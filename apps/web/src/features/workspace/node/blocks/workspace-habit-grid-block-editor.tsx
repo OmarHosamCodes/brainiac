@@ -73,13 +73,13 @@ export function WorkspaceHabitGridBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4 rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <div className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Habit Tracking
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-toned">
               Review weekly consistency, update each habit quickly, and keep daily progress easy to
               scan.
             </p>
@@ -113,16 +113,14 @@ export function WorkspaceHabitGridBlockEditor({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-3xl border border-muted/20 bg-muted/5 p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-              Habits
-            </p>
+          <div className="rounded-3xl border border-muted bg-background p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Habits</p>
             <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
               {summary.totalHabits}
             </p>
           </div>
-          <div className="rounded-3xl border border-muted/20 bg-muted/5 p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <div className="rounded-3xl border border-muted bg-background p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Weekly Checks
             </p>
             <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
@@ -136,7 +134,7 @@ export function WorkspaceHabitGridBlockEditor({
             <p className="mt-2 text-2xl font-black tracking-tight text-primary sm:text-3xl">
               {summary.overallPercent}%
             </p>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
               {trackedDayCount} tracked days
             </p>
           </div>
@@ -153,25 +151,25 @@ export function WorkspaceHabitGridBlockEditor({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-3xl border border-muted/20 bg-background/40 p-1">
+      <div className="overflow-x-auto rounded-3xl border border-muted bg-background p-1">
         <table className="min-w-full border-separate border-spacing-y-2">
           <caption className="sr-only">
             Habit grid with {block.habits.length} habits and {trackedDayCount} day toggles per habit
           </caption>
           <thead>
             <tr>
-              <th className="min-w-[200px] px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+              <th className="min-w-[200px] px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Habit
               </th>
               {WORKSPACE_HABIT_GRID_DAYS.map((day) => (
                 <th
                   key={day}
-                  className="w-14 px-1 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50"
+                  className="w-14 px-1 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                 >
                   {dayLabels[day].slice(0, 3)}
                 </th>
               ))}
-              <th className="w-20 px-4 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+              <th className="w-20 px-4 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 %
               </th>
               <th className="w-12 px-4 py-3" />
@@ -202,7 +200,7 @@ export function WorkspaceHabitGridBlockEditor({
                           "mx-auto flex min-h-9 min-w-9 items-center justify-center rounded-xl border px-2 text-[10px] font-bold transition-all hover:scale-105 active:scale-95",
                           habit.days[day]
                             ? "border-primary/30 bg-primary/10 text-primary"
-                            : "border-muted/20 bg-muted/5 text-muted-foreground/50 hover:border-muted/40",
+                            : "border-muted bg-background text-muted hover:border-muted/40",
                         )}
                         aria-pressed={habit.days[day]}
                         aria-label={`${habit.days[day] ? "Uncheck" : "Check"} ${dayLabels[day]} for ${habit.name || "this habit"}`}
@@ -245,11 +243,11 @@ export function WorkspaceHabitGridBlockEditor({
         </table>
 
         {block.habits.length === 0 ? (
-          <div className="mx-3 mb-3 rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <div className="mx-3 mb-3 rounded-2xl border border-dashed border-muted bg-background py-12 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               No habits tracked yet
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-toned">
               Add the first habit to start logging daily consistency.
             </p>
             <Button

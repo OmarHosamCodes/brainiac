@@ -109,7 +109,7 @@ export function WorkspaceMessageHouseBlockEditor({
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-black tracking-tight text-foreground">Brand Promise</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-xs text-toned">
               The line the whole team can repeat without improvising.
             </p>
           </div>
@@ -130,7 +130,7 @@ export function WorkspaceMessageHouseBlockEditor({
         <Textarea
           value={block.brandPromise}
           rows={3}
-          className="rounded-2xl bg-background/60 text-lg leading-relaxed font-black tracking-tight"
+          className="rounded-2xl bg-background text-lg leading-relaxed font-black tracking-tight"
           placeholder="What is the single promise this brand owns?"
           onChange={(event) =>
             mutateBlock(tabId, block.id, (entry) => {
@@ -147,12 +147,12 @@ export function WorkspaceMessageHouseBlockEditor({
         {block.pillars.map((pillar) => (
           <article
             key={pillar.id}
-            className="rounded-2xl border border-muted/20 bg-background/40 p-4 transition-colors hover:border-muted/30"
+            className="rounded-2xl border border-muted bg-background p-4 transition-colors hover:border-muted"
           >
             <div className="mb-3">
               <Label
                 htmlFor={`pillar-title-${pillar.id}`}
-                className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
               >
                 Pillar
               </Label>
@@ -178,7 +178,7 @@ export function WorkspaceMessageHouseBlockEditor({
 
             <Label
               htmlFor={`pillar-body-${pillar.id}`}
-              className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+              className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
             >
               Message
             </Label>
@@ -186,7 +186,7 @@ export function WorkspaceMessageHouseBlockEditor({
               id={`pillar-body-${pillar.id}`}
               value={pillar.body}
               rows={5}
-              className="rounded-xl bg-muted/5 leading-relaxed"
+              className="rounded-xl bg-background leading-relaxed"
               placeholder="What repeatable message should this pillar carry?"
               onChange={(event) =>
                 mutateBlock(tabId, block.id, (entry) => {
@@ -209,11 +209,11 @@ export function WorkspaceMessageHouseBlockEditor({
         {bottomSections.map((section) => (
           <article
             key={section.key}
-            className="rounded-2xl border border-muted/20 bg-background/40 p-4 transition-colors hover:border-muted/30"
+            className="rounded-2xl border border-muted bg-background p-4 transition-colors hover:border-muted"
           >
             <Label
               htmlFor={section.key}
-              className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+              className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
             >
               {section.label}
             </Label>
@@ -221,7 +221,7 @@ export function WorkspaceMessageHouseBlockEditor({
               id={section.key}
               value={block[section.key]}
               rows={5}
-              className="rounded-xl bg-muted/5 leading-relaxed"
+              className="rounded-xl bg-background leading-relaxed"
               placeholder={section.placeholder}
               onChange={(event) =>
                 mutateBlock(tabId, block.id, (entry) => {
@@ -242,23 +242,21 @@ export function WorkspaceMessageHouseBlockEditor({
             <h2 className="text-sm font-black tracking-tight text-foreground">
               Stress-Test Output
             </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Finds gaps, contradictions, and weak proof.
-            </p>
+            <p className="mt-0.5 text-xs text-toned">Finds gaps, contradictions, and weak proof.</p>
           </div>
 
           {block.stressTestUpdatedAt ? (
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-toned">
               Last run {formatDateTime(block.stressTestUpdatedAt)}
             </p>
           ) : null}
         </div>
 
-        <div className="min-h-[80px] rounded-xl border border-muted/20 bg-background/60 p-4 text-sm leading-relaxed text-muted-foreground">
+        <div className="min-h-[80px] rounded-xl border border-muted bg-background p-4 text-sm leading-relaxed text-toned">
           {block.latestStressTest ? (
             <p className="whitespace-pre-wrap">{block.latestStressTest}</p>
           ) : (
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Run AI Stress-Test to get a critique of the messaging
             </p>
           )}

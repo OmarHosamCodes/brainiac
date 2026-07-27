@@ -34,11 +34,9 @@ export function WorkspaceProcessBlockEditor({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-muted/20 bg-background/40 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-muted bg-background p-4">
         <div className="space-y-1.5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Progress
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Progress</p>
           <div className="flex items-center gap-3">
             <p className="text-xl font-black tracking-tight text-foreground sm:text-2xl">
               {summary.completedSteps}/{summary.totalSteps}
@@ -93,7 +91,7 @@ export function WorkspaceProcessBlockEditor({
               {index + 1}
             </button>
 
-            <div className="rounded-2xl border border-muted/20 bg-background/40 p-4 transition-all hover:border-muted/30">
+            <div className="rounded-2xl border border-muted bg-background p-4 transition-all hover:border-muted">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <Input
@@ -153,10 +151,10 @@ export function WorkspaceProcessBlockEditor({
               </div>
 
               {expandedStepId === step.id ? (
-                <div className="mt-4 border-t border-muted/10 pt-4">
+                <div className="mt-4 border-t border-muted pt-4">
                   <label
                     htmlFor={`step-note-${step.id}`}
-                    className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                    className="mb-2 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                   >
                     Notes
                   </label>
@@ -184,14 +182,12 @@ export function WorkspaceProcessBlockEditor({
         ))}
 
         {block.steps.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
+          <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
               <ListChecks className="size-6" />
             </div>
             <p className="mt-3 text-xs font-bold text-muted-foreground">No steps yet</p>
-            <p className="mt-1 text-[11px] text-muted-foreground/60">
-              Add steps to build your process
-            </p>
+            <p className="mt-1 text-[11px] text-toned">Add steps to build your process</p>
           </div>
         ) : null}
       </div>

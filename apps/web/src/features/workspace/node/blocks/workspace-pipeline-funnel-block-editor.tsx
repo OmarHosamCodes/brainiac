@@ -67,7 +67,7 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
     case "closed":
       return "border-success/35 bg-success/5";
     default:
-      return "border-muted/30 bg-background/60";
+      return "border-muted bg-background";
   }
 }
 
@@ -114,49 +114,47 @@ export function WorkspacePipelineFunnelBlockEditor({
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Pipeline Value
           </p>
           <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
             {formatCurrency(summary.totalValue)}
           </p>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-toned">
             {summary.dealCount} deals
           </p>
         </div>
 
         <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Open Value
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Open Value</p>
           <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
             {formatCurrency(summary.openValue)}
           </p>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-toned">
             In progress
           </p>
         </div>
 
         <div className="rounded-2xl border border-success/10 bg-success/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Closed Value
           </p>
           <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
             {formatCurrency(summary.closedValue)}
           </p>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-toned">
             Converted
           </p>
         </div>
 
         <div className="rounded-2xl border border-destructive/10 bg-destructive/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Top of Funnel
           </p>
           <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
             {summary.stageSummaries[0]?.dealCount ?? 0}
           </p>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-toned">
             Leads qualified
           </p>
         </div>
@@ -167,9 +165,7 @@ export function WorkspacePipelineFunnelBlockEditor({
           <h2 className="text-sm font-black tracking-tight text-foreground">
             Sales Pipeline Funnel
           </h2>
-          <p className="text-xs text-muted-foreground">
-            Track deal progression and conversion at each stage.
-          </p>
+          <p className="text-xs text-toned">Track deal progression and conversion at each stage.</p>
         </div>
 
         <Button
@@ -184,7 +180,7 @@ export function WorkspacePipelineFunnelBlockEditor({
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-muted/20 bg-background/40 p-4">
+      <div className="rounded-2xl border border-muted bg-background p-4">
         <div className="space-y-2.5">
           {summary.stageSummaries.map((stage) => (
             <div key={stage.stage} className="flex justify-center">
@@ -197,7 +193,7 @@ export function WorkspacePipelineFunnelBlockEditor({
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       {stage.label}
                     </p>
                     <p className="mt-0.5 text-sm font-bold text-foreground">
@@ -218,14 +214,12 @@ export function WorkspacePipelineFunnelBlockEditor({
       <div>
         <div className="mb-3 px-1">
           <h3 className="text-sm font-black tracking-tight text-foreground">Deals</h3>
-          <p className="text-xs text-muted-foreground">
-            Update stage and value directly from the list.
-          </p>
+          <p className="text-xs text-toned">Update stage and value directly from the list.</p>
         </div>
 
         {sortedDeals.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
+          <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
               <Filter className="size-6" />
             </div>
             <p className="mt-3 text-xs font-bold text-muted-foreground">No deals yet</p>
@@ -233,10 +227,7 @@ export function WorkspacePipelineFunnelBlockEditor({
         ) : (
           <div className="space-y-3">
             {sortedDeals.map((deal) => (
-              <article
-                key={deal.id}
-                className="rounded-2xl border border-muted/20 bg-background/40 p-4"
-              >
+              <article key={deal.id} className="rounded-2xl border border-muted bg-background p-4">
                 <div className="grid items-center gap-3 sm:grid-cols-[minmax(0,1fr)_12rem_12rem_auto]">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2.5">
@@ -267,7 +258,7 @@ export function WorkspacePipelineFunnelBlockEditor({
                       />
                     </div>
 
-                    <p className="mt-1.5 pl-3.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="mt-1.5 pl-3.5 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       {workspaceSalesTemperatureLabels[deal.temperature]} temperature
                     </p>
                   </div>
@@ -275,7 +266,7 @@ export function WorkspacePipelineFunnelBlockEditor({
                   <div>
                     <Label
                       htmlFor={`value-${deal.id}`}
-                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                     >
                       Value (EGP)
                     </Label>
@@ -302,7 +293,7 @@ export function WorkspacePipelineFunnelBlockEditor({
                   <div>
                     <Label
                       htmlFor={`stage-${deal.id}`}
-                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                     >
                       Stage
                     </Label>

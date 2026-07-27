@@ -163,51 +163,45 @@ export function WorkspaceDealScoringMatrixBlockEditor({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Pipeline
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Pipeline</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {formatCurrency(summary.totalValue)}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">{summary.dealCount} active deals</p>
+          <p className="mt-1 text-sm text-toned">{summary.dealCount} active deals</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Avg Score
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Avg Score</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.averageScore}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Prioritization score out of 100</p>
+          <p className="mt-1 text-sm text-toned">Prioritization score out of 100</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Hot Deals
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Hot Deals</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.hotCount}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Immediate follow-up required</p>
+          <p className="mt-1 text-sm text-toned">Immediate follow-up required</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Advanced Stage
           </p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {advancedStageCount}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Proposal or later</p>
+          <p className="mt-1 text-sm text-toned">Proposal or later</p>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
           <p className="text-sm font-semibold text-foreground">Deal priority stack</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-toned">
             Deals are automatically ranked by score so the best opportunities stay at the top.
           </p>
         </div>
@@ -227,9 +221,9 @@ export function WorkspaceDealScoringMatrixBlockEditor({
       </div>
 
       {sortedDeals.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No scored deals yet.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-toned">
             Add your first opportunity to start ranking the pipeline.
           </p>
         </div>
@@ -252,7 +246,7 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                     <Input
                       value={deal.clientName}
                       placeholder="Client name"
-                      className="w-full border-0 bg-transparent px-0 text-lg font-bold text-foreground placeholder:text-muted-foreground/60 shadow-none focus-visible:ring-0"
+                      className="w-full border-0 bg-transparent px-0 text-lg font-bold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
                       onChange={(event) =>
                         mutateDeal(deal.id, (target) => {
                           target.clientName = event.target.value.slice(0, 120);
@@ -281,7 +275,7 @@ export function WorkspaceDealScoringMatrixBlockEditor({
 
                 <div className="flex items-start gap-3">
                   <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       Score
                     </p>
                     <p
@@ -389,7 +383,7 @@ export function WorkspaceDealScoringMatrixBlockEditor({
               </div>
 
               <div className="mt-5 space-y-3">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   <span>Priority Score</span>
                   <span className={getScoreTextClasses(deal.score)}>
                     {getPriorityLabel(deal.score)}
@@ -404,7 +398,7 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                   min={0}
                   max={100}
                   step={1}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
                   onChange={(event) =>
                     mutateDeal(deal.id, (target) => {
                       target.score = clampScore(event.target.value);
@@ -430,20 +424,18 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                   />
                 </div>
 
-                <div className="rounded-2xl border border-muted/20 bg-background/40 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <div className="rounded-2xl border border-muted bg-background p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                     Priority context
                   </p>
                   <p className="mt-2 text-sm font-semibold text-foreground">
                     {workspaceSalesPipelineStageLabels[deal.stage]}
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {getPrioritySummary(deal.score)}
-                  </p>
+                  <p className="mt-1 text-sm text-toned">{getPrioritySummary(deal.score)}</p>
                 </div>
               </div>
 
-              <p className="mt-4 text-sm text-muted-foreground">
+              <p className="mt-4 text-sm text-toned">
                 {formatCurrency(deal.valueEgp)} opportunity with{" "}
                 {workspaceSalesTemperatureLabels[deal.temperature].toLowerCase()} urgency.
               </p>

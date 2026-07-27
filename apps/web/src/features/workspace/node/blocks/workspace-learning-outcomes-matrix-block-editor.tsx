@@ -194,7 +194,7 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-black tracking-tight text-foreground">Education Agent</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-xs text-toned">
               Generate outcomes matrix from course roadmap context.
             </p>
           </div>
@@ -229,7 +229,7 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
           <div className="space-y-1.5">
             <Label
               htmlFor="course-select"
-              className="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+              className="block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
             >
               Selected Course
             </Label>
@@ -240,7 +240,7 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
               aria-label="Selected course"
               onValueChange={updateSelectedCourse}
             />
-            <p className="text-[10px] leading-relaxed text-muted-foreground/50">
+            <p className="text-[10px] leading-relaxed text-muted">
               Lessons and outcomes passed automatically.
             </p>
           </div>
@@ -248,7 +248,7 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
           <div className="space-y-1.5">
             <Label
               htmlFor="analysis-prompt"
-              className="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+              className="block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
             >
               Analysis Prompt
             </Label>
@@ -256,7 +256,7 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
               id="analysis-prompt"
               value={block.prompt}
               rows={3}
-              className="rounded-xl bg-background/60 leading-relaxed"
+              className="rounded-xl bg-background leading-relaxed"
               placeholder="Design a learning outcomes matrix..."
               onChange={(event) =>
                 mutateBlock(tabId, block.id, (entry) => {
@@ -275,7 +275,7 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
             <BookOpen className="mt-0.5 size-4 shrink-0" />
             <div>
               <p className="text-sm font-semibold">No course context found</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-toned">
                 Add a Course Roadmap block to this node to enable AI analysis.
               </p>
             </div>
@@ -283,24 +283,24 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-muted/20 bg-background/40 p-4">
+      <section className="rounded-2xl border border-muted bg-background p-4">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-black tracking-tight text-foreground">Analysis Output</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-xs text-toned">
               Structured matrix mapping modules to capabilities and behaviors.
             </p>
           </div>
 
           {block.outputHistory[0]?.createdAt ? (
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-toned">
               Updated {formatDateTime(block.outputHistory[0].createdAt)}
             </p>
           ) : null}
         </div>
 
         <div
-          className="prose prose-sm dark:prose-invert max-w-none rounded-xl border border-muted/20 bg-muted/5 p-4 text-sm leading-relaxed text-muted-foreground"
+          className="prose prose-sm dark:prose-invert max-w-none rounded-xl border border-muted bg-background p-4 text-sm leading-relaxed text-toned"
           dangerouslySetInnerHTML={{ __html: renderedLatestOutput }}
         />
       </section>
@@ -311,7 +311,7 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
             <h3 className="text-sm font-black tracking-tight text-foreground">
               Previous Iterations
             </h3>
-            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/40">
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">
               {block.outputHistory.length - 1} saved
             </span>
           </div>
@@ -325,19 +325,19 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
               return (
                 <article
                   key={entry.id}
-                  className="rounded-xl border border-muted/20 bg-background/40 p-3"
+                  className="rounded-xl border border-muted bg-background p-3"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-xs font-bold uppercase tracking-wider text-foreground">
                       {entry.prompt}
                     </p>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-toned">
                       {formatDateTime(entry.createdAt)}
                     </span>
                   </div>
 
                   <div
-                    className="prose prose-sm dark:prose-invert mt-3 max-w-none text-xs leading-relaxed text-muted-foreground opacity-80"
+                    className="prose prose-sm dark:prose-invert mt-3 max-w-none text-xs leading-relaxed text-toned opacity-80"
                     dangerouslySetInnerHTML={{ __html: renderSimpleMarkdown(entry.output) }}
                   />
                 </article>

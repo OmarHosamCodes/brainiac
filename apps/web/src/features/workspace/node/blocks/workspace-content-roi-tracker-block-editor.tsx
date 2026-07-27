@@ -145,54 +145,48 @@ export function WorkspaceContentRoiTrackerBlockEditor({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Top Platform
           </p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.topPlatform ? workspaceContentPlatformLabels[summary.topPlatform] : "None"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Highest average ROI across current rows
-          </p>
+          <p className="mt-1 text-sm text-toned">Highest average ROI across current rows</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Top Campaign
           </p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.topCampaign || "No campaign"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Most impactful marketing push</p>
+          <p className="mt-1 text-sm text-toned">Most impactful marketing push</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Influenced Leads
           </p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.totalInfluencedLeads}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Lead count weighted by conversion influence
-          </p>
+          <p className="mt-1 text-sm text-toned">Lead count weighted by conversion influence</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Average ROI
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Average ROI</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.averageScore}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-toned">
             {summary.highReturnCount} high-return pieces right now
           </p>
         </div>
       </div>
 
-      <div className="rounded-3xl border border-muted/20 bg-muted/10 p-4">
+      <div className="rounded-3xl border border-muted bg-muted p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -208,13 +202,13 @@ export function WorkspaceContentRoiTrackerBlockEditor({
               </Badge>
             </div>
 
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-toned">
               Track which pieces actually create leads, influence conversions, and keep paying back
               through repurposing.
             </p>
 
             {topItem ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-toned">
                 Best current performer:{" "}
                 <span className="font-semibold text-foreground">
                   {topItem.title || "Untitled content"}
@@ -259,9 +253,9 @@ export function WorkspaceContentRoiTrackerBlockEditor({
       </div>
 
       {sortedItems.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No content ROI rows yet.</p>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-toned">
             Add the first content piece to compare commercial performance across campaigns and
             platforms.
           </p>
@@ -269,13 +263,13 @@ export function WorkspaceContentRoiTrackerBlockEditor({
       ) : (
         <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
           <div
-            className="grid min-w-[1520px] gap-px overflow-hidden rounded-3xl border border-muted/20 bg-muted/20"
+            className="grid min-w-[1520px] gap-px overflow-hidden rounded-3xl border border-muted bg-muted/20"
             style={rowGridStyle}
           >
             {tableHeaders.map((label) => (
               <div
                 key={label}
-                className="bg-muted/10 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                className="bg-muted px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
               >
                 {label}
               </div>
@@ -287,7 +281,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
 
               return (
                 <div key={item.id} className="contents">
-                  <div className="flex items-center bg-background/40 p-3">
+                  <div className="flex items-center bg-background p-3">
                     <Input
                       value={item.title}
                       placeholder="Content piece"
@@ -301,7 +295,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="flex items-center bg-background/40 p-3">
+                  <div className="flex items-center bg-background p-3">
                     <BlockSelect
                       value={item.platform}
                       options={platformOptions}
@@ -315,7 +309,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="flex items-center bg-background/40 p-3">
+                  <div className="flex items-center bg-background p-3">
                     <Input
                       value={item.campaign}
                       placeholder="Campaign"
@@ -329,7 +323,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="flex items-center bg-background/40 p-3">
+                  <div className="flex items-center bg-background p-3">
                     <Input
                       value={item.goal}
                       placeholder="Goal"
@@ -343,7 +337,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="flex items-center bg-background/40 p-3">
+                  <div className="flex items-center bg-background p-3">
                     <Input
                       type="number"
                       min={0}
@@ -358,7 +352,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="flex items-center bg-background/40 p-3">
+                  <div className="flex items-center bg-background p-3">
                     <Input
                       type="number"
                       min={0}
@@ -373,9 +367,9 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="flex flex-col justify-center bg-background/40 p-3">
+                  <div className="flex flex-col justify-center bg-background p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         Score
                       </span>
                       <span className="text-sm font-black text-primary">
@@ -387,7 +381,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                       min={1}
                       max={10}
                       value={item.conversionInfluence}
-                      className="mt-2 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                      className="mt-2 h-1.5 w-full appearance-none rounded-full bg-muted accent-primary"
                       aria-label={`Conversion influence for ${item.title || "content row"}`}
                       onChange={(event) =>
                         mutateItem(item.id, (entry) => {
@@ -397,9 +391,9 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="flex flex-col justify-center bg-background/40 p-3">
+                  <div className="flex flex-col justify-center bg-background p-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         Score
                       </span>
                       <span className="text-sm font-black text-primary">{item.repurposeValue}</span>
@@ -409,7 +403,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                       min={1}
                       max={10}
                       value={item.repurposeValue}
-                      className="mt-2 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                      className="mt-2 h-1.5 w-full appearance-none rounded-full bg-muted accent-primary"
                       aria-label={`Repurpose value for ${item.title || "content row"}`}
                       onChange={(event) =>
                         mutateItem(item.id, (entry) => {
@@ -419,7 +413,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <div className={cn("min-w-0 rounded-2xl border p-3", getStatusClasses(score))}>
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">

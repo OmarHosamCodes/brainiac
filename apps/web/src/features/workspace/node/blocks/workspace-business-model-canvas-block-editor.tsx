@@ -147,7 +147,7 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
           <h2 className="text-sm font-black tracking-tight text-foreground">
             Business Model Canvas
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-toned">
             Pressure-test how the model creates, delivers, and captures value.
           </p>
         </div>
@@ -191,11 +191,11 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
                   className={cn(
                     "rounded-2xl border p-4 transition-colors",
                     gridAreaClass[cell.area],
-                    filled ? "border-muted/20 bg-background/40" : "border-warning/30 bg-warning/5",
+                    filled ? "border-muted bg-background" : "border-warning/30 bg-warning/5",
                   )}
                 >
                   <div className="mb-3 flex items-center justify-between gap-2">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       {workspaceBusinessModelCanvasCellLabels[cell.key]}
                     </p>
                     <Badge variant={filled ? "default" : "secondary"} className="rounded-lg px-2">
@@ -206,7 +206,7 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
                   <Textarea
                     value={block.cells[cell.key]}
                     rows={cell.key === "costStructure" || cell.key === "revenueStreams" ? 3 : 5}
-                    className="min-h-24 rounded-xl bg-muted/10"
+                    className="min-h-24 rounded-xl bg-muted"
                     placeholder={filled ? "" : cell.placeholder}
                     onChange={(event) =>
                       mutateBlock(tabId, block.id, (entry) => {
@@ -232,7 +232,7 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
             </div>
             <div className="flex-1">
               <p className="text-sm font-bold text-warning">Incomplete canvas</p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-toned">
                 {summary.missingCellCount} cell{summary.missingCellCount !== 1 ? "s" : ""} need
                 {summary.missingCellCount === 1 ? "s" : ""} attention. Fill all cells for a complete
                 model analysis.
@@ -246,19 +246,19 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-black tracking-tight text-foreground">Analysis Output</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="mt-0.5 text-xs text-toned">
               Identifies strengths, gaps, and strategic questions.
             </p>
           </div>
 
           {block.analysisUpdatedAt ? (
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Last analyzed {formatDateTime(block.analysisUpdatedAt)}
             </p>
           ) : null}
         </div>
 
-        <div className="mt-3 rounded-xl border border-muted/20 bg-background/60 p-4 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
+        <div className="mt-3 rounded-xl border border-muted bg-background p-4 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
           {block.analysis || "Run AI Analyze to generate a gap analysis of the current canvas."}
         </div>
       </section>

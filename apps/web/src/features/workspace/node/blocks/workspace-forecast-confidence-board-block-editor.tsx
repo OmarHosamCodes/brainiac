@@ -282,14 +282,14 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
       <div className="flex flex-wrap items-center justify-between gap-6 px-1">
         <div className="max-w-md">
           <h3 className="text-base font-bold text-foreground">Forecast Board</h3>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-1 text-xs leading-relaxed text-toned">
             Manage your sales pipeline by deal confidence and track performance against targets.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-3 rounded-2xl border border-muted/10 bg-muted/5 p-1.5">
-            <label className="ml-3 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">
+          <div className="flex items-center gap-3 rounded-2xl border border-muted bg-background p-1.5">
+            <label className="ml-3 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.2em] text-toned">
               Target
             </label>
             <Input
@@ -374,11 +374,11 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                 <div className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex size-8 items-center justify-center rounded-xl border border-muted/10 bg-background/80 shadow-sm">
+                      <div className="flex size-8 items-center justify-center rounded-xl border border-muted bg-background shadow-sm">
                         <BucketIcon className={cn("size-4", bucketClasses.text)} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase leading-none tracking-[0.2em] text-muted-foreground/50">
+                        <p className="text-[10px] font-black uppercase leading-none tracking-[0.2em] text-toned">
                           {workspaceSalesForecastBucketLabels[bucket]}
                         </p>
                         <p className="mt-1 text-xs font-bold leading-none text-foreground/60">
@@ -392,7 +392,7 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                     <p className="text-2xl font-black tracking-tight text-foreground">
                       {formatCurrency(getBucketSummary(bucket).totalValue)}
                     </p>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-toned">
                       Wgt: {formatCurrency(getBucketSummary(bucket).weightedValue)}
                     </p>
                   </div>
@@ -404,7 +404,7 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                       key={deal.id}
                       draggable
                       className={cn(
-                        "group relative rounded-[24px] border border-muted/10 bg-background/80 p-5 shadow-sm transition-all hover:border-primary/30 hover:bg-background hover:shadow-md",
+                        "group relative rounded-[24px] border border-muted bg-background p-5 shadow-sm transition-all hover:border-primary/30 hover:bg-background hover:shadow-md",
                         draggingDealId === deal.id
                           ? "pointer-events-none scale-95 opacity-40 grayscale"
                           : "cursor-grab active:cursor-grabbing",
@@ -435,7 +435,7 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                               })
                             }
                           />
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40">
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-toned">
                             <Badge variant="secondary" className="rounded-full">
                               {workspaceSalesForecastBucketLabels[deal.bucket]}
                             </Badge>
@@ -484,13 +484,13 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                       <div className="mt-6 space-y-4">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
-                            <label className="ml-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                            <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-highlighted">
                               VALUE (EGP)
                             </label>
                             <Input
                               type="number"
                               value={String(deal.valueEgp)}
-                              className="rounded-xl border-muted/10 bg-muted/5 font-bold"
+                              className="rounded-xl border-muted bg-background font-bold"
                               onChange={(event) =>
                                 mutateDeal(deal.id, (entry) => {
                                   entry.valueEgp = toCurrencyValue(event.target.value);
@@ -499,13 +499,13 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="ml-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                            <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-highlighted">
                               CLOSE MONTH
                             </label>
                             <Input
                               type="month"
                               value={deal.expectedCloseMonth ?? ""}
-                              className="rounded-xl border-muted/10 bg-muted/5"
+                              className="rounded-xl border-muted bg-background"
                               onChange={(event) =>
                                 mutateDeal(deal.id, (entry) => {
                                   entry.expectedCloseMonth = event.target.value || null;
@@ -516,15 +516,15 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="ml-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                          <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-highlighted">
                             OWNER
                           </label>
                           <div className="relative">
-                            <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/40" />
+                            <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
                             <Input
                               value={deal.owner}
                               placeholder="Owner Name"
-                              className="rounded-xl border-muted/10 bg-muted/5 pl-9"
+                              className="rounded-xl border-muted bg-background pl-9"
                               onChange={(event) =>
                                 mutateDeal(deal.id, (entry) => {
                                   entry.owner = event.target.value.slice(0, 120);
@@ -536,7 +536,7 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
 
                         <div className="pt-2">
                           <div className="mb-2 flex items-center justify-between px-1">
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-highlighted">
                               Confidence
                             </span>
                             <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-black text-foreground">
@@ -549,7 +549,7 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                             max={100}
                             step={1}
                             value={deal.confidence}
-                            className="h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                            className="h-1.5 w-full appearance-none rounded-full bg-muted accent-primary"
                             aria-label={`Confidence for ${deal.clientName || "forecast deal"}`}
                             onChange={(event) =>
                               mutateDeal(deal.id, (entry) => {
@@ -562,8 +562,8 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                           />
                         </div>
 
-                        <div className="space-y-1.5 rounded-2xl border border-muted/5 bg-muted/5 p-3">
-                          <label className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                        <div className="space-y-1.5 rounded-2xl border border-muted bg-background p-3">
+                          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-highlighted">
                             <ListTodo className="size-3" />
                             Next Action
                           </label>
@@ -584,11 +584,11 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                   ))}
 
                   {dealsByBucket[bucket].length === 0 ? (
-                    <div className="flex h-full flex-col items-center justify-center rounded-[32px] border-2 border-dashed border-muted/5 bg-background/10 p-8 text-center">
-                      <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted/5">
-                        <BucketIcon className="size-6 text-muted-foreground/20" />
+                    <div className="flex h-full flex-col items-center justify-center rounded-[32px] border-2 border-dashed border-muted bg-background p-8 text-center">
+                      <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-background">
+                        <BucketIcon className="size-6 text-muted" />
                       </div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/30">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-toned">
                         Empty {bucket}
                       </p>
                     </div>

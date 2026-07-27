@@ -1261,6 +1261,15 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
   color: var(--color-inverted-foreground);
 }
 /*
+ * Same collision for `default`: it is a surface token (bg-default = card).
+ * Without this pin, `text-default` paints in the card fill color — white-on-white
+ * in light mode and near-black-on-black in dark mode — which washes out every
+ * inherited label and input inside the app shell.
+ */
+:where(html) .text-default {
+  color: var(--color-foreground);
+}
+/*
  * Same collision for `default`: it is a surface token (bg-default = card), but
  * border-default / divide-default mean the default hairline. Without this pin the
  * borders paint in the card color: invisible white-on-white in the light theme.

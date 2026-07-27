@@ -223,7 +223,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
             <h2 className="text-lg font-black tracking-tight text-foreground">
               Cash Flow Overview
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-toned">
               Real-time profitability and margin metrics across all clients.
             </p>
           </div>
@@ -246,9 +246,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
               >
                 <TrendingUp className="size-[18px]" />
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                Revenue
-              </p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Revenue</p>
             </div>
             <p className="mt-3 truncate font-mono text-2xl font-black tracking-tight text-success sm:text-3xl">
               {formatCurrency(summary.totalRevenue)}
@@ -271,7 +269,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
               >
                 <TrendingDown className="size-[18px]" />
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Expenses
               </p>
             </div>
@@ -296,7 +294,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
               >
                 <Wallet className="size-[18px]" />
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Net Profit
               </p>
             </div>
@@ -326,9 +324,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
               >
                 <Percent className="size-[18px]" />
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                Margin
-              </p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Margin</p>
             </div>
             <p
               className={cn(
@@ -349,7 +345,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
               <h2 className="text-lg font-black tracking-tight text-foreground">
                 Client Portfolio
               </h2>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-toned">
                 Track profitability, margins, and collection status per client.
               </p>
             </div>
@@ -367,12 +363,12 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
           </div>
 
           {block.clients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-              <div className="flex size-16 items-center justify-center rounded-2xl bg-muted/10 text-muted-foreground/30">
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted bg-background py-10 text-center">
+              <div className="flex size-16 items-center justify-center rounded-2xl bg-muted text-muted">
                 <Users2 className="size-8" />
               </div>
               <p className="mt-4 text-sm font-bold text-muted-foreground">No clients yet</p>
-              <p className="mt-1 text-xs text-muted-foreground/60">
+              <p className="mt-1 text-xs text-toned">
                 Add your first client to track profitability
               </p>
               <Button type="button" variant="ghost" size="sm" className="mt-3" onClick={addClient}>
@@ -389,14 +385,14 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                 return (
                   <article
                     key={client.id}
-                    className="group relative rounded-2xl border border-muted/20 bg-background/40 p-5 transition-all hover:border-muted/30"
+                    className="group relative rounded-2xl border border-muted bg-background p-5 transition-all hover:border-muted"
                   >
-                    <div className="mb-5 flex items-start justify-between gap-4 border-b border-muted/10 pb-4">
+                    <div className="mb-5 flex items-start justify-between gap-4 border-b border-muted pb-4">
                       <div className="min-w-0 flex-1">
                         <Input
                           value={client.name}
                           placeholder="Client name"
-                          className="border-0 bg-transparent px-0 text-xl font-black tracking-tight text-foreground shadow-none placeholder:text-muted-foreground/30 focus-visible:ring-0"
+                          className="border-0 bg-transparent px-0 text-xl font-black tracking-tight text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                           onChange={(event) =>
                             mutateClient(client.id, (target) => {
                               target.name = event.target.value.slice(0, 120);
@@ -469,7 +465,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                       </div>
                     </div>
 
-                    <div className="mt-4 rounded-xl border border-muted/10 bg-muted/10 p-4">
+                    <div className="mt-4 rounded-xl border border-muted bg-muted p-4">
                       <div className="mb-2 flex items-center justify-between">
                         <BlockFieldLabel>Relationship Health</BlockFieldLabel>
                         <div className="flex items-center gap-1.5">
@@ -489,7 +485,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                           <span className="text-xs font-black text-primary/60">%</span>
                         </div>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted/20">
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-300",
@@ -506,7 +502,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
           )}
         </section>
 
-        <section className="flex flex-col gap-5 rounded-2xl border border-muted/20 bg-muted/5 p-6 lg:sticky lg:top-8 lg:h-fit">
+        <section className="flex flex-col gap-5 rounded-2xl border border-muted bg-background p-6 lg:sticky lg:top-8 lg:h-fit">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-black tracking-tight text-foreground">
@@ -528,8 +524,8 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
           </div>
 
           {block.expenses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-muted/20 bg-muted/5 py-8 text-center">
-              <Receipt className="size-6 text-muted-foreground/30" />
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-muted bg-background py-8 text-center">
+              <Receipt className="size-6 text-muted" />
               <p className="mt-3 text-xs font-bold text-muted-foreground">No overhead costs</p>
             </div>
           ) : (
@@ -537,14 +533,14 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
               {block.expenses.map((expense) => (
                 <article
                   key={expense.id}
-                  className="relative rounded-xl border border-muted/10 bg-background/40 p-4 transition-all hover:bg-background/60"
+                  className="relative rounded-xl border border-muted bg-background p-4 transition-all hover:bg-background"
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="flex-1">
                       <Input
                         value={expense.category}
                         placeholder="Category name"
-                        className="border-0 bg-transparent px-0 text-sm font-bold text-foreground shadow-none placeholder:text-muted-foreground/30 focus-visible:ring-0"
+                        className="border-0 bg-transparent px-0 text-sm font-bold text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                         onChange={(event) =>
                           mutateExpense(expense.id, (target) => {
                             target.category = event.target.value.slice(0, 120);
@@ -581,7 +577,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                     </div>
 
                     <div className="pb-0.5 text-right">
-                      <p className="font-mono text-xs font-black text-muted-foreground/60">
+                      <p className="font-mono text-xs font-black text-toned">
                         {getExpenseSharePercent(expense, totalExpenseBreakdown)}%
                       </p>
                     </div>
@@ -591,7 +587,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
 
               <div className="flex items-center justify-between rounded-xl border border-primary/10 bg-primary/5 p-4">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                     Total Monthly
                   </p>
                   <p className="mt-1 font-mono text-lg font-black tracking-tight text-primary">

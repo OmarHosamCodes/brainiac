@@ -103,9 +103,7 @@ export function WorkspaceScorecardBlockEditor({
               className,
             )}
           >
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-              {label}
-            </p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">{label}</p>
             <p className={cn("mt-1 text-2xl font-black tracking-tight sm:text-3xl")}>{value}</p>
           </div>
         ))}
@@ -114,10 +112,10 @@ export function WorkspaceScorecardBlockEditor({
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3 px-2">
           <div>
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Key Performance Indicators
             </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-toned">
               Track the current value, target, and unit for each metric in one place.
             </p>
           </div>
@@ -184,7 +182,7 @@ export function WorkspaceScorecardBlockEditor({
 
                   <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         Current vs Target
                       </p>
                       <div className="mt-2 flex items-end gap-2">
@@ -196,7 +194,7 @@ export function WorkspaceScorecardBlockEditor({
                         >
                           {metric.value}
                         </span>
-                        <span className="pb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                        <span className="pb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                           / {metric.target} {metric.unit || "units"}
                         </span>
                       </div>
@@ -205,7 +203,7 @@ export function WorkspaceScorecardBlockEditor({
 
                   <div className="mt-5 space-y-3">
                     <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em]">
-                      <span className="text-muted-foreground/60">Progress</span>
+                      <span className="text-toned">Progress</span>
                       <span className={status.textClass}>{progress}%</span>
                     </div>
                     <BlockProgressBar value={progress} max={100} />
@@ -244,7 +242,7 @@ export function WorkspaceScorecardBlockEditor({
                       ] as const
                     ).map(([label, value, type, onChange]) => (
                       <div key={label} className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                           {label}
                         </p>
                         <Input
@@ -263,12 +261,12 @@ export function WorkspaceScorecardBlockEditor({
             })}
           </div>
         ) : (
-          <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
-            <BarChart3 className="mx-auto mb-4 size-8 text-muted-foreground/40" />
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+            <BarChart3 className="mx-auto mb-4 size-8 text-muted" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               No metrics defined
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-toned">
               Add a metric to track performance against a target.
             </p>
             <Button

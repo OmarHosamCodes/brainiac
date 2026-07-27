@@ -166,7 +166,7 @@ export function WorkspaceNodeShell({
                     >
                       {nodeVisibilityLabel}
                     </span>
-                    <span className="text-[11px] text-muted">Owner: {nodeOwnerLabel}</span>
+                    <span className="text-[11px] text-toned">Owner: {nodeOwnerLabel}</span>
                     {activeTeamRoleLabel ? (
                       <span className="text-[11px] text-muted">Role: {activeTeamRoleLabel}</span>
                     ) : null}

@@ -42,7 +42,7 @@ export function WorkspaceAiPromptBlockEditor({
     <div className="space-y-6">
       <div className="group relative">
         <div className="absolute -inset-1 rounded-[32px] bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-xl transition-all group-focus-within:opacity-60" />
-        <div className="relative rounded-3xl border border-primary/20 bg-background/80 p-5 backdrop-blur-sm">
+        <div className="relative rounded-3xl border border-primary/20 bg-background p-5 backdrop-blur-sm">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3 px-1">
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-primary">
@@ -59,7 +59,7 @@ export function WorkspaceAiPromptBlockEditor({
                   </Badge>
                 ) : null}
               </div>
-              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 <BlockCheckbox
                   checked={block.includeContext}
                   onCheckedChange={(checked) =>
@@ -106,8 +106,8 @@ export function WorkspaceAiPromptBlockEditor({
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3 px-2">
             <div className="flex items-center gap-2">
-              <Terminal className="size-4 text-muted-foreground/60" />
-              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <Terminal className="size-4 text-toned" />
+              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Latest result
               </h4>
             </div>
@@ -115,7 +115,7 @@ export function WorkspaceAiPromptBlockEditor({
               {contextModeLabel}
             </Badge>
           </div>
-          <div className="rounded-3xl border border-muted/20 bg-muted/10 p-6 shadow-sm">
+          <div className="rounded-3xl border border-muted bg-muted p-6 shadow-sm">
             <div className="prose prose-sm max-w-none leading-relaxed whitespace-pre-wrap text-foreground">
               {block.latestOutput}
             </div>
@@ -127,23 +127,20 @@ export function WorkspaceAiPromptBlockEditor({
         <div className="space-y-3">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
-              <History className="size-4 text-muted-foreground/60" />
-              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <History className="size-4 text-toned" />
+              <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Prompt history
               </h4>
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               {block.outputHistory.length} entries
             </span>
           </div>
           <div className="grid gap-3">
             {block.outputHistory.map((entry) => (
-              <div
-                key={entry.id}
-                className="rounded-2xl border border-muted/20 bg-background/40 p-4"
-              >
+              <div key={entry.id} className="rounded-2xl border border-muted bg-background p-4">
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                     {formatDateTime(entry.createdAt)}
                   </span>
                 </div>

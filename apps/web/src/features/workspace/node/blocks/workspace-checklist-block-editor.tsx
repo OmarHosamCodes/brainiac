@@ -45,7 +45,7 @@ export function WorkspaceChecklistBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4 rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <div className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
@@ -54,10 +54,10 @@ export function WorkspaceChecklistBlockEditor({
 
             <div className="flex-1 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Completion
                 </p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   {progress.completed}/{progress.total}
                 </p>
               </div>
@@ -94,7 +94,7 @@ export function WorkspaceChecklistBlockEditor({
         {block.items.map((item) => (
           <div
             key={item.id}
-            className="flex items-center gap-3 rounded-2xl border border-muted/20 bg-background/40 p-3 transition-all hover:border-primary/20 hover:bg-background/60"
+            className="flex items-center gap-3 rounded-2xl border border-muted bg-background p-3 transition-all hover:border-primary/40 hover:bg-background"
           >
             <BlockCheckbox
               checked={item.completed}
@@ -113,7 +113,7 @@ export function WorkspaceChecklistBlockEditor({
               placeholder="Checklist item"
               className={cn(
                 "flex-1 border-0 bg-transparent px-0 font-medium shadow-none focus-visible:ring-0",
-                item.completed ? "text-muted-foreground/60 line-through" : "text-foreground",
+                item.completed ? "text-toned line-through" : "text-foreground",
               )}
               onChange={(event) =>
                 mutateChecklistItem(item.id, (entry) => {
@@ -126,7 +126,7 @@ export function WorkspaceChecklistBlockEditor({
               type="button"
               variant="ghost"
               size="sm"
-              className="rounded-lg text-muted-foreground/70 hover:text-destructive"
+              className="rounded-lg text-toned hover:text-destructive"
               aria-label="Delete checklist item"
               onClick={() =>
                 mutateTypedBlock(tabId, block.id, "checklist", (entry) => {
@@ -140,11 +140,11 @@ export function WorkspaceChecklistBlockEditor({
         ))}
 
         {block.items.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+          <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               No checklist items yet
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-toned">
               Add the first item to start tracking completion.
             </p>
           </div>

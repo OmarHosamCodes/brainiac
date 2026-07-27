@@ -17,7 +17,7 @@ type WorkspaceNodeBlockRendererProps = {
 
 function BlockEditorFallback() {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-dashed border-muted/40 px-4 py-6 text-sm text-muted">
+    <div className="flex items-center gap-2 rounded-xl border border-dashed border-muted px-4 py-6 text-sm text-muted">
       <Loader2 className="size-4 animate-spin" />
       Loading block editor…
     </div>
@@ -70,11 +70,11 @@ export function WorkspaceNodeBlockRenderer({
     <div
       ref={rootRef}
       data-block-id={block.id}
-      className="group relative flex flex-col gap-5 rounded-[32px] border border-default bg-default p-6 transition-all duration-200 hover:border-primary/30 hover:bg-elevated/20 focus-within:border-primary/30 focus-within:bg-elevated/20"
+      className="group relative flex flex-col gap-5 rounded-[32px] border border-default bg-default p-6 transition-all duration-200 hover:border-primary/40 hover:bg-elevated focus-within:border-primary/40 focus-within:bg-elevated"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-muted/60 bg-elevated/50 text-toned transition-colors group-hover:border-primary/40 group-hover:text-primary">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-muted bg-elevated text-toned transition-colors group-hover:border-primary/40 group-hover:text-primary">
             <Icon className="size-5" />
           </div>
 
@@ -84,10 +84,10 @@ export function WorkspaceNodeBlockRenderer({
               value={block.title}
               placeholder="Untitled block"
               autoFocus={shouldFocusTitle}
-              className="h-auto border-0 bg-transparent px-0 text-xl font-bold tracking-tight shadow-none focus-visible:ring-0"
+              className="h-auto border-0 bg-transparent px-0 text-xl font-bold tracking-tight text-highlighted shadow-none placeholder:text-muted focus-visible:ring-0"
               onChange={(event) => updateBlockTitle(tabId, block.id, event.target.value)}
             />
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/80">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-toned">
               {registryEntry.label}
             </p>
           </div>

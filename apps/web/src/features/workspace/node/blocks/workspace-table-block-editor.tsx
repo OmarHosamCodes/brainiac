@@ -30,27 +30,23 @@ export function WorkspaceTableBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-muted/20 bg-muted/10 p-6">
+      <div className="rounded-3xl border border-muted bg-muted p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                Columns
-              </p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Columns</p>
               <p className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
                 {summary.columnCount}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                Rows
-              </p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Rows</p>
               <p className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
                 {summary.rowCount}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Filled Cells
               </p>
               <p className="text-2xl font-black tracking-tight text-primary sm:text-3xl">
@@ -58,7 +54,7 @@ export function WorkspaceTableBlockEditor({
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Coverage
               </p>
               <p className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
@@ -80,7 +76,7 @@ export function WorkspaceTableBlockEditor({
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-muted/10 pt-6">
+        <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-muted pt-6">
           <Button
             type="button"
             variant="secondary"
@@ -119,7 +115,7 @@ export function WorkspaceTableBlockEditor({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-3xl border border-muted/20 bg-background/40 p-4">
+      <div className="overflow-x-auto rounded-3xl border border-muted bg-background p-4">
         <table className="min-w-full border-separate border-spacing-y-3">
           <caption className="sr-only">
             Editable workspace table with {summary.rowCount} rows and {summary.columnCount} columns
@@ -128,7 +124,7 @@ export function WorkspaceTableBlockEditor({
             <tr>
               <th
                 scope="col"
-                className="w-20 px-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                className="w-20 px-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
               >
                 Row
               </th>
@@ -176,7 +172,7 @@ export function WorkspaceTableBlockEditor({
               ))}
               <th
                 scope="col"
-                className="w-28 px-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                className="w-28 px-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
               >
                 Status
               </th>
@@ -186,13 +182,10 @@ export function WorkspaceTableBlockEditor({
           <tbody>
             {block.rows.map((row, rowIndex) => (
               <tr key={row.id}>
-                <th
-                  scope="row"
-                  className="px-2 align-middle text-sm font-bold text-muted-foreground/60"
-                >
+                <th scope="row" className="px-2 align-middle text-sm font-bold text-toned">
                   <div className="space-y-1">
                     <p>Row {rowIndex + 1}</p>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-highlighted">
                       {getRowFilledCellCount(row)}/{block.columns.length} filled
                     </p>
                   </div>
@@ -243,11 +236,11 @@ export function WorkspaceTableBlockEditor({
         </table>
 
         {block.rows.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               No rows added yet
             </p>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-toned">
               Start by adding a row or column to build this table.
             </p>
           </div>

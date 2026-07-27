@@ -150,7 +150,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
           <h2 className="text-sm font-black tracking-tight text-foreground">
             Cohort Health Dashboard
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-toned">
             Track fill rate, revenue, and delivery risk per cohort.
           </p>
         </div>
@@ -168,8 +168,8 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
       </div>
 
       {block.cohorts.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
+        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
             <Users className="size-6" />
           </div>
           <p className="mt-3 text-xs font-bold text-muted-foreground">No cohorts tracked yet</p>
@@ -191,7 +191,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                       <Input
                         value={cohort.name}
                         placeholder="Cohort name"
-                        className="min-w-[12rem] flex-1 border-0 bg-transparent px-0 text-base font-black text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
+                        className="min-w-[12rem] flex-1 border-0 bg-transparent px-0 text-base font-black text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                         onChange={(event) =>
                           mutateCohort(cohort.id, (entry) => {
                             entry.name = event.target.value.slice(0, 120);
@@ -204,7 +204,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                       </Badge>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       <span>
                         {cohort.seatsSold}/{cohort.capacity} seats
                       </span>
@@ -214,7 +214,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                     </div>
 
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                      <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         <span>Fill Rate</span>
                         <span>{fillPercent}%</span>
                       </div>
@@ -242,7 +242,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                     <div>
                       <Label
                         htmlFor={`sold-${cohort.id}`}
-                        className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                        className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                       >
                         Seats Sold
                       </Label>
@@ -265,7 +265,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                     <div>
                       <Label
                         htmlFor={`capacity-${cohort.id}`}
-                        className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                        className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                       >
                         Capacity
                       </Label>
@@ -289,7 +289,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                     <div>
                       <Label
                         htmlFor={`revenue-${cohort.id}`}
-                        className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                        className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                       >
                         Revenue (EGP)
                       </Label>
@@ -309,7 +309,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                     <div>
                       <Label
                         htmlFor={`start-${cohort.id}`}
-                        className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                        className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                       >
                         Start Date
                       </Label>
@@ -327,7 +327,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                     </div>
                   </div>
 
-                  <div className="space-y-3 rounded-xl border border-muted/20 bg-background/40 p-3">
+                  <div className="space-y-3 rounded-xl border border-muted bg-background p-3">
                     <div>
                       <BlockFieldLabel className="mb-2 block">Status</BlockFieldLabel>
                       <div className="flex flex-wrap gap-1.5">
@@ -353,7 +353,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                     <div className="space-y-2">
                       <BlockFieldLabel>Risk Flags</BlockFieldLabel>
                       <div className="grid gap-2 sm:grid-cols-2">
-                        <label className="flex items-center gap-2.5 rounded-lg border border-muted/20 bg-muted/10 px-3 py-2">
+                        <label className="flex items-center gap-2.5 rounded-lg border border-muted bg-muted px-3 py-2">
                           <BlockCheckbox
                             checked={cohort.refundRisk}
                             aria-label="Refund risk"
@@ -363,12 +363,12 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                               })
                             }
                           />
-                          <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground/80">
+                          <span className="text-xs font-bold uppercase tracking-[0.2em] text-toned">
                             Refund
                           </span>
                         </label>
 
-                        <label className="flex items-center gap-2.5 rounded-lg border border-muted/20 bg-muted/10 px-3 py-2">
+                        <label className="flex items-center gap-2.5 rounded-lg border border-muted bg-muted px-3 py-2">
                           <BlockCheckbox
                             checked={cohort.completionRisk}
                             aria-label="Completion risk"
@@ -378,7 +378,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                               })
                             }
                           />
-                          <span className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground/80">
+                          <span className="text-xs font-bold uppercase tracking-[0.2em] text-toned">
                             Completion
                           </span>
                         </label>

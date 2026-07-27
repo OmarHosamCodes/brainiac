@@ -105,7 +105,7 @@ export function WorkspaceOkrTrackerBlockEditor({
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Average Progress
           </p>
           <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
@@ -114,18 +114,14 @@ export function WorkspaceOkrTrackerBlockEditor({
         </div>
 
         <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Off Track
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Off Track</p>
           <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
             {summary.offTrackCount}
           </p>
         </div>
 
         <div className="rounded-2xl border border-success/10 bg-success/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Healthy
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Healthy</p>
           <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
             {summary.healthyCount}
           </p>
@@ -135,7 +131,7 @@ export function WorkspaceOkrTrackerBlockEditor({
       <div className="flex items-center justify-between gap-3 px-1">
         <div>
           <h2 className="text-sm font-black tracking-tight text-foreground">Objectives</h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-toned">
             Track objective health from the average of key results.
           </p>
         </div>
@@ -153,14 +149,12 @@ export function WorkspaceOkrTrackerBlockEditor({
       </div>
 
       {block.objectives.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
+        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
             <Target className="size-6" />
           </div>
           <p className="mt-3 text-xs font-bold text-muted-foreground">No objectives yet</p>
-          <p className="mt-1 text-[11px] text-muted-foreground/60">
-            Add objectives to track progress and health
-          </p>
+          <p className="mt-1 text-[11px] text-toned">Add objectives to track progress and health</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -172,7 +166,7 @@ export function WorkspaceOkrTrackerBlockEditor({
               <article
                 key={objective.id}
                 className={cn(
-                  "overflow-hidden rounded-2xl border border-l-4 border-muted/20 bg-background/40 p-4 transition-colors",
+                  "overflow-hidden rounded-2xl border border-l-4 border-muted bg-background p-4 transition-colors",
                   getHealthClasses(health),
                 )}
               >
@@ -197,7 +191,7 @@ export function WorkspaceOkrTrackerBlockEditor({
                         })
                       }
                     />
-                    <p className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       {objective.keyResults.length} key result
                       {objective.keyResults.length !== 1 ? "s" : ""}
                     </p>
@@ -205,7 +199,7 @@ export function WorkspaceOkrTrackerBlockEditor({
 
                   <div className="flex shrink-0 items-start gap-3">
                     <div className="text-right">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         Progress
                       </p>
                       <p
@@ -235,7 +229,7 @@ export function WorkspaceOkrTrackerBlockEditor({
                   {objective.keyResults.map((keyResult) => (
                     <div
                       key={keyResult.id}
-                      className="rounded-xl border border-muted/20 bg-background/60 p-3"
+                      className="rounded-xl border border-muted bg-background p-3"
                     >
                       <div className="mb-2 flex items-center gap-3">
                         <Input
@@ -286,7 +280,7 @@ export function WorkspaceOkrTrackerBlockEditor({
                             type="range"
                             min={0}
                             max={100}
-                            className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
+                            className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
                             aria-label="Key result progress"
                             onChange={(event) =>
                               mutateBlock(tabId, block.id, (entry) => {

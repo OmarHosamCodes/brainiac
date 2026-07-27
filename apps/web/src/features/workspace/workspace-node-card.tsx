@@ -162,11 +162,11 @@ export function WorkspaceNodeCard({
                         {detail.blockTitle}
                       </span>
                     </div>
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-muted">
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-toned">
                       {detail.tabTitle}
                     </span>
                   </div>
-                  <p className="line-clamp-2 text-[11px] leading-relaxed text-muted">
+                  <p className="line-clamp-2 text-[11px] leading-relaxed text-toned">
                     {detail.summary}
                   </p>
                 </div>

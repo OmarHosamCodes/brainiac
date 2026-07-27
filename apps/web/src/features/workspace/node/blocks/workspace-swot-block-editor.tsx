@@ -40,10 +40,8 @@ export function WorkspaceSwotBlockEditor({
   return (
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-muted/20 bg-background/40 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Filled
-          </p>
+        <div className="rounded-2xl border border-muted bg-background p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Filled</p>
           <p className="mt-2 text-xl font-black tracking-tight text-foreground sm:text-2xl">
             {summary.filledCellCount}/4
           </p>

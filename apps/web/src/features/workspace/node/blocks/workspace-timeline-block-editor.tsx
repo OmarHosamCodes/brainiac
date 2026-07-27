@@ -61,7 +61,7 @@ function getStatusColor(status: WorkspaceTimelineMilestoneStatus) {
     case "blocked":
       return "text-destructive bg-destructive/10 border-destructive/20";
     default:
-      return "text-muted-foreground bg-muted/10 border-muted/20";
+      return "text-muted-foreground bg-muted border-muted";
   }
 }
 
@@ -103,13 +103,13 @@ export function WorkspaceTimelineBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4 rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <div className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Milestone Journey
             </p>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-toned">
               Chronological project roadmap
             </p>
           </div>
@@ -165,14 +165,14 @@ export function WorkspaceTimelineBlockEditor({
 
               <div
                 className={cn(
-                  "rounded-3xl border border-muted/20 bg-background/40 p-5 transition-all hover:border-primary/20 hover:bg-background/60 hover:shadow-xl hover:shadow-black/5",
+                  "rounded-3xl border border-muted bg-background p-5 transition-all hover:border-primary/40 hover:bg-background hover:shadow-xl hover:shadow-black/5",
                   isExpanded && "ring-1 ring-primary/20",
                 )}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-toned">
                         {milestone.date || "No Date Set"}
                       </span>
                       <Badge
@@ -205,9 +205,7 @@ export function WorkspaceTimelineBlockEditor({
                     />
 
                     {milestone.note && !isExpanded ? (
-                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                        {milestone.note}
-                      </p>
+                      <p className="mt-2 line-clamp-2 text-sm text-toned">{milestone.note}</p>
                     ) : null}
                   </div>
 
@@ -216,7 +214,7 @@ export function WorkspaceTimelineBlockEditor({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="rounded-lg text-muted-foreground/70 hover:text-foreground"
+                      className="rounded-lg text-toned hover:text-foreground"
                       aria-label={isExpanded ? "Hide milestone details" : "Show milestone details"}
                       aria-expanded={isExpanded}
                       onClick={() => toggleMilestone(milestone.id)}
@@ -229,7 +227,7 @@ export function WorkspaceTimelineBlockEditor({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-6 rounded-lg text-muted-foreground/70 hover:text-foreground"
+                        className="h-6 rounded-lg text-toned hover:text-foreground"
                         disabled={index === 0}
                         aria-label={`Move ${milestone.title || "milestone"} up`}
                         onClick={() => moveTimelineMilestone(tabId, block.id, milestone.id, "up")}
@@ -240,7 +238,7 @@ export function WorkspaceTimelineBlockEditor({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-6 rounded-lg text-muted-foreground/70 hover:text-foreground"
+                        className="h-6 rounded-lg text-toned hover:text-foreground"
                         disabled={index === block.milestones.length - 1}
                         aria-label={`Move ${milestone.title || "milestone"} down`}
                         onClick={() => moveTimelineMilestone(tabId, block.id, milestone.id, "down")}
@@ -253,7 +251,7 @@ export function WorkspaceTimelineBlockEditor({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="rounded-lg text-muted-foreground/70 hover:text-destructive"
+                      className="rounded-lg text-toned hover:text-destructive"
                       aria-label={`Remove ${milestone.title || "milestone"}`}
                       onClick={() => removeTimelineMilestone(tabId, block.id, milestone.id)}
                     >
@@ -263,10 +261,10 @@ export function WorkspaceTimelineBlockEditor({
                 </div>
 
                 {isExpanded ? (
-                  <div className="mt-6 space-y-6 border-t border-muted/10 pt-6">
+                  <div className="mt-6 space-y-6 border-t border-muted pt-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                           Milestone Date
                         </Label>
                         <Input
@@ -282,7 +280,7 @@ export function WorkspaceTimelineBlockEditor({
                       </div>
 
                       <div className="space-y-2">
-                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                        <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                           Status
                         </Label>
                         <BlockSelect
@@ -302,7 +300,7 @@ export function WorkspaceTimelineBlockEditor({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                      <Label className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         Supporting Note
                       </Label>
                       <Textarea
@@ -324,9 +322,9 @@ export function WorkspaceTimelineBlockEditor({
         })}
 
         {block.milestones.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
-            <Milestone className="mx-auto mb-3 size-8 text-muted-foreground/20" />
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+            <Milestone className="mx-auto mb-3 size-8 text-muted" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               No milestones defined
             </p>
             <Button

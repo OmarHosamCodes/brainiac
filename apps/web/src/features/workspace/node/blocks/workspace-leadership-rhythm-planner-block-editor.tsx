@@ -59,7 +59,7 @@ function getMeetingClasses(meeting: WorkspaceLeadershipRhythmPlannerBlock["meeti
     return "border-primary/30 bg-primary/5";
   }
 
-  return "border-muted/30 bg-background/70";
+  return "border-muted bg-background";
 }
 
 function getStatusBadgeVariant(
@@ -147,9 +147,7 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
             <h2 className="text-sm font-black tracking-tight text-foreground">
               Leadership Rhythm Planner
             </h2>
-            <p className="text-xs text-muted-foreground">
-              Track recurring meetings to prevent cadence gaps.
-            </p>
+            <p className="text-xs text-toned">Track recurring meetings to prevent cadence gaps.</p>
           </div>
 
           <Button
@@ -202,9 +200,9 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-muted/20 bg-background/40 p-4">
+        <div className="rounded-2xl border border-muted bg-background p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Cadence coverage
             </p>
             <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-primary/60">
@@ -238,8 +236,8 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
       </div>
 
       {visibleMeetings.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
+        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
             <Calendar className="size-6" />
           </div>
           <p className="mt-3 text-xs font-bold text-muted-foreground">
@@ -252,7 +250,7 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
             <article
               key={meeting.id}
               className={cn(
-                "rounded-2xl border border-muted/20 p-4 transition-all",
+                "rounded-2xl border border-muted p-4 transition-all",
                 getMeetingClasses(meeting),
               )}
             >
@@ -369,7 +367,7 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
                     <Textarea
                       value={meeting.purpose}
                       rows={3}
-                      className="rounded-2xl bg-muted/5"
+                      className="rounded-2xl bg-background"
                       onChange={(event) =>
                         mutateMeeting(meeting.id, (entry) => {
                           entry.purpose = event.target.value.slice(0, 4000);
@@ -398,8 +396,8 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
                     />
                   </div>
 
-                  <div className="flex min-w-[120px] flex-col justify-center rounded-xl border border-muted/20 bg-background/60 px-3 py-2.5">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  <div className="flex min-w-[120px] flex-col justify-center rounded-xl border border-muted bg-background px-3 py-2.5">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       {workspaceLeadershipRhythmLabels[meeting.rhythm]}
                     </span>
                     {isLeadershipMeetingUpcoming(meeting) ? (

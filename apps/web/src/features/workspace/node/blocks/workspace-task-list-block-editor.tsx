@@ -68,7 +68,7 @@ export function WorkspaceTaskListBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4 rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <div className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-6">
             <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -78,7 +78,7 @@ export function WorkspaceTaskListBlockEditor({
             </div>
 
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Task progress
               </p>
               <div className="flex flex-wrap items-center gap-2">
@@ -95,7 +95,7 @@ export function WorkspaceTaskListBlockEditor({
             </div>
           </div>
 
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             {progress.completed} / {progress.total}
           </p>
         </div>
@@ -105,10 +105,8 @@ export function WorkspaceTaskListBlockEditor({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3 px-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Tasks
-          </p>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Tasks</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             {openTaskCount} open
           </p>
         </div>
@@ -117,7 +115,7 @@ export function WorkspaceTaskListBlockEditor({
           <div
             key={task.id}
             className={cn(
-              "group flex flex-col overflow-hidden rounded-2xl border border-muted/20 bg-background/40 transition-all hover:border-primary/20 hover:bg-background/60",
+              "group flex flex-col overflow-hidden rounded-2xl border border-muted bg-background transition-all hover:border-primary/40 hover:bg-background",
               expandedTaskId === task.id && "ring-1 ring-primary/30",
             )}
           >
@@ -184,7 +182,7 @@ export function WorkspaceTaskListBlockEditor({
             </div>
 
             {expandedTaskId === task.id ? (
-              <div className="grid gap-6 border-t border-muted/10 bg-muted/5 p-5 transition-all lg:grid-cols-2">
+              <div className="grid gap-6 border-t border-muted bg-background p-5 transition-all lg:grid-cols-2">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <BlockFieldLabel>Due Date</BlockFieldLabel>
@@ -244,7 +242,7 @@ export function WorkspaceTaskListBlockEditor({
                         type="range"
                         min={1}
                         max={10}
-                        className="h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                        className="h-1.5 w-full appearance-none rounded-full bg-muted accent-primary"
                         onChange={(event) =>
                           updateTask(task.id, (entry) => {
                             entry.urgency = clampTenPointScale(event.target.value);
@@ -263,7 +261,7 @@ export function WorkspaceTaskListBlockEditor({
                         type="range"
                         min={1}
                         max={10}
-                        className="h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                        className="h-1.5 w-full appearance-none rounded-full bg-muted accent-primary"
                         onChange={(event) =>
                           updateTask(task.id, (entry) => {
                             entry.importance = clampTenPointScale(event.target.value);
@@ -298,8 +296,8 @@ export function WorkspaceTaskListBlockEditor({
         ))}
 
         {block.tasks.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               No tasks added yet
             </p>
           </div>

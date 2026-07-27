@@ -36,7 +36,7 @@ export function WorkspaceDecisionBlockEditor({
 
   return (
     <div className="space-y-8">
-      <div className="space-y-5 rounded-3xl border border-muted/20 bg-muted/10 p-6">
+      <div className="space-y-5 rounded-3xl border border-muted bg-muted p-6">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary" className="rounded-2xl">
             {block.pros.length} pros
@@ -59,7 +59,7 @@ export function WorkspaceDecisionBlockEditor({
           <div className="flex-1 px-4 sm:px-8">
             <ProsConsBalanceBar prosWeight={summary.prosWeight} consWeight={summary.consWeight} />
             <div className="mt-4 text-center">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Current Signal
               </p>
               <p className="text-lg font-black uppercase tracking-tight text-foreground">
@@ -102,7 +102,7 @@ export function WorkspaceDecisionBlockEditor({
           </div>
 
           {block.pros.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+            <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
               <p className="text-sm font-semibold text-muted-foreground">No pros added yet.</p>
             </div>
           ) : null}
@@ -111,7 +111,7 @@ export function WorkspaceDecisionBlockEditor({
             {block.pros.map((item) => (
               <div
                 key={item.id}
-                className="group space-y-3 rounded-2xl border border-success/20 bg-background/40 p-3 transition-all hover:bg-background/60"
+                className="group space-y-3 rounded-2xl border border-success/20 bg-background p-3 transition-all hover:bg-background"
               >
                 <div className="flex items-start gap-3">
                   <Input
@@ -170,7 +170,7 @@ export function WorkspaceDecisionBlockEditor({
           </div>
 
           {block.cons.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+            <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
               <p className="text-sm font-semibold text-muted-foreground">No cons added yet.</p>
             </div>
           ) : null}
@@ -179,7 +179,7 @@ export function WorkspaceDecisionBlockEditor({
             {block.cons.map((item) => (
               <div
                 key={item.id}
-                className="group space-y-3 rounded-2xl border border-destructive/20 bg-background/40 p-3 transition-all hover:bg-background/60"
+                className="group space-y-3 rounded-2xl border border-destructive/20 bg-background p-3 transition-all hover:bg-background"
               >
                 <div className="flex items-start gap-3">
                   <Input

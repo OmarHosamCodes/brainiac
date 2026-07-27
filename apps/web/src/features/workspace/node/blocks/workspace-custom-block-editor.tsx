@@ -319,7 +319,7 @@ export function WorkspaceCustomBlockEditor({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <section className="rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -339,7 +339,7 @@ export function WorkspaceCustomBlockEditor({
                 {blockStatus.label}
               </Badge>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">{blockStatus.description}</p>
+            <p className="mt-2 text-sm text-toned">{blockStatus.description}</p>
           </div>
 
           {operationState.pending ? (
@@ -358,8 +358,8 @@ export function WorkspaceCustomBlockEditor({
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
-          <div key={card.key} className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <div key={card.key} className="rounded-3xl border border-muted bg-muted p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               {card.label}
             </p>
             <p
@@ -370,16 +370,16 @@ export function WorkspaceCustomBlockEditor({
             >
               {card.value}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">{card.supporting}</p>
+            <p className="mt-1 text-sm text-toned">{card.supporting}</p>
           </div>
         ))}
       </div>
 
-      <section className="space-y-4 rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <section className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-foreground">Template inputs</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-toned">
               Fill each field to keep formula outputs and AI responses grounded in real context.
             </p>
           </div>
@@ -390,10 +390,7 @@ export function WorkspaceCustomBlockEditor({
 
         <div className="grid gap-4 sm:grid-cols-2">
           {template.fields.map((field) => (
-            <article
-              key={field.id}
-              className="rounded-2xl border border-muted/20 bg-background/50 p-4"
-            >
+            <article key={field.id} className="rounded-2xl border border-muted bg-background p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-foreground">{field.label}</p>
                 <Badge variant="secondary" className="rounded-full capitalize">
@@ -410,8 +407,8 @@ export function WorkspaceCustomBlockEditor({
                   onChange={(event) => updateFieldValue(field, event.target.value)}
                 />
               ) : field.type === "checkbox" ? (
-                <label className="flex items-center justify-between gap-3 rounded-2xl border border-muted/20 bg-background/70 px-3 py-2">
-                  <span className="text-sm text-muted-foreground">
+                <label className="flex items-center justify-between gap-3 rounded-2xl border border-muted bg-background px-3 py-2">
+                  <span className="text-sm text-toned">
                     {getCheckedValue(block, field) ? "Enabled" : "Disabled"}
                   </span>
                   <BlockCheckbox
@@ -439,10 +436,10 @@ export function WorkspaceCustomBlockEditor({
       </section>
 
       {template.formula ? (
-        <section className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
+        <section className="rounded-3xl border border-muted bg-muted p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 {template.formula.label}
               </p>
               <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
@@ -450,7 +447,7 @@ export function WorkspaceCustomBlockEditor({
               </p>
             </div>
 
-            <div className="rounded-2xl border border-muted/20 bg-background/50 px-3 py-2 text-xs text-muted-foreground">
+            <div className="rounded-2xl border border-muted bg-background px-3 py-2 text-xs text-toned">
               Expression: {template.formula.expression}
             </div>
           </div>
@@ -458,7 +455,7 @@ export function WorkspaceCustomBlockEditor({
       ) : null}
 
       {template.includeNotes ? (
-        <section className="space-y-3 rounded-3xl border border-muted/20 bg-muted/10 p-5">
+        <section className="space-y-3 rounded-3xl border border-muted bg-muted p-5">
           <h3 className="text-sm font-semibold text-foreground">Notes</h3>
           <Textarea
             value={block.notes}
@@ -471,12 +468,12 @@ export function WorkspaceCustomBlockEditor({
       ) : null}
 
       {template.aiPromptTemplate ? (
-        <section className="space-y-4 rounded-3xl border border-muted/20 bg-background/40 p-5">
+        <section className="space-y-4 rounded-3xl border border-muted bg-background p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
               <p className="text-sm font-semibold text-foreground">AI prompt template</p>
-              <p className="text-sm text-muted-foreground">{getCustomPromptPreview(block)}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-toned">{getCustomPromptPreview(block)}</p>
+              <p className="text-xs text-toned">
                 {hasLatestOutput
                   ? "Regenerate after important field changes."
                   : "Generate an initial draft once key fields are filled."}
@@ -506,40 +503,40 @@ export function WorkspaceCustomBlockEditor({
             </div>
           ) : null}
 
-          <div className="rounded-2xl border border-muted/20 bg-muted/10 p-4">
+          <div className="rounded-2xl border border-muted bg-muted p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Latest output
               </p>
               {latestOutputEntry ? (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-toned">
                   {formatDateTime(latestOutputEntry.createdAt)}
                 </span>
               ) : null}
             </div>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-toned">
               {block.latestAiOutput || "Run the template to capture output."}
             </p>
           </div>
 
           {block.outputHistory.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Recent runs
               </p>
               <div className="grid gap-2">
                 {block.outputHistory.slice(0, 3).map((entry) => (
                   <article
                     key={entry.id}
-                    className="rounded-2xl border border-muted/20 bg-background/60 p-3"
+                    className="rounded-2xl border border-muted bg-background p-3"
                   >
                     <p className="text-[11px] text-muted-foreground">
                       {formatDateTime(entry.createdAt)}
                     </p>
-                    <p className="mt-1 line-clamp-2 text-xs italic text-muted-foreground/80">
+                    <p className="mt-1 line-clamp-2 text-xs italic text-toned">
                       &quot;{entry.prompt}&quot;
                     </p>
-                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-muted-foreground">
+                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-toned">
                       {entry.output}
                     </p>
                   </article>

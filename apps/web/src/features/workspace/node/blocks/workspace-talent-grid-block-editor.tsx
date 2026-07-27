@@ -51,7 +51,7 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
       return "border-primary/35 bg-primary/5";
     case "core-player":
     case "average-joe":
-      return "border-muted/35 bg-muted/50";
+      return "border-muted/35 bg-background0";
     case "risk":
     case "under-performer":
       return "border-destructive/35 bg-destructive/10";
@@ -218,8 +218,8 @@ export function WorkspaceTalentGridBlockEditor({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-muted/20 bg-muted/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="rounded-2xl border border-muted bg-muted p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Core Contributors
           </p>
           <p className="mt-2 text-xl font-black tracking-tight text-foreground sm:text-2xl">
@@ -242,7 +242,7 @@ export function WorkspaceTalentGridBlockEditor({
           <h2 className="text-sm font-black tracking-tight text-foreground">
             Talent Development Grid
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-toned">
             Assess performance (1-5) and growth potential to support team development.
           </p>
         </div>
@@ -269,7 +269,7 @@ export function WorkspaceTalentGridBlockEditor({
           {performanceColumns.map((column) => (
             <div
               key={column}
-              className="rounded-xl border border-muted/20 bg-muted/10 px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+              className="rounded-xl border border-muted bg-muted px-3 py-2.5 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
             >
               {column}
             </div>
@@ -277,7 +277,7 @@ export function WorkspaceTalentGridBlockEditor({
 
           {gridRows.map((row) => (
             <Fragment key={row.label}>
-              <div className="flex items-center rounded-xl border border-muted/20 bg-muted/5 px-2.5 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <div className="flex items-center rounded-xl border border-muted bg-background px-2.5 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 {row.label}
               </div>
 
@@ -288,10 +288,10 @@ export function WorkspaceTalentGridBlockEditor({
                 >
                   <div className="mb-3 flex items-start justify-between gap-2">
                     <div className="flex-1">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         {workspaceTalentGridBoxLabels[cell]}
                       </p>
-                      <p className="mt-1 text-[9px] leading-tight text-muted-foreground/40">
+                      <p className="mt-1 text-[10px] leading-tight text-toned">
                         {membersByBox.get(cell)?.length ?? 0} member
                         {(membersByBox.get(cell)?.length ?? 0) !== 1 ? "s" : ""}
                       </p>
@@ -302,7 +302,7 @@ export function WorkspaceTalentGridBlockEditor({
                     {membersByBox.get(cell)?.map((member) => (
                       <div
                         key={member.id}
-                        className="rounded-full border border-muted/20 bg-background/80 px-2.5 py-0.5 text-[11px] font-semibold text-foreground"
+                        className="rounded-full border border-muted bg-background px-2.5 py-0.5 text-[11px] font-semibold text-foreground"
                       >
                         {member.name || "—"}
                       </div>
@@ -316,14 +316,12 @@ export function WorkspaceTalentGridBlockEditor({
       </div>
 
       {block.members.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
+        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
             <Users className="size-6" />
           </div>
           <p className="mt-3 text-xs font-bold text-muted-foreground">No team members yet</p>
-          <p className="mt-1 text-[11px] text-muted-foreground/60">
-            Add members to assess and develop your team
-          </p>
+          <p className="mt-1 text-[11px] text-toned">Add members to assess and develop your team</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -334,20 +332,20 @@ export function WorkspaceTalentGridBlockEditor({
             return (
               <article
                 key={member.id}
-                className="rounded-2xl border border-muted/20 bg-background/40 p-4 transition-all hover:border-muted/30"
+                className="rounded-2xl border border-muted bg-background p-4 transition-all hover:border-muted"
               >
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <Input
                       value={member.name}
                       placeholder="Name"
-                      className="w-full border-0 bg-transparent px-0 text-base font-bold text-foreground placeholder:text-muted-foreground/40 shadow-none focus-visible:ring-0"
+                      className="w-full border-0 bg-transparent px-0 text-base font-bold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
                       onChange={(event) => updateMemberName(member.id, event.target.value)}
                     />
                     <Input
                       value={member.role}
                       placeholder="Role"
-                      className="mt-0.5 border-0 bg-transparent px-0 text-xs text-muted-foreground placeholder:text-muted-foreground/40 shadow-none focus-visible:ring-0"
+                      className="mt-0.5 border-0 bg-transparent px-0 text-xs text-toned placeholder:text-muted shadow-none focus-visible:ring-0"
                       onChange={(event) => updateMemberRole(member.id, event.target.value)}
                     />
                   </div>
@@ -370,10 +368,10 @@ export function WorkspaceTalentGridBlockEditor({
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-muted/20 bg-muted/10 p-3">
+                  <div className="rounded-xl border border-muted bg-muted p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <label
-                        className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                        className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                         htmlFor={`performance-${member.id}`}
                       >
                         Performance
@@ -389,15 +387,15 @@ export function WorkspaceTalentGridBlockEditor({
                       min={1}
                       max={5}
                       step={1}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
                       onChange={(event) => updateMemberPerformance(member.id, event.target.value)}
                     />
                   </div>
 
-                  <div className="rounded-xl border border-muted/20 bg-muted/10 p-3">
+                  <div className="rounded-xl border border-muted bg-muted p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <label
-                        className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                        className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                         htmlFor={`potential-${member.id}`}
                       >
                         Growth Potential
@@ -411,17 +409,15 @@ export function WorkspaceTalentGridBlockEditor({
                       min={1}
                       max={5}
                       step={1}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
                       onChange={(event) => updateMemberPotential(member.id, event.target.value)}
                     />
                   </div>
                 </div>
 
                 {boxDescription ? (
-                  <div className="mt-3 rounded-lg bg-muted/5 px-3 py-2">
-                    <p className="text-[10px] leading-snug text-muted-foreground/70">
-                      {boxDescription}
-                    </p>
+                  <div className="mt-3 rounded-lg bg-background px-3 py-2">
+                    <p className="text-[10px] leading-snug text-toned">{boxDescription}</p>
                   </div>
                 ) : null}
               </article>

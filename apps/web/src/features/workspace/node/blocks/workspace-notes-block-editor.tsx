@@ -41,7 +41,7 @@ export function WorkspaceNotesBlockEditor({
         </div>
 
         <div className="flex items-center gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Markdown supported
           </p>
           <Button
@@ -60,7 +60,7 @@ export function WorkspaceNotesBlockEditor({
 
       <div
         className={cn(
-          "min-h-[240px] rounded-3xl border border-muted/20 bg-background/40 shadow-sm transition-all focus-within:border-primary/30 focus-within:bg-background/60",
+          "min-h-[240px] rounded-3xl border border-muted bg-background shadow-sm transition-all focus-within:border-primary/40 focus-within:bg-background",
           isPreview && "p-8",
         )}
       >
@@ -69,13 +69,13 @@ export function WorkspaceNotesBlockEditor({
             value={block.body}
             placeholder="Capture notes, decisions, or raw thinking..."
             rows={12}
-            className="min-h-[240px] w-full resize-y border-0 bg-transparent p-8 font-serif text-base leading-relaxed shadow-none focus-visible:ring-0"
+            className="min-h-[240px] w-full resize-y border-0 bg-transparent p-8 font-serif text-base leading-relaxed text-highlighted shadow-none placeholder:text-muted focus-visible:ring-0"
             onChange={(event) => updateBody(event.target.value)}
           />
         ) : !block.body.trim() ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <StickyNote className="mb-3 size-8 text-muted-foreground/20" />
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+            <StickyNote className="mb-3 size-8 text-muted" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               No notes to preview
             </p>
           </div>

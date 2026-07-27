@@ -144,7 +144,7 @@ export function WorkspaceAuthorityScorecardBlockEditor({
       <div className="flex items-center justify-between gap-3 px-1">
         <div>
           <h2 className="text-sm font-black tracking-tight text-foreground">Authority Metrics</h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-toned">
             Track key authority indicators with quick increments and precise editing.
           </p>
         </div>
@@ -162,12 +162,12 @@ export function WorkspaceAuthorityScorecardBlockEditor({
             >
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-muted/20 bg-background/80 text-muted-foreground">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-muted bg-background text-muted-foreground">
                     <Icon className="size-4.5" />
                   </div>
 
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       {workspaceAuthorityScoreMetricLabels[metricKey]}
                     </p>
                     <p
@@ -199,7 +199,7 @@ export function WorkspaceAuthorityScorecardBlockEditor({
               </div>
 
               <div className="mb-4 space-y-2">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   <span>Progress</span>
                   <span>Target: {formatValue(block.metrics[metricKey].target)}</span>
                 </div>
@@ -214,7 +214,7 @@ export function WorkspaceAuthorityScorecardBlockEditor({
                 <div>
                   <Label
                     htmlFor={`current-${metricKey}`}
-                    className="mb-1 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                    className="mb-1 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                   >
                     Current
                   </Label>
@@ -230,7 +230,7 @@ export function WorkspaceAuthorityScorecardBlockEditor({
                 <div>
                   <Label
                     htmlFor={`target-${metricKey}`}
-                    className="mb-1 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                    className="mb-1 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                   >
                     Target
                   </Label>

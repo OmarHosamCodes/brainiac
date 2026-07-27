@@ -54,7 +54,7 @@ function getStatusClasses(status: WorkspaceStrategicAssumptionStatus) {
     case "at-risk":
       return "border-destructive/40 bg-destructive/5 text-destructive";
     case "false":
-      return "border-muted/40 bg-muted/10 text-muted-foreground";
+      return "border-muted/40 bg-muted text-muted-foreground";
     default:
       return "border-warning/40 bg-warning/5 text-warning";
   }
@@ -228,9 +228,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
           <h2 className="text-sm font-black tracking-tight text-foreground">
             Strategic Assumptions
           </h2>
-          <p className="text-xs text-muted-foreground">
-            Track bets behind the strategy and surface risks.
-          </p>
+          <p className="text-xs text-toned">Track bets behind the strategy and surface risks.</p>
         </div>
 
         <Button
@@ -268,8 +266,8 @@ export function WorkspaceAssumptionTrackerBlockEditor({
       </div>
 
       {visibleAssumptions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
+        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
             <Activity className="size-6" />
           </div>
           <p className="mt-3 text-xs font-bold text-muted-foreground">
@@ -291,7 +289,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                   <Input
                     value={assumption.statement}
                     placeholder="Assumption statement"
-                    className="w-full border-0 bg-transparent px-0 text-base font-black text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
+                    className="w-full border-0 bg-transparent px-0 text-base font-black text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                     onChange={(event) =>
                       mutateBlock(tabId, block.id, (entry) => {
                         if (entry.type !== "assumption-tracker") {
@@ -308,7 +306,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                     }
                   />
 
-                  <p className="mt-1.5 text-xs text-muted-foreground/80">
+                  <p className="mt-1.5 text-xs text-toned">
                     {currentNode
                       ? resolveStrategicAssumptionLinkLabel(currentNode, assumption) ||
                         "No linked strategic area."
@@ -337,7 +335,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                 <div>
                   <Label
                     htmlFor={`link-${assumption.id}`}
-                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                   >
                     Link
                   </Label>
@@ -368,7 +366,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                 <div>
                   <Label
                     htmlFor={`owner-${assumption.id}`}
-                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                   >
                     Owner
                   </Label>
@@ -397,7 +395,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                 <div>
                   <Label
                     htmlFor={`review-${assumption.id}`}
-                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                   >
                     Review Date
                   </Label>
@@ -425,9 +423,9 @@ export function WorkspaceAssumptionTrackerBlockEditor({
               </div>
 
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
-                <div className="space-y-3 rounded-xl border border-muted/20 bg-background/40 p-3">
+                <div className="space-y-3 rounded-xl border border-muted bg-background p-3">
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       <Label htmlFor={`confidence-${assumption.id}`}>Confidence</Label>
                       <span>{assumption.confidence}/5</span>
                     </div>
@@ -437,7 +435,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                       type="range"
                       min={1}
                       max={5}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
                       onChange={(event) =>
                         mutateBlock(tabId, block.id, (entry) => {
                           if (entry.type !== "assumption-tracker") {
@@ -456,7 +454,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                   </div>
 
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       Status
                     </p>
                     <div className="flex flex-wrap gap-1.5">
@@ -492,7 +490,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                 <div>
                   <Label
                     htmlFor={`evidence-${assumption.id}`}
-                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                   >
                     Evidence Notes
                   </Label>
@@ -501,7 +499,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                     value={assumption.evidenceNotes}
                     rows={3}
                     placeholder="What customer input, market signal, or operational evidence supports this?"
-                    className="rounded-xl bg-background/40"
+                    className="rounded-xl bg-background"
                     onChange={(event) =>
                       mutateBlock(tabId, block.id, (entry) => {
                         if (entry.type !== "assumption-tracker") {

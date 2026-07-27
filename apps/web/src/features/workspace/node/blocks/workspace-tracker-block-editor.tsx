@@ -73,13 +73,13 @@ export function WorkspaceTrackerBlockEditor({
 
   return (
     <div className="space-y-8">
-      <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <div className="rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Performance Tracker
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-toned">
               Track progress over time, compare against a goal, and keep key entries easy to scan.
             </p>
           </div>
@@ -116,25 +116,21 @@ export function WorkspaceTrackerBlockEditor({
           <p className="mt-2 text-2xl font-black tracking-tight text-primary sm:text-3xl">
             {latestEntry ? formatStatValue(latestEntry.value) : "0"}
           </p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
             {latestEntry?.label || "No entries yet"}
           </p>
         </div>
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Average
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Average</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {formatStatValue(averageValue)}
           </p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
             {block.entries.length} data points
           </p>
         </div>
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Trend
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Trend</p>
           <div className="mt-2 flex items-center gap-2">
             <TrendIcon
               className={cn(
@@ -151,7 +147,7 @@ export function WorkspaceTrackerBlockEditor({
               {formatStatValue(trend.delta)}
             </p>
           </div>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
             {trend.percentChange === null ? "No baseline yet" : `${trend.percentChange}% change`}
           </p>
         </div>
@@ -192,7 +188,7 @@ export function WorkspaceTrackerBlockEditor({
       </div>
 
       {chartHeights.length > 0 ? (
-        <div className="relative overflow-hidden rounded-3xl border border-muted/20 bg-background/40 p-8 shadow-inner">
+        <div className="relative overflow-hidden rounded-3xl border border-muted bg-background p-8 shadow-inner">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-50" />
           <div className="relative flex h-36 items-end gap-2 lg:gap-3">
             {chartHeights.map((point, index) => (
@@ -225,10 +221,8 @@ export function WorkspaceTrackerBlockEditor({
 
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Data Log
-          </p>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Data Log</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             {block.entries.length} entries
           </p>
         </div>
@@ -236,7 +230,7 @@ export function WorkspaceTrackerBlockEditor({
           {block.entries.map((entry) => (
             <div
               key={entry.id}
-              className="group flex items-center gap-4 rounded-2xl border border-muted/20 bg-background/40 p-3 transition-all hover:border-primary/20 hover:bg-background/60"
+              className="group flex items-center gap-4 rounded-2xl border border-muted bg-background p-3 transition-all hover:border-primary/40 hover:bg-background"
             >
               <div className="min-w-0 flex-1">
                 <Input
@@ -249,7 +243,7 @@ export function WorkspaceTrackerBlockEditor({
                     })
                   }
                 />
-                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-highlighted">
                   {formatDateTime(entry.createdAt)}
                 </p>
               </div>
@@ -270,7 +264,7 @@ export function WorkspaceTrackerBlockEditor({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="rounded-lg text-muted-foreground/70 hover:text-destructive"
+                  className="rounded-lg text-toned hover:text-destructive"
                   aria-label={`Remove ${entry.label || "tracker"} entry`}
                   onClick={() => removeTrackerEntry(tabId, block.id, entry.id)}
                 >
@@ -280,8 +274,8 @@ export function WorkspaceTrackerBlockEditor({
             </div>
           ))}
           {block.entries.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 No data entries
               </p>
             </div>

@@ -22,9 +22,7 @@ import { cn } from "@/lib/utils";
 const statusOptions: WorkspaceCourseStatus[] = ["planning", "in-progress"];
 
 function getCourseClasses(status: WorkspaceCourseStatus) {
-  return status === "in-progress"
-    ? "border-primary/20 bg-primary/5"
-    : "border-muted/20 bg-muted/10";
+  return status === "in-progress" ? "border-primary/20 bg-primary/5" : "border-muted bg-muted";
 }
 
 export function WorkspaceCourseRoadmapBlockEditor({
@@ -102,52 +100,44 @@ export function WorkspaceCourseRoadmapBlockEditor({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Courses
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Courses</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.courseCount}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Total curriculum units</p>
+          <p className="mt-1 text-sm text-toned">Total curriculum units</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Recorded
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Recorded</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.recordedLessons}/{summary.lessonCount}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Production progress</p>
+          <p className="mt-1 text-sm text-toned">Production progress</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Average
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Average</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.averageCompletionPercent}%
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Overall completion rate</p>
+          <p className="mt-1 text-sm text-toned">Overall completion rate</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Active
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Active</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.inProgressCount}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Courses currently in progress</p>
+          <p className="mt-1 text-sm text-toned">Courses currently in progress</p>
         </div>
       </div>
 
-      <div className="space-y-4 rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <div className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-foreground">Course roadmap</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-toned">
               Track lesson recording progress per course and keep the promised outcomes visible.
             </p>
           </div>
@@ -181,7 +171,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
       </div>
 
       {block.courses.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No courses mapped yet.</p>
         </div>
       ) : (
@@ -260,7 +250,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
 
                 <div className="mt-5 space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       Lesson Flow
                     </p>
                     <Button
@@ -284,7 +274,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
                           "flex min-w-40 items-center gap-2 rounded-2xl border px-3 py-2 text-left transition",
                           lesson.recorded
                             ? "border-success/20 bg-success/10 text-success"
-                            : "border-muted/20 bg-background/40 text-muted-foreground/60 hover:border-primary/30 hover:text-foreground",
+                            : "border-muted bg-background text-toned hover:border-primary/30 hover:text-foreground",
                         )}
                         onClick={() => toggleLesson(course.id, lesson.id)}
                       >
@@ -293,7 +283,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
                             "flex size-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold",
                             lesson.recorded
                               ? "border-success/20 bg-success/10"
-                              : "border-muted/20 bg-muted/10",
+                              : "border-muted bg-muted",
                           )}
                         >
                           {lesson.recorded ? <Check className="size-3.5" /> : lessonIndex + 1}
@@ -309,7 +299,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
                     {course.lessons.map((lesson, lessonIndex) => (
                       <div
                         key={`${course.id}-${lesson.id}-editor`}
-                        className="flex items-center gap-3 rounded-2xl border border-muted/20 bg-background/40 px-3 py-3"
+                        className="flex items-center gap-3 rounded-2xl border border-muted bg-background px-3 py-3"
                       >
                         <Button
                           type="button"
@@ -342,7 +332,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
                           }
                         />
 
-                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                           {lessonIndex + 1}
                         </span>
 
@@ -363,7 +353,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
 
                 <div className="mt-6 space-y-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       Learning Outcomes
                     </p>
                     <Button
@@ -390,7 +380,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
                     {course.outcomes.map((outcome) => (
                       <div
                         key={outcome.id}
-                        className="flex items-start gap-3 rounded-2xl border border-muted/20 bg-background/40 px-3 py-3"
+                        className="flex items-start gap-3 rounded-2xl border border-muted bg-background px-3 py-3"
                       >
                         <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
                           <Check className="size-4" />

@@ -62,13 +62,13 @@ export function Workspace2x2MatrixBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <div className="rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Decision Matrix
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-toned">
               Compare ideas across four quadrants with clearer axis labels and easier item
               management.
             </p>
@@ -100,11 +100,9 @@ export function Workspace2x2MatrixBlockEditor({
           ].map(([label, value, extra]) => (
             <div
               key={String(label)}
-              className={cn("rounded-3xl border border-muted/20 bg-muted/10 p-5", extra)}
+              className={cn("rounded-3xl border border-muted bg-muted p-5", extra)}
             >
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                {label}
-              </p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">{label}</p>
               <p className="mt-1 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
                 {value}
               </p>
@@ -112,7 +110,7 @@ export function Workspace2x2MatrixBlockEditor({
           ))}
         </div>
 
-        <div className="grid gap-3 rounded-3xl border border-muted/20 bg-background/40 p-4 sm:grid-cols-2 lg:w-[360px]">
+        <div className="grid gap-3 rounded-3xl border border-muted bg-background p-4 sm:grid-cols-2 lg:w-[360px]">
           {(
             [
               ["xAxisLabel", "Horizontal axis", 80],
@@ -135,8 +133,8 @@ export function Workspace2x2MatrixBlockEditor({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-muted/20 bg-background/40 p-4">
-        <div className="mb-3 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+      <div className="rounded-3xl border border-muted bg-background p-4">
+        <div className="mb-3 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
           <span>{block.yEndLabel}</span>
           <span>{block.yAxisLabel}</span>
         </div>
@@ -151,7 +149,7 @@ export function Workspace2x2MatrixBlockEditor({
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex items-center gap-2">
                     <SquareDashed className={cn("size-4", quadrant.accent)} />
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       {block.quadrants[quadrant.key].items.length} items
                     </p>
                   </div>
@@ -185,7 +183,7 @@ export function Workspace2x2MatrixBlockEditor({
                 {block.quadrants[quadrant.key].items.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-2 rounded-2xl border border-muted/20 bg-background/60 p-2"
+                    className="flex items-center gap-2 rounded-2xl border border-muted bg-background p-2"
                   >
                     <Input
                       value={item.text}
@@ -222,11 +220,11 @@ export function Workspace2x2MatrixBlockEditor({
                 ))}
 
                 {block.quadrants[quadrant.key].items.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-8 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+                  <div className="rounded-2xl border border-dashed border-muted bg-background py-8 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                       Empty Quadrant
                     </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
+                    <p className="mt-2 text-sm text-toned">
                       Add the first item to clarify what belongs here.
                     </p>
                   </div>
@@ -236,12 +234,12 @@ export function Workspace2x2MatrixBlockEditor({
           ))}
         </div>
 
-        <div className="mt-3 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="mt-3 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
           <span>{block.xStartLabel}</span>
           <span>{block.xAxisLabel}</span>
           <span>{block.xEndLabel}</span>
         </div>
-        <div className="mt-1 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+        <div className="mt-1 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
           {block.yStartLabel}
         </div>
       </div>

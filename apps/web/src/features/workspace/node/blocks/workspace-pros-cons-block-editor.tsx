@@ -75,9 +75,7 @@ export function WorkspaceProsConsBlockEditor({
             className={cn("flex items-center gap-2", isPros ? "text-success" : "text-destructive")}
           >
             {isPros ? <PlusCircle className="size-5" /> : <MinusCircle className="size-5" />}
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-              {title}
-            </h3>
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">{title}</h3>
           </div>
           <Button
             type="button"
@@ -94,7 +92,7 @@ export function WorkspaceProsConsBlockEditor({
         {items.map((item) => (
           <div
             key={item.id}
-            className="group space-y-3 rounded-2xl border border-muted/20 bg-background/40 p-3 transition-all hover:bg-background/60"
+            className="group space-y-3 rounded-2xl border border-muted bg-background p-3 transition-all hover:bg-background"
           >
             <div className="flex items-start gap-3">
               <Input

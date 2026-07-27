@@ -46,7 +46,7 @@ const columnConfigs: Array<{
 }> = [
   {
     status: "ideas",
-    className: "border-muted/10 bg-muted/5",
+    className: "border-muted bg-background",
     dotClass: "bg-muted-foreground/60",
     icon: Lightbulb,
   },
@@ -256,10 +256,10 @@ export function WorkspaceContentPipelineBlockEditor({
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="group relative overflow-hidden rounded-[24px] border border-muted/10 bg-muted/5 p-5 transition-all hover:bg-muted/10">
+        <div className="group relative overflow-hidden rounded-[24px] border border-muted bg-background p-5 transition-all hover:bg-muted">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Total Pieces
               </p>
               <p className="mt-2 text-3xl font-black tracking-tight text-foreground">
@@ -270,15 +270,13 @@ export function WorkspaceContentPipelineBlockEditor({
               <Layers className="size-5 text-primary" />
             </div>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">
-            Active items in pipeline
-          </p>
+          <p className="mt-4 text-xs leading-relaxed text-toned">Active items in pipeline</p>
         </div>
 
-        <div className="group relative overflow-hidden rounded-[24px] border border-muted/10 bg-muted/5 p-5 transition-all hover:bg-muted/10">
+        <div className="group relative overflow-hidden rounded-[24px] border border-muted bg-background p-5 transition-all hover:bg-muted">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Review Queue
               </p>
               <p className="mt-2 text-3xl font-black tracking-tight text-foreground">
@@ -289,13 +287,13 @@ export function WorkspaceContentPipelineBlockEditor({
               <Eye className="size-5 text-warning" />
             </div>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">Awaiting approval</p>
+          <p className="mt-4 text-xs leading-relaxed text-toned">Awaiting approval</p>
         </div>
 
-        <div className="group relative overflow-hidden rounded-[24px] border border-muted/10 bg-muted/5 p-5 transition-all hover:bg-muted/10">
+        <div className="group relative overflow-hidden rounded-[24px] border border-muted bg-background p-5 transition-all hover:bg-muted">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Published
               </p>
               <p className="mt-2 text-3xl font-black tracking-tight text-foreground">
@@ -306,15 +304,13 @@ export function WorkspaceContentPipelineBlockEditor({
               <Rocket className="size-5 text-success" />
             </div>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">
-            Live content pieces
-          </p>
+          <p className="mt-4 text-xs leading-relaxed text-toned">Live content pieces</p>
         </div>
 
-        <div className="group relative overflow-hidden rounded-[24px] border border-muted/10 bg-muted/5 p-5 transition-all hover:bg-muted/10">
+        <div className="group relative overflow-hidden rounded-[24px] border border-muted bg-background p-5 transition-all hover:bg-muted">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Top Platform
               </p>
               <p className="mt-2 text-3xl font-black tracking-tight text-foreground">
@@ -325,16 +321,14 @@ export function WorkspaceContentPipelineBlockEditor({
               <TopPlatformIcon className="size-5 text-secondary" />
             </div>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">
-            {getTopPlatformLabel()}
-          </p>
+          <p className="mt-4 text-xs leading-relaxed text-toned">{getTopPlatformLabel()}</p>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 px-1">
         <div className="space-y-1">
           <h3 className="text-base font-bold text-foreground">Content Pipeline</h3>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-toned">
             Drag items between stages or use the move buttons for keyboard-safe updates.
           </p>
         </div>
@@ -372,13 +366,13 @@ export function WorkspaceContentPipelineBlockEditor({
               >
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded-xl border border-muted/10 bg-background/80 shadow-sm">
+                    <div className="flex size-8 items-center justify-center rounded-xl border border-muted bg-background shadow-sm">
                       <ColumnIcon
                         className={cn("size-4", column.dotClass.replace("bg-", "text-"))}
                       />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase leading-none tracking-[0.2em] text-muted-foreground/50">
+                      <p className="text-[10px] font-black uppercase leading-none tracking-[0.2em] text-toned">
                         {workspaceContentPipelineStatusLabels[column.status]}
                       </p>
                       <p className="mt-1 text-xs font-bold leading-none text-foreground/60">
@@ -397,7 +391,7 @@ export function WorkspaceContentPipelineBlockEditor({
                         key={item.id}
                         draggable
                         className={cn(
-                          "group relative rounded-[24px] border border-muted/10 bg-background/80 p-4 shadow-sm transition-all hover:border-primary/30 hover:bg-background hover:shadow-md",
+                          "group relative rounded-[24px] border border-muted bg-background p-4 shadow-sm transition-all hover:border-primary/30 hover:bg-background hover:shadow-md",
                           draggingItemId === item.id
                             ? "pointer-events-none scale-95 opacity-40 grayscale"
                             : "cursor-grab active:cursor-grabbing",
@@ -410,7 +404,7 @@ export function WorkspaceContentPipelineBlockEditor({
                             value={item.title}
                             placeholder="Untitled content piece"
                             rows={1}
-                            className="min-h-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm font-bold text-foreground shadow-none placeholder:text-muted-foreground/30 focus-visible:ring-0"
+                            className="min-h-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm font-bold text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                             onChange={(event) =>
                               mutateItem(item.id, (entry) => {
                                 entry.title = event.target.value.slice(0, 240);
@@ -460,7 +454,7 @@ export function WorkspaceContentPipelineBlockEditor({
                             <BlockSelect
                               value={item.platform}
                               options={platformOptions}
-                              className="h-8 rounded-full border-muted/10 bg-muted/5 text-xs"
+                              className="h-8 rounded-full border-muted bg-background text-xs"
                               aria-label={`Platform for ${item.title || "content item"}`}
                               onValueChange={(value) =>
                                 mutateItem(item.id, (entry) => {
@@ -476,7 +470,7 @@ export function WorkspaceContentPipelineBlockEditor({
                               <Input
                                 value={item.assignee}
                                 placeholder="Assignee"
-                                className="h-8 rounded-full border-muted/10 bg-muted/5 pl-9 text-xs"
+                                className="h-8 rounded-full border-muted bg-background pl-9 text-xs"
                                 onChange={(event) =>
                                   mutateItem(item.id, (entry) => {
                                     entry.assignee = event.target.value.slice(0, 120);
@@ -491,11 +485,11 @@ export function WorkspaceContentPipelineBlockEditor({
                   })}
 
                   {columnItems.length === 0 ? (
-                    <div className="flex h-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-muted/5 bg-background/10 p-6 text-center">
-                      <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-muted/5">
-                        <ColumnIcon className="size-5 text-muted-foreground/20" />
+                    <div className="flex h-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-muted bg-background p-6 text-center">
+                      <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-background">
+                        <ColumnIcon className="size-5 text-muted" />
                       </div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/30">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-toned">
                         No {column.status}
                       </p>
                     </div>

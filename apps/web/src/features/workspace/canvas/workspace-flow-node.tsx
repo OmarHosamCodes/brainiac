@@ -57,14 +57,14 @@ function WorkspaceFlowNodeComponent({ id, selected, data }: NodeProps<WorkspaceF
         )}
         style={getWorkspaceNodeTintStyle(data.tint)}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-default bg-muted/20 px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-default bg-muted px-4 py-3">
           <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-highlighted">
             {title}
           </h3>
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
-              className="nodrag nopan inline-flex size-8 items-center justify-center rounded-xl border border-default bg-default text-muted transition-colors hover:bg-elevated hover:text-highlighted"
+              className="nodrag nopan inline-flex size-8 items-center justify-center rounded-xl border border-default bg-default text-toned transition-colors hover:bg-elevated hover:text-highlighted"
               aria-label="Edit node"
               title="Edit node"
               onClick={() => onEditNode({ nodeId: id })}
@@ -73,7 +73,7 @@ function WorkspaceFlowNodeComponent({ id, selected, data }: NodeProps<WorkspaceF
             </button>
             <button
               type="button"
-              className="nodrag nopan inline-flex size-8 items-center justify-center rounded-xl border border-default bg-default text-muted transition-colors hover:bg-error/10 hover:text-error"
+              className="nodrag nopan inline-flex size-8 items-center justify-center rounded-xl border border-default bg-default text-toned transition-colors hover:bg-error/10 hover:text-error"
               aria-label="Delete node"
               title="Delete node"
               onClick={() => onRemoveNode({ nodeId: id })}
@@ -82,7 +82,7 @@ function WorkspaceFlowNodeComponent({ id, selected, data }: NodeProps<WorkspaceF
             </button>
             <button
               type="button"
-              className="nodrag nopan inline-flex size-8 items-center justify-center rounded-xl border border-default bg-default text-muted transition-colors hover:bg-elevated hover:text-highlighted"
+              className="nodrag nopan inline-flex size-8 items-center justify-center rounded-xl border border-default bg-default text-toned transition-colors hover:bg-elevated hover:text-highlighted"
               aria-label="Focus node"
               title="Focus node"
               onClick={() => onFitNode(id)}

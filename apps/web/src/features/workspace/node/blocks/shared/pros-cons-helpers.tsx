@@ -9,13 +9,13 @@ export function getProsConsWeightButtonClass(
 
   if (list === "pros") {
     return isActive
-      ? "border-success/30 bg-success text-white"
-      : "border-muted/20 bg-background/60 text-muted-foreground/70 hover:border-success/30 hover:text-success";
+      ? "border-success bg-success text-primary-foreground"
+      : "border-muted bg-background text-toned hover:border-success hover:text-success";
   }
 
   return isActive
-    ? "border-destructive/30 bg-destructive text-white"
-    : "border-muted/20 bg-background/60 text-muted-foreground/70 hover:border-destructive/30 hover:text-destructive";
+    ? "border-destructive bg-destructive text-destructive-foreground"
+    : "border-muted bg-background text-toned hover:border-destructive hover:text-destructive";
 }
 
 type ProsConsWeightButtonsProps = {
@@ -58,7 +58,7 @@ export function ProsConsBalanceBar({ prosWeight, consWeight }: ProsConsBalanceBa
   const totalWeight = Math.max(prosWeight + consWeight, 1);
 
   return (
-    <div className="relative h-2 overflow-hidden rounded-full bg-muted/20">
+    <div className="relative h-2 overflow-hidden rounded-full bg-muted">
       <div
         className="absolute inset-y-0 left-0 bg-success transition-all duration-500"
         style={{ width: `${(prosWeight / totalWeight) * 100}%` }}

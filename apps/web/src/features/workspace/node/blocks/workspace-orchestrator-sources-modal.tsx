@@ -227,7 +227,7 @@ export function WorkspaceOrchestratorSourcesModal({
 
         <section>
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Connected Sources
             </p>
             <Badge variant="secondary" className="rounded-2xl">
@@ -236,9 +236,9 @@ export function WorkspaceOrchestratorSourcesModal({
           </div>
 
           {connectedNodes.length === 0 ? (
-            <div className="mt-3 rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-8 text-center">
-              <Plug2 className="mx-auto size-8 text-muted-foreground/30" />
-              <p className="mt-2 text-sm text-muted-foreground">
+            <div className="mt-3 rounded-2xl border border-dashed border-muted bg-background py-8 text-center">
+              <Plug2 className="mx-auto size-8 text-muted" />
+              <p className="mt-2 text-sm text-toned">
                 No sources connected. Add a node to start aggregating tasks.
               </p>
             </div>
@@ -251,10 +251,10 @@ export function WorkspaceOrchestratorSourcesModal({
                 return (
                   <li
                     key={source.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-muted/20 bg-muted/10 px-4 py-3"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-muted bg-muted px-4 py-3"
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <Box className="size-4 shrink-0 text-muted-foreground/60" />
+                      <Box className="size-4 shrink-0 text-toned" />
                       <button
                         type="button"
                         className="min-w-0 truncate text-sm font-bold text-foreground transition-colors hover:text-primary"
@@ -337,11 +337,11 @@ export function WorkspaceOrchestratorSourcesModal({
           </div>
         </section>
 
-        <div className="border-t border-muted/10" />
+        <div className="border-t border-muted" />
 
         <section>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Task Browser
             </p>
             <div className="flex items-center gap-1">
@@ -363,16 +363,16 @@ export function WorkspaceOrchestratorSourcesModal({
           </div>
 
           {collectedTasks.length === 0 ? (
-            <div className="mt-3 rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-8 text-center">
-              <Inbox className="mx-auto size-8 text-muted-foreground/30" />
-              <p className="mt-2 text-sm text-muted-foreground">
+            <div className="mt-3 rounded-2xl border border-dashed border-muted bg-background py-8 text-center">
+              <Inbox className="mx-auto size-8 text-muted" />
+              <p className="mt-2 text-sm text-toned">
                 No tasks found. Connected sources don&apos;t contain any open tasks yet.
               </p>
             </div>
           ) : (
             <div className="mt-3 space-y-4">
               {groupedTasks.map((group) => (
-                <div key={group.key} className="rounded-2xl border border-muted/20 bg-muted/5">
+                <div key={group.key} className="rounded-2xl border border-muted bg-background">
                   <div className="flex items-center justify-between gap-3 px-4 py-3">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-bold text-foreground">{group.label}</p>
@@ -397,11 +397,11 @@ export function WorkspaceOrchestratorSourcesModal({
                     ) : null}
                   </div>
 
-                  <ul className="border-t border-muted/10">
+                  <ul className="border-t border-muted">
                     {group.items.map((item) => (
                       <li
                         key={item.task.id}
-                        className="flex items-center gap-3 border-b border-muted/10 px-4 py-2.5 last:border-b-0"
+                        className="flex items-center gap-3 border-b border-muted px-4 py-2.5 last:border-b-0"
                       >
                         <button
                           type="button"
@@ -409,7 +409,7 @@ export function WorkspaceOrchestratorSourcesModal({
                             "flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors",
                             item.task.completed
                               ? "border-primary bg-primary/20 text-primary"
-                              : "border-muted/30 hover:border-primary/50",
+                              : "border-muted hover:border-primary/50",
                           )}
                           aria-label={item.task.completed ? "Reopen task" : "Complete task"}
                           onClick={() =>
@@ -488,7 +488,7 @@ export function WorkspaceOrchestratorSourcesModal({
                         {groupMode !== "source" ? (
                           <button
                             type="button"
-                            className="max-w-28 truncate rounded-lg bg-muted/20 px-2 py-0.5 text-[10px] font-bold text-muted-foreground/60 transition-colors hover:text-primary"
+                            className="max-w-28 truncate rounded-lg bg-muted/20 px-2 py-0.5 text-[10px] font-bold text-toned transition-colors hover:text-primary"
                             title={`Go to ${item.sourceNodeTitle}`}
                             onClick={() => handleNavigate(item.sourceNodeId)}
                           >

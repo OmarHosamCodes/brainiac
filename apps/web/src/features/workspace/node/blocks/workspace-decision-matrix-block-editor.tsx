@@ -149,13 +149,13 @@ export function WorkspaceDecisionMatrixBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <div className="rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Decision prompt
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-toned">
               Compare options with weighted criteria, then score each path from 0 to 10.
             </p>
           </div>
@@ -178,17 +178,14 @@ export function WorkspaceDecisionMatrixBlockEditor({
           value={block.question}
           placeholder="What decision are you making?"
           aria-label="Decision question"
-          className="mt-4 w-full border-0 bg-transparent px-0 text-xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/40 shadow-none focus-visible:ring-0"
+          className="mt-4 w-full border-0 bg-transparent px-0 text-xl font-bold tracking-tight text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
           onChange={(event) => updateQuestion(event.target.value)}
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {block.options.map((option) => (
-          <article
-            key={option.id}
-            className="rounded-3xl border border-muted/20 bg-background/40 p-5"
-          >
+          <article key={option.id} className="rounded-3xl border border-muted bg-background p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -208,7 +205,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
                   value={option.label}
                   placeholder="Option name"
                   aria-label={`Option label for ${option.label || "decision option"}`}
-                  className="mt-3 w-full border-0 bg-transparent px-0 text-lg font-bold text-foreground placeholder:text-muted-foreground/60 shadow-none focus-visible:ring-0"
+                  className="mt-3 w-full border-0 bg-transparent px-0 text-lg font-bold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
                   onChange={(event) => updateOptionLabel(option.id, event.target.value)}
                 />
                 <p className="mt-2 text-2xl font-black tracking-tight text-primary sm:text-3xl">
@@ -228,7 +225,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
               </Button>
             </div>
             <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 <span>Relative score</span>
                 <span>{getOptionSummary(option.id)?.progress ?? 0}%</span>
               </div>
@@ -253,7 +250,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
           <p className="text-sm font-semibold text-foreground">Weighted scoring matrix</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-toned">
             Increase criterion weight when it matters more, then score each option against that
             criterion.
           </p>
@@ -282,16 +279,14 @@ export function WorkspaceDecisionMatrixBlockEditor({
 
       <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
         <div
-          className="grid min-w-[760px] gap-px overflow-hidden rounded-3xl border border-muted/20 bg-muted/20"
+          className="grid min-w-[760px] gap-px overflow-hidden rounded-3xl border border-muted bg-muted/20"
           style={matrixGridStyle}
           role="table"
           aria-label="Decision matrix scoring grid"
         >
-          <div className="flex flex-col justify-center bg-muted/10 p-4" role="columnheader">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-              Criteria
-            </p>
-            <p className="mt-1 text-xs font-medium text-muted-foreground/70">
+          <div className="flex flex-col justify-center bg-muted p-4" role="columnheader">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Criteria</p>
+            <p className="mt-1 text-xs font-medium text-toned">
               {summary.criteriaCount} criteria, {summary.totalWeight} weight pts
             </p>
           </div>
@@ -299,16 +294,16 @@ export function WorkspaceDecisionMatrixBlockEditor({
           {block.options.map((option) => (
             <div
               key={`${option.id}-header`}
-              className="flex flex-col justify-center bg-muted/10 p-4"
+              className="flex flex-col justify-center bg-muted p-4"
               role="columnheader"
             >
-              <p className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 {option.label || "Option"}
               </p>
               <p className="mt-1 text-lg font-black text-foreground">
                 {getOptionSummary(option.id)?.totalScore ?? 0}
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-toned">
                 Rank #{getOptionRank(option.id) ?? "—"}
               </p>
             </div>
@@ -317,7 +312,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
           {block.criteria.flatMap((criterion) => [
             <div
               key={criterion.id}
-              className="flex flex-col justify-center space-y-3 bg-background/40 p-4"
+              className="flex flex-col justify-center space-y-3 bg-background p-4"
               role="rowheader"
             >
               <div className="flex items-start justify-between gap-3">
@@ -325,7 +320,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
                   value={criterion.label}
                   placeholder="Criterion name"
                   aria-label={`Criterion label for ${criterion.label || "decision criterion"}`}
-                  className="flex-1 border-0 bg-transparent px-0 text-sm font-semibold text-foreground placeholder:text-muted-foreground/40 shadow-none focus-visible:ring-0"
+                  className="flex-1 border-0 bg-transparent px-0 text-sm font-semibold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
                   onChange={(event) => updateCriterionLabel(criterion.id, event.target.value)}
                 />
                 <Button
@@ -341,7 +336,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
                 </Button>
               </div>
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   <span>Weight</span>
                   <span>{criterion.weight}/10</span>
                 </div>
@@ -350,7 +345,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
                   type="range"
                   min={1}
                   max={10}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
                   aria-label={`Weight for ${criterion.label || "criterion"}`}
                   onChange={(event) => updateCriterionWeight(criterion.id, event.target.value)}
                 />
@@ -359,10 +354,10 @@ export function WorkspaceDecisionMatrixBlockEditor({
             ...block.options.map((option) => (
               <div
                 key={`${criterion.id}-${option.id}`}
-                className="flex flex-col justify-center bg-background/40 p-4"
+                className="flex flex-col justify-center bg-background p-4"
                 role="cell"
               >
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   <span>Score</span>
                   <span>{option.scores[criterion.id] ?? 0}/10</span>
                 </div>
@@ -371,13 +366,13 @@ export function WorkspaceDecisionMatrixBlockEditor({
                   type="range"
                   min={0}
                   max={10}
-                  className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
+                  className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
                   aria-label={`Score for ${option.label || "option"} on ${criterion.label || "criterion"}`}
                   onChange={(event) =>
                     updateOptionScore(option.id, criterion.id, event.target.value)
                   }
                 />
-                <div className="mt-3 flex justify-between text-xs font-medium text-muted-foreground/70">
+                <div className="mt-3 flex justify-between text-xs font-medium text-toned">
                   <span>Weighted</span>
                   <span className="font-black text-foreground">
                     {(option.scores[criterion.id] ?? 0) * criterion.weight}

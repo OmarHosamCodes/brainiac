@@ -9,12 +9,7 @@ type BlockFieldLabelProps = {
 
 export function BlockFieldLabel({ children, className }: BlockFieldLabelProps) {
   return (
-    <span
-      className={cn(
-        "text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60",
-        className,
-      )}
-    >
+    <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em] text-toned", className)}>
       {children}
     </span>
   );

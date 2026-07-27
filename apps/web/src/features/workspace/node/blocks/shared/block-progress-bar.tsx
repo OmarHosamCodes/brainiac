@@ -10,7 +10,7 @@ export function BlockProgressBar({ value, max, className }: BlockProgressBarProp
   const percent = Math.min(100, Math.max(0, (value / Math.max(max, 1)) * 100));
 
   return (
-    <div className={cn("h-2 w-full overflow-hidden rounded-full bg-muted/20", className)}>
+    <div className={cn("h-2 w-full overflow-hidden rounded-full bg-muted", className)}>
       <div
         className="h-full rounded-full bg-primary transition-all duration-300"
         style={{ width: `${percent}%` }}

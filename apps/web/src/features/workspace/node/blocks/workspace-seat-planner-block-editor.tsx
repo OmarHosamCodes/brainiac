@@ -49,7 +49,7 @@ function getSeatClasses(seat: WorkspaceSeatPlannerBlock["seats"][number]) {
     return "border-warning/30 bg-warning/5";
   }
 
-  return "border-muted/30 bg-background/70";
+  return "border-muted bg-background";
 }
 
 export function WorkspaceSeatPlannerBlockEditor({
@@ -116,7 +116,7 @@ export function WorkspaceSeatPlannerBlockEditor({
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Filled Seats
           </p>
           <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
@@ -125,27 +125,21 @@ export function WorkspaceSeatPlannerBlockEditor({
         </div>
 
         <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Fragile
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Fragile</p>
           <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
             {summary.fragileSeats}
           </p>
         </div>
 
         <div className="rounded-2xl border border-destructive/10 bg-destructive/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Uncovered
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Uncovered</p>
           <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
             {summary.uncoveredSeats}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-muted/20 bg-muted/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Overloaded
-          </p>
+        <div className="rounded-2xl border border-muted bg-muted p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Overloaded</p>
           <p className="mt-2 text-xl font-black tracking-tight text-foreground sm:text-2xl">
             {summary.overloadedSeats}
           </p>
@@ -157,7 +151,7 @@ export function WorkspaceSeatPlannerBlockEditor({
           <h2 className="text-sm font-black tracking-tight text-foreground">
             Seat Ownership Planner
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-toned">
             Clarify critical functions, fragile seats, and coverage gaps.
           </p>
         </div>
@@ -197,8 +191,8 @@ export function WorkspaceSeatPlannerBlockEditor({
       </div>
 
       {visibleSeats.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
+        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
             <Users className="size-6" />
           </div>
           <p className="mt-3 text-xs font-bold text-muted-foreground">No seats match this filter</p>
@@ -208,25 +202,25 @@ export function WorkspaceSeatPlannerBlockEditor({
           <table className="min-w-[1100px] w-full border-separate border-spacing-y-2">
             <thead>
               <tr>
-                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Seat
                 </th>
-                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Owner
                 </th>
-                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Function
                 </th>
-                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Health
                 </th>
-                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Load
                 </th>
-                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Backup
                 </th>
-                <th className="px-3 pb-2 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-2 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Actions
                 </th>
               </tr>
@@ -244,7 +238,7 @@ export function WorkspaceSeatPlannerBlockEditor({
                     <Input
                       value={seat.name}
                       placeholder="Seat name"
-                      className="border-0 bg-transparent px-0 text-sm font-bold text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
+                      className="border-0 bg-transparent px-0 text-sm font-bold text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                       onChange={(event) =>
                         mutateSeat(seat.id, (target) => {
                           target.name = event.target.value.slice(0, 120);
@@ -352,10 +346,8 @@ export function WorkspaceSeatPlannerBlockEditor({
       )}
 
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-muted/20 bg-background/40 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Health
-          </p>
+        <div className="rounded-xl border border-muted bg-background p-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Health</p>
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             {healthOptions.map((option) => (
               <Badge key={option.value} variant="secondary" className="rounded-full px-2">
@@ -365,10 +357,8 @@ export function WorkspaceSeatPlannerBlockEditor({
           </div>
         </div>
 
-        <div className="rounded-xl border border-muted/20 bg-background/40 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Load
-          </p>
+        <div className="rounded-xl border border-muted bg-background p-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Load</p>
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             {loadOptions.map((option) => (
               <Badge key={option.value} variant="secondary" className="rounded-full px-2">
@@ -378,11 +368,11 @@ export function WorkspaceSeatPlannerBlockEditor({
           </div>
         </div>
 
-        <div className="rounded-xl border border-muted/20 bg-background/40 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="rounded-xl border border-muted bg-background p-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Coverage Rule
           </p>
-          <p className="mt-2.5 text-xs text-muted-foreground">
+          <p className="mt-2.5 text-xs text-toned">
             Uncovered when owner missing, backup missing, or marked as gap.
           </p>
         </div>

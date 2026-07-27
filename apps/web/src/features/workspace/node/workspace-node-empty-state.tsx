@@ -32,7 +32,7 @@ export function WorkspaceNodeEmptyState({
 
   return (
     <div className="rounded-2xl border border-dashed border-muted/40 px-6 py-12 text-center">
-      <div className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-muted/50 bg-muted/20 text-toned">
+      <div className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-muted bg-muted text-toned">
         <Blocks className="size-5" />
       </div>
       <h2 className="mt-4 text-lg font-semibold text-highlighted">Start this workspace</h2>

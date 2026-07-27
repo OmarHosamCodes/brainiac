@@ -94,7 +94,7 @@ function getStatusButtonClasses(
     return "border-destructive/20 bg-destructive/10 text-destructive";
   }
 
-  return "border-muted/20 bg-background/40 text-muted-foreground/60 hover:border-muted/30 hover:text-foreground";
+  return "border-muted bg-background text-toned hover:border-muted hover:text-foreground";
 }
 
 export function WorkspaceDelegationMatrixBlockEditor({
@@ -230,8 +230,8 @@ export function WorkspaceDelegationMatrixBlockEditor({
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
-          <div key={card.key} className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <div key={card.key} className="rounded-3xl border border-muted bg-muted p-5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               {card.label}
             </p>
             <p
@@ -242,16 +242,16 @@ export function WorkspaceDelegationMatrixBlockEditor({
             >
               {card.value}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">{card.supporting}</p>
+            <p className="mt-1 text-sm text-toned">{card.supporting}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-3xl border border-muted/20 bg-muted/10 p-4">
+      <div className="rounded-3xl border border-muted bg-muted p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-foreground">Delegation tracker</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-toned">
               Prioritize trapped founder tasks first, then assign explicit ownership and move each
               handoff toward delegated.
             </p>
@@ -318,7 +318,7 @@ export function WorkspaceDelegationMatrixBlockEditor({
             />
           </div>
 
-          <div className="rounded-2xl border border-muted/20 bg-background/50 px-3 py-2 text-xs text-muted-foreground">
+          <div className="rounded-2xl border border-muted bg-background px-3 py-2 text-xs text-toned">
             Currency values use the hourly rate context shown above. Update it before reviewing
             weekly cost impact.
           </div>
@@ -337,16 +337,16 @@ export function WorkspaceDelegationMatrixBlockEditor({
       </div>
 
       {block.items.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No delegation items yet.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-toned">
             Add a recurring task to begin mapping handoff opportunities.
           </p>
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No items match this filter.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-toned">
             Switch to another status filter to continue planning handoffs.
           </p>
         </div>
@@ -372,7 +372,7 @@ export function WorkspaceDelegationMatrixBlockEditor({
                   <Input
                     value={item.task}
                     placeholder="Task name"
-                    className="w-full border-0 bg-transparent px-0 text-lg font-bold text-foreground placeholder:text-muted-foreground/60 shadow-none focus-visible:ring-0"
+                    className="w-full border-0 bg-transparent px-0 text-lg font-bold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
                     aria-label={`Task name for ${item.task || "new delegation item"}`}
                     onChange={(event) =>
                       mutateItem(item.id, (target) => {
@@ -380,7 +380,7 @@ export function WorkspaceDelegationMatrixBlockEditor({
                       })
                     }
                   />
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="mt-2 text-sm text-toned">
                     {item.hoursPerWeek}h/week ·{" "}
                     {formatCurrency(item.hoursPerWeek * block.hourlyRate)} of founder time
                   </p>

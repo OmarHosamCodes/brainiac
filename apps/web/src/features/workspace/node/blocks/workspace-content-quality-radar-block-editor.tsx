@@ -196,10 +196,8 @@ export function WorkspaceContentQualityRadarBlockEditor({
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Average
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Average</p>
           <p
             className={cn(
               "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
@@ -208,13 +206,11 @@ export function WorkspaceContentQualityRadarBlockEditor({
           >
             {summary.averageScore}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Live average across all 10 quality dimensions
-          </p>
+          <p className="mt-1 text-sm text-toned">Live average across all 10 quality dimensions</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Quality band
           </p>
           <p
@@ -225,53 +221,43 @@ export function WorkspaceContentQualityRadarBlockEditor({
           >
             {qualityBand.label}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">{qualityBand.interpretation}</p>
+          <p className="mt-1 text-sm text-toned">{qualityBand.interpretation}</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Strongest
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Strongest</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-success sm:text-3xl">
             {summary.strongestDimension
               ? workspaceContentQualityDimensionLabels[summary.strongestDimension]
               : "None"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            The highest-performing quality pillar
-          </p>
+          <p className="mt-1 text-sm text-toned">The highest-performing quality pillar</p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Weakest
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Weakest</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-destructive sm:text-3xl">
             {summary.weakestDimension
               ? workspaceContentQualityDimensionLabels[summary.weakestDimension]
               : "None"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Priority area for the next content iteration
-          </p>
+          <p className="mt-1 text-sm text-toned">Priority area for the next content iteration</p>
         </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[20rem_minmax(0,1fr)]">
-        <section className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
+        <section className="rounded-3xl border border-muted bg-muted p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-foreground">Radar view</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-toned">
                 The filled shape expands where content quality is strong and collapses where
                 execution needs work.
               </p>
             </div>
 
             <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                Score
-              </p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Score</p>
               <p
                 className={cn("text-2xl font-black tracking-tight sm:text-3xl", averageToneClasses)}
               >
@@ -288,7 +274,7 @@ export function WorkspaceContentQualityRadarBlockEditor({
                   points={points}
                   fill="none"
                   stroke="currentColor"
-                  className="text-muted-foreground/20"
+                  className="text-muted"
                 />
               ))}
 
@@ -300,7 +286,7 @@ export function WorkspaceContentQualityRadarBlockEditor({
                   x2={axis.outerX}
                   y2={axis.outerY}
                   stroke="currentColor"
-                  className="text-muted-foreground/20"
+                  className="text-muted"
                 />
               ))}
 
@@ -336,15 +322,15 @@ export function WorkspaceContentQualityRadarBlockEditor({
             </svg>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-muted/20 bg-background/50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
+          <div className="mt-4 rounded-2xl border border-muted bg-background p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-toned">
               Focus next
             </p>
             <div className="mt-3 space-y-2">
               {focusDimensions.map((dimension) => (
                 <article
                   key={dimension}
-                  className="rounded-xl border border-muted/20 bg-background/70 p-3"
+                  className="rounded-xl border border-muted bg-background p-3"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-semibold text-foreground">
@@ -359,19 +345,17 @@ export function WorkspaceContentQualityRadarBlockEditor({
                       {block.scores[dimension]}/10
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {dimensionPlaybook[dimension]}
-                  </p>
+                  <p className="mt-1 text-xs text-toned">{dimensionPlaybook[dimension]}</p>
                 </article>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-muted/20 bg-background/40 p-5">
+        <section className="rounded-3xl border border-muted bg-background p-5">
           <div className="mb-5">
             <p className="text-sm font-semibold text-foreground">Dimension controls</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-toned">
               Score each pillar from 1 to 10. Use the benchmark note to decide what to improve
               before publishing.
             </p>
@@ -379,10 +363,7 @@ export function WorkspaceContentQualityRadarBlockEditor({
 
           <div className="grid gap-4 md:grid-cols-2">
             {WORKSPACE_CONTENT_QUALITY_DIMENSIONS.map((dimension) => (
-              <article
-                key={dimension}
-                className="rounded-2xl border border-muted/20 bg-muted/10 p-4"
-              >
+              <article key={dimension} className="rounded-2xl border border-muted bg-muted p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-foreground">
                     {workspaceContentQualityDimensionLabels[dimension]}
@@ -402,13 +383,13 @@ export function WorkspaceContentQualityRadarBlockEditor({
                   type="range"
                   min={1}
                   max={10}
-                  className="mt-4 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                  className="mt-4 h-1.5 w-full appearance-none rounded-full bg-muted accent-primary"
                   aria-label={`Score for ${workspaceContentQualityDimensionLabels[dimension]}`}
                   onChange={(event) => updateScore(dimension, event.target.value)}
                 />
 
                 <div className="mt-3 flex items-center justify-between gap-2">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                     1
                   </div>
                   <Input
@@ -421,12 +402,12 @@ export function WorkspaceContentQualityRadarBlockEditor({
                     aria-label={`Numeric score for ${workspaceContentQualityDimensionLabels[dimension]}`}
                     onChange={(event) => updateScore(dimension, event.target.value)}
                   />
-                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                     10
                   </div>
                 </div>
 
-                <p className="mt-3 text-xs text-muted-foreground">{dimensionPlaybook[dimension]}</p>
+                <p className="mt-3 text-xs text-toned">{dimensionPlaybook[dimension]}</p>
               </article>
             ))}
           </div>

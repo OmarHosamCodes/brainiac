@@ -254,7 +254,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5 backdrop-blur-sm">
+      <div className="rounded-3xl border border-muted bg-muted p-5 backdrop-blur-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-primary">
@@ -264,7 +264,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
             <h3 className="text-lg font-bold tracking-tight text-foreground">
               Focus the workload view around what matters now
             </h3>
-            <p className="max-w-2xl text-sm text-muted-foreground">
+            <p className="max-w-2xl text-sm text-toned">
               Saved filters keep this block aligned to the domains and urgency quadrants you want
               leadership to review first.
             </p>
@@ -299,7 +299,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <fieldset className="space-y-3">
-            <legend className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <legend className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Domain filters
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -327,7 +327,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
           </fieldset>
 
           <fieldset className="space-y-3">
-            <legend className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <legend className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Quadrant filters
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -357,7 +357,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {primarySummaryCards.map((card) => (
           <div key={card.key} className={cn("rounded-3xl border p-5", card.className)}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               {card.label}
             </p>
             <p
@@ -368,18 +368,18 @@ export function WorkspaceTimeOrchestratorBlockEditor({
             >
               {card.value}
             </p>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/40">
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
               {card.supportingLabel}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-3xl border border-muted/20 bg-background/40 px-5 py-4">
+      <div className="rounded-3xl border border-muted bg-background px-5 py-4">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {secondarySummaryStats.map((stat) => (
             <div key={stat.key} className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 {stat.label}
               </p>
               <p className="text-lg font-black tracking-tight text-foreground">{stat.value}</p>
@@ -389,13 +389,13 @@ export function WorkspaceTimeOrchestratorBlockEditor({
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <section className="rounded-3xl border border-muted/20 bg-background/40 p-5">
+        <section className="rounded-3xl border border-muted bg-background p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 Suggested next actions
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-toned">
                 Highest-leverage tasks from the current filter set.
               </p>
             </div>
@@ -408,7 +408,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
             {(summary?.suggestedNextActions ?? []).map((item) => (
               <li
                 key={`${block.id}-${item.task.id}`}
-                className="rounded-2xl border border-muted/20 bg-muted/10 p-4"
+                className="rounded-2xl border border-muted bg-muted p-4"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-2">
@@ -428,7 +428,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
                       </Badge>
                     </div>
 
-                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/40">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
                       {formatRelativeTaskMeta(item)}
                     </p>
                   </div>
@@ -449,27 +449,23 @@ export function WorkspaceTimeOrchestratorBlockEditor({
           </ul>
 
           {(summary?.suggestedNextActions.length ?? 0) === 0 ? (
-            <div className="mt-4 rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <div className="mt-4 rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                 No matching next actions
               </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Adjust the filters above to widen the view.
-              </p>
+              <p className="mt-2 text-sm text-toned">Adjust the filters above to widen the view.</p>
             </div>
           ) : null}
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-3xl border border-muted/20 bg-background/40 p-5">
+          <section className="rounded-3xl border border-muted bg-background p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Domain load
                 </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Open work grouped by team domain.
-                </p>
+                <p className="mt-1 text-sm text-toned">Open work grouped by team domain.</p>
               </div>
               <Badge variant="secondary" className="rounded-2xl">
                 {summary?.domainBreakdown.length ?? 0} domains
@@ -480,7 +476,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
               {(summary?.domainBreakdown ?? []).map((domain) => (
                 <div
                   key={domain.label}
-                  className="rounded-2xl border border-muted/20 bg-muted/5 p-4"
+                  className="rounded-2xl border border-muted bg-background p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-bold text-foreground">{domain.label}</p>
@@ -488,29 +484,27 @@ export function WorkspaceTimeOrchestratorBlockEditor({
                       {formatMinutes(domain.estimateMinutes)}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-xs text-toned">
                     {domain.count} open task{domain.count === 1 ? "" : "s"}
                   </p>
                 </div>
               ))}
 
               {(summary?.domainBreakdown.length ?? 0) === 0 ? (
-                <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    No domain data for the active filters.
-                  </p>
+                <div className="rounded-2xl border border-dashed border-muted bg-background py-8 text-center">
+                  <p className="text-sm text-toned">No domain data for the active filters.</p>
                 </div>
               ) : null}
             </div>
           </section>
 
-          <section className="rounded-3xl border border-muted/20 bg-background/40 p-5">
+          <section className="rounded-3xl border border-muted bg-background p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Deadlines
                 </p>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-sm text-toned">
                   Tasks that need immediate or near-term attention.
                 </p>
               </div>
@@ -530,18 +524,18 @@ export function WorkspaceTimeOrchestratorBlockEditor({
                       <p className="text-sm font-bold text-foreground">
                         {item.task.text || "Untitled task"}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-1 text-xs text-toned">
                         {item.sourceNodeTitle} · {formatRelativeTaskMeta(item)}
                       </p>
                     </li>
                   ))}
                 </ul>
                 {(summary?.overdue.length ?? 0) === 0 ? (
-                  <p className="mt-2 text-xs text-muted-foreground">Nothing overdue.</p>
+                  <p className="mt-2 text-xs text-toned">Nothing overdue.</p>
                 ) : null}
               </div>
 
-              <div className="border-t border-muted/10 pt-5">
+              <div className="border-t border-muted pt-5">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-primary/60">
                   Upcoming
                 </p>
@@ -554,16 +548,14 @@ export function WorkspaceTimeOrchestratorBlockEditor({
                       <p className="text-sm font-bold text-foreground">
                         {item.task.text || "Untitled task"}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-1 text-xs text-toned">
                         {item.sourceNodeTitle} · {formatRelativeTaskMeta(item)}
                       </p>
                     </li>
                   ))}
                 </ul>
                 {(summary?.upcoming.length ?? 0) === 0 ? (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    No tasks due in the next seven days.
-                  </p>
+                  <p className="mt-2 text-xs text-toned">No tasks due in the next seven days.</p>
                 ) : null}
               </div>
             </div>
@@ -578,14 +570,11 @@ export function WorkspaceTimeOrchestratorBlockEditor({
         )}
       >
         {visibleQuadrants.map((quadrant) => (
-          <section
-            key={quadrant.key}
-            className="rounded-3xl border border-muted/20 bg-background/40 p-5"
-          >
+          <section key={quadrant.key} className="rounded-3xl border border-muted bg-background p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-bold text-foreground">{quadrant.label}</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   {formatMinutes(quadrant.estimateMinutes)}
                 </p>
               </div>
@@ -598,12 +587,12 @@ export function WorkspaceTimeOrchestratorBlockEditor({
               {quadrant.tasks.slice(0, 4).map((item) => (
                 <li
                   key={`${quadrant.key}-${item.task.id}`}
-                  className="rounded-2xl border border-muted/20 bg-muted/5 px-3 py-2"
+                  className="rounded-2xl border border-muted bg-background px-3 py-2"
                 >
                   <p className="text-xs font-semibold text-muted-foreground">
                     {item.task.text || "Untitled task"}
                   </p>
-                  <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/40">
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
                     {formatRelativeTaskMeta(item)}
                   </p>
                 </li>
@@ -611,7 +600,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
             </ul>
 
             {quadrant.tasks.length === 0 ? (
-              <p className="mt-4 text-xs text-muted-foreground">No tasks in this quadrant.</p>
+              <p className="mt-4 text-xs text-toned">No tasks in this quadrant.</p>
             ) : null}
           </section>
         ))}

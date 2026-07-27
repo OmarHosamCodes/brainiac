@@ -72,17 +72,15 @@ export function WorkspacePricingSimulatorBlockEditor({
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-      <section className="space-y-4 rounded-2xl border border-muted/20 bg-background/40 p-4">
+      <section className="space-y-4 rounded-2xl border border-muted bg-background p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-black tracking-tight text-foreground">Pricing Simulator</h2>
-            <p className="text-xs text-muted-foreground">
-              Monthly retainer model for executive decisions.
-            </p>
+            <p className="text-xs text-toned">Monthly retainer model for executive decisions.</p>
           </div>
 
           <div className="rounded-xl border border-primary/10 bg-primary/5 px-4 py-2.5 text-right">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Active Clients
             </p>
             <p className="mt-1 text-xl font-black tracking-tight text-primary sm:text-2xl">
@@ -94,7 +92,7 @@ export function WorkspacePricingSimulatorBlockEditor({
         <div className="grid gap-3 sm:grid-cols-2">
           <button
             type="button"
-            className="rounded-xl border border-muted/20 bg-muted/10 px-4 py-2.5 text-left transition hover:border-primary/30"
+            className="rounded-xl border border-muted bg-muted px-4 py-2.5 text-left transition hover:border-primary/30"
             onClick={() =>
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== "pricing-simulator") {
@@ -104,15 +102,13 @@ export function WorkspacePricingSimulatorBlockEditor({
               })
             }
           >
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-              Adjust
-            </p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Adjust</p>
             <p className="mt-1 text-base font-bold text-foreground">-1 Client</p>
           </button>
 
           <button
             type="button"
-            className="rounded-xl border border-muted/20 bg-muted/10 px-4 py-2.5 text-left transition hover:border-primary/30"
+            className="rounded-xl border border-muted bg-muted px-4 py-2.5 text-left transition hover:border-primary/30"
             onClick={() =>
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== "pricing-simulator") {
@@ -122,19 +118,17 @@ export function WorkspacePricingSimulatorBlockEditor({
               })
             }
           >
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-              Adjust
-            </p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Adjust</p>
             <p className="mt-1 text-base font-bold text-foreground">+1 Client</p>
           </button>
         </div>
 
         {controls.map((control) => (
-          <article key={control.key} className="rounded-xl border border-muted/20 bg-muted/10 p-3">
+          <article key={control.key} className="rounded-xl border border-muted bg-muted p-3">
             <div className="mb-2 flex items-center justify-between gap-3">
               <label
                 htmlFor={control.key}
-                className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
               >
                 {control.label}
               </label>
@@ -180,7 +174,7 @@ export function WorkspacePricingSimulatorBlockEditor({
               />
             </div>
 
-            <div className="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+            <div className="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               <span>{control.min}</span>
               <span>{control.max}</span>
             </div>
@@ -191,7 +185,7 @@ export function WorkspacePricingSimulatorBlockEditor({
       <section className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-success/10 bg-success/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Projected Revenue
             </p>
             <p className="mt-2 font-mono text-xl font-black tracking-tight text-success sm:text-2xl">
@@ -200,7 +194,7 @@ export function WorkspacePricingSimulatorBlockEditor({
           </div>
 
           <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Min Retainer / Client
             </p>
             <p className="mt-2 font-mono text-xl font-black tracking-tight text-primary sm:text-2xl">
@@ -209,7 +203,7 @@ export function WorkspacePricingSimulatorBlockEditor({
           </div>
 
           <div className="rounded-2xl border border-secondary/10 bg-secondary/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Projected Profit
             </p>
             <p
@@ -223,7 +217,7 @@ export function WorkspacePricingSimulatorBlockEditor({
           </div>
 
           <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Required Revenue
             </p>
             <p className="mt-2 font-mono text-xl font-black tracking-tight text-warning sm:text-2xl">
@@ -232,9 +226,9 @@ export function WorkspacePricingSimulatorBlockEditor({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-muted/20 bg-background/40 p-4">
+        <div className="rounded-2xl border border-muted bg-background p-4">
           <h3 className="text-sm font-black tracking-tight text-foreground">Scenario Readout</h3>
-          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+          <div className="mt-3 space-y-2 text-sm text-toned">
             <p>
               At <strong>{block.activeClients}</strong> active clients, the team carries{" "}
               <strong>{summary.monthlyClientHours}</strong> monthly delivery hours.
@@ -244,7 +238,7 @@ export function WorkspacePricingSimulatorBlockEditor({
               each client should clear at least{" "}
               <strong>{formatCurrency(summary.minimumRetainerPerClient)}</strong> per month.
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-toned">
               Use this to pressure-test rate increases, hiring decisions, and minimum retainers.
             </p>
           </div>

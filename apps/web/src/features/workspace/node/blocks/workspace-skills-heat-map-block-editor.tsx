@@ -184,25 +184,21 @@ export function WorkspaceSkillsHeatMapBlockEditor({
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-3xl border border-primary/10 bg-primary/5 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Team
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Team</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-primary sm:text-3xl">
             {summary.memberCount}
           </p>
         </div>
 
         <div className="rounded-3xl border border-success/10 bg-success/5 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Avg Score
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Avg Score</p>
           <p className="mt-2 text-2xl font-black tracking-tight text-success sm:text-3xl">
             {summary.overallAverage}/10
           </p>
         </div>
 
         <div className="rounded-3xl border border-destructive/10 bg-destructive/5 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Critical Gaps
           </p>
           <p className="mt-2 text-2xl font-black tracking-tight text-destructive sm:text-3xl">
@@ -210,14 +206,12 @@ export function WorkspaceSkillsHeatMapBlockEditor({
           </p>
         </div>
 
-        <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-            Strongest
-          </p>
+        <div className="rounded-3xl border border-muted bg-muted p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Strongest</p>
           <p className="mt-2 text-lg font-black tracking-tight text-foreground">
             {strongestDimensionLabel}
           </p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
             {strongestDimensionAverage === null
               ? "Add scores to rank the team."
               : `${strongestDimensionAverage}/10 team average`}
@@ -225,11 +219,11 @@ export function WorkspaceSkillsHeatMapBlockEditor({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <div className="rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-foreground">Skills matrix</p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-toned">
               Score each team member from 1 to 10 for every skill. Higher scores indicate stronger
               capability.
             </p>
@@ -279,11 +273,11 @@ export function WorkspaceSkillsHeatMapBlockEditor({
       </div>
 
       {block.dimensions.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">
             No skill dimensions added yet.
           </p>
-          <p className="mt-2 text-sm text-muted-foreground/80">
+          <p className="mt-2 text-sm text-toned">
             Start with a default set or add custom skills for your team.
           </p>
           <Button
@@ -298,9 +292,9 @@ export function WorkspaceSkillsHeatMapBlockEditor({
           </Button>
         </div>
       ) : block.members.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No team members added yet.</p>
-          <p className="mt-2 text-sm text-muted-foreground/80">
+          <p className="mt-2 text-sm text-toned">
             Add a team member to start scoring strengths and gaps.
           </p>
           <Button
@@ -319,7 +313,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
           <table className="min-w-[880px] w-full border-separate border-spacing-y-3">
             <thead>
               <tr>
-                <th className="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Team Member
                 </th>
                 {block.dimensions.map((dimension) => (
@@ -328,7 +322,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                       <Input
                         value={dimension.label}
                         placeholder="Skill"
-                        className="w-24 border-0 bg-transparent px-0 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
+                        className="w-24 border-0 bg-transparent px-0 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-toned shadow-none placeholder:text-muted focus-visible:ring-0"
                         aria-label={`Skill name for ${dimension.label || "new skill"}`}
                         onChange={(event) => updateDimensionLabel(dimension.id, event.target.value)}
                       />
@@ -347,10 +341,10 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                     </div>
                   </th>
                 ))}
-                <th className="px-3 pb-1 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-1 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Average
                 </th>
-                <th className="px-3 pb-1 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <th className="px-3 pb-1 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Actions
                 </th>
               </tr>
@@ -362,21 +356,18 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                 const memberAverage = getMemberAverage(member);
 
                 return (
-                  <tr
-                    key={member.id}
-                    className="rounded-2xl border border-muted/20 bg-background/40"
-                  >
-                    <td className="rounded-l-2xl border-y border-l border-muted/20 bg-background/40 px-4 py-4 align-top">
+                  <tr key={member.id} className="rounded-2xl border border-muted bg-background">
+                    <td className="rounded-l-2xl border-y border-l border-muted bg-background px-4 py-4 align-top">
                       <Input
                         value={member.name}
                         placeholder="Name"
-                        className="border-0 bg-transparent px-0 text-sm font-semibold text-foreground shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+                        className="border-0 bg-transparent px-0 text-sm font-semibold text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                         onChange={(event) => updateMemberName(member.id, event.target.value)}
                       />
                       <Input
                         value={member.role}
                         placeholder="Role"
-                        className="mt-1 border-0 bg-transparent px-0 text-xs font-medium text-muted-foreground/70 shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+                        className="mt-1 border-0 bg-transparent px-0 text-xs font-medium text-toned shadow-none placeholder:text-muted focus-visible:ring-0"
                         onChange={(event) => updateMemberRole(member.id, event.target.value)}
                       />
                     </td>
@@ -387,7 +378,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                       return (
                         <td
                           key={`${member.id}-${dimension.id}`}
-                          className="border-y border-muted/20 bg-background/40 px-3 py-4 text-center"
+                          className="border-y border-muted bg-background px-3 py-4 text-center"
                         >
                           <button
                             type="button"
@@ -404,7 +395,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                       );
                     })}
 
-                    <td className="border-y border-muted/20 bg-background/40 px-3 py-4 text-center">
+                    <td className="border-y border-muted bg-background px-3 py-4 text-center">
                       <div
                         className={cn(
                           "rounded-2xl border px-3 py-4 text-lg font-black tracking-tight",
@@ -415,7 +406,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                       </div>
                     </td>
 
-                    <td className="rounded-r-2xl border-y border-r border-muted/20 bg-background/40 px-3 py-4 text-right">
+                    <td className="rounded-r-2xl border-y border-r border-muted bg-background px-3 py-4 text-right">
                       <Button
                         type="button"
                         variant="ghost"
@@ -433,7 +424,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
 
             <tfoot>
               <tr>
-                <td className="px-3 pt-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <td className="px-3 pt-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   Team Average
                 </td>
                 {block.dimensions.map((dimension) => {

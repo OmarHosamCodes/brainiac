@@ -116,7 +116,7 @@ function getDomainPillClass(domain: WorkspaceTaskDomain | null | undefined) {
     case "orchestrator":
       return "border-primary/30 bg-primary/10 text-primary";
     default:
-      return "border-muted/30 bg-muted/30 text-muted-foreground";
+      return "border-muted bg-muted/30 text-muted-foreground";
   }
 }
 
@@ -540,7 +540,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
+      <section className="rounded-3xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-primary">
@@ -550,7 +550,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
             <h3 className="text-lg font-bold tracking-tight text-foreground">
               Prioritize across the current task scope
             </h3>
-            <p className="max-w-2xl text-sm text-muted-foreground">{matrixStatus.description}</p>
+            <p className="max-w-2xl text-sm text-toned">{matrixStatus.description}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -597,7 +597,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <fieldset className="space-y-3">
-            <legend className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <legend className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Domain filters
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -625,7 +625,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
           </fieldset>
 
           <fieldset className="space-y-3">
-            <legend className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+            <legend className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
               Quadrant filters
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -695,16 +695,16 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
           <article
             key={quadrant.key}
             className={cn(
-              "rounded-3xl border border-muted/20 p-5",
+              "rounded-3xl border border-muted p-5",
               getQuadrantClassName(quadrant.key),
             )}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                   {quadrant.label}
                 </p>
-                <p className="mt-1 text-xs font-medium text-muted-foreground/80">
+                <p className="mt-1 text-xs font-medium text-toned">
                   {getQuadrantDescription(quadrant.key)}
                 </p>
               </div>
@@ -713,14 +713,14 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
                 <p className="text-2xl font-black tracking-tight text-foreground">
                   {quadrant.taskCount}
                 </p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-toned">
                   {formatDuration(quadrant.estimateMinutes)}
                 </p>
               </div>
             </div>
 
             {quadrant.tasks.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-8 text-center text-sm font-medium text-muted-foreground/60">
+              <div className="mt-4 rounded-2xl border border-dashed border-muted bg-background py-8 text-center text-sm font-medium text-toned">
                 No tasks in this quadrant.
               </div>
             ) : (
@@ -728,7 +728,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
                 {quadrant.tasks.map((item) => (
                   <article
                     key={getCollectedTaskKey(item)}
-                    className="rounded-2xl border border-muted/20 bg-background/40 p-4"
+                    className="rounded-2xl border border-muted bg-background p-4"
                   >
                     <div className="flex items-start gap-3">
                       <BlockCheckbox
@@ -766,7 +766,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
                             </Badge>
                           ) : null}
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/40">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
                           {formatRelativeTaskMeta(item)}
                         </p>
                       </div>
@@ -779,20 +779,20 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
         ))}
       </div>
 
-      <section className="rounded-3xl border border-muted/20 bg-background/40 p-6">
+      <section className="rounded-3xl border border-muted bg-background p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
               Domain time allocation
             </h3>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-toned">
               Open task load is grouped by domain so time concentration is visible at a glance.
             </p>
           </div>
         </div>
 
         {summary.domainAllocation.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center text-sm font-medium text-muted-foreground/60">
+          <div className="mt-6 rounded-2xl border border-dashed border-muted bg-background py-12 text-center text-sm font-medium text-toned">
             No open task load yet.
           </div>
         ) : (
@@ -809,7 +809,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
                       {allocation.taskCount} tasks
                     </Badge>
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                     {formatDuration(allocation.estimateMinutes)}
                   </span>
                 </div>
@@ -824,13 +824,13 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
         )}
       </section>
 
-      <section className="rounded-3xl border border-muted/20 bg-background/40 p-6">
+      <section className="rounded-3xl border border-muted bg-background p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
               Task editor
             </h3>
-            <p className="mt-1 text-xs text-muted-foreground">{taskEditorDescription}</p>
+            <p className="mt-1 text-xs text-toned">{taskEditorDescription}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -861,7 +861,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
         </div>
 
         {summary.prioritizedTasks.length === 0 ? (
-          <div className="mt-6 rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center text-sm font-medium text-muted-foreground/60">
+          <div className="mt-6 rounded-3xl border border-dashed border-muted bg-background py-12 text-center text-sm font-medium text-toned">
             {scopedCollectedTasks.length === 0
               ? "No tasks to prioritize yet."
               : "No tasks match the current filters."}
@@ -871,7 +871,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
             {summary.prioritizedTasks.map((item) => (
               <article
                 key={getCollectedTaskKey(item)}
-                className="rounded-2xl border border-muted/20 bg-muted/5 p-4"
+                className="rounded-2xl border border-muted bg-background p-4"
               >
                 <div className="grid gap-4 xl:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,0.7fr)]">
                   <div className="flex items-start pt-2">
@@ -906,12 +906,12 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
                       </Button>
                     </div>
 
-                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/40">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
                       {formatRelativeTaskMeta(item)}
                     </p>
 
                     {isDerivedTask(item) ? (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-toned">
                         Urgency, importance, estimate, and due date are derived from the source
                         content pipeline and are read-only here.
                       </p>
@@ -943,9 +943,9 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2 rounded-xl border border-muted/20 bg-background/40 p-3">
+                      <div className="space-y-2 rounded-xl border border-muted bg-background p-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                             Urgency
                           </span>
                           <span className="text-sm font-black text-foreground">
@@ -964,9 +964,9 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
                         />
                       </div>
 
-                      <div className="space-y-2 rounded-xl border border-muted/20 bg-background/40 p-3">
+                      <div className="space-y-2 rounded-xl border border-muted bg-background p-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                             Importance
                           </span>
                           <span className="text-sm font-black text-foreground">
@@ -989,7 +989,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
 
                   <div className="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)_auto] xl:grid-cols-1">
                     <div className="space-y-1">
-                      <label className="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                      <label className="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         Time Estimate
                       </label>
                       <Input
@@ -1003,7 +1003,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                      <label className="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         Due Date
                       </label>
                       <Input
@@ -1042,21 +1042,21 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
             <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
               AI battle plan
             </h3>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-toned">
               The Orchestrator agent turns the current filtered matrix scope into a concrete
               sequencing recommendation.
             </p>
           </div>
 
           {block.battlePlanUpdatedAt ? (
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-toned">
               Last updated {formatDateTime(block.battlePlanUpdatedAt)}
             </p>
           ) : null}
         </div>
 
         <div
-          className="prose prose-sm dark:prose-invert mt-6 max-w-none rounded-2xl border border-muted/20 bg-background/60 p-5 text-sm leading-relaxed text-muted-foreground shadow-sm"
+          className="prose prose-sm dark:prose-invert mt-6 max-w-none rounded-2xl border border-muted bg-background p-5 text-sm leading-relaxed text-toned shadow-sm"
           dangerouslySetInnerHTML={{
             __html: renderSimpleMarkdown(
               block.latestBattlePlan ||

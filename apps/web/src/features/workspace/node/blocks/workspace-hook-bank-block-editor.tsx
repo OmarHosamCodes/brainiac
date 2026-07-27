@@ -180,11 +180,11 @@ export function WorkspaceHookBankBlockEditor({
       <div className="flex flex-wrap items-start justify-between gap-3 px-1">
         <div>
           <h2 className="text-sm font-black tracking-tight text-foreground">Hook Bank</h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-toned">
             Hooks sorted by score to surface the strongest opening angles.
           </p>
           {block.lastGeneratedAt ? (
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
               Last generated {formatDateTime(block.lastGeneratedAt)}
             </p>
           ) : null}
@@ -216,8 +216,8 @@ export function WorkspaceHookBankBlockEditor({
       </div>
 
       {sortedHooks.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted/20 bg-muted/5 py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
+        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
             <Link className="size-6" />
           </div>
           <p className="mt-3 text-xs font-bold text-muted-foreground">No hooks stored yet</p>
@@ -237,14 +237,14 @@ export function WorkspaceHookBankBlockEditor({
           {sortedHooks.map((hook) => (
             <article
               key={hook.id}
-              className="rounded-2xl border border-muted/20 bg-background/40 p-4 transition-all hover:border-muted/30"
+              className="rounded-2xl border border-muted bg-background p-4 transition-all hover:border-muted"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-3">
                   <div>
                     <Label
                       htmlFor={`category-${hook.id}`}
-                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                     >
                       Category
                     </Label>
@@ -264,7 +264,7 @@ export function WorkspaceHookBankBlockEditor({
                   <div>
                     <Label
                       htmlFor={`score-${hook.id}`}
-                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                     >
                       Hook Score ({hook.score}/10)
                     </Label>
@@ -289,7 +289,7 @@ export function WorkspaceHookBankBlockEditor({
                             key={`${hook.id}-${score}`}
                             className={cn(
                               "h-1.5 flex-1 rounded-full transition-all",
-                              score <= hook.score ? "bg-primary" : "bg-muted/20",
+                              score <= hook.score ? "bg-primary" : "bg-muted",
                             )}
                             aria-label={`Score ${score}`}
                           />
@@ -301,7 +301,7 @@ export function WorkspaceHookBankBlockEditor({
                   <div>
                     <Label
                       htmlFor={`text-${hook.id}`}
-                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                      className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                     >
                       Hook Text
                     </Label>
@@ -309,7 +309,7 @@ export function WorkspaceHookBankBlockEditor({
                       id={`text-${hook.id}`}
                       value={hook.text}
                       rows={2}
-                      className="rounded-2xl bg-muted/5"
+                      className="rounded-2xl bg-background"
                       placeholder="Write the hook..."
                       onChange={(event) =>
                         mutateHook(hook.id, (entry) => {

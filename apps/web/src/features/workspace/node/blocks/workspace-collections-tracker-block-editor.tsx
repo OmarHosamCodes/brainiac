@@ -160,9 +160,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
           <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
             {formatCurrency(summary.totalOutstanding)}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {block.invoices.length} tracked invoices
-          </p>
+          <p className="mt-1 text-sm text-toned">{block.invoices.length} tracked invoices</p>
         </div>
 
         <div className="rounded-3xl border border-destructive/20 bg-destructive/10 p-5">
@@ -172,9 +170,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
           <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
             {formatCurrency(summary.overdueAmount)}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {overdueCount} invoices need follow-up
-          </p>
+          <p className="mt-1 text-sm text-toned">{overdueCount} invoices need follow-up</p>
         </div>
 
         <div className="rounded-3xl border border-warning/20 bg-warning/10 p-5">
@@ -184,7 +180,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
           <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
             {formatCurrency(summary.dueThisWeekAmount)}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">{highRiskCount} high-risk exposures</p>
+          <p className="mt-1 text-sm text-toned">{highRiskCount} high-risk exposures</p>
         </div>
 
         <div className="rounded-3xl border border-success/20 bg-success/10 p-5">
@@ -194,7 +190,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
           <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
             {formatCurrency(summary.collectedThisMonth)}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">{paidCount} invoices marked paid</p>
+          <p className="mt-1 text-sm text-toned">{paidCount} invoices marked paid</p>
         </div>
       </div>
 
@@ -204,7 +200,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
             <p className="text-sm font-semibold text-foreground">
               Collections & receivables tracker
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-toned">
               Risk is highlighted automatically from invoice size, status, and delay length so the
               team can focus follow-up where cash exposure is highest.
             </p>
@@ -255,24 +251,24 @@ export function WorkspaceCollectionsTrackerBlockEditor({
       </div>
 
       {filteredInvoices.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             No invoices match the current filter
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-toned">
             Add a receivable or switch the filter to review another part of the cash pipeline.
           </p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-4">
           <div
-            className="grid min-w-[1560px] gap-px overflow-hidden rounded-3xl border border-muted/20 bg-muted/20"
+            className="grid min-w-[1560px] gap-px overflow-hidden rounded-3xl border border-muted bg-muted/20"
             style={rowGridStyle}
           >
             {headerLabels.map((label) => (
               <div
                 key={label}
-                className="bg-muted/10 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+                className="bg-muted px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
               >
                 {label}
               </div>
@@ -284,11 +280,11 @@ export function WorkspaceCollectionsTrackerBlockEditor({
 
               return (
                 <div key={invoice.id} className="contents">
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <Input
                       value={invoice.clientName}
                       placeholder="Client"
-                      className="border-0 bg-transparent px-0 font-semibold text-foreground shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+                      className="border-0 bg-transparent px-0 font-semibold text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                       aria-label={`Client name for invoice ${invoice.clientName || "draft"}`}
                       onChange={(event) =>
                         mutateInvoice(invoice.id, (entry) => {
@@ -298,7 +294,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <Input
                       type="number"
                       value={String(invoice.amountEgp)}
@@ -312,7 +308,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <Input
                       type="date"
                       value={invoice.dueDate ?? ""}
@@ -326,20 +322,20 @@ export function WorkspaceCollectionsTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <p
                       className={cn(
                         "rounded-2xl border px-3 py-2 text-center text-[10px] font-bold uppercase tracking-[0.1em]",
                         daysOverdue > 0
                           ? "border-destructive/20 bg-destructive/10 text-destructive"
-                          : "border-muted/20 bg-muted/10 text-muted-foreground/60",
+                          : "border-muted bg-muted text-toned",
                       )}
                     >
                       {daysOverdue > 0 ? `${daysOverdue}d` : "0d"}
                     </p>
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <Input
                       value={invoice.owner}
                       placeholder="Owner"
@@ -353,7 +349,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <Input
                       type="date"
                       value={invoice.nextFollowUpDate ?? ""}
@@ -367,7 +363,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <BlockSelect
                       value={invoice.status}
                       options={statusOptions}
@@ -377,7 +373,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <Badge variant={getRiskBadgeVariant(riskLevel)} className="rounded-2xl px-3">
                       {workspaceReceivableRiskLevelLabels[riskLevel]}
                     </Badge>
@@ -397,11 +393,11 @@ export function WorkspaceCollectionsTrackerBlockEditor({
                     ) : null}
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <Textarea
                       value={invoice.notes}
                       rows={1}
-                      className="min-h-0 resize-none rounded-2xl bg-muted/10 text-sm"
+                      className="min-h-0 resize-none rounded-2xl bg-muted text-sm"
                       placeholder="Follow-up notes"
                       aria-label={`Follow-up notes for ${invoice.clientName || "invoice"}`}
                       onChange={(event) =>
@@ -412,7 +408,7 @@ export function WorkspaceCollectionsTrackerBlockEditor({
                     />
                   </div>
 
-                  <div className="bg-background/40 p-3">
+                  <div className="bg-background p-3">
                     <Button
                       type="button"
                       variant="ghost"
