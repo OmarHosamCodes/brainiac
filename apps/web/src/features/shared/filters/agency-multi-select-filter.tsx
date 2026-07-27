@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, Search } from "lucide-react";
 
+import { Checkbox } from "@/ui/checkbox";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import {
@@ -108,14 +109,10 @@ function FilterCheckbox({
         agencyFocusRingClass,
       )}
     >
-      <input
-        type="checkbox"
-        checked={checked}
-        ref={(node) => {
-          if (node) node.indeterminate = Boolean(indeterminate);
-        }}
-        onChange={(event) => onChange(event.target.checked)}
-        className="size-3.5 shrink-0 cursor-pointer rounded border border-default accent-primary"
+      <Checkbox
+        checked={indeterminate ? "indeterminate" : checked}
+        onCheckedChange={(value) => onChange(value === true)}
+        className="size-3.5 [&_svg]:size-2.5"
       />
       <span className={cn("min-w-0 flex-1 truncate", checked ? "text-highlighted" : "text-muted")}>
         {label}

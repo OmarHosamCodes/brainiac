@@ -11,6 +11,8 @@ import {
   useAgencyProjectsQuery,
 } from "@/features/shared/agency-queries";
 import type { AggregatedReportRow } from "@/features/reports/agency-report-grouping";
+import { filterEntriesByShowWaste } from "@/features/reports/agency-report-grouping";
+import { DEFAULT_AGENCY_REPORT_SHOW_WASTE } from "@/features/reports/agency-report-show-waste";
 import { selectEntriesForDetailsRow } from "@/features/reports/hooks/use-agency-report-entry-details-dialog";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
@@ -24,8 +26,17 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   const queryClient = useQueryClient();
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const deletingEntryIds = useAgencyTimeTrackingStore((state) => state.deletingEntryIds);
-  const { range, projectId, memberUserId, clientId, clientIds, projectIds, memberUserIds, fields } =
-    filters;
+  const {
+    range,
+    projectId,
+    memberUserId,
+    clientId,
+    clientIds,
+    projectIds,
+    memberUserIds,
+    fields,
+    showWaste,
+  } = filters;
   const [updatingRowKeys, setUpdatingRowKeys] = useState<Set<string>>(() => new Set());
   const [wastePendingRowKeys, setWastePendingRowKeys] = useState<Set<string>>(() => new Set());
   const [detailsRowKey, setDetailsRowKey] = useState<string | null>(null);
@@ -207,10 +218,17 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     }
   }, []);
 
-  const entries = entriesQuery.data ?? [];
+  const entries = useMemo(
+    () =>
+      filterEntriesByShowWaste(
+        entriesQuery.data ?? [],
+        showWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+      ),
+    [entriesQuery.data, showWaste],
+  );
   const detailsEntries = useMemo(
-    () => selectEntriesForDetailsRow(entries, detailsRowKey),
-    [detailsRowKey, entries],
+    () => selectEntriesForDetailsRow(entriesQuery.data ?? [], detailsRowKey),
+    [detailsRowKey, entriesQuery.data],
   );
   const isPending = entriesQuery.isPending && !entriesQuery.isPlaceholderData;
   const isError = entriesQuery.isError;
@@ -235,6 +253,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     deletingEntryIds,
     wastePendingRowKeys,
     visibleFields: fields,
+    showWaste: showWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE,
     detailsOpen: detailsRowKey !== null,
     detailsEntries,
     detailsLabel: detailsRowLabel,

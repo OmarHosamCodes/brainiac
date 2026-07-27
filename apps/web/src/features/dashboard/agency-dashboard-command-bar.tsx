@@ -1,4 +1,4 @@
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, MoreHorizontal } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import {
@@ -12,8 +12,17 @@ import {
   type AgencyFilterOptionGroup,
 } from "@/features/shared/filters/agency-multi-select-filter";
 import { Button } from "@/ui/button";
+import { Checkbox } from "@/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/ui/radio-group";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import {
   AGENCY_REPORT_FIELD_LABELS,
@@ -22,6 +31,15 @@ import {
   isAgencyReportFieldId,
   type AgencyReportFieldId,
 } from "@/features/reports/agency-report-fields";
+import {
+  AGENCY_REPORT_SHOW_WASTE_LABELS,
+  AGENCY_REPORT_SHOW_WASTE_SOURCES,
+  areSameShowWaste,
+  DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+  type AgencyReportShowWaste,
+  type AgencyReportShowWasteSource,
+} from "@/features/reports/agency-report-show-waste";
+import type { TenureQuarterMonth } from "@/features/resourcing/tenure-utils";
 import { cn } from "@/lib/utils";
 
 export type RangePreset = "tenure" | "today" | "week" | "month" | "last30" | "custom";
@@ -79,32 +97,59 @@ type AgencyDashboardCommandBarProps = {
   defaultRangePreset: RangePreset;
   tenureAvailable: boolean;
   tenurePeriodLabel?: string | null;
+  tenureQuarterLabel?: string | null;
+  tenureQuarterMonths?: TenureQuarterMonth[];
+  tenureMonthIndexes?: number[];
+  onTenureMonthIndexesChange?: (monthIndexes: number[]) => void;
   members: Array<{ userId: string; userName: string; avatar?: string | null }>;
   projectsLoading?: boolean;
   fieldIds?: AgencyReportFieldId[];
   onFieldIdsChange?: (fieldIds: AgencyReportFieldId[]) => void;
   defaultFieldIds?: AgencyReportFieldId[];
+  showWaste?: AgencyReportShowWaste;
+  onShowWasteChange?: (showWaste: AgencyReportShowWaste) => void;
   trailingActions?: ReactNode;
   shellClassName?: string;
 };
+
+function normalizeTenureMonthIndexes(next: number[]): number[] {
+  const unique = [...new Set(next)]
+    .filter((index): index is 0 | 1 | 2 => index === 0 || index === 1 || index === 2)
+    .sort((left, right) => left - right);
+  return unique.length === 3 ? [] : unique;
+}
 
 function RangePresetChooser({
   value,
   onChange,
   tenureAvailable,
   tenurePeriodLabel,
+  tenureQuarterLabel,
+  tenureQuarterMonths,
+  tenureMonthIndexes,
+  onTenureMonthIndexesChange,
 }: {
   value: RangePreset;
   onChange: (preset: RangePreset) => void;
   tenureAvailable: boolean;
   tenurePeriodLabel?: string | null;
+  tenureQuarterLabel?: string | null;
+  tenureQuarterMonths: TenureQuarterMonth[];
+  tenureMonthIndexes: number[];
+  onTenureMonthIndexesChange: (monthIndexes: number[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const presets = rangePresets(tenureAvailable);
+  const allQuarterSelected = tenureMonthIndexes.length === 0;
+
+  function selectTenureMonths(next: number[]) {
+    onTenureMonthIndexesChange(normalizeTenureMonthIndexes(next));
+    onChange("tenure");
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
         <button
           type="button"
           className={cn(filterTriggerClass, "text-highlighted")}
@@ -115,10 +160,91 @@ function RangePresetChooser({
           </span>
           <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
         </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-1">
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48 p-1">
         {presets.map((preset) => {
           const selected = preset === value;
+
+          if (preset === "tenure") {
+            return (
+              <DropdownMenuSub key={preset}>
+                <DropdownMenuSubTrigger
+                  className={cn(
+                    filterOptionButtonClass,
+                    "data-open:bg-default/80",
+                    selected && "bg-primary/10 text-primary data-open:bg-primary/10",
+                  )}
+                  onClick={() => {
+                    selectTenureMonths([]);
+                  }}
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {rangePresetLabel(preset, tenureQuarterLabel ?? tenurePeriodLabel)}
+                  </span>
+                  {selected ? (
+                    <Check className="size-3.5 shrink-0" aria-hidden />
+                  ) : (
+                    <span className="size-3.5 shrink-0" aria-hidden />
+                  )}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-44 p-1" sideOffset={6}>
+                  <div
+                    className="flex flex-col gap-0.5"
+                    onPointerDown={(event) => event.preventDefault()}
+                  >
+                    <RadioGroup
+                      value={allQuarterSelected ? "all" : ""}
+                      onValueChange={(next) => {
+                        if (next === "all") selectTenureMonths([]);
+                      }}
+                      className="gap-0.5"
+                    >
+                      <label
+                        className={cn(
+                          filterOptionButtonClass,
+                          "justify-start gap-2.5",
+                          allQuarterSelected && "bg-primary/10 text-primary",
+                        )}
+                      >
+                        <RadioGroupItem value="all" className="size-3.5" aria-label="All Quarter" />
+                        <span className="min-w-0 flex-1 truncate">All Quarter</span>
+                      </label>
+                    </RadioGroup>
+
+                    {tenureQuarterMonths.map((month) => {
+                      const checked = tenureMonthIndexes.includes(month.index);
+                      return (
+                        <label
+                          key={month.index}
+                          className={cn(
+                            filterOptionButtonClass,
+                            "justify-start gap-2.5",
+                            checked && "bg-primary/10 text-primary",
+                          )}
+                        >
+                          <Checkbox
+                            checked={checked}
+                            className="size-3.5"
+                            aria-label={month.label}
+                            onCheckedChange={(next) => {
+                              const enabled = next === true;
+                              selectTenureMonths(
+                                enabled
+                                  ? [...tenureMonthIndexes, month.index]
+                                  : tenureMonthIndexes.filter((index) => index !== month.index),
+                              );
+                            }}
+                          />
+                          <span className="min-w-0 flex-1 truncate">{month.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            );
+          }
+
           return (
             <button
               key={preset}
@@ -138,8 +264,127 @@ function RangePresetChooser({
             </button>
           );
         })}
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ReportsOptionsMenu({
+  fieldIds,
+  onFieldIdsChange,
+  defaultFieldIds,
+  showWaste,
+  onShowWasteChange,
+}: {
+  fieldIds: AgencyReportFieldId[];
+  onFieldIdsChange: (fieldIds: AgencyReportFieldId[]) => void;
+  defaultFieldIds: AgencyReportFieldId[];
+  showWaste: AgencyReportShowWaste;
+  onShowWasteChange: (showWaste: AgencyReportShowWaste) => void;
+}) {
+  function toggleField(field: AgencyReportFieldId, enabled: boolean) {
+    const next = enabled
+      ? [...new Set([...fieldIds, field])]
+      : fieldIds.filter((value) => value !== field);
+    const normalized = next.filter(isAgencyReportFieldId);
+    onFieldIdsChange(normalized.length > 0 ? normalized : defaultFieldIds);
+  }
+
+  function toggleShowWaste(source: AgencyReportShowWasteSource, enabled: boolean) {
+    onShowWasteChange({ ...showWaste, [source]: enabled });
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="px-2.5"
+          aria-label="Report options"
+          title="Report options"
+        >
+          <MoreHorizontal className="size-4" aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44 p-1">
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger
+            className={cn(filterOptionButtonClass, "data-open:bg-default/80")}
+          >
+            <span className="min-w-0 flex-1 truncate">Fields</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-44 p-1" sideOffset={6}>
+            <div
+              className="flex flex-col gap-0.5"
+              onPointerDown={(event) => event.preventDefault()}
+            >
+              {defaultFieldIds.map((field) => {
+                const checked = fieldIds.includes(field);
+                return (
+                  <label
+                    key={field}
+                    className={cn(
+                      filterOptionButtonClass,
+                      "justify-start gap-2.5",
+                      checked && "bg-primary/10 text-primary",
+                    )}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      className="size-3.5"
+                      aria-label={AGENCY_REPORT_FIELD_LABELS[field]}
+                      onCheckedChange={(next) => toggleField(field, next === true)}
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {AGENCY_REPORT_FIELD_LABELS[field]}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger
+            className={cn(filterOptionButtonClass, "data-open:bg-default/80")}
+          >
+            <span className="min-w-0 flex-1 truncate">Show waste</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-44 p-1" sideOffset={6}>
+            <div
+              className="flex flex-col gap-0.5"
+              onPointerDown={(event) => event.preventDefault()}
+            >
+              {AGENCY_REPORT_SHOW_WASTE_SOURCES.map((source) => {
+                const checked = showWaste[source];
+                return (
+                  <label
+                    key={source}
+                    className={cn(
+                      filterOptionButtonClass,
+                      "justify-start gap-2.5",
+                      checked && "bg-primary/10 text-primary",
+                    )}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      className="size-3.5"
+                      aria-label={AGENCY_REPORT_SHOW_WASTE_LABELS[source]}
+                      onCheckedChange={(next) => toggleShowWaste(source, next === true)}
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {AGENCY_REPORT_SHOW_WASTE_LABELS[source]}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -165,23 +410,31 @@ export function AgencyDashboardCommandBar({
   defaultRangePreset,
   tenureAvailable,
   tenurePeriodLabel = null,
+  tenureQuarterLabel = null,
+  tenureQuarterMonths = [],
+  tenureMonthIndexes = [],
+  onTenureMonthIndexesChange,
   members,
   projectsLoading,
   fieldIds,
   onFieldIdsChange,
   defaultFieldIds = allAgencyReportFieldIds(),
+  showWaste = DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+  onShowWasteChange,
   trailingActions,
   shellClassName,
 }: AgencyDashboardCommandBarProps) {
   const showClientFilter = Boolean(clients && onClientIdsChange);
-  const showFieldsFilter = Boolean(onFieldIdsChange && fieldIds);
+  const showReportsOptions = Boolean(onFieldIdsChange && fieldIds && onShowWasteChange);
 
   const hasActiveFilters = Boolean(
     rangePreset !== defaultRangePreset ||
+    tenureMonthIndexes.length > 0 ||
     clientIds.length > 0 ||
     projectIds.length > 0 ||
     memberUserIds.length > 0 ||
-    (showFieldsFilter && fieldIds && !areSameReportFieldSets(fieldIds, defaultFieldIds)),
+    (showReportsOptions && fieldIds && !areSameReportFieldSets(fieldIds, defaultFieldIds)) ||
+    (showReportsOptions && !areSameShowWaste(showWaste, DEFAULT_AGENCY_REPORT_SHOW_WASTE)),
   );
 
   const clientOptions = clients?.map((client) => ({ value: client.id, label: client.name })) ?? [];
@@ -217,26 +470,15 @@ export function AgencyDashboardCommandBar({
         onValuesChange={onMemberUserIdsChange}
         searchPlaceholder="Search users or groups"
       />
-      {showFieldsFilter ? (
-        <AgencyMultiSelectFilter
-          label="Fields"
-          values={fieldIds!}
-          options={defaultFieldIds.map((field) => ({
-            value: field,
-            label: AGENCY_REPORT_FIELD_LABELS[field],
-          }))}
-          onValuesChange={(values) => {
-            const next = values.filter(isAgencyReportFieldId);
-            onFieldIdsChange!(next.length > 0 ? next : defaultFieldIds);
-          }}
-          searchPlaceholder="Search fields"
-        />
-      ) : null}
       <RangePresetChooser
         value={rangePreset}
         onChange={onRangePresetChange}
         tenureAvailable={tenureAvailable}
         tenurePeriodLabel={tenurePeriodLabel}
+        tenureQuarterLabel={tenureQuarterLabel}
+        tenureQuarterMonths={tenureQuarterMonths}
+        tenureMonthIndexes={tenureMonthIndexes}
+        onTenureMonthIndexesChange={onTenureMonthIndexesChange ?? (() => undefined)}
       />
 
       {rangePreset === "custom" ? (
@@ -266,6 +508,15 @@ export function AgencyDashboardCommandBar({
       ) : null}
 
       <AgencyCommandBarActions>
+        {showReportsOptions ? (
+          <ReportsOptionsMenu
+            fieldIds={fieldIds!}
+            onFieldIdsChange={onFieldIdsChange!}
+            defaultFieldIds={defaultFieldIds}
+            showWaste={showWaste}
+            onShowWasteChange={onShowWasteChange!}
+          />
+        ) : null}
         <Button variant="secondary" size="sm" disabled={!hasPendingChanges} onClick={onApply}>
           Apply
         </Button>

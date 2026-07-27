@@ -1,6 +1,17 @@
 import type { AgencyTimeEntry } from "@orch/api/schemas/agency-ops";
 
+import {
+  isWasteLabel,
+  type AgencyReportShowWaste,
+} from "@/features/reports/agency-report-show-waste";
+
 export type AgencyReportEntry = AgencyTimeEntry;
+
+export type AgencyReportWasteSources = {
+  projects: boolean;
+  tasks: boolean;
+  entries: boolean;
+};
 
 export type ProjectGroup = {
   projectId: string;
@@ -161,16 +172,60 @@ export function groupEntriesForDisplay(entries: AgencyReportEntry[]): DisplayCli
   }));
 }
 
-export function isReportEntryWaste(
-  entry:
-    | Pick<AgencyReportEntry, "taskIsWaste" | "isWaste">
-    | Pick<AggregatedReportRow, "taskIsWaste" | "entries">,
-): boolean {
-  if ("entries" in entry) {
-    if (entry.entries.length === 0) return entry.taskIsWaste === true;
-    return entry.entries.every((item) => item.isWaste === true || item.taskIsWaste === true);
-  }
-  return entry.isWaste === true || entry.taskIsWaste === true;
+export function reportEntryWasteSources(
+  entry: Pick<AgencyReportEntry, "projectName" | "taskTitle" | "taskIsWaste" | "isWaste">,
+): AgencyReportWasteSources {
+  return {
+    projects: isWasteLabel(entry.projectName),
+    tasks: entry.taskIsWaste === true || isWasteLabel(entry.taskTitle),
+    entries: entry.isWaste === true,
+  };
 }
 
-export const reportEntryWasteRowClass = "text-muted line-through decoration-muted/60 opacity-70";
+export function isAnyWasteSource(sources: AgencyReportWasteSources): boolean {
+  return sources.projects || sources.tasks || sources.entries;
+}
+
+export function isReportEntryWaste(
+  entry:
+    | Pick<AgencyReportEntry, "projectName" | "taskTitle" | "taskIsWaste" | "isWaste">
+    | Pick<AggregatedReportRow, "projectName" | "taskTitle" | "taskIsWaste" | "entries">,
+): boolean {
+  if ("entries" in entry) {
+    if (entry.entries.length === 0) {
+      return isAnyWasteSource(
+        reportEntryWasteSources({
+          projectName: entry.projectName,
+          taskTitle: entry.taskTitle,
+          taskIsWaste: entry.taskIsWaste,
+          isWaste: false,
+        }),
+      );
+    }
+    return entry.entries.every((item) => isAnyWasteSource(reportEntryWasteSources(item)));
+  }
+  return isAnyWasteSource(reportEntryWasteSources(entry));
+}
+
+export function isReportEntryWasteVisible(
+  entry: Pick<AgencyReportEntry, "projectName" | "taskTitle" | "taskIsWaste" | "isWaste">,
+  showWaste: AgencyReportShowWaste,
+): boolean {
+  const sources = reportEntryWasteSources(entry);
+  if (!isAnyWasteSource(sources)) return true;
+  return (
+    (showWaste.projects && sources.projects) ||
+    (showWaste.tasks && sources.tasks) ||
+    (showWaste.entries && sources.entries)
+  );
+}
+
+export function filterEntriesByShowWaste(
+  entries: readonly AgencyReportEntry[],
+  showWaste: AgencyReportShowWaste,
+): AgencyReportEntry[] {
+  return entries.filter((entry) => isReportEntryWasteVisible(entry, showWaste));
+}
+
+/** Playful wavy strike — see `.agency-waste-strike` in index.css. */
+export const reportEntryWasteRowClass = "agency-waste-strike text-muted";

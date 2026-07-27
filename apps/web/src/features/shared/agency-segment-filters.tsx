@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -7,6 +7,18 @@ import { AgencyDashboardCommandBar } from "@/features/dashboard/agency-dashboard
 import { AgencyListFilterCommandBar } from "@/features/shared/command-bar/agency-list-filter-command-bar";
 import { AgencyProjectCreateDialog } from "@/features/projects/agency-project-create-dialog";
 import { AgencyReportHistoryMenu } from "@/features/reports/creator/agency-report-history-menu";
+import {
+  allAgencyReportFieldIds,
+  areSameReportFieldSets,
+  parseReportFieldsParam,
+  serializeReportFieldsParam,
+} from "@/features/reports/agency-report-fields";
+import {
+  areSameShowWaste,
+  DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+  parseShowWasteParam,
+  serializeShowWasteParam,
+} from "@/features/reports/agency-report-show-waste";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -112,11 +124,46 @@ function ReportsFiltersRoot({
   const navigate = useNavigate();
   const [creatingReport, setCreatingReport] = useState(false);
 
+  const initialFieldIds = useMemo(
+    () => parseReportFieldsParam(searchParams.get("fields")),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once from the landing URL
+    [],
+  );
+  const initialShowWaste = useMemo(
+    () => parseShowWasteParam(searchParams.get("showWaste")),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once from the landing URL
+    [],
+  );
+
+  const syncReportFilterParams = useCallback(
+    (fieldIds: typeof initialFieldIds, showWaste: typeof initialShowWaste) => {
+      const next = new URLSearchParams(searchParams);
+      next.set("section", "reports");
+      if (areSameReportFieldSets(fieldIds, allAgencyReportFieldIds())) {
+        next.delete("fields");
+      } else {
+        next.set("fields", serializeReportFieldsParam(fieldIds));
+      }
+      if (areSameShowWaste(showWaste, DEFAULT_AGENCY_REPORT_SHOW_WASTE)) {
+        next.delete("showWaste");
+      } else {
+        next.set("showWaste", serializeShowWasteParam(showWaste));
+      }
+      navigate(`/agency?${next.toString()}`, { replace: true });
+    },
+    [navigate, searchParams],
+  );
+
   const timeRange = useAgencyTimeRangeFilters({
     teamId,
     includeClientFilter: true,
     includeFieldsFilter: true,
     fetchEntries: true,
+    initialFieldIds,
+    initialShowWaste,
+    onFiltersApplied: (snapshot) => {
+      syncReportFilterParams(snapshot.fieldIds, snapshot.showWaste);
+    },
   });
 
   const searchContext = {
@@ -135,6 +182,7 @@ function ReportsFiltersRoot({
       next.delete("project");
       next.delete("member");
       next.delete("fields");
+      next.delete("showWaste");
       navigate(`/agency?${next.toString()}`);
     },
     [navigate, searchParams],
@@ -194,6 +242,10 @@ function ReportsFiltersRoot({
             <AgencyDashboardCommandBar
               {...timeRange.barProps}
               shellClassName="rounded-dense"
+              onReset={() => {
+                timeRange.barProps.onReset();
+                syncReportFilterParams(allAgencyReportFieldIds(), DEFAULT_AGENCY_REPORT_SHOW_WASTE);
+              }}
               trailingActions={
                 <>
                   <Button

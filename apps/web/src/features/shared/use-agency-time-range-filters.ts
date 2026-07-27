@@ -8,11 +8,17 @@ import {
   areSameReportFieldSets,
   type AgencyReportFieldId,
 } from "@/features/reports/agency-report-fields";
+import {
+  areSameShowWaste,
+  DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+  type AgencyReportShowWaste,
+} from "@/features/reports/agency-report-show-waste";
 import { fetchAllReportEntries } from "@/features/reports/fetch-report-entries";
 import { orpc } from "@/lib/orpc";
 import { useAgencyClientsQuery } from "@/features/shared/agency-queries";
 import {
   getCurrentTenurePeriodRange,
+  getCurrentTenureQuarterMonths,
   resolveDefaultDashboardRangePreset,
 } from "@/features/resourcing/tenure-utils";
 
@@ -46,6 +52,7 @@ export type AgencyTimeRangeFilters = {
   projectIds?: string[];
   memberUserIds?: string[];
   fields?: AgencyReportFieldId[];
+  showWaste?: AgencyReportShowWaste;
 };
 
 export type AgencyTimeRangeFilterSnapshot = {
@@ -61,6 +68,8 @@ export type AgencyTimeRangeFilterSnapshot = {
   projectIds: string[];
   memberUserIds: string[];
   fieldIds: AgencyReportFieldId[];
+  showWaste: AgencyReportShowWaste;
+  tenureMonthIndexes: number[];
   range: { from: string; to: string };
 };
 
@@ -69,6 +78,8 @@ type UseAgencyTimeRangeFiltersOptions = {
   includeClientFilter?: boolean;
   includeFieldsFilter?: boolean;
   fetchEntries?: boolean;
+  initialFieldIds?: AgencyReportFieldId[];
+  initialShowWaste?: AgencyReportShowWaste;
   onFiltersApplied?: (snapshot: Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt">) => void;
 };
 
@@ -105,6 +116,7 @@ function resolveRangeFromPreset(
   customToDate: string,
   tenurePolicy: Parameters<typeof getCurrentTenurePeriodRange>[0],
   now: Date,
+  tenureMonthIndexes: number[] = [],
 ): { from: string; to: string } {
   const endIso = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
@@ -115,7 +127,7 @@ function resolveRangeFromPreset(
 
   switch (preset) {
     case "tenure": {
-      const tenureRange = getCurrentTenurePeriodRange(tenurePolicy, now);
+      const tenureRange = getCurrentTenurePeriodRange(tenurePolicy, now, tenureMonthIndexes);
       if (tenureRange) {
         return { from: tenureRange.from, to: tenureRange.to };
       }
@@ -159,9 +171,13 @@ export function useAgencyTimeRangeFilters({
   includeClientFilter = false,
   includeFieldsFilter = false,
   fetchEntries = false,
+  initialFieldIds,
+  initialShowWaste,
   onFiltersApplied,
 }: UseAgencyTimeRangeFiltersOptions) {
   const defaultFieldIds = allAgencyReportFieldIds();
+  const startingFieldIds = initialFieldIds ?? defaultFieldIds;
+  const startingShowWaste = initialShowWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE;
   const now = useMemo(() => new Date(), []);
 
   const tenurePolicyQuery = useQuery({
@@ -173,8 +189,8 @@ export function useAgencyTimeRangeFilters({
     () => resolveDefaultDashboardRangePreset(tenurePolicy),
     [tenurePolicy],
   );
-  const tenurePeriodLabel = useMemo(
-    () => getCurrentTenurePeriodRange(tenurePolicy, now)?.simpleLabel ?? null,
+  const tenureQuarterMonths = useMemo(
+    () => getCurrentTenureQuarterMonths(tenurePolicy, now) ?? [],
     [now, tenurePolicy],
   );
 
@@ -187,7 +203,10 @@ export function useAgencyTimeRangeFilters({
   const [appliedClientIds, setAppliedClientIds] = useState<string[]>([]);
   const [appliedProjectIds, setAppliedProjectIds] = useState<string[]>([]);
   const [appliedMemberUserIds, setAppliedMemberUserIds] = useState<string[]>([]);
-  const [appliedFieldIds, setAppliedFieldIds] = useState<AgencyReportFieldId[]>(defaultFieldIds);
+  const [appliedFieldIds, setAppliedFieldIds] = useState<AgencyReportFieldId[]>(startingFieldIds);
+  const [appliedShowWaste, setAppliedShowWaste] =
+    useState<AgencyReportShowWaste>(startingShowWaste);
+  const [appliedTenureMonthIndexes, setAppliedTenureMonthIndexes] = useState<number[]>([]);
 
   const [draftRangePreset, setDraftRangePreset] = useState<RangePreset | null>(null);
   const effectiveDraftRangePreset = draftRangePreset ?? defaultRangePreset;
@@ -198,14 +217,28 @@ export function useAgencyTimeRangeFilters({
   const [draftClientIds, setDraftClientIds] = useState<string[]>([]);
   const [draftProjectIds, setDraftProjectIds] = useState<string[]>([]);
   const [draftMemberUserIds, setDraftMemberUserIds] = useState<string[]>([]);
-  const [draftFieldIds, setDraftFieldIds] = useState<AgencyReportFieldId[]>(defaultFieldIds);
+  const [draftFieldIds, setDraftFieldIds] = useState<AgencyReportFieldId[]>(startingFieldIds);
+  const [draftShowWaste, setDraftShowWaste] = useState<AgencyReportShowWaste>(startingShowWaste);
+  const [draftTenureMonthIndexes, setDraftTenureMonthIndexes] = useState<number[]>([]);
+
+  const tenurePeriodLabel = useMemo(
+    () =>
+      getCurrentTenurePeriodRange(tenurePolicy, now, draftTenureMonthIndexes)?.simpleLabel ?? null,
+    [draftTenureMonthIndexes, now, tenurePolicy],
+  );
+  const tenureQuarterLabel = useMemo(
+    () => getCurrentTenurePeriodRange(tenurePolicy, now)?.simpleLabel ?? null,
+    [now, tenurePolicy],
+  );
 
   const hasPendingFilterChanges =
     effectiveDraftRangePreset !== effectiveAppliedRangePreset ||
     !sameIdList(draftProjectIds, appliedProjectIds) ||
     !sameIdList(draftMemberUserIds, appliedMemberUserIds) ||
+    !sameIdList(draftTenureMonthIndexes.map(String), appliedTenureMonthIndexes.map(String)) ||
     (includeClientFilter && !sameIdList(draftClientIds, appliedClientIds)) ||
     (includeFieldsFilter && !areSameReportFieldSets(draftFieldIds, appliedFieldIds)) ||
+    (includeFieldsFilter && !areSameShowWaste(draftShowWaste, appliedShowWaste)) ||
     (effectiveDraftRangePreset === "custom" &&
       (draftCustomFromDate !== appliedCustomFromDate || draftCustomToDate !== appliedCustomToDate));
 
@@ -217,8 +250,16 @@ export function useAgencyTimeRangeFilters({
         appliedCustomToDate,
         tenurePolicy,
         now,
+        appliedTenureMonthIndexes,
       ),
-    [appliedCustomFromDate, appliedCustomToDate, effectiveAppliedRangePreset, now, tenurePolicy],
+    [
+      appliedCustomFromDate,
+      appliedCustomToDate,
+      appliedTenureMonthIndexes,
+      effectiveAppliedRangePreset,
+      now,
+      tenurePolicy,
+    ],
   );
 
   const applied: AgencyTimeRangeFilters = useMemo(
@@ -227,13 +268,14 @@ export function useAgencyTimeRangeFilters({
       clientIds: appliedClientIds.length > 0 ? appliedClientIds : undefined,
       projectIds: appliedProjectIds.length > 0 ? appliedProjectIds : undefined,
       memberUserIds: appliedMemberUserIds.length > 0 ? appliedMemberUserIds : undefined,
-      ...(includeFieldsFilter ? { fields: appliedFieldIds } : {}),
+      ...(includeFieldsFilter ? { fields: appliedFieldIds, showWaste: appliedShowWaste } : {}),
     }),
     [
       appliedClientIds,
       appliedFieldIds,
       appliedMemberUserIds,
       appliedProjectIds,
+      appliedShowWaste,
       includeFieldsFilter,
       range,
     ],
@@ -311,6 +353,8 @@ export function useAgencyTimeRangeFilters({
     projectIds: string[],
     memberUserIds: string[],
     fieldIds: AgencyReportFieldId[],
+    showWaste: AgencyReportShowWaste,
+    tenureMonthIndexes: number[],
   ): Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt"> {
     return {
       rangePreset: preset,
@@ -324,7 +368,16 @@ export function useAgencyTimeRangeFilters({
       projectIds,
       memberUserIds,
       fieldIds,
-      range: resolveRangeFromPreset(preset, customFromDate, customToDate, tenurePolicy, now),
+      showWaste,
+      tenureMonthIndexes,
+      range: resolveRangeFromPreset(
+        preset,
+        customFromDate,
+        customToDate,
+        tenurePolicy,
+        now,
+        tenureMonthIndexes,
+      ),
     };
   }
 
@@ -339,6 +392,8 @@ export function useAgencyTimeRangeFilters({
           draftProjectIds,
           draftMemberUserIds,
           draftFieldIds,
+          draftShowWaste,
+          draftTenureMonthIndexes,
         ),
       );
     }
@@ -348,8 +403,10 @@ export function useAgencyTimeRangeFilters({
     setAppliedClientIds(draftClientIds);
     setAppliedProjectIds(draftProjectIds);
     setAppliedMemberUserIds(draftMemberUserIds);
+    setAppliedTenureMonthIndexes(draftTenureMonthIndexes);
     if (includeFieldsFilter) {
       setAppliedFieldIds(draftFieldIds);
+      setAppliedShowWaste(draftShowWaste);
     }
   }
 
@@ -358,12 +415,16 @@ export function useAgencyTimeRangeFilters({
     setDraftClientIds([]);
     setDraftProjectIds([]);
     setDraftMemberUserIds([]);
+    setDraftTenureMonthIndexes([]);
     setAppliedClientIds([]);
     setAppliedProjectIds([]);
     setAppliedMemberUserIds([]);
+    setAppliedTenureMonthIndexes([]);
     if (includeFieldsFilter) {
       setDraftFieldIds(defaultFieldIds);
       setAppliedFieldIds(defaultFieldIds);
+      setDraftShowWaste(DEFAULT_AGENCY_REPORT_SHOW_WASTE);
+      setAppliedShowWaste(DEFAULT_AGENCY_REPORT_SHOW_WASTE);
     }
     setAppliedRangePreset(null);
   }
@@ -377,6 +438,8 @@ export function useAgencyTimeRangeFilters({
       appliedProjectIds,
       appliedMemberUserIds,
       appliedFieldIds,
+      appliedShowWaste,
+      appliedTenureMonthIndexes,
     );
   }
 
@@ -400,6 +463,8 @@ export function useAgencyTimeRangeFilters({
         : snapshot.memberUserId
           ? [snapshot.memberUserId]
           : [];
+    const tenureMonthIndexes = snapshot.tenureMonthIndexes ?? [];
+    const showWaste = snapshot.showWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE;
 
     setDraftRangePreset(storedPreset);
     setDraftCustomFromDate(snapshot.customFromDate);
@@ -408,6 +473,8 @@ export function useAgencyTimeRangeFilters({
     setDraftProjectIds(projectIds);
     setDraftMemberUserIds(memberUserIds);
     setDraftFieldIds(snapshot.fieldIds);
+    setDraftShowWaste(showWaste);
+    setDraftTenureMonthIndexes(tenureMonthIndexes);
     setAppliedRangePreset(storedPreset);
     setAppliedCustomFromDate(snapshot.customFromDate);
     setAppliedCustomToDate(snapshot.customToDate);
@@ -415,6 +482,8 @@ export function useAgencyTimeRangeFilters({
     setAppliedProjectIds(projectIds);
     setAppliedMemberUserIds(memberUserIds);
     setAppliedFieldIds(snapshot.fieldIds);
+    setAppliedShowWaste(showWaste);
+    setAppliedTenureMonthIndexes(tenureMonthIndexes);
   }
 
   const isLoading =
@@ -435,6 +504,10 @@ export function useAgencyTimeRangeFilters({
     defaultRangePreset,
     tenureAvailable: Boolean(tenurePolicy?.enabled),
     tenurePeriodLabel,
+    tenureQuarterLabel,
+    tenureQuarterMonths,
+    tenureMonthIndexes: draftTenureMonthIndexes,
+    onTenureMonthIndexesChange: setDraftTenureMonthIndexes,
     members,
     projectsLoading: projectsQuery.isPending,
     clientIds: draftClientIds,
@@ -455,6 +528,8 @@ export function useAgencyTimeRangeFilters({
           fieldIds: draftFieldIds,
           onFieldIdsChange: setDraftFieldIds,
           defaultFieldIds,
+          showWaste: draftShowWaste,
+          onShowWasteChange: setDraftShowWaste,
         }
       : {}),
   };

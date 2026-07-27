@@ -10,9 +10,14 @@ import {
 import { sanitizeReportFileName } from "@/features/reports/agency-report-naming";
 import {
   groupEntriesForDisplay,
+  filterEntriesByShowWaste,
   type AgencyReportEntry,
   type AggregatedReportRow,
 } from "@/features/reports/agency-report-grouping";
+import {
+  DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+  type AgencyReportShowWaste,
+} from "@/features/reports/agency-report-show-waste";
 import { formatDuration } from "@/lib/utils/format-duration";
 
 type ExportAgencyReportXlsxInput = {
@@ -22,6 +27,7 @@ type ExportAgencyReportXlsxInput = {
   excludedEntryIds: Set<string>;
   entryOverrides: Map<string, Partial<AgencyTimeEntry>>;
   visibleFields?: AgencyReportFieldId[];
+  showWaste?: AgencyReportShowWaste;
 };
 
 function resolveActiveReportFields(
@@ -59,13 +65,17 @@ function resolveExportEntries(
   entries: AgencyReportEntry[],
   excludedEntryIds: Set<string>,
   entryOverrides: Map<string, Partial<AgencyTimeEntry>>,
+  showWaste: AgencyReportShowWaste,
 ): AgencyReportEntry[] {
-  return entries
-    .filter((entry) => !excludedEntryIds.has(entry.id))
-    .map((entry) => {
-      const override = entryOverrides.get(entry.id);
-      return override ? ({ ...entry, ...override } as AgencyReportEntry) : entry;
-    });
+  return filterEntriesByShowWaste(
+    entries
+      .filter((entry) => !excludedEntryIds.has(entry.id))
+      .map((entry) => {
+        const override = entryOverrides.get(entry.id);
+        return override ? ({ ...entry, ...override } as AgencyReportEntry) : entry;
+      }),
+    showWaste,
+  );
 }
 
 export async function exportAgencyReportXlsx({
@@ -75,13 +85,14 @@ export async function exportAgencyReportXlsx({
   excludedEntryIds,
   entryOverrides,
   visibleFields,
+  showWaste = DEFAULT_AGENCY_REPORT_SHOW_WASTE,
 }: ExportAgencyReportXlsxInput): Promise<{ fileName: string; blob: Blob }> {
   // ponytail: dynamic import keeps exceljs off the main bundle; upgrade path is a dedicated export chunk route
   const ExcelJS = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Report");
 
-  const exportEntries = resolveExportEntries(entries, excludedEntryIds, entryOverrides);
+  const exportEntries = resolveExportEntries(entries, excludedEntryIds, entryOverrides, showWaste);
   const clientGroups = groupEntriesForDisplay(exportEntries);
   const activeFields = resolveActiveReportFields(visibleFields);
   const columnCount = Math.max(activeFields.length, 1);

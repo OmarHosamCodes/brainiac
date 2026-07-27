@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   aggregateSimilarReportRows,
+  filterEntriesByShowWaste,
   groupEntriesForDisplay,
   type AgencyReportEntry,
 } from "@/features/reports/agency-report-grouping";
@@ -117,5 +118,49 @@ describe("groupEntriesForDisplay", () => {
     expect(soulIn?.rows).toHaveLength(2);
     expect(soulIn?.totalSeconds).toBe(3_300);
     expect(groups[0]?.totalSeconds).toBe(3_600);
+  });
+});
+
+describe("filterEntriesByShowWaste", () => {
+  test("hides all waste when showWaste is all off", () => {
+    const entries = [
+      makeEntry({ id: "ok", description: "billable" }),
+      makeEntry({ id: "entry-waste", isWaste: true }),
+      makeEntry({ id: "task-waste", taskIsWaste: true, taskTitle: "Cleanup" }),
+      makeEntry({ id: "project-waste", projectName: "Waste bucket" }),
+    ];
+
+    const visible = filterEntriesByShowWaste(entries, {
+      projects: false,
+      tasks: false,
+      entries: false,
+    });
+
+    expect(visible.map((entry) => entry.id)).toEqual(["ok"]);
+  });
+
+  test("reveals only matching waste sources", () => {
+    const entries = [
+      makeEntry({ id: "ok" }),
+      makeEntry({ id: "entry-waste", isWaste: true }),
+      makeEntry({ id: "task-waste", taskIsWaste: true }),
+      makeEntry({ id: "project-waste", projectName: "Internal Waste" }),
+    ];
+
+    expect(
+      filterEntriesByShowWaste(entries, {
+        projects: false,
+        tasks: false,
+        entries: true,
+      }).map((entry) => entry.id),
+    ).toEqual(["ok", "entry-waste"]);
+
+    expect(
+      filterEntriesByShowWaste(entries, {
+        projects: true,
+        tasks: true,
+        entries: false,
+      }).map((entry) => entry.id),
+    ).toEqual(["ok", "task-waste", "project-waste"]);
   });
 });

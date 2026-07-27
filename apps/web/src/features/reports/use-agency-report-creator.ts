@@ -2,6 +2,8 @@ import type { AgencyTimeEntry } from "@orch/api/schemas/agency-ops";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { AgencyReportEntry } from "@/features/reports/agency-report-grouping";
+import { filterEntriesByShowWaste } from "@/features/reports/agency-report-grouping";
+import { DEFAULT_AGENCY_REPORT_SHOW_WASTE } from "@/features/reports/agency-report-show-waste";
 
 type UseAgencyReportCreatorOptions = {
   initialExcludedEntryIds?: string[];
@@ -54,12 +56,15 @@ export function useAgencyReportCreator(
   };
 
   const visibleEntries = useMemo(() => {
-    return entries
-      .filter((entry) => !excludedEntryIds.has(entry.id))
-      .map((entry) => {
-        const override = entryOverrides.get(entry.id);
-        return override ? ({ ...entry, ...override } as AgencyReportEntry) : entry;
-      });
+    return filterEntriesByShowWaste(
+      entries
+        .filter((entry) => !excludedEntryIds.has(entry.id))
+        .map((entry) => {
+          const override = entryOverrides.get(entry.id);
+          return override ? ({ ...entry, ...override } as AgencyReportEntry) : entry;
+        }),
+      DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+    );
   }, [entries, excludedEntryIds, entryOverrides]);
 
   const selectedEntry = useMemo(
