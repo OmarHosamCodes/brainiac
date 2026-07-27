@@ -11,11 +11,7 @@ import {
   useAgencyProjectsQuery,
 } from "@/features/shared/agency-queries";
 import type { AggregatedReportRow } from "@/features/reports/agency-report-grouping";
-import {
-  filterEntriesByShowWaste,
-  groupEntriesForDisplay,
-} from "@/features/reports/agency-report-grouping";
-import { DEFAULT_AGENCY_REPORT_SHOW_WASTE } from "@/features/reports/agency-report-show-waste";
+import { groupEntriesForDisplay } from "@/features/reports/agency-report-grouping";
 import { selectEntriesForDetailsRow } from "@/features/reports/hooks/use-agency-report-entry-details-dialog";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
@@ -221,14 +217,8 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     }
   }, []);
 
-  const entries = useMemo(
-    () =>
-      filterEntriesByShowWaste(
-        entriesQuery.data ?? [],
-        showWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE,
-      ),
-    [entriesQuery.data, showWaste],
-  );
+  // Reports surface always shows waste; Show waste filters apply only in create-report.
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data]);
   const clientGroups = useMemo(() => groupEntriesForDisplay(entries), [entries]);
   const detailsEntries = useMemo(
     () => selectEntriesForDetailsRow(entriesQuery.data ?? [], detailsRowKey),
@@ -261,7 +251,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     deletingEntryIds,
     wastePendingRowKeys,
     visibleFields: fields,
-    showWaste: showWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+    showWaste,
     detailsOpen: detailsRowKey !== null,
     detailsEntries,
     detailsLabel: detailsRowLabel,

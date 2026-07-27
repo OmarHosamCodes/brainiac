@@ -117,7 +117,8 @@ export function useAgencyNotificationUnreadCountQuery(teamId: string, enabled = 
         }),
         enabled: Boolean(teamId) && enabled,
       },
-      "hot",
+      // Live `notification.created` already patches the badge; cold poll is a backstop only.
+      "cold",
     ),
   );
 }

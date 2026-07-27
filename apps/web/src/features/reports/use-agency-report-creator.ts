@@ -3,10 +3,14 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { AgencyReportEntry } from "@/features/reports/agency-report-grouping";
 import { filterEntriesByShowWaste } from "@/features/reports/agency-report-grouping";
-import { DEFAULT_AGENCY_REPORT_SHOW_WASTE } from "@/features/reports/agency-report-show-waste";
+import {
+  DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+  type AgencyReportShowWaste,
+} from "@/features/reports/agency-report-show-waste";
 
 type UseAgencyReportCreatorOptions = {
   initialExcludedEntryIds?: string[];
+  showWaste?: AgencyReportShowWaste;
 };
 
 export function applyStartEditing(entryId: string) {
@@ -32,6 +36,7 @@ export function useAgencyReportCreator(
   entries: AgencyReportEntry[],
   options: UseAgencyReportCreatorOptions = {},
 ) {
+  const showWaste = options.showWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE;
   const [excludedEntryIds, setExcludedEntryIds] = useState<Set<string>>(
     () => new Set(options.initialExcludedEntryIds ?? []),
   );
@@ -63,9 +68,9 @@ export function useAgencyReportCreator(
           const override = entryOverrides.get(entry.id);
           return override ? ({ ...entry, ...override } as AgencyReportEntry) : entry;
         }),
-      DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+      showWaste,
     );
-  }, [entries, excludedEntryIds, entryOverrides]);
+  }, [entries, excludedEntryIds, entryOverrides, showWaste]);
 
   const selectedEntry = useMemo(
     () => visibleEntries.find((entry) => entry.id === selectedEntryId) ?? null,

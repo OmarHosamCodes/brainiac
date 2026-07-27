@@ -191,7 +191,7 @@ function ReportsFiltersRoot({
   };
 
   const openSavedReport = useCallback(
-    (reportId: string) => {
+    (reportId: string, options?: { preserveShowWaste?: boolean }) => {
       const next = new URLSearchParams(searchParams);
       next.set("section", "reports");
       next.set("report", reportId);
@@ -201,7 +201,9 @@ function ReportsFiltersRoot({
       next.delete("project");
       next.delete("member");
       next.delete("fields");
-      next.delete("showWaste");
+      if (!options?.preserveShowWaste) {
+        next.delete("showWaste");
+      }
       navigate(`/agency?${next.toString()}`);
     },
     [navigate, searchParams],
@@ -241,7 +243,7 @@ function ReportsFiltersRoot({
         fieldIds: snapshot.fieldIds,
       });
 
-      openSavedReport(report.id);
+      openSavedReport(report.id, { preserveShowWaste: true });
     } catch (error) {
       toast.error("Couldn't create report", {
         description: getErrorMessage(error, "Try again."),

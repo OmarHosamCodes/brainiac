@@ -7,6 +7,7 @@ import {
   normalizeReportFieldIds,
   type AgencyReportFieldId,
 } from "@/features/reports/agency-report-fields";
+import { parseShowWasteParam } from "@/features/reports/agency-report-show-waste";
 import { fetchAllReportEntries } from "@/features/reports/fetch-report-entries";
 import { useAgencyReportAutosave } from "@/features/reports/use-agency-report-autosave";
 import { useAgencyReportCreator } from "@/features/reports/use-agency-report-creator";
@@ -61,6 +62,11 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     [report?.fieldIds],
   );
 
+  const showWaste = useMemo(
+    () => parseShowWasteParam(searchParams.get("showWaste")),
+    [searchParams],
+  );
+
   const filters = useMemo(
     () => ({
       clientId: report?.clientId || undefined,
@@ -99,6 +105,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   const entries = entriesQuery.data ?? [];
   const creator = useAgencyReportCreator(entries, {
     initialExcludedEntryIds: report?.excludedEntryIds,
+    showWaste,
   });
 
   const autosave = useAgencyReportAutosave({
@@ -276,6 +283,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
         excludedEntryIds: creator.excludedEntryIds,
         entryOverrides: creator.entryOverrides,
         visibleFields,
+        showWaste,
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
