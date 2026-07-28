@@ -23,6 +23,7 @@ import {
   type AgencyTrackerDraft,
 } from "@/features/time-tracking/tracker-draft";
 import { shouldSkipActiveTimerDescriptionSync } from "@/features/time-tracking/tracker-description-sync";
+import { createTimerMutationQueue } from "@/features/time-tracking/timer-mutation-queue";
 import { type AgencyListOverlay } from "@/features/shared/agency-optimistic-merge";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 
@@ -268,6 +269,8 @@ type AgencyTimeTrackingState = {
   timerStartCount: number;
   timerStopCount: number;
   timerAdjustCount: number;
+  /** Depth of queued start/stop work — keeps pending true across chain handoff. */
+  timerQueueDepth: number;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
   duplicatingEntryIds: string[];
@@ -287,27 +290,27 @@ function createAgencyTimeTrackingActions(
     { payload: RegisteredActiveTimerQuery; count: number }
   >();
   const logQueryRegistry = new Map<string, { payload: RegisteredLogQuery; count: number }>();
-  // ponytail: single-flight gate; upgrade to a queue if overlapping starts must not drop
-  let timerMutationInFlight = false;
+  // Serialize start/stop so bar + mini-timer clicks enqueue instead of dropping.
+  const timerMutationQueue = createTimerMutationQueue();
 
-  async function startTimer(payload: StartTimerPayload) {
-    if (timerMutationInFlight) return;
-    timerMutationInFlight = true;
-    try {
-      await runStartTimer(payload);
-    } finally {
-      timerMutationInFlight = false;
-    }
+  function enqueueTimerMutation(run: () => Promise<void>) {
+    // Hold pending from enqueue through settle so chained ops never flash enabled.
+    set((s) => ({ ...s, timerQueueDepth: s.timerQueueDepth + 1 }));
+    return timerMutationQueue.enqueue(async () => {
+      try {
+        await run();
+      } finally {
+        set((s) => ({ ...s, timerQueueDepth: Math.max(0, s.timerQueueDepth - 1) }));
+      }
+    });
   }
 
-  async function stopTimer(payload: StopTimerPayload) {
-    if (timerMutationInFlight) return;
-    timerMutationInFlight = true;
-    try {
-      await runStopTimer(payload);
-    } finally {
-      timerMutationInFlight = false;
-    }
+  function startTimer(payload: StartTimerPayload) {
+    return enqueueTimerMutation(() => runStartTimer(payload));
+  }
+
+  function stopTimer(payload: StopTimerPayload) {
+    return enqueueTimerMutation(() => runStopTimer(payload));
   }
 
   function optimistic() {
@@ -1960,6 +1963,7 @@ export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, 
   timerStartCount: 0,
   timerStopCount: 0,
   timerAdjustCount: 0,
+  timerQueueDepth: 0,
   deletingEntryIds: [],
   updatingEntryIds: [],
   duplicatingEntryIds: [],
@@ -1989,4 +1993,4 @@ export function useTrackerDraft(teamId: string) {
 }
 
 export const selectIsTimerMutationPending = (s: AgencyTimeTrackingState) =>
-  s.timerStartCount > 0 || s.timerStopCount > 0 || s.timerAdjustCount > 0;
+  s.timerQueueDepth > 0 || s.timerStartCount > 0 || s.timerStopCount > 0 || s.timerAdjustCount > 0;
