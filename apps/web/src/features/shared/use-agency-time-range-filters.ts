@@ -398,8 +398,7 @@ export function useAgencyTimeRangeFilters({
   }
 
   function handleApply() {
-    const nextFieldIds =
-      draftFieldIds.length > 0 ? draftFieldIds : defaultFieldIds;
+    const nextFieldIds = draftFieldIds.length > 0 ? draftFieldIds : defaultFieldIds;
     const nextShowWaste = draftShowWaste;
     if (draftFieldIds.length === 0) {
       setDraftFieldIds(nextFieldIds);
