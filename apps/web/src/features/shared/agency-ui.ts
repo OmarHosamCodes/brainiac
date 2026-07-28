@@ -305,13 +305,64 @@ export const agencyTimeTrackerMetricClass = cn(
 
 export const agencyTimeTrackerElapsedInputClass = cn(
   agencyTimeTrackerMetricClass,
-  "rounded-md border border-transparent bg-transparent px-0 shadow-none",
-  "text-highlighted focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+  // Override shared Input defaults (px/py/md:text-sm) so digits sit optically centered.
+  "rounded-md border border-transparent bg-transparent px-0 py-0 shadow-none",
+  "text-center leading-9 md:text-base text-highlighted",
+  "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+);
+
+export const agencyTaskChooserTriggerClass = cn(
+  "inline-flex min-w-0 max-w-full shrink items-center justify-start gap-1.5 overflow-hidden rounded-lg border-0 bg-transparent px-2 py-0 font-normal leading-none text-foreground shadow-none",
+  "transition-[color,background-color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] hover:bg-muted hover:text-foreground active:scale-[0.98]",
+  agencyFocusRingClass,
+  "motion-reduce:transition-none motion-reduce:active:scale-100",
 );
 
 export const agencyTimeTrackerTaskChooserTriggerClass = cn(
-  "inline-flex h-9 max-h-9 min-h-9 w-auto min-w-0 max-w-full shrink items-center justify-start gap-1.5 overflow-hidden rounded-2xl border-0 bg-transparent px-2 py-0 text-sm font-normal leading-none text-foreground shadow-none",
-  "transition-colors hover:bg-muted/50 hover:text-foreground",
+  agencyTaskChooserTriggerClass,
+  "h-9 max-h-9 min-h-9 w-auto gap-1.5 text-sm",
+);
+
+export const agencyTaskChooserClearClass = cn(
+  "absolute top-1/2 right-1 z-10 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground",
+  "transition-[color,background-color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] hover:bg-muted hover:text-foreground",
+  agencyFocusRingClass,
+  "motion-reduce:transition-none",
+);
+
+export const agencyTaskChooserPanelClass = cn(
+  "flex w-[26rem] max-w-[calc(100vw-2rem)] flex-col gap-0 rounded-xl border border-border bg-popover p-0 font-sans text-popover-foreground shadow-lg ring-0",
+  // Exit animation can stall Presence unmount and leave a click-eating layer.
+  "data-[state=closed]:animate-none",
+);
+
+export const agencyTaskChooserSearchInputClass = cn(
+  "h-9 rounded-lg border-border bg-card pl-8 font-sans text-sm transition-[border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)]",
+);
+
+export const agencyTaskChooserRowClass = cn(
+  "group flex w-full items-center gap-0.5 rounded-md transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] hover:bg-muted motion-reduce:transition-none",
+);
+
+export const agencyTaskChooserRowSelectedClass = "bg-primary/10 hover:bg-primary/10";
+
+export const agencyTaskChooserRowBestMatchClass = "bg-accent/40 hover:bg-accent/50";
+
+export const agencyTaskChooserRowActiveClass = "bg-accent hover:bg-accent";
+
+export const agencyTaskChooserSectionHoverClass = cn(
+  "rounded-md transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] hover:bg-muted",
+  "motion-reduce:transition-none",
+);
+
+export const agencyTaskChooserCreateActionClass = cn(
+  "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-primary transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] hover:bg-muted hover:text-primary/80",
+  agencyFocusRingClass,
+  "motion-reduce:transition-none",
+);
+
+export const agencyTaskChooserCreateActionMutedClass = cn(
+  "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] hover:bg-muted hover:text-muted-foreground",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
 );
