@@ -1,8 +1,19 @@
 import { ChevronDown, Plus, Star } from "lucide-react";
+import { motion } from "motion/react";
+import { useState } from "react";
 
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
 import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
-import { agencyFocusRingClass } from "@/features/shared/agency-ui";
+import {
+  agencyFocusRingClass,
+  agencyTaskChooserRowActiveClass,
+  agencyTaskChooserRowClass,
+} from "@/features/shared/agency-ui";
+import {
+  chooserBaseTransition,
+  chooserStarPopTransition,
+  chooserTapScale,
+} from "@/features/time-tracking/agency-task-chooser-motion";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 
@@ -46,22 +57,23 @@ export function AgencyTaskChooserProjectRow({
   onCreateTask,
 }: AgencyTaskChooserProjectRowProps) {
   const projectStyle = projectHueStyle(projectId, colorHueId);
+  const [starPopKey, setStarPopKey] = useState(0);
 
   return (
-    <div
-      className={cn(
-        "group flex w-full items-center gap-0.5 rounded-md pr-1 transition-colors hover:bg-default/80",
-        active && "bg-accent/50 hover:bg-accent/50",
-      )}
+    <motion.div
+      layout
+      className={cn(agencyTaskChooserRowClass, "pr-1", active && agencyTaskChooserRowActiveClass)}
+      transition={chooserBaseTransition}
     >
-      <button
+      <motion.button
         type="button"
         id={optionId}
         className={cn(
           "flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left",
           agencyFocusRingClass,
-          "motion-reduce:transition-none",
         )}
+        whileTap={chooserTapScale}
+        transition={chooserBaseTransition}
         onClick={onToggle}
         aria-expanded={expanded}
       >
@@ -78,7 +90,7 @@ export function AgencyTaskChooserProjectRow({
             )}
           </span>
           {showClientName && clientName ? (
-            <span className="font-normal text-dimmed">
+            <span className="font-normal text-muted-foreground">
               {" · "}
               {highlightSearch ? (
                 <AgencySearchHighlight text={clientName} query={searchTerm} />
@@ -88,51 +100,62 @@ export function AgencyTaskChooserProjectRow({
             </span>
           ) : null}
         </span>
-        <span className="shrink-0 text-[11px] font-normal text-dimmed tabular-nums">
+        <span className="shrink-0 text-[11px] font-normal text-muted-foreground tabular-nums">
           {taskCount} {taskCount === 1 ? "task" : "tasks"}
         </span>
-        <ChevronDown
-          className={cn(
-            "size-3.5 shrink-0 text-muted transition-transform duration-200 motion-reduce:transition-none",
-            expanded && "rotate-180",
-          )}
-          aria-hidden
-        />
-      </button>
-      <button
+        <motion.span
+          animate={{ rotate: expanded ? 180 : 0 }}
+          transition={chooserBaseTransition}
+          className="inline-flex shrink-0"
+        >
+          <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
+        </motion.span>
+      </motion.button>
+      <motion.button
         type="button"
         aria-label={favorited ? "Remove project from favorites" : "Add project to favorites"}
         className={cn(
-          "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted",
+          "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground",
           "pointer-events-none opacity-0 transition-opacity",
           "group-hover:pointer-events-auto group-hover:opacity-100",
           "focus-visible:pointer-events-auto focus-visible:opacity-100",
           favorited && "pointer-events-auto text-warning opacity-100",
           agencyFocusRingClass,
         )}
+        whileTap={chooserTapScale}
         onPointerDown={(event) => {
           event.preventDefault();
           event.stopPropagation();
         }}
         onClick={(event) => {
           event.stopPropagation();
+          setStarPopKey((key) => key + 1);
           onToggleFavorite();
         }}
       >
-        <Star className={cn("size-3.5", favorited && "fill-current")} aria-hidden />
-      </button>
+        <motion.span
+          key={starPopKey}
+          initial={starPopKey === 0 ? false : { scale: 1 }}
+          animate={starPopKey === 0 ? { scale: 1 } : { scale: [1, 1.15, 1] }}
+          transition={chooserStarPopTransition}
+          className="inline-flex"
+        >
+          <Star className={cn("size-3.5", favorited && "fill-current")} aria-hidden />
+        </motion.span>
+      </motion.button>
       {showCreateTask && expanded ? (
-        <button
+        <motion.button
           type="button"
           aria-label="Create task"
           className={cn(
             "inline-flex size-7 shrink-0 items-center justify-center rounded-md",
-            createMuted ? "text-muted" : "text-info",
+            createMuted ? "text-muted-foreground" : "text-primary",
             "pointer-events-none opacity-0 transition-opacity",
             "group-hover:pointer-events-auto group-hover:opacity-100",
             "focus-visible:pointer-events-auto focus-visible:opacity-100",
             agencyFocusRingClass,
           )}
+          whileTap={chooserTapScale}
           onPointerDown={(event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -143,8 +166,8 @@ export function AgencyTaskChooserProjectRow({
           }}
         >
           <Plus className="size-3.5" aria-hidden />
-        </button>
+        </motion.button>
       ) : null}
-    </div>
+    </motion.div>
   );
 }

@@ -1,8 +1,22 @@
 import { Star } from "lucide-react";
-import type { PointerEvent } from "react";
+import { motion } from "motion/react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 
 import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
-import { agencyFocusRingClass } from "@/features/shared/agency-ui";
+import {
+  agencyFocusRingClass,
+  agencyTaskChooserRowActiveClass,
+  agencyTaskChooserRowBestMatchClass,
+  agencyTaskChooserRowClass,
+  agencyTaskChooserRowSelectedClass,
+} from "@/features/shared/agency-ui";
+import {
+  CHOOSER_MS,
+  chooserBaseTransition,
+  chooserSelectFlashTransition,
+  chooserStarPopTransition,
+  chooserTapScale,
+} from "@/features/time-tracking/agency-task-chooser-motion";
 import { cn } from "@/lib/utils";
 
 type AgencyTaskChooserTaskRowProps = {
@@ -19,6 +33,12 @@ type AgencyTaskChooserTaskRowProps = {
   onToggleFavorite: () => void;
 };
 
+function prefersReducedMotionNow(): boolean {
+  return (
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 export function AgencyTaskChooserTaskRow({
   taskId,
   title,
@@ -32,22 +52,55 @@ export function AgencyTaskChooserTaskRow({
   onSelect,
   onToggleFavorite,
 }: AgencyTaskChooserTaskRowProps) {
+  const [starPopKey, setStarPopKey] = useState(0);
+  const [selecting, setSelecting] = useState(false);
+  const selectFlashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (selectFlashTimeoutRef.current) {
+        clearTimeout(selectFlashTimeoutRef.current);
+      }
+    };
+  }, []);
+
   function keepPointerInsideChooser(event: PointerEvent<HTMLButtonElement>) {
     // Keep the search input's blur and Radix's dismiss layer from racing the click.
     event.preventDefault();
     event.stopPropagation();
   }
 
+  function handleSelect() {
+    if (prefersReducedMotionNow()) {
+      onSelect();
+      return;
+    }
+    if (selectFlashTimeoutRef.current) {
+      clearTimeout(selectFlashTimeoutRef.current);
+    }
+    setSelecting(true);
+    selectFlashTimeoutRef.current = setTimeout(() => {
+      setSelecting(false);
+      onSelect();
+      selectFlashTimeoutRef.current = null;
+    }, CHOOSER_MS.fast * 1000);
+  }
+
   return (
-    <div
+    <motion.div
+      layout
+      animate={selecting ? { scale: 1.01 } : { scale: 1 }}
+      transition={chooserSelectFlashTransition}
       className={cn(
-        "group flex w-full items-center gap-0.5 rounded-md pr-1 pl-5 transition-colors hover:bg-default/80",
-        selected && "bg-primary/10 hover:bg-primary/10",
-        !selected && bestMatch && "bg-accent/40 hover:bg-accent/50",
-        !selected && active && "bg-accent/50 hover:bg-accent/50",
+        agencyTaskChooserRowClass,
+        "pr-1 pl-5",
+        selected && agencyTaskChooserRowSelectedClass,
+        !selected && bestMatch && agencyTaskChooserRowBestMatchClass,
+        !selected && active && agencyTaskChooserRowActiveClass,
+        selecting && "bg-primary/15 hover:bg-primary/15",
       )}
     >
-      <button
+      <motion.button
         type="button"
         id={optionId}
         data-selected-task={selected ? "true" : undefined}
@@ -56,46 +109,57 @@ export function AgencyTaskChooserTaskRow({
         className={cn(
           "flex min-w-0 flex-1 items-center rounded-md px-2 py-1.5 text-left",
           agencyFocusRingClass,
-          "motion-reduce:transition-none",
         )}
+        whileTap={chooserTapScale}
+        transition={chooserBaseTransition}
         onPointerDown={keepPointerInsideChooser}
         onClick={(event) => {
           event.stopPropagation();
-          onSelect();
+          handleSelect();
         }}
       >
         <span
           className={cn(
             "min-w-0 flex-1 truncate text-sm font-normal leading-snug",
-            selected ? "font-medium text-primary" : "text-muted",
+            selected ? "font-medium text-primary" : "text-muted-foreground",
             !selected && bestMatch && "font-medium text-foreground",
           )}
         >
           {highlightSearch ? <AgencySearchHighlight text={title} query={searchTerm} /> : title}
         </span>
-      </button>
-      <button
+      </motion.button>
+      <motion.button
         type="button"
         aria-label={favorited ? "Remove task from favorites" : "Add task to favorites"}
         className={cn(
-          "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted",
+          "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground",
           "pointer-events-none opacity-0 transition-opacity",
           "group-hover:pointer-events-auto group-hover:opacity-100",
           "focus-visible:pointer-events-auto focus-visible:opacity-100",
           favorited && "pointer-events-auto text-warning opacity-100",
           agencyFocusRingClass,
         )}
+        whileTap={chooserTapScale}
         onPointerDown={(event) => {
           event.preventDefault();
           event.stopPropagation();
         }}
         onClick={(event) => {
           event.stopPropagation();
+          setStarPopKey((key) => key + 1);
           onToggleFavorite();
         }}
       >
-        <Star className={cn("size-3.5", favorited && "fill-current")} aria-hidden />
-      </button>
-    </div>
+        <motion.span
+          key={starPopKey}
+          initial={starPopKey === 0 ? false : { scale: 1 }}
+          animate={starPopKey === 0 ? { scale: 1 } : { scale: [1, 1.15, 1] }}
+          transition={chooserStarPopTransition}
+          className="inline-flex"
+        >
+          <Star className={cn("size-3.5", favorited && "fill-current")} aria-hidden />
+        </motion.span>
+      </motion.button>
+    </motion.div>
   );
 }

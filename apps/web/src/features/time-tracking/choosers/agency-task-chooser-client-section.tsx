@@ -1,7 +1,16 @@
 import { ChevronDown } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 
-import { agencyFocusRingClass } from "@/features/shared/agency-ui";
+import {
+  agencyFocusRingClass,
+  agencyTaskChooserSectionHoverClass,
+} from "@/features/shared/agency-ui";
+import {
+  chooserBaseTransition,
+  chooserCollapseVariants,
+  chooserTapScale,
+} from "@/features/time-tracking/agency-task-chooser-motion";
 import { cn } from "@/lib/utils";
 
 type AgencyTaskChooserClientSectionProps = {
@@ -21,29 +30,46 @@ export function AgencyTaskChooserClientSection({
 }: AgencyTaskChooserClientSectionProps) {
   return (
     <section className="py-1 first:pt-0">
-      <button
+      <motion.button
         type="button"
         className={cn(
-          "mb-0.5 flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-default/60",
+          "mb-0.5 flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left",
+          agencyTaskChooserSectionHoverClass,
           agencyFocusRingClass,
-          "motion-reduce:transition-none",
         )}
+        whileTap={chooserTapScale}
+        transition={chooserBaseTransition}
         onClick={onToggle}
         aria-expanded={expanded}
       >
-        <span className="min-w-0 truncate text-xs font-medium text-muted">{clientName}</span>
-        <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-normal text-dimmed tabular-nums">
-          {projectCount} {projectCount === 1 ? "project" : "projects"}
-          <ChevronDown
-            className={cn(
-              "size-3.5 text-muted transition-transform duration-200 motion-reduce:transition-none",
-              expanded && "rotate-180",
-            )}
-            aria-hidden
-          />
+        <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">
+          {clientName}
         </span>
-      </button>
-      {expanded ? <div className="space-y-0.5">{children}</div> : null}
+        <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-normal text-muted-foreground tabular-nums">
+          {projectCount} {projectCount === 1 ? "project" : "projects"}
+          <motion.span
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={chooserBaseTransition}
+            className="inline-flex"
+          >
+            <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
+          </motion.span>
+        </span>
+      </motion.button>
+      <AnimatePresence initial={false}>
+        {expanded ? (
+          <motion.div
+            key="client-projects"
+            initial="collapsed"
+            animate="expanded"
+            exit="collapsed"
+            variants={chooserCollapseVariants}
+            className="overflow-hidden"
+          >
+            <div className="space-y-0.5">{children}</div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </section>
   );
 }

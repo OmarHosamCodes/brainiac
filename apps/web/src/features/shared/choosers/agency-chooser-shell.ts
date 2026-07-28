@@ -193,5 +193,16 @@ export function useAgencyChooserExpandedClients(selectedClientName: string | nul
     });
   }
 
-  return { isClientExpanded, toggleClient };
+  return {
+    isClientExpanded,
+    toggleClient,
+    expandClient: (clientName: string) => {
+      setCollapsedClientNames((current) => {
+        if (!current.has(clientName)) return current;
+        const next = new Set(current);
+        next.delete(clientName);
+        return next;
+      });
+    },
+  };
 }

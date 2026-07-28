@@ -234,7 +234,7 @@ export function useAgencyTaskChooser(
     selectedTask?.projectId ?? null,
     open,
   );
-  const { isClientExpanded, toggleClient } = useAgencyChooserExpandedClients(
+  const { isClientExpanded, toggleClient, expandClient } = useAgencyChooserExpandedClients(
     triggerProject?.clientName || null,
     open,
   );
@@ -247,7 +247,9 @@ export function useAgencyTaskChooser(
   useEffect(() => {
     if (!open || !bestMatchTask) return;
     expandProject(bestMatchTask.projectId);
-  }, [bestMatchTask, expandProject, open]);
+    const clientName = projectsById.get(bestMatchTask.projectId)?.clientName;
+    if (clientName) expandClient(clientName);
+  }, [bestMatchTask, expandClient, expandProject, open, projectsById]);
 
   const sections = useMemo(
     () =>
@@ -266,18 +268,9 @@ export function useAgencyTaskChooser(
   const [expandEpoch, setExpandEpoch] = useState(0);
 
   const isProjectExpandedForList = (projectId: string) =>
-    Boolean(searchTerm.trim()) ||
-    isProjectExpanded(projectId) ||
-    projectId === selectedTask?.projectId ||
-    projectId === bestMatchTask?.projectId;
-  const bestMatchClientName = bestMatchTask
-    ? (projectsById.get(bestMatchTask.projectId)?.clientName ?? null)
-    : null;
+    Boolean(searchTerm.trim()) || isProjectExpanded(projectId);
   const isClientExpandedForList = (clientName: string) =>
-    Boolean(searchTerm.trim()) ||
-    isClientExpanded(clientName) ||
-    clientName === (selectedProject?.clientName || null) ||
-    clientName === bestMatchClientName;
+    Boolean(searchTerm.trim()) || isClientExpanded(clientName);
 
   const keyboardItems = useMemo(
     () =>
@@ -296,9 +289,7 @@ export function useAgencyTaskChooser(
       searchTerm,
       expandEpoch,
       selectedTask?.projectId,
-      selectedProject?.clientName,
       bestMatchTask?.projectId,
-      bestMatchClientName,
     ],
   );
 

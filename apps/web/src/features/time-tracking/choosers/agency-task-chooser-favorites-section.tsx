@@ -9,7 +9,7 @@ export function AgencyTaskChooserFavoritesSection({
 }: AgencyTaskChooserFavoritesSectionProps) {
   return (
     <section className="pb-2">
-      <div className="px-2 py-1.5 text-[11px] font-semibold tracking-wide text-dimmed">
+      <div className="px-2 py-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground">
         Favorites
       </div>
       <div className="space-y-0.5">{children}</div>
