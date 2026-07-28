@@ -260,7 +260,7 @@ export const agencyTimeTrackerCardClass = cn(
 );
 
 export const agencyTimeTrackerDescriptionZoneClass =
-  "group/desc relative flex min-h-0 min-w-0 flex-1 items-center overflow-visible pr-2";
+  "group/desc relative flex min-h-0 min-w-0 flex-1 items-center overflow-visible";
 
 export const agencyTimeTrackerControlsZoneClass =
   "flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2";
@@ -338,7 +338,7 @@ export const agencyTimeTrackerSuggestionPanelClass = cn(
 );
 
 export const agencyTimeTrackerSuggestionOptionClass = cn(
-  "flex w-full min-w-0 flex-row items-center gap-2 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-accent/35",
+  "flex w-full min-w-0 flex-col items-stretch gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-accent/35",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
 );

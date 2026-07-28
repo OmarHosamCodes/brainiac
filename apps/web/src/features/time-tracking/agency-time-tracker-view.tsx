@@ -53,12 +53,14 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
     <div className="flex min-w-0 flex-col gap-1.5">
       <div
         className={agencyTimeTrackerCardClass}
+        data-agency-time-tracker
         data-timer-state={view.activeTimer ? "running" : idleManual ? "manual" : "idle"}
       >
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 pr-2">
           <AgencyDescriptionDatalistField
             value={view.timerDescription}
             options={view.descriptionDatalistOptions}
+            affinityProjectId={view.selectedProjectId || undefined}
             onValueChange={view.onDescriptionChange}
             onSelectOption={view.onDescriptionSuggestionSelect}
             onFocus={view.onDescriptionFocus}
@@ -82,6 +84,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               required={!view.activeTimer}
               triggerFormat="task-client"
               highlightSearch
+              bestMatchTaskId={view.suggestionBestTaskId}
               fallbackTaskTitle={view.activeTimer?.taskTitle ?? undefined}
               fallbackProjectId={view.activeTimer?.projectId ?? undefined}
               fallbackProjectName={view.activeTimer?.projectName ?? undefined}
