@@ -52,6 +52,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     onToggleProjectFavorite,
     onToggleTaskFavorite,
     highlightSearch,
+    bestMatchTaskId,
     teamId,
     createTaskOpen,
     createTaskProjectId,
@@ -158,6 +159,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                 taskId={task.id}
                 title={task.title}
                 selected={task.id === value}
+                bestMatch={Boolean(bestMatchTaskId) && task.id === bestMatchTaskId}
                 favorited={favoriteTaskIds.has(task.id)}
                 searchTerm={searchTerm}
                 highlightSearch={highlightSearch}

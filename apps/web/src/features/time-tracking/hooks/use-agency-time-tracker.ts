@@ -10,8 +10,10 @@ import {
 import { setTrackingFavicon } from "@/lib/favicon";
 
 import {
+  bestTaskIdFromRankedSuggestions,
   buildDescriptionDatalistOptions,
   draftFromDescriptionSuggestion,
+  rankDescriptionDatalistOptions,
   type DescriptionDatalistOption,
 } from "@/features/time-tracking/description-suggestions";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
@@ -117,6 +119,7 @@ export type AgencyTimeTrackerViewModel = {
   isManualCreatePending: boolean;
   manualError: string | null;
   descriptionDatalistOptions: DescriptionDatalistOption[];
+  suggestionBestTaskId: string | null;
   trackerStatusLine: string;
   onDescriptionChange: (value: string) => void;
   onDescriptionSuggestionSelect: (option: DescriptionDatalistOption) => void;
@@ -413,9 +416,28 @@ export function useAgencyTimeTracker({
   );
 
   const descriptionDatalistOptions = useMemo(
-    () => buildDescriptionDatalistOptions(recentEntriesQuery.data?.items ?? []),
+    () =>
+      buildDescriptionDatalistOptions(
+        (recentEntriesQuery.data?.items ?? []).map((entry) => ({
+          description: entry.description,
+          taskId: entry.taskId,
+          taskTitle: entry.taskTitle,
+          projectId: entry.projectId,
+          projectName: entry.projectName,
+          clientName: entry.clientName,
+          startedAt: entry.startedAt,
+        })),
+      ),
     [recentEntriesQuery.data?.items],
   );
+
+  const suggestionBestTaskId = useMemo(() => {
+    const ranked = rankDescriptionDatalistOptions(descriptionDatalistOptions, {
+      query: timerDescription,
+      affinityProjectId: selectedProjectId || undefined,
+    });
+    return bestTaskIdFromRankedSuggestions(ranked);
+  }, [descriptionDatalistOptions, selectedProjectId, timerDescription]);
 
   async function startTimer() {
     if (!teamId || !canStartTimer || activeTimer) return;
@@ -704,6 +726,7 @@ export function useAgencyTimeTracker({
     isManualCreatePending,
     manualError,
     descriptionDatalistOptions,
+    suggestionBestTaskId,
     trackerStatusLine,
     onDescriptionChange: handleDescriptionChange,
     onDescriptionSuggestionSelect: handleDescriptionSuggestionSelect,

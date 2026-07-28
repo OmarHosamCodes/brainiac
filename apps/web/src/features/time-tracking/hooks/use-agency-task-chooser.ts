@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 import type {
   AgencyProject,
@@ -61,6 +61,8 @@ export type UseAgencyTaskChooserOptions = {
   filterProjectId?: string;
   highlightSearch?: boolean;
   required?: boolean;
+  /** Ranked suggestion best-match — highlighted when chooser opens. */
+  bestMatchTaskId?: string | null;
 };
 
 export type AgencyTaskChooserViewModel = {
@@ -96,6 +98,7 @@ export type AgencyTaskChooserViewModel = {
   onToggleProjectFavorite: (projectId: string) => void;
   onToggleTaskFavorite: (taskId: string) => void;
   highlightSearch: boolean;
+  bestMatchTaskId: string | null;
   statusLabel: (status: TaskStatus | undefined) => string;
   createTaskOpen: boolean;
   createTaskProjectId: string;
@@ -136,6 +139,7 @@ export function useAgencyTaskChooser(
     highlightSearch = false,
     required = false,
     filterProjectId,
+    bestMatchTaskId = null,
   } = options;
 
   const { open, searchTerm, setSearchTerm, setOpen } = useAgencyChooserOpenState({
@@ -215,6 +219,16 @@ export function useAgencyTaskChooser(
     open,
   );
 
+  const bestMatchTask = useMemo(
+    () => (bestMatchTaskId ? (tasks.find((task) => task.id === bestMatchTaskId) ?? null) : null),
+    [bestMatchTaskId, tasks],
+  );
+
+  useEffect(() => {
+    if (!open || !bestMatchTask) return;
+    expandProject(bestMatchTask.projectId);
+  }, [bestMatchTask, expandProject, open]);
+
   const sections = useMemo(
     () =>
       buildAgencyTaskChooserSections({
@@ -234,8 +248,8 @@ export function useAgencyTaskChooser(
     open,
     searchInputRef,
     listRef,
-    selectedSelector: '[data-selected-task="true"]',
-    revealDeps: [selectedTask?.projectId, value],
+    selectedSelector: '[data-selected-task="true"], [data-best-match-task="true"]',
+    revealDeps: [selectedTask?.projectId, value, bestMatchTaskId],
   });
 
   const clients = useMemo(() => {
@@ -328,6 +342,7 @@ export function useAgencyTaskChooser(
     onToggleProjectFavorite: handleToggleProjectFavorite,
     onToggleTaskFavorite: handleToggleTaskFavorite,
     highlightSearch,
+    bestMatchTaskId: bestMatchTaskId || null,
     statusLabel,
     createTaskOpen,
     createTaskProjectId,
