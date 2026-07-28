@@ -1,9 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  bestTaskIdFromRankedSuggestions,
   buildDescriptionDatalistOptions,
   draftFromDescriptionSuggestion,
   normalizeSuggestionText,
+  rankDescriptionDatalistOptions,
 } from "./description-suggestions";
 import { filterDescriptionDatalistOptions } from "./description-datalist";
 
@@ -15,6 +17,7 @@ function entry(
     projectId: string;
     projectName: string;
     clientName: string;
+    startedAt: string;
   }>,
 ) {
   return {
@@ -24,6 +27,7 @@ function entry(
     projectId: partial.projectId ?? "p1",
     projectName: partial.projectName ?? "Project",
     clientName: partial.clientName ?? "Client",
+    startedAt: partial.startedAt,
   };
 }
 
@@ -36,8 +40,18 @@ describe("normalizeSuggestionText", () => {
 describe("buildDescriptionDatalistOptions", () => {
   test("returns recent unique descriptions with project metadata", () => {
     const options = buildDescriptionDatalistOptions([
-      entry({ description: "Ship landing", projectName: "Alpha", clientName: "Acme" }),
-      entry({ description: "Fix billing", projectName: "Beta", clientName: "Globex" }),
+      entry({
+        description: "Ship landing",
+        projectName: "Alpha",
+        clientName: "Acme",
+        startedAt: "2026-07-28T12:00:00.000Z",
+      }),
+      entry({
+        description: "Fix billing",
+        projectName: "Beta",
+        clientName: "Globex",
+        startedAt: "2026-07-28T11:00:00.000Z",
+      }),
     ]);
 
     expect(options).toEqual([
@@ -48,6 +62,8 @@ describe("buildDescriptionDatalistOptions", () => {
         projectId: "p1",
         projectName: "Alpha",
         clientName: "Acme",
+        frequency: 1,
+        lastUsedAtMs: Date.parse("2026-07-28T12:00:00.000Z"),
       },
       {
         description: "Fix billing",
@@ -56,17 +72,109 @@ describe("buildDescriptionDatalistOptions", () => {
         projectId: "p1",
         projectName: "Beta",
         clientName: "Globex",
+        frequency: 1,
+        lastUsedAtMs: Date.parse("2026-07-28T11:00:00.000Z"),
       },
     ]);
   });
 
-  test("dedupes by normalized description", () => {
+  test("dedupes by normalized description and aggregates frequency", () => {
     const options = buildDescriptionDatalistOptions([
-      entry({ description: "Ship landing" }),
-      entry({ description: "  ship   landing " }),
+      entry({
+        description: "Ship landing",
+        taskId: "t1",
+        taskTitle: "Landing",
+        startedAt: "2026-07-28T12:00:00.000Z",
+      }),
+      entry({
+        description: "  ship   landing ",
+        taskId: "t2",
+        taskTitle: "Older",
+        startedAt: "2026-07-27T12:00:00.000Z",
+      }),
     ]);
 
     expect(options).toHaveLength(1);
+    expect(options[0]?.frequency).toBe(2);
+    expect(options[0]?.taskId).toBe("t1");
+  });
+});
+
+describe("rankDescriptionDatalistOptions", () => {
+  const nowMs = Date.parse("2026-07-28T15:00:00.000Z");
+  const options = buildDescriptionDatalistOptions([
+    entry({
+      description: "Homepage hero",
+      taskId: "t-home",
+      taskTitle: "Landing",
+      projectId: "p-acme",
+      projectName: "Acme Rebrand",
+      startedAt: "2026-07-28T14:00:00.000Z",
+    }),
+    entry({
+      description: "Brand guidelines",
+      taskId: "t-brand",
+      taskTitle: "Brand system",
+      projectId: "p-other",
+      projectName: "Other",
+      startedAt: "2026-07-20T14:00:00.000Z",
+    }),
+    entry({
+      description: "Homepage hero",
+      taskId: "t-home",
+      taskTitle: "Landing",
+      projectId: "p-acme",
+      projectName: "Acme Rebrand",
+      startedAt: "2026-07-28T10:00:00.000Z",
+    }),
+  ]);
+
+  test("ranks affinity + frequency ahead when query is empty", () => {
+    const ranked = rankDescriptionDatalistOptions(options, {
+      query: "",
+      affinityProjectId: "p-acme",
+      nowMs,
+    });
+    expect(ranked[0]?.description).toBe("Homepage hero");
+    expect(ranked[0]?.frequency).toBe(2);
+  });
+
+  test("filters and prefers description prefix matches", () => {
+    const ranked = rankDescriptionDatalistOptions(options, {
+      query: "guidelines",
+      nowMs,
+    });
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0]?.taskId).toBe("t-brand");
+  });
+});
+
+describe("bestTaskIdFromRankedSuggestions", () => {
+  test("returns the first compound with a task", () => {
+    expect(
+      bestTaskIdFromRankedSuggestions([
+        {
+          description: "Ad hoc",
+          taskId: null,
+          taskTitle: null,
+          projectId: "p1",
+          projectName: "P",
+          clientName: "C",
+          frequency: 1,
+          lastUsedAtMs: 1,
+        },
+        {
+          description: "Ship",
+          taskId: "task-9",
+          taskTitle: "Ship",
+          projectId: "p1",
+          projectName: "P",
+          clientName: "C",
+          frequency: 1,
+          lastUsedAtMs: 2,
+        },
+      ]),
+    ).toBe("task-9");
   });
 });
 
@@ -80,6 +188,8 @@ describe("draftFromDescriptionSuggestion", () => {
         projectId: "proj-1",
         projectName: "Alpha",
         clientName: "Acme",
+        frequency: 1,
+        lastUsedAtMs: 0,
       }),
     ).toEqual({
       description: "Ship landing",
@@ -97,6 +207,8 @@ describe("draftFromDescriptionSuggestion", () => {
         projectId: "proj-2",
         projectName: "Beta",
         clientName: "Globex",
+        frequency: 1,
+        lastUsedAtMs: 0,
       }),
     ).toEqual({
       description: "Ad hoc",
@@ -113,8 +225,14 @@ describe("filterDescriptionDatalistOptions", () => {
       taskTitle: "Mesh Madrasa",
       projectName: "Coaching",
       clientName: "Consultation",
+      startedAt: "2026-07-28T12:00:00.000Z",
     }),
-    entry({ description: "Deploy", projectName: "Growth", clientName: "Design" }),
+    entry({
+      description: "Deploy",
+      projectName: "Growth",
+      clientName: "Design",
+      startedAt: "2026-07-28T11:00:00.000Z",
+    }),
   ]);
 
   test("returns all options when query is empty", () => {
