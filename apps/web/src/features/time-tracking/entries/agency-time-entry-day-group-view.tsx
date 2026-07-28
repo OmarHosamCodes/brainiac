@@ -1,7 +1,6 @@
 import { Copy, Pencil, Trash2, TrashIcon, X } from "lucide-react";
 
 import {
-  agencyFocusRingClass,
   agencyTimeEntryBulkActionClass,
   agencyTimeEntryBulkRowSelectedClass,
   agencyTimeEntryBulkSelectColumnClass,
@@ -25,6 +24,7 @@ import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-t
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { AgencyTagChooser } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import { Button } from "@/ui/button";
+import { Checkbox } from "@/ui/checkbox";
 import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -122,15 +122,11 @@ export function AgencyTimeEntryDayGroupView({
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {bulkEditActive && onToggleEntrySelected ? (
             <label className={agencyTimeEntryBulkSelectColumnClass}>
-              <input
-                type="checkbox"
-                checked={allSelected}
-                ref={(el) => {
-                  if (el) el.indeterminate = partiallySelected;
-                }}
-                onChange={() => onToggleEntrySelected(dayEntryIds)}
+              <Checkbox
+                checked={partiallySelected ? "indeterminate" : allSelected}
+                onCheckedChange={() => onToggleEntrySelected(dayEntryIds)}
                 aria-label="Select all entries for day"
-                className={cn("size-3.5 accent-primary", agencyFocusRingClass)}
+                className="size-3.5"
               />
             </label>
           ) : null}
@@ -308,12 +304,11 @@ export function AgencyTimeEntryDayGroupView({
             >
               {bulkEditActive && onToggleEntrySelected ? (
                 <label className={agencyTimeEntryBulkSelectColumnClass}>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={selected}
-                    onChange={() => onToggleEntrySelected(groupEntryIds)}
+                    onCheckedChange={() => onToggleEntrySelected(groupEntryIds)}
                     aria-label={`Select ${group.entries.length === 1 ? "entry" : `${group.entries.length} entries`}`}
-                    className={cn("size-3.5 accent-primary", agencyFocusRingClass)}
+                    className="size-3.5"
                   />
                 </label>
               ) : null}
