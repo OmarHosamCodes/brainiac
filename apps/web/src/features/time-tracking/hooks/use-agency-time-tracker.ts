@@ -51,6 +51,12 @@ import {
   type TimeEntryDraft,
 } from "@/features/time-tracking/time-entry-draft";
 import {
+  clockNudgeMinutes,
+  durationNudgeSeconds,
+  nudgeClockTimeLabel,
+  nudgeDurationInput,
+} from "@/features/time-tracking/time-field-keyboard";
+import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
   useTrackerDraft,
@@ -574,6 +580,16 @@ export function useAgencyTimeTracker({
   }
 
   function onElapsedKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    const delta = durationNudgeSeconds(event);
+    if (delta !== null) {
+      event.preventDefault();
+      const next = nudgeDurationInput(elapsedDraft || elapsedLabel || "00:00:00", delta);
+      if (next) {
+        setElapsedDraft(next);
+        if (elapsedError) setElapsedError(null);
+      }
+      return;
+    }
     if (event.key === "Enter") {
       event.preventDefault();
       const ok = persistElapsedDraft(elapsedDraft);
@@ -615,6 +631,19 @@ export function useAgencyTimeTracker({
   }
 
   function onStartTimeKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    const delta = clockNudgeMinutes(event);
+    if (delta !== null) {
+      event.preventDefault();
+      const prefer = activeTimer
+        ? meridiemFromDraftTime(startedAtToDateTimeDraft(activeTimer.startedAt).startTime)
+        : null;
+      const next = nudgeClockTimeLabel(startTimeDraft, delta, prefer);
+      if (next) {
+        setStartTimeDraft(next);
+        if (startTimeError) setStartTimeError(null);
+      }
+      return;
+    }
     if (event.key === "Enter") {
       event.preventDefault();
       const ok = persistStartTimeDraft(startTimeDraft);
