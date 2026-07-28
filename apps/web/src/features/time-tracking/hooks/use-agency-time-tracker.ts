@@ -19,6 +19,7 @@ import { useAgencyElapsedTimer } from "@/features/time-tracking/hooks/use-agency
 import {
   canStartAgencyTimer,
   canStopAgencyTimer,
+  AGENCY_TIMER_STOP_TASK_REQUIRED,
   getAgencyTimerStopBlockedMessage,
   getAgencyTimerStopButtonPresentation,
   resolveAgencyTimerStartProject,
@@ -100,7 +101,6 @@ export type AgencyTimeTrackerViewModel = {
   stopButtonHint: string | null;
   stopButtonDisabled: boolean;
   startButtonDisabled: boolean;
-  stopButtonWarningRing: boolean;
   isTimerMutationPending: boolean;
   isStartTimeSaving: boolean;
   elapsedEditing: boolean;
@@ -283,6 +283,9 @@ export function useAgencyTimeTracker({
     activeTimer,
     description: timerDescription,
     selectedTask: resolvedTimerTask,
+    selectedTaskId,
+    selectedTaskTitle,
+    catalogTasks: tasks,
   });
 
   const elapsedLabel = useAgencyElapsedTimer({
@@ -669,7 +672,9 @@ export function useAgencyTimeTracker({
     isBillable,
     taskChooserOpen,
     taskChooserLabel,
-    taskChooserWarning: !activeTimerHasTask && !resolvedTimerTask && taskChooserOpen,
+    taskChooserWarning:
+      (!activeTimerHasTask && !resolvedTimerTask && taskChooserOpen) ||
+      stopBlockedMessage === AGENCY_TIMER_STOP_TASK_REQUIRED,
     startProject: manualProject,
     projects,
     tasks,
@@ -683,7 +688,6 @@ export function useAgencyTimeTracker({
     stopButtonHint,
     stopButtonDisabled,
     startButtonDisabled,
-    stopButtonWarningRing: Boolean(stopBlockedMessage),
     isTimerMutationPending,
     isStartTimeSaving: timerAdjustCount > 0,
     elapsedEditing,

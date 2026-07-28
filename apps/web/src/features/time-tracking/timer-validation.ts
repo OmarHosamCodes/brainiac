@@ -147,6 +147,10 @@ export function getAgencyTimerStartBlockedMessage(input: {
   );
 }
 
+export const AGENCY_TIMER_STOP_DESCRIPTION_REQUIRED =
+  "Add a description before stopping the timer.";
+export const AGENCY_TIMER_STOP_TASK_REQUIRED = "Choose a task before stopping the timer.";
+
 export function getAgencyTimerStopBlockedMessage(input: {
   activeTimer: AgencyActiveTimerRef | null;
   description: string;
@@ -161,19 +165,22 @@ export function getAgencyTimerStopBlockedMessage(input: {
   }
 
   if (!input.description.trim()) {
-    return "Add a description before stopping the timer.";
+    return AGENCY_TIMER_STOP_DESCRIPTION_REQUIRED;
   }
 
   const hasProject = Boolean(input.activeTimer.projectId?.trim());
-  const task = resolveAgencyTimerTaskRef({
-    activeTimer: input.activeTimer,
-    selectedTaskId: input.selectedTaskId,
-    selectedTaskTitle: input.selectedTaskTitle,
-    catalogTasks: input.catalogTasks,
-  });
+  // Prefer an already-resolved draft task so mid-run chooser picks unlock Stop.
+  const task =
+    input.selectedTask ??
+    resolveAgencyTimerTaskRef({
+      activeTimer: input.activeTimer,
+      selectedTaskId: input.selectedTaskId,
+      selectedTaskTitle: input.selectedTaskTitle,
+      catalogTasks: input.catalogTasks,
+    });
 
   if (!hasProject && !task?.id) {
-    return "Choose a task before stopping the timer.";
+    return AGENCY_TIMER_STOP_TASK_REQUIRED;
   }
 
   return null;

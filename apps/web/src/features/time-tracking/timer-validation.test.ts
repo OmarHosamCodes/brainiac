@@ -87,6 +87,16 @@ describe("getAgencyTimerStopBlockedMessage", () => {
     ).toBe("Choose a task before stopping the timer.");
   });
 
+  it("accepts a resolved draft task for an unbound timer", () => {
+    expect(
+      getAgencyTimerStopBlockedMessage({
+        activeTimer: { taskId: null, taskTitle: null, description: "", projectId: "" },
+        description: "Work",
+        selectedTask: task,
+      }),
+    ).toBeNull();
+  });
+
   it("allows stop for a project-only server timer with a description", () => {
     expect(
       getAgencyTimerStopBlockedMessage({
