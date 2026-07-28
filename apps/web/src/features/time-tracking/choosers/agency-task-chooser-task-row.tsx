@@ -10,6 +10,8 @@ type AgencyTaskChooserTaskRowProps = {
   title: string;
   selected: boolean;
   bestMatch?: boolean;
+  active?: boolean;
+  optionId?: string;
   favorited: boolean;
   searchTerm: string;
   highlightSearch: boolean;
@@ -22,6 +24,8 @@ export function AgencyTaskChooserTaskRow({
   title,
   selected,
   bestMatch = false,
+  active = false,
+  optionId,
   favorited,
   searchTerm,
   highlightSearch,
@@ -37,18 +41,20 @@ export function AgencyTaskChooserTaskRow({
   return (
     <div
       className={cn(
-        "group flex w-full items-center gap-0.5 rounded-lg pr-1 pl-5 transition-colors hover:bg-default/80",
+        "group flex w-full items-center gap-0.5 rounded-md pr-1 pl-5 transition-colors hover:bg-default/80",
         selected && "bg-primary/10 hover:bg-primary/10",
         !selected && bestMatch && "bg-accent/40 hover:bg-accent/50",
+        !selected && active && "bg-accent/50 hover:bg-accent/50",
       )}
     >
       <button
         type="button"
+        id={optionId}
         data-selected-task={selected ? "true" : undefined}
         data-best-match-task={!selected && bestMatch ? "true" : undefined}
         data-task-id={taskId}
         className={cn(
-          "flex min-w-0 flex-1 items-center rounded-lg px-2 py-1.5 text-left",
+          "flex min-w-0 flex-1 items-center rounded-md px-2 py-1.5 text-left",
           agencyFocusRingClass,
           "motion-reduce:transition-none",
         )}

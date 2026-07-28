@@ -24,7 +24,7 @@ export function AgencyTaskChooserClientSection({
       <button
         type="button"
         className={cn(
-          "mb-0.5 flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-default/60",
+          "mb-0.5 flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-default/60",
           agencyFocusRingClass,
           "motion-reduce:transition-none",
         )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 
 import type {
   AgencyProject,
@@ -22,6 +22,13 @@ import {
   type ChooserClientGroup,
   type ChooserProjectGroup,
 } from "@/features/time-tracking/agency-task-chooser-groups";
+import {
+  buildTaskChooserKeyboardItems,
+  indexOfTaskChooserItem,
+  taskChooserCreatePriority,
+  taskChooserOptionDomId,
+  type TaskChooserKeyboardItem,
+} from "@/features/time-tracking/agency-task-chooser-keyboard";
 
 type Project = Pick<AgencyProject, "id" | "clientId" | "clientName" | "name"> & {
   colorHueId?: number | null;
@@ -63,6 +70,11 @@ export type UseAgencyTaskChooserOptions = {
   required?: boolean;
   /** Ranked suggestion best-match — highlighted when chooser opens. */
   bestMatchTaskId?: string | null;
+  /**
+   * Tracker: remove (X clears). Entries: switch (icon opens chooser to change).
+   * Default remove.
+   */
+  clearAffordance?: "remove" | "switch";
 };
 
 export type AgencyTaskChooserViewModel = {
@@ -92,13 +104,20 @@ export type AgencyTaskChooserViewModel = {
   isClientExpanded: (clientName: string) => boolean;
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
+  onSearchKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onSelectTask: (taskId: string) => void;
+  onClearTask: () => void;
+  canClearTask: boolean;
+  clearAffordance: "remove" | "switch";
   onToggleProject: (projectId: string) => void;
   onToggleClient: (clientName: string) => void;
   onToggleProjectFavorite: (projectId: string) => void;
   onToggleTaskFavorite: (taskId: string) => void;
   highlightSearch: boolean;
   bestMatchTaskId: string | null;
+  activeOptionKey: string | null;
+  activeOptionDomId: string | undefined;
+  createPriority: "default" | "demoted" | "elevated";
   statusLabel: (status: TaskStatus | undefined) => string;
   createTaskOpen: boolean;
   createTaskProjectId: string;
@@ -140,6 +159,7 @@ export function useAgencyTaskChooser(
     required = false,
     filterProjectId,
     bestMatchTaskId = null,
+    clearAffordance = "remove",
   } = options;
 
   const { open, searchTerm, setSearchTerm, setOpen } = useAgencyChooserOpenState({
@@ -243,6 +263,82 @@ export function useAgencyTaskChooser(
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const [expandEpoch, setExpandEpoch] = useState(0);
+
+  const isProjectExpandedForList = (projectId: string) =>
+    Boolean(searchTerm.trim()) ||
+    isProjectExpanded(projectId) ||
+    projectId === selectedTask?.projectId ||
+    projectId === bestMatchTask?.projectId;
+  const bestMatchClientName = bestMatchTask
+    ? (projectsById.get(bestMatchTask.projectId)?.clientName ?? null)
+    : null;
+  const isClientExpandedForList = (clientName: string) =>
+    Boolean(searchTerm.trim()) ||
+    isClientExpanded(clientName) ||
+    clientName === (selectedProject?.clientName || null) ||
+    clientName === bestMatchClientName;
+
+  const keyboardItems = useMemo(
+    () =>
+      buildTaskChooserKeyboardItems({
+        favorites: sections.favorites,
+        clientGroups: sections.clientGroups,
+        isProjectExpanded: isProjectExpandedForList,
+        isClientExpanded: isClientExpandedForList,
+        includeProjects: !searchTerm.trim(),
+      }),
+    // expandEpoch invalidates after project/client toggles.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- expand helpers close over render state
+    [
+      sections.favorites,
+      sections.clientGroups,
+      searchTerm,
+      expandEpoch,
+      selectedTask?.projectId,
+      selectedProject?.clientName,
+      bestMatchTask?.projectId,
+      bestMatchClientName,
+    ],
+  );
+
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  useEffect(() => {
+    if (!open) {
+      setActiveIndex(-1);
+      return;
+    }
+    setActiveIndex(
+      indexOfTaskChooserItem(keyboardItems, {
+        taskId: bestMatchTaskId || value || null,
+        projectId: selectedTask?.projectId ?? bestMatchTask?.projectId ?? null,
+      }),
+    );
+    // Re-seek when preferred task becomes visible (expand-on-open).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid reset on every arrow move
+  }, [open, searchTerm, bestMatchTaskId, value, keyboardItems.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    setActiveIndex((current) => {
+      if (keyboardItems.length === 0) return -1;
+      if (current < 0) return 0;
+      return Math.min(current, keyboardItems.length - 1);
+    });
+  }, [keyboardItems.length, open]);
+
+  useEffect(() => {
+    if (!open || activeIndex < 0) return;
+    const item = keyboardItems[activeIndex];
+    if (!item) return;
+    const frame = requestAnimationFrame(() => {
+      listRef.current
+        ?.querySelector<HTMLElement>(`#${CSS.escape(taskChooserOptionDomId(item.key))}`)
+        ?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeIndex, keyboardItems, open]);
 
   useAgencyChooserScrollReveal({
     open,
@@ -272,9 +368,83 @@ export function useAgencyTaskChooser(
     [templatesQuery.data?.items],
   );
 
+  const hasVisibleResults = sections.favorites.length > 0 || sections.clientGroups.length > 0;
+  const createPriority = taskChooserCreatePriority({
+    searchTerm,
+    hasVisibleResults,
+  });
+
+  const activeItem: TaskChooserKeyboardItem | null =
+    activeIndex >= 0 ? (keyboardItems[activeIndex] ?? null) : null;
+  const activeOptionKey = activeItem?.key ?? null;
+  const activeOptionDomId = activeOptionKey ? taskChooserOptionDomId(activeOptionKey) : undefined;
+
+  const canClearTask = Boolean(value || triggerTaskTitle) && !disabled && !loading;
+
   function selectTask(taskId: string) {
     onValueChange(taskId);
     setOpen(false);
+  }
+
+  function clearTask() {
+    if (clearAffordance === "switch") {
+      setOpen(true);
+      return;
+    }
+    onValueChange("");
+    setOpen(false);
+  }
+
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!open) return;
+
+    if (event.key === "ArrowDown") {
+      if (keyboardItems.length === 0) return;
+      event.preventDefault();
+      setActiveIndex((current) => {
+        if (current < 0) return 0;
+        return Math.min(current + 1, keyboardItems.length - 1);
+      });
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      if (keyboardItems.length === 0) return;
+      event.preventDefault();
+      setActiveIndex((current) => {
+        if (current < 0) return keyboardItems.length - 1;
+        return Math.max(current - 1, 0);
+      });
+      return;
+    }
+
+    if (event.key === "Enter") {
+      const item = activeIndex >= 0 ? keyboardItems[activeIndex] : null;
+      if (!item) return;
+      event.preventDefault();
+      if (item.kind === "task") {
+        selectTask(item.taskId);
+        return;
+      }
+      toggleProject(item.projectId);
+      setExpandEpoch((epoch) => epoch + 1);
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setOpen(false);
+    }
+  }
+
+  function handleToggleProject(projectId: string) {
+    toggleProject(projectId);
+    setExpandEpoch((epoch) => epoch + 1);
+  }
+
+  function handleToggleClient(clientName: string) {
+    toggleClient(clientName);
+    setExpandEpoch((epoch) => epoch + 1);
   }
 
   function handleToggleProjectFavorite(projectId: string) {
@@ -332,17 +502,24 @@ export function useAgencyTaskChooser(
     favoriteTaskIds,
     searchInputRef,
     listRef,
-    isProjectExpanded: (projectId) => Boolean(searchTerm.trim()) || isProjectExpanded(projectId),
-    isClientExpanded: (clientName) => Boolean(searchTerm.trim()) || isClientExpanded(clientName),
+    isProjectExpanded: isProjectExpandedForList,
+    isClientExpanded: isClientExpandedForList,
     onOpenChange: setOpen,
     onSearchChange: setSearchTerm,
+    onSearchKeyDown: handleSearchKeyDown,
     onSelectTask: selectTask,
-    onToggleProject: toggleProject,
-    onToggleClient: toggleClient,
+    onClearTask: clearTask,
+    canClearTask,
+    clearAffordance,
+    onToggleProject: handleToggleProject,
+    onToggleClient: handleToggleClient,
     onToggleProjectFavorite: handleToggleProjectFavorite,
     onToggleTaskFavorite: handleToggleTaskFavorite,
     highlightSearch,
     bestMatchTaskId: bestMatchTaskId || null,
+    activeOptionKey,
+    activeOptionDomId,
+    createPriority,
     statusLabel,
     createTaskOpen,
     createTaskProjectId,

@@ -14,10 +14,13 @@ type AgencyTaskChooserProjectRowProps = {
   taskCount: number;
   expanded: boolean;
   favorited: boolean;
+  active?: boolean;
+  optionId?: string;
   searchTerm: string;
   highlightSearch: boolean;
   showClientName: boolean;
   showCreateTask: boolean;
+  createMuted?: boolean;
   onToggle: () => void;
   onToggleFavorite: () => void;
   onCreateTask: () => void;
@@ -31,10 +34,13 @@ export function AgencyTaskChooserProjectRow({
   taskCount,
   expanded,
   favorited,
+  active = false,
+  optionId,
   searchTerm,
   highlightSearch,
   showClientName,
   showCreateTask,
+  createMuted = false,
   onToggle,
   onToggleFavorite,
   onCreateTask,
@@ -42,11 +48,17 @@ export function AgencyTaskChooserProjectRow({
   const projectStyle = projectHueStyle(projectId, colorHueId);
 
   return (
-    <div className="group flex w-full items-center gap-0.5 rounded-lg pr-1 transition-colors hover:bg-default/80">
+    <div
+      className={cn(
+        "group flex w-full items-center gap-0.5 rounded-md pr-1 transition-colors hover:bg-default/80",
+        active && "bg-accent/50 hover:bg-accent/50",
+      )}
+    >
       <button
         type="button"
+        id={optionId}
         className={cn(
-          "flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left",
+          "flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left",
           agencyFocusRingClass,
           "motion-reduce:transition-none",
         )}
@@ -114,7 +126,8 @@ export function AgencyTaskChooserProjectRow({
           type="button"
           aria-label="Create task"
           className={cn(
-            "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-info",
+            "inline-flex size-7 shrink-0 items-center justify-center rounded-md",
+            createMuted ? "text-muted" : "text-info",
             "pointer-events-none opacity-0 transition-opacity",
             "group-hover:pointer-events-auto group-hover:opacity-100",
             "focus-visible:pointer-events-auto focus-visible:opacity-100",
