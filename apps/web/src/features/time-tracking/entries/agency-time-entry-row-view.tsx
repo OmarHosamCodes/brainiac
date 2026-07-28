@@ -132,15 +132,9 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
           onChange={(e) => onDescriptionChange(e.target.value)}
           onFocus={() => onEditingDescriptionChange(true)}
           onBlur={() => {
-            onEditingDescriptionChange(false);
             onDescriptionBlur();
           }}
-          onKeyDown={(event) => {
-            onDescriptionKeyDown(event);
-            if (event.key === "Enter" || event.key === "Escape") {
-              onEditingDescriptionChange(false);
-            }
-          }}
+          onKeyDown={onDescriptionKeyDown}
           disabled={editSaving || rowUpdating}
           placeholder="Add description"
           className={cn(

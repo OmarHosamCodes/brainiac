@@ -22,6 +22,7 @@ import {
   createRetainedTrackerDraftAfterStop,
   type AgencyTrackerDraft,
 } from "@/features/time-tracking/tracker-draft";
+import { shouldSkipActiveTimerDescriptionSync } from "@/features/time-tracking/tracker-description-sync";
 import { type AgencyListOverlay } from "@/features/shared/agency-optimistic-merge";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 
@@ -164,6 +165,22 @@ type UpdateActiveTimerStartPayload = {
 
 const ACTIVE_TIMER_DESCRIPTION_DEBOUNCE_MS = 400;
 const activeTimerDescriptionPersistTimers = new Map<string, ReturnType<typeof setTimeout>>();
+/** Local draft differs from last server-acked description; blocks live/cache overwrites. */
+const trackerDescriptionDirtyByTeam = new Map<string, boolean>();
+
+function markTrackerDescriptionDirty(teamId: string) {
+  if (!teamId) return;
+  trackerDescriptionDirtyByTeam.set(teamId, true);
+}
+
+function clearTrackerDescriptionDirty(teamId: string) {
+  if (!teamId) return;
+  trackerDescriptionDirtyByTeam.delete(teamId);
+}
+
+function isTrackerDescriptionDirty(teamId: string) {
+  return trackerDescriptionDirtyByTeam.get(teamId) === true;
+}
 
 type RestartEntryPayload = {
   teamId: string;
@@ -368,7 +385,9 @@ function createAgencyTimeTrackingActions(
         },
       };
     });
-    mirrorTrackerDraftToActiveTimer(teamId);
+    // Draft-only while typing: mirroring into the active-timer query on every
+    // keystroke re-renders the tracker and lets live echoes fight the input.
+    markTrackerDescriptionDirty(teamId);
     scheduleActiveTimerDescriptionPersist(teamId);
   }
 
@@ -405,10 +424,18 @@ function createAgencyTimeTrackingActions(
     const draft = get().trackerDraftsByTeam[teamId];
     const activeTimer = getActiveTimerForTeam(teamId);
     if (!draft || !activeTimer || draft.syncedTimerId !== activeTimer.id) {
+      if (!activeTimer) {
+        clearTrackerDescriptionDirty(teamId);
+      }
       return;
     }
 
     const description = draft.description;
+    if (description === activeTimer.description) {
+      clearTrackerDescriptionDirty(teamId);
+      return;
+    }
+
     const timerSnapshots = snapshotQueries(
       [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
     );
@@ -420,6 +447,9 @@ function createAgencyTimeTrackingActions(
       })) as { timer: AgencyActiveTimer };
 
       patchActiveTimerCaches(result.timer);
+      if (get().trackerDraftsByTeam[teamId]?.description === description) {
+        clearTrackerDescriptionDirty(teamId);
+      }
     } catch (error) {
       restoreQuerySnapshots(timerSnapshots);
 
@@ -636,69 +666,89 @@ function createAgencyTimeTrackingActions(
       return;
     }
 
-    set((s) => {
-      const draft = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
+    const draft = get().trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
 
-      if (!timer) {
-        if (draft.syncedTimerId === null) {
+    if (!timer) {
+      clearTrackerDescriptionDirty(teamId);
+      if (draft.syncedTimerId === null) {
+        return;
+      }
+
+      set((s) => {
+        const current = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
+        if (current.syncedTimerId === null) {
           return s;
         }
-
         return {
           ...s,
           trackerDraftsByTeam: {
             ...s.trackerDraftsByTeam,
-            [teamId]: { ...draft, syncedTimerId: null },
+            [teamId]: { ...current, syncedTimerId: null },
           },
         };
-      }
+      });
+      return;
+    }
 
-      const nextDescription = options?.skipDescription ? draft.description : timer.description;
+    const sameTimer = draft.syncedTimerId === timer.id;
+    const skipDescription = shouldSkipActiveTimerDescriptionSync({
+      sameTimer,
+      skipDescription: options?.skipDescription,
+      descriptionDirty: isTrackerDescriptionDirty(teamId),
+    });
 
-      if (draft.syncedTimerId === timer.id) {
-        const nextTaskId = options?.authoritative ? (timer.taskId ?? "") : draft.taskId;
-        const nextProjectId = options?.authoritative ? timer.projectId : draft.projectId;
-        const nextTagIds = options?.authoritative ? timer.tags.map((tag) => tag.id) : draft.tagIds;
-        const nextIsBillable = options?.authoritative ? timer.isBillable : draft.isBillable;
-
-        if (
-          nextDescription === draft.description &&
-          nextTaskId === draft.taskId &&
-          nextProjectId === draft.projectId &&
-          nextIsBillable === draft.isBillable &&
-          nextTagIds.length === draft.tagIds.length &&
-          nextTagIds.every((tagId, index) => tagId === draft.tagIds[index])
-        ) {
-          return s;
-        }
-
+    if (!sameTimer) {
+      clearTrackerDescriptionDirty(teamId);
+      set((s) => {
+        const current = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
         return {
           ...s,
           trackerDraftsByTeam: {
             ...s.trackerDraftsByTeam,
             [teamId]: {
-              ...draft,
-              description: nextDescription,
-              projectId: nextProjectId,
-              taskId: nextTaskId,
-              tagIds: nextTagIds,
-              isBillable: nextIsBillable,
+              description: timer.description,
+              projectId: timer.projectId,
+              taskId: timer.taskId ?? current.taskId ?? "",
+              tagIds: timer.tags.map((tag) => tag.id),
+              isBillable: timer.isBillable,
+              syncedTimerId: timer.id,
             },
           },
         };
-      }
+      });
+      return;
+    }
 
+    const nextDescription = skipDescription ? draft.description : timer.description;
+    const nextTaskId = options?.authoritative ? (timer.taskId ?? "") : draft.taskId;
+    const nextProjectId = options?.authoritative ? timer.projectId : draft.projectId;
+    const nextTagIds = options?.authoritative ? timer.tags.map((tag) => tag.id) : draft.tagIds;
+    const nextIsBillable = options?.authoritative ? timer.isBillable : draft.isBillable;
+
+    if (
+      nextDescription === draft.description &&
+      nextTaskId === draft.taskId &&
+      nextProjectId === draft.projectId &&
+      nextIsBillable === draft.isBillable &&
+      nextTagIds.length === draft.tagIds.length &&
+      nextTagIds.every((tagId, index) => tagId === draft.tagIds[index])
+    ) {
+      return;
+    }
+
+    set((s) => {
+      const current = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
       return {
         ...s,
         trackerDraftsByTeam: {
           ...s.trackerDraftsByTeam,
           [teamId]: {
-            description: nextDescription,
-            projectId: timer.projectId,
-            taskId: timer.taskId ?? draft.taskId ?? "",
-            tagIds: timer.tags.map((tag) => tag.id),
-            isBillable: timer.isBillable,
-            syncedTimerId: timer.id,
+            ...current,
+            description: skipDescription ? current.description : timer.description,
+            projectId: nextProjectId,
+            taskId: nextTaskId,
+            tagIds: nextTagIds,
+            isBillable: nextIsBillable,
           },
         },
       };
@@ -720,8 +770,24 @@ function createAgencyTimeTrackingActions(
       return;
     }
 
-    patchActiveTimerCaches(timer, teamId);
-    syncDraftFromActiveTimer(teamId, timer, { authoritative: true });
+    // Keep draft description when dirty; still accept authoritative task/tags/etc.
+    const skipDescription = isTrackerDescriptionDirty(teamId);
+    if (timer && skipDescription) {
+      const draft = get().trackerDraftsByTeam[teamId];
+      patchActiveTimerCaches(
+        {
+          ...timer,
+          description: draft?.description ?? timer.description,
+        },
+        teamId,
+      );
+    } else {
+      patchActiveTimerCaches(timer, teamId);
+    }
+    syncDraftFromActiveTimer(teamId, timer, {
+      authoritative: true,
+      skipDescription,
+    });
     set((state) => ({
       ...state,
       timerLiveUpdatedAtByTeam: {

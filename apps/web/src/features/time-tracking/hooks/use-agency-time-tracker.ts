@@ -479,11 +479,13 @@ export function useAgencyTimeTracker({
     }
   }
 
-  function handleDescriptionBlur() {
-    setDescriptionFocused(false);
+  async function handleDescriptionBlur() {
+    // Flush while still focused/dirty so a stale cache snapshot cannot overwrite
+    // the draft when descriptionFocused flips false.
     if (teamId && activeTimer) {
-      void flushActiveTimerDescription(teamId);
+      await flushActiveTimerDescription(teamId);
     }
+    setDescriptionFocused(false);
   }
 
   async function stopTimer(discard = false) {

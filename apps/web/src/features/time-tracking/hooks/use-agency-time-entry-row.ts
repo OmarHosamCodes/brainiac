@@ -230,16 +230,18 @@ export function useAgencyTimeEntryRow({
   const [descriptionDraft, setDescriptionDraft] = useState(() => resolvedTitle);
 
   useEffect(() => {
+    if (editingDescription) return;
     setDescriptionDraft(resolvedTitle);
-  }, [groupDescription, groupTaskTitle]);
+  }, [groupDescription, groupTaskTitle, editingDescription, resolvedTitle]);
 
   useEffect(() => {
+    if (editingDuration || timeEditorOpen) return;
     const nextDraft = entryToDraft(primaryEntry);
     setEditDraft(nextDraft);
     setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
     setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
     setEditError(null);
-  }, [primaryEntry]);
+  }, [primaryEntry, editingDuration, timeEditorOpen]);
 
   const resetEditDraft = useCallback(() => {
     const nextDraft = entryToDraft(primaryEntry);
@@ -317,20 +319,28 @@ export function useAgencyTimeEntryRow({
 
   const saveDescriptionEdit = useCallback(async () => {
     const trimmed = descriptionDraft.trim();
-    if (trimmed === resolvedTitle) return;
-
-    if (isMulti) {
-      await saveBulkFieldPatch({ description: trimmed });
+    if (trimmed === resolvedTitle) {
+      setEditingDescription(false);
       return;
     }
 
-    const draft = entryToDraft(primaryEntry);
-    draft.description = trimmed;
-    await saveDraft(draft);
+    try {
+      if (isMulti) {
+        await saveBulkFieldPatch({ description: trimmed });
+        return;
+      }
+
+      const draft = entryToDraft(primaryEntry);
+      draft.description = trimmed;
+      await saveDraft(draft);
+    } finally {
+      setEditingDescription(false);
+    }
   }, [descriptionDraft, isMulti, primaryEntry, resolvedTitle, saveBulkFieldPatch, saveDraft]);
 
   const cancelDescriptionEdit = useCallback(() => {
     setDescriptionDraft(resolvedTitle);
+    setEditingDescription(false);
   }, [resolvedTitle]);
 
   const updateInlineDraft = useCallback((nextDraft: TimeEntryDraft) => {
@@ -484,11 +494,12 @@ export function useAgencyTimeEntryRow({
     onDescriptionKeyDown: (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
-        void saveDescriptionEdit();
+        event.currentTarget.blur();
       }
       if (event.key === "Escape") {
         event.preventDefault();
         cancelDescriptionEdit();
+        event.currentTarget.blur();
       }
     },
     onTaskChange: (taskId) => {
