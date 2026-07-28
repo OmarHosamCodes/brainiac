@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import type { AgencyTimeEntryRowViewModel } from "@/features/time-tracking/hooks/use-agency-time-entry-row";
 import {
   agencyFocusRingClass,
+  agencyTaskChooserTriggerClass,
   agencyTimeEntryIconButtonClass,
   agencyTimeEntryMainClass,
   agencyTimeEntryRailMoreClass,
@@ -66,6 +67,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     durationLabel,
     editingDescription,
     editingDuration,
+    timeEditorOpen,
     onToggleExpand,
     onRestart,
     onDeleteGroup,
@@ -83,16 +85,16 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onEndTimeBlur,
     onStartDateChange,
     onDurationChange,
-    onInlineBlur,
+    onDurationBlur,
     onInlineKeyDown,
     onEditingDescriptionChange,
+    onTimeEditorOpenChange,
     onEditingDurationChange,
   } = view;
 
   const taskChooserTriggerClass = cn(
-    "h-auto min-h-0 w-auto max-w-full shrink justify-start gap-1 rounded-2xl border-0 bg-transparent px-2 py-0 text-xs font-normal shadow-none hover:bg-muted/60 dark:hover:bg-muted/60",
-    agencyFocusRingClass,
-    "motion-reduce:transition-none",
+    agencyTaskChooserTriggerClass,
+    "h-auto min-h-0 w-auto max-w-full gap-1 px-2 py-0 text-xs shadow-none",
   );
 
   return (
@@ -102,7 +104,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
       className={cn(
         agencyTimeEntryRowClass,
         highlighted && agencyTimeEntryRowHighlightClass,
-        (editingDescription || editingDuration) && agencyTimeEntryRowEditingClass,
+        (editingDescription || editingDuration || timeEditorOpen) && agencyTimeEntryRowEditingClass,
         className,
       )}
       {...agentScopeableProps({
@@ -194,12 +196,16 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 data-time-field="start"
                 value={startTimeInput}
                 onChange={(e) => onStartTimeChange(e.target.value)}
-                onFocus={(e) => e.currentTarget.select()}
+                onFocus={(e) => {
+                  onTimeEditorOpenChange(true);
+                  e.currentTarget.select();
+                }}
                 onBlur={onStartTimeBlur}
                 onKeyDown={onInlineKeyDown}
                 disabled={editSaving || rowUpdating}
                 className={agencyTimeEntryClockTimeInputClass}
                 aria-label="Start time"
+                aria-invalid={Boolean(editError)}
               />
               <span className={cn("shrink-0", agencyWorkTimeRangeClass)} aria-hidden>
                 -
@@ -210,12 +216,16 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 data-time-field="end"
                 value={endTimeInput}
                 onChange={(e) => onEndTimeChange(e.target.value)}
-                onFocus={(e) => e.currentTarget.select()}
+                onFocus={(e) => {
+                  onTimeEditorOpenChange(true);
+                  e.currentTarget.select();
+                }}
                 onBlur={onEndTimeBlur}
                 onKeyDown={onInlineKeyDown}
                 disabled={editSaving || rowUpdating}
                 className={agencyTimeEntryClockTimeInputClass}
                 aria-label="End time"
+                aria-invalid={Boolean(editError)}
               />
             </div>
           ) : timeRange ? (
@@ -245,13 +255,11 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         <div className={agencyTimeEntryRailDurationClass}>
           {!isMulti ? (
             <Input
+              data-time-field="duration"
               value={editDraft.durationInput}
               onChange={(e) => onDurationChange(e.target.value)}
               onFocus={() => onEditingDurationChange(true)}
-              onBlur={() => {
-                onEditingDurationChange(false);
-                onInlineBlur();
-              }}
+              onBlur={onDurationBlur}
               onKeyDown={onInlineKeyDown}
               disabled={editSaving || rowUpdating}
               className={cn(
@@ -259,6 +267,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 agencyWorkMetricClass,
               )}
               aria-label="Duration"
+              aria-invalid={Boolean(editError)}
             />
           ) : (
             <span className={cn("block w-full text-center", agencyWorkMetricClass)}>
@@ -266,7 +275,9 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             </span>
           )}
           {editError ? (
-            <p className="absolute top-full left-2.5 z-10 text-xs text-error">{editError}</p>
+            <p className="absolute top-full left-2.5 z-10 text-xs text-destructive" role="alert">
+              {editError}
+            </p>
           ) : null}
         </div>
 

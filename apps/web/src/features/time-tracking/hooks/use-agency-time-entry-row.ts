@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import type { FocusEvent, KeyboardEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
@@ -19,6 +19,13 @@ import {
   meridiemFromDraftTime,
   parseClockTimeLabel,
 } from "@/features/time-tracking/time-entry-draft";
+import {
+  clockNudgeMinutes,
+  durationNudgeSeconds,
+  nudgeClockTimeLabel,
+  nudgeDurationInput,
+  shouldSyncTimeDraftFromEntry,
+} from "@/features/time-tracking/time-field-keyboard";
 import { formatDuration } from "@/lib/utils/format-duration";
 import type {
   CollapsedEntryGroup,
@@ -26,6 +33,12 @@ import type {
 } from "@/features/time-tracking/group-time-entries";
 import { useTrackerDraft } from "@/features/time-tracking/stores/agency-time-tracking";
 import { useTheme } from "@/stores/theme";
+
+function isTimeFieldTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const field = target.dataset.timeField;
+  return field === "start" || field === "end" || field === "duration";
+}
 
 function localDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -167,10 +180,11 @@ export type AgencyTimeEntryRowViewModel = {
   onIsBillableChange: (isBillable: boolean) => void;
   onStartTimeChange: (value: string) => void;
   onEndTimeChange: (value: string) => void;
-  onStartTimeBlur: () => void;
-  onEndTimeBlur: () => void;
+  onStartTimeBlur: (event: FocusEvent<HTMLInputElement>) => void;
+  onEndTimeBlur: (event: FocusEvent<HTMLInputElement>) => void;
   onStartDateChange: (value: string) => void;
   onDurationChange: (value: string) => void;
+  onDurationBlur: (event: FocusEvent<HTMLInputElement>) => void;
   onInlineBlur: () => void;
   onInlineKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onEditingDescriptionChange: (editing: boolean) => void;
@@ -235,7 +249,7 @@ export function useAgencyTimeEntryRow({
   }, [groupDescription, groupTaskTitle, editingDescription, resolvedTitle]);
 
   useEffect(() => {
-    if (editingDuration || timeEditorOpen) return;
+    if (!shouldSyncTimeDraftFromEntry({ editingDuration, timeEditorOpen })) return;
     const nextDraft = entryToDraft(primaryEntry);
     setEditDraft(nextDraft);
     setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
@@ -390,35 +404,119 @@ export function useAgencyTimeEntryRow({
     await saveInlineDraft(nextDraft);
   }, [editDraft, endTimeInput, isMulti, saveInlineDraft, updateInlineDraft]);
 
+  const onStartTimeBlur = useCallback(
+    async (event: FocusEvent<HTMLInputElement>) => {
+      const stayingInTime = isTimeFieldTarget(event.relatedTarget);
+      try {
+        await commitStartTimeInput();
+      } finally {
+        if (!stayingInTime) setTimeEditorOpen(false);
+      }
+    },
+    [commitStartTimeInput],
+  );
+
+  const onEndTimeBlur = useCallback(
+    async (event: FocusEvent<HTMLInputElement>) => {
+      const stayingInTime = isTimeFieldTarget(event.relatedTarget);
+      try {
+        await commitEndTimeInput();
+      } finally {
+        if (!stayingInTime) setTimeEditorOpen(false);
+      }
+    },
+    [commitEndTimeInput],
+  );
+
+  const onDurationBlur = useCallback(
+    async (event: FocusEvent<HTMLInputElement>) => {
+      const stayingInTime = isTimeFieldTarget(event.relatedTarget);
+      setEditingDuration(false);
+      try {
+        await saveInlineDraft();
+      } finally {
+        if (!stayingInTime) setTimeEditorOpen(false);
+      }
+    },
+    [saveInlineDraft],
+  );
+
   const onInlineKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>) => {
+      const field = event.currentTarget.dataset.timeField;
+
+      const clockDelta = clockNudgeMinutes(event);
+      if (clockDelta !== null && (field === "start" || field === "end")) {
+        event.preventDefault();
+        const prefer =
+          field === "start"
+            ? meridiemFromDraftTime(editDraft.startTime)
+            : meridiemFromDraftTime(editDraft.endTime);
+        const currentLabel = field === "start" ? startTimeInput : endTimeInput;
+        const nextLabel = nudgeClockTimeLabel(currentLabel, clockDelta, prefer);
+        if (!nextLabel) return;
+        const parsed = parseClockTimeLabel(nextLabel, { preferMeridiem: prefer });
+        if (!parsed) return;
+        const nextDraft =
+          field === "start"
+            ? applyStartTimeToDraft(editDraft, parsed)
+            : applyEndTimeToDraft(editDraft, parsed);
+        setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
+        setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
+        updateInlineDraft(nextDraft);
+        return;
+      }
+
+      const durationDelta = durationNudgeSeconds(event);
+      if (durationDelta !== null && field === "duration") {
+        event.preventDefault();
+        const nextDuration = nudgeDurationInput(editDraft.durationInput, durationDelta);
+        if (!nextDuration) return;
+        updateInlineDraft(applyDurationToDraft(editDraft, nextDuration));
+        return;
+      }
+
       if (event.key === "Enter") {
         event.preventDefault();
         setEditingDuration(false);
-        const field = event.currentTarget.dataset.timeField;
         if (field === "start") {
-          void commitStartTimeInput();
+          void commitStartTimeInput().then(() => {
+            setTimeEditorOpen(false);
+            event.currentTarget.blur();
+          });
           return;
         }
         if (field === "end") {
-          void commitEndTimeInput();
+          void commitEndTimeInput().then(() => {
+            setTimeEditorOpen(false);
+            event.currentTarget.blur();
+          });
           return;
         }
-        void saveInlineDraft();
+        void saveInlineDraft().then(() => {
+          setTimeEditorOpen(false);
+          event.currentTarget.blur();
+        });
+        return;
       }
+
       if (event.key === "Escape") {
         event.preventDefault();
         resetEditDraft();
-        cancelDescriptionEdit();
         setEditingDuration(false);
+        setTimeEditorOpen(false);
+        event.currentTarget.blur();
       }
     },
     [
-      cancelDescriptionEdit,
       commitEndTimeInput,
       commitStartTimeInput,
+      editDraft,
+      endTimeInput,
       resetEditDraft,
       saveInlineDraft,
+      startTimeInput,
+      updateInlineDraft,
     ],
   );
 
@@ -555,8 +653,8 @@ export function useAgencyTimeEntryRow({
     },
     onStartTimeChange: setStartTimeInput,
     onEndTimeChange: setEndTimeInput,
-    onStartTimeBlur: () => void commitStartTimeInput(),
-    onEndTimeBlur: () => void commitEndTimeInput(),
+    onStartTimeBlur: (event) => void onStartTimeBlur(event),
+    onEndTimeBlur: (event) => void onEndTimeBlur(event),
     onStartDateChange: (value) => {
       const nextDraft = { ...editDraft, date: value };
       updateInlineDraft(nextDraft);
@@ -567,10 +665,14 @@ export function useAgencyTimeEntryRow({
       void saveInlineDraft(nextDraft);
     },
     onDurationChange: (value) => updateInlineDraft(applyDurationToDraft(editDraft, value)),
+    onDurationBlur: (event) => void onDurationBlur(event),
     onInlineBlur: () => void saveInlineDraft(),
     onInlineKeyDown,
     onEditingDescriptionChange: setEditingDescription,
     onTimeEditorOpenChange: setTimeEditorOpen,
-    onEditingDurationChange: setEditingDuration,
+    onEditingDurationChange: (editing) => {
+      setEditingDuration(editing);
+      if (editing) setTimeEditorOpen(true);
+    },
   };
 }
