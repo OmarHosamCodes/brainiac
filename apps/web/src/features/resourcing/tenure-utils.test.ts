@@ -5,6 +5,7 @@ import {
   getCurrentTenurePeriodRange,
   getCurrentTenureQuarterMonths,
   resolveDefaultDashboardRangePreset,
+  resolveDefaultTenureMonthIndexes,
   simpleTenurePeriodLabel,
 } from "./tenure-utils";
 
@@ -28,6 +29,37 @@ describe("resolveDefaultDashboardRangePreset", () => {
         enabled: false,
       }),
     ).toBe("last30");
+  });
+});
+
+describe("resolveDefaultTenureMonthIndexes", () => {
+  const calendarPolicy = {
+    fiscalYearStartMonth: 1,
+    fiscalYearStartDay: 1,
+    enabled: true,
+  } as const;
+
+  test("defaults to the current month inside the tenure quarter", () => {
+    expect(
+      resolveDefaultTenureMonthIndexes(calendarPolicy, new Date("2026-07-28T12:00:00.000Z")),
+    ).toEqual([0]);
+    expect(
+      resolveDefaultTenureMonthIndexes(calendarPolicy, new Date("2026-08-20T12:00:00.000Z")),
+    ).toEqual([1]);
+    expect(
+      resolveDefaultTenureMonthIndexes(calendarPolicy, new Date("2026-09-05T12:00:00.000Z")),
+    ).toEqual([2]);
+  });
+
+  test("returns empty when tenure is unavailable", () => {
+    expect(resolveDefaultTenureMonthIndexes(null)).toEqual([]);
+    expect(
+      resolveDefaultTenureMonthIndexes({
+        fiscalYearStartMonth: 1,
+        fiscalYearStartDay: 1,
+        enabled: false,
+      }),
+    ).toEqual([]);
   });
 });
 

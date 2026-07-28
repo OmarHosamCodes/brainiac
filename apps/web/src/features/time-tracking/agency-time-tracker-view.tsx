@@ -85,7 +85,6 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               triggerFormat="task-client"
               highlightSearch
               bestMatchTaskId={view.suggestionBestTaskId}
-              clearAffordance="remove"
               fallbackTaskTitle={view.activeTimer?.taskTitle ?? undefined}
               fallbackProjectId={view.activeTimer?.projectId ?? undefined}
               fallbackProjectName={view.activeTimer?.projectName ?? undefined}

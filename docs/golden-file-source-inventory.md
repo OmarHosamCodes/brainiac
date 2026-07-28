@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-07-26 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-07-28 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,9 +19,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 455 |
+| golden-feature | 467 |
 | server-operation | 12 |
-| shared-infrastructure | 257 |
+| shared-infrastructure | 260 |
 | static-presentation | 15 |
 
 ## Counts by domain
@@ -46,15 +46,15 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | notifications | 20 |
 | performance | 8 |
 | projects | 23 |
-| reports | 48 |
+| reports | 50 |
 | repository | 13 |
 | resourcing | 16 |
 | server-platform | 21 |
 | settings | 1 |
 | task-management | 41 |
 | team | 19 |
-| time-tracking | 86 |
-| web-platform | 94 |
+| time-tracking | 96 |
+| web-platform | 97 |
 | workspace | 104 |
 
 ## Artifacts
@@ -206,13 +206,13 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/reports/agency-report-entry-details-dialog.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/reports/agency-report-fields.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/reports/agency-report-fields.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
-| `apps/web/src/features/reports/agency-report-show-waste.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
-| `apps/web/src/features/reports/agency-report-show-waste.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/reports/agency-report-grouping.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/reports/agency-report-grouping.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/reports/agency-report-naming.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/reports/agency-report-naming.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/reports/agency-report-row-actions.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/reports/agency-report-show-waste.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/reports/agency-report-show-waste.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/reports/agency-reports-surface-view.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/reports/agency-reports-surface.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/reports/agency-reports-table.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -354,8 +354,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/time-tracking/agency-settings-tags-pane.tsx` | time-tracking | web-query | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical web-query layer. | content: oRPC procedures or clients, React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/agency-task-chooser-groups.test.ts` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/time-tracking/agency-task-chooser-groups.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
-| `apps/web/src/features/time-tracking/agency-task-chooser-keyboard.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/agency-task-chooser-keyboard.test.ts` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/time-tracking/agency-task-chooser-keyboard.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/agency-task-chooser-motion.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/agency-task-chooser-project-create-dialog-view.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/agency-task-create-dialog-view.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -384,6 +384,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/time-tracking/entries/agency-time-entries-log-view.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/entries/agency-time-entries-log.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-actions.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/time-tracking/entries/agency-time-entry-date-picker.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-day-group-view.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-project-label.test.tsx` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations, React component or hook code; structure: test filename |
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-project-label.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -566,6 +567,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/ui/breadcrumb.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/bubble.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/button.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/ui/calendar.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/card.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/checkbox.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/collapsible.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |

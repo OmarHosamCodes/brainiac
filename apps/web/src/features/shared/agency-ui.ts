@@ -323,13 +323,6 @@ export const agencyTimeTrackerTaskChooserTriggerClass = cn(
   "h-9 max-h-9 min-h-9 w-auto gap-1.5 text-sm",
 );
 
-export const agencyTaskChooserClearClass = cn(
-  "absolute top-1/2 right-1 z-10 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground",
-  "transition-[color,background-color,transform] duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)] hover:bg-muted hover:text-foreground",
-  agencyFocusRingClass,
-  "motion-reduce:transition-none",
-);
-
 export const agencyTaskChooserPanelClass = cn(
   "flex w-[26rem] max-w-[calc(100vw-2rem)] flex-col gap-0 rounded-xl border border-border bg-popover p-0 font-sans text-popover-foreground shadow-lg ring-0",
   // Exit animation can stall Presence unmount and leave a click-eating layer.

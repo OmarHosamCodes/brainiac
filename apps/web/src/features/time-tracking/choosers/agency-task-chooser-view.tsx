@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Plus, Search, X } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import type { ReactNode } from "react";
 
@@ -29,7 +29,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Skeleton } from "@/ui/skeleton";
 import {
   agencyInputPlaceholderClass,
-  agencyTaskChooserClearClass,
   agencyTaskChooserCreateActionClass,
   agencyTaskChooserCreateActionMutedClass,
   agencyTaskChooserPanelClass,
@@ -69,9 +68,6 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     onSearchChange,
     onSearchKeyDown,
     onSelectTask,
-    onClearTask,
-    canClearTask,
-    clearAffordance,
     onToggleProject,
     onToggleClient,
     onToggleProjectFavorite,
@@ -250,7 +246,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
 
   return (
     <>
-      <div className="relative inline-flex min-w-0 max-w-full shrink items-center self-center">
+      <div className="inline-flex min-w-0 max-w-full shrink items-center self-center">
         <Popover open={open} onOpenChange={onOpenChange}>
           <PopoverTrigger asChild>
             <Button
@@ -264,8 +260,6 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                 agencyTaskChooserTriggerClass,
                 triggerFormat === "task-only" ? "gap-2" : "gap-1",
                 className,
-                // After className so px-* from trigger styles cannot wipe reserved icon space.
-                canClearTask && "pr-8",
               )}
             >
               {renderTriggerLabel()}
@@ -386,26 +380,6 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
             </MotionConfig>
           </PopoverContent>
         </Popover>
-
-        {canClearTask ? (
-          <motion.button
-            type="button"
-            aria-label={clearAffordance === "switch" ? "Change task" : "Clear task"}
-            className={agencyTaskChooserClearClass}
-            whileTap={chooserTapScale}
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onClearTask();
-            }}
-          >
-            {clearAffordance === "switch" ? (
-              <ArrowLeftRight className="size-3.5" aria-hidden />
-            ) : (
-              <X className="size-3.5" aria-hidden />
-            )}
-          </motion.button>
-        ) : null}
       </div>
 
       <AgencyTaskCreateDialog

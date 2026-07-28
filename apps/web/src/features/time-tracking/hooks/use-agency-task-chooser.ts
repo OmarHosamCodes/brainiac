@@ -70,11 +70,6 @@ export type UseAgencyTaskChooserOptions = {
   required?: boolean;
   /** Ranked suggestion best-match — highlighted when chooser opens. */
   bestMatchTaskId?: string | null;
-  /**
-   * Tracker: remove (X clears). Entries: switch (icon opens chooser to change).
-   * Default remove.
-   */
-  clearAffordance?: "remove" | "switch";
 };
 
 export type AgencyTaskChooserViewModel = {
@@ -106,9 +101,6 @@ export type AgencyTaskChooserViewModel = {
   onSearchChange: (value: string) => void;
   onSearchKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onSelectTask: (taskId: string) => void;
-  onClearTask: () => void;
-  canClearTask: boolean;
-  clearAffordance: "remove" | "switch";
   onToggleProject: (projectId: string) => void;
   onToggleClient: (clientName: string) => void;
   onToggleProjectFavorite: (projectId: string) => void;
@@ -159,7 +151,6 @@ export function useAgencyTaskChooser(
     required = false,
     filterProjectId,
     bestMatchTaskId = null,
-    clearAffordance = "remove",
   } = options;
 
   const { open, searchTerm, setSearchTerm, setOpen } = useAgencyChooserOpenState({
@@ -370,19 +361,8 @@ export function useAgencyTaskChooser(
   const activeOptionKey = activeItem?.key ?? null;
   const activeOptionDomId = activeOptionKey ? taskChooserOptionDomId(activeOptionKey) : undefined;
 
-  const canClearTask = Boolean(value || triggerTaskTitle) && !disabled && !loading;
-
   function selectTask(taskId: string) {
     onValueChange(taskId);
-    setOpen(false);
-  }
-
-  function clearTask() {
-    if (clearAffordance === "switch") {
-      setOpen(true);
-      return;
-    }
-    onValueChange("");
     setOpen(false);
   }
 
@@ -499,9 +479,6 @@ export function useAgencyTaskChooser(
     onSearchChange: setSearchTerm,
     onSearchKeyDown: handleSearchKeyDown,
     onSelectTask: selectTask,
-    onClearTask: clearTask,
-    canClearTask,
-    clearAffordance,
     onToggleProject: handleToggleProject,
     onToggleClient: handleToggleClient,
     onToggleProjectFavorite: handleToggleProjectFavorite,

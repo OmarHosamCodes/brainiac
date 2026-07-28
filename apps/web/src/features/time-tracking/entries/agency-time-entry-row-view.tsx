@@ -1,10 +1,11 @@
-import { CalendarDays, MoreVertical, Play, Trash2 } from "lucide-react";
+import { MoreVertical, Play, Trash2 } from "lucide-react";
 
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import {
   AgencyTimeEntryMoreAction,
   AgencyTimeEntryPlayAction,
 } from "@/features/time-tracking/entries/agency-time-entry-actions";
+import { AgencyTimeEntryDatePicker } from "@/features/time-tracking/entries/agency-time-entry-date-picker";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -159,7 +160,6 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             placeholder="Task"
             triggerFormat="task-client"
             highlightSearch
-            clearAffordance="switch"
             contentAlign="start"
             disabled={editSaving || rowUpdating}
             className={cn(taskChooserTriggerClass, "max-w-full")}
@@ -238,18 +238,11 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         </div>
 
         <div className={agencyTimeEntryRailCalendarClass}>
-          <label className="relative inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-highlighted">
-            <Input
-              type="date"
-              value={editDraft.date}
-              onChange={(e) => onStartDateChange(e.target.value)}
-              onKeyDown={onInlineKeyDown}
-              disabled={editSaving || rowUpdating}
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              aria-label="Entry date"
-            />
-            <CalendarDays className="size-4" aria-hidden />
-          </label>
+          <AgencyTimeEntryDatePicker
+            date={editDraft.date}
+            disabled={editSaving || rowUpdating}
+            onDateChange={onStartDateChange}
+          />
         </div>
 
         <div className={agencyTimeEntryRailDurationClass}>

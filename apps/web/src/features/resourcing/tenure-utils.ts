@@ -32,6 +32,28 @@ export function resolveDefaultDashboardRangePreset(
   return policy?.enabled ? "tenure" : "last30";
 }
 
+/** Current fiscal month inside the active tenure quarter (clamped to the quarter window). */
+export function resolveDefaultTenureMonthIndexes(
+  policy: TenurePolicyCalendar | null | undefined,
+  now = new Date(),
+): number[] {
+  const months = getCurrentTenureQuarterMonths(policy, now);
+  if (!months || months.length === 0) return [];
+
+  const nowMs = now.getTime();
+  const containing = months.find((month) => {
+    const fromMs = new Date(month.from).getTime();
+    const toExclusiveMs = new Date(month.toExclusive).getTime();
+    return nowMs >= fromMs && nowMs < toExclusiveMs;
+  });
+  if (containing) return [containing.index];
+
+  const first = months[0]!;
+  const last = months[months.length - 1]!;
+  if (nowMs < new Date(first.from).getTime()) return [first.index];
+  return [last.index];
+}
+
 /** Short range-chooser label, e.g. "Q1 2026".
  * Uses the calendar year of the quarter's midpoint so off-calendar fiscal
  * years (e.g. Dec 26 start → FY2025 Q3 spans Jun–Sep 2026) still read as

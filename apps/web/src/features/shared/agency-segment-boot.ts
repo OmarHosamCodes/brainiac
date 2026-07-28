@@ -9,6 +9,7 @@ import { ensureAgencyWorkBootQueries } from "@/features/shared/agency-queries";
 import {
   getCurrentTenurePeriodRange,
   resolveDefaultDashboardRangePreset,
+  resolveDefaultTenureMonthIndexes,
 } from "@/features/resourcing/tenure-utils";
 import { orpc } from "@/lib/orpc";
 import {
@@ -55,7 +56,11 @@ async function resolveDashboardRange(queryClient: QueryClient, teamId: string) {
   const preset = resolveDefaultDashboardRangePreset(tenurePolicy);
 
   if (preset === "tenure") {
-    const tenureRange = getCurrentTenurePeriodRange(tenurePolicy, now);
+    const tenureRange = getCurrentTenurePeriodRange(
+      tenurePolicy,
+      now,
+      resolveDefaultTenureMonthIndexes(tenurePolicy, now),
+    );
     if (tenureRange) {
       return { from: tenureRange.from, to: tenureRange.to };
     }

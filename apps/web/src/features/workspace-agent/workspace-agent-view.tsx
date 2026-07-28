@@ -59,7 +59,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                       "border border-transparent",
                       isWorking
                         ? "workspace-agent-pill-shimmer h-1.5 w-28 bg-foreground/40"
-                        : "h-1.5 w-24 bg-foreground/35",
+                        : "h-1.5 w-32 bg-foreground/35",
                       "motion-safe:transition-[width,height,padding,background-color,border-color] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.25,1,0.5,1)]",
                       "group-hover/pill:h-11 group-hover/pill:w-full group-hover/pill:justify-between group-hover/pill:border-border group-hover/pill:bg-card group-hover/pill:px-4",
                       "focus-visible:h-11 focus-visible:w-full focus-visible:justify-between focus-visible:border-border focus-visible:bg-card focus-visible:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
