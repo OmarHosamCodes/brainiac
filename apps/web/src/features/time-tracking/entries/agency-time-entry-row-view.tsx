@@ -90,7 +90,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
   } = view;
 
   const taskChooserTriggerClass = cn(
-    "h-auto min-h-0 w-auto max-w-full justify-start gap-1 border-0 bg-transparent px-0 py-0 text-xs font-normal shadow-none hover:bg-muted/60",
+    "h-auto min-h-0 w-auto max-w-full shrink justify-start gap-1 rounded-2xl border-0 bg-transparent px-2 py-0 text-xs font-normal shadow-none hover:bg-muted/60 dark:hover:bg-muted/60",
     agencyFocusRingClass,
     "motion-reduce:transition-none",
   );
@@ -157,6 +157,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             placeholder="Task"
             triggerFormat="task-client"
             highlightSearch
+            clearAffordance="switch"
             contentAlign="start"
             disabled={editSaving || rowUpdating}
             className={cn(taskChooserTriggerClass, "max-w-full")}

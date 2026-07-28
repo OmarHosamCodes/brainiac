@@ -310,7 +310,7 @@ export const agencyTimeTrackerElapsedInputClass = cn(
 );
 
 export const agencyTimeTrackerTaskChooserTriggerClass = cn(
-  "inline-flex h-9 max-h-9 min-h-9 w-auto min-w-0 max-w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border-0 bg-transparent px-0 py-0 text-sm font-normal leading-none text-foreground shadow-none",
+  "inline-flex h-9 max-h-9 min-h-9 w-auto min-w-0 max-w-full shrink items-center justify-start gap-1.5 overflow-hidden rounded-2xl border-0 bg-transparent px-2 py-0 text-sm font-normal leading-none text-foreground shadow-none",
   "transition-colors hover:bg-muted/50 hover:text-foreground",
   agencyFocusRingClass,
   "motion-reduce:transition-none",

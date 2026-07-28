@@ -244,6 +244,7 @@ export function AgencyTimeEntryDayGroupView({
             tasks={tasks}
             placeholder="Task"
             triggerFormat="task-client"
+            clearAffordance="switch"
             contentAlign="start"
           />
           <AgencyTagChooser
