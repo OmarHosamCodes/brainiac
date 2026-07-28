@@ -64,6 +64,8 @@ export function AgencyDescriptionDatalistField({
       onValueChange(option.description);
     }
     setFocused(false);
+    // mousedown preventDefault skips input blur; still flush parent focus/dirty.
+    onBlur?.();
   }
 
   return (
