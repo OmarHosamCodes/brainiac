@@ -12,8 +12,8 @@
   width: 100%;
 }
 
-/* MiniMap SVG should not leave a square gap under the glass radius. */
-.workspace-flow .react-flow__minimap.ui-chrome-glass svg {
+/* MiniMap SVG should not leave a square gap under the panel radius. */
+.workspace-flow .react-flow__minimap svg {
   display: block;
 }
 

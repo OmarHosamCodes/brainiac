@@ -33,7 +33,8 @@ export const shellChromeFrameClass = "app-shell__chrome app-shell__chrome-surfac
 
 export const shellContextBarClass = "app-shell__context-bar";
 
-export const shellChromeGlassClass = "ui-chrome-glass";
+export const shellChromePanelClass =
+  "bg-card text-card-foreground shadow-sm ring-1 ring-foreground/5 dark:ring-foreground/10";
 
 export const shellHeaderContextRegionClass = "app-shell__context-bar-left min-w-0";
 

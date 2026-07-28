@@ -44,7 +44,7 @@ import {
   dashboardEmptyPanelClass,
   dashboardFocusRingClass,
 } from "@/features/dashboard/dashboard-ui";
-import { shellChromeGlassClass } from "@/features/app-shell/app-shell-ui";
+import { shellChromePanelClass } from "@/features/app-shell/app-shell-ui";
 import {
   getCanonicalConnectionPair,
   getEligibleConnectionTargetIds,
@@ -357,7 +357,7 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
             <Panel position="bottom-left" className="!mb-8 !ml-4">
               <div
                 className={cn(
-                  shellChromeGlassClass,
+                  shellChromePanelClass,
                   "flex flex-col items-center gap-1 rounded-[14px] p-1.5",
                 )}
                 role="toolbar"
@@ -411,7 +411,7 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
               <MiniMap
                 aria-label="Board overview"
                 className={cn(
-                  shellChromeGlassClass,
+                  shellChromePanelClass,
                   "!m-0 overflow-hidden !rounded-[14px] !border-0 !shadow-none",
                 )}
                 maskColor="color-mix(in oklab, var(--chart-2) 12%, transparent)"
