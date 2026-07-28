@@ -253,13 +253,11 @@ export const agencyTimeEntryIconButtonClass = cn(
   "motion-reduce:transition-none",
 );
 
+/** Match entry-row content height (`agencyTimeEntryRowClass` min-h-[52px]). */
 export const agencyTimeTrackerCardClass = cn(
   agencyWorkTrackerCardClass,
-  "flex h-12 min-w-0 flex-row items-center overflow-visible px-3 sm:px-4",
+  "flex min-h-[52px] min-w-0 flex-row items-center overflow-visible px-3 sm:px-4",
 );
-
-export const agencyTimeTrackerCardRunningClass =
-  "border-success/35 motion-reduce:transition-none transition-[border-color] duration-200";
 
 export const agencyTimeTrackerDescriptionZoneClass =
   "group/desc relative flex min-h-0 min-w-0 flex-1 items-center overflow-visible pr-2";
@@ -283,7 +281,7 @@ export const agencyTimeTrackerDescriptionLabelClass =
   "text-xs font-semibold leading-none text-muted";
 
 export const agencyTimeTrackerDescriptionInputClass =
-  "block h-8 w-full min-w-0 truncate rounded-md border-0 bg-transparent px-0 py-0 text-sm font-normal leading-8 text-foreground shadow-none";
+  "block h-9 w-full min-w-0 truncate rounded-md border-0 bg-transparent px-0 py-0 text-base font-normal leading-9 text-foreground shadow-none";
 
 export const agencyTimeTrackerActiveRowClass =
   "flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2";
@@ -294,15 +292,15 @@ export const agencyTimeTrackerStatusZoneClass =
 /** Tracker right cluster — single-height rail with hairline separators. */
 export const agencyTimeTrackerRailClass = "flex h-full shrink-0 items-center";
 
-export const agencyTimeTrackerRailCellClass = "flex shrink-0 items-center gap-1 px-2";
+export const agencyTimeTrackerRailCellClass = "flex shrink-0 items-center gap-1.5 px-2";
 
-export const agencyTimeTrackerRailDividerClass = "h-5 w-px shrink-0 bg-border";
+export const agencyTimeTrackerRailDividerClass = "h-6 w-px shrink-0 bg-border";
 
 export const agencyTimeTrackerInnerDividerClass = agencyTimeTrackerRailDividerClass;
 
 export const agencyTimeTrackerMetricClass = cn(
   agencyWorkMetricClass,
-  "inline-flex h-8 w-[4.75rem] shrink-0 items-center justify-center",
+  "inline-flex h-9 w-[5.25rem] shrink-0 items-center justify-center text-base",
 );
 
 export const agencyTimeTrackerElapsedInputClass = cn(
@@ -312,7 +310,7 @@ export const agencyTimeTrackerElapsedInputClass = cn(
 );
 
 export const agencyTimeTrackerTaskChooserTriggerClass = cn(
-  "inline-flex h-8 max-h-8 min-h-8 w-auto min-w-0 max-w-full items-center justify-start gap-1 overflow-hidden rounded-md border-0 bg-transparent px-0 py-0 text-xs font-normal leading-none text-foreground shadow-none",
+  "inline-flex h-9 max-h-9 min-h-9 w-auto min-w-0 max-w-full items-center justify-start gap-1.5 overflow-hidden rounded-md border-0 bg-transparent px-0 py-0 text-sm font-normal leading-none text-foreground shadow-none",
   "transition-colors hover:bg-muted/50 hover:text-foreground",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
@@ -324,13 +322,13 @@ export const agencyTimeTrackerProjectEmptyTriggerClass = cn(
 );
 
 export const agencyTimeTrackerPrimaryActionClass =
-  "inline-flex h-8 max-h-8 min-h-8 min-w-[4.25rem] shrink-0 items-center justify-center rounded-md bg-primary px-3 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary/90";
+  "inline-flex h-9 max-h-9 min-h-9 min-w-[4.75rem] shrink-0 items-center justify-center rounded-md bg-primary px-3.5 text-xs font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary/90";
 
 export const agencyTimeTrackerStopActionClass =
-  "inline-flex h-8 max-h-8 min-h-8 min-w-[4.25rem] shrink-0 items-center justify-center rounded-md bg-destructive px-3 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground hover:bg-destructive/90";
+  "inline-flex h-9 max-h-9 min-h-9 min-w-[4.75rem] shrink-0 items-center justify-center rounded-md bg-destructive px-3.5 text-xs font-semibold uppercase tracking-wide text-primary-foreground hover:bg-destructive/90";
 
 export const agencyTimeTrackerIconActionClass = cn(
-  "inline-flex size-8 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+  "inline-flex size-9 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
 );

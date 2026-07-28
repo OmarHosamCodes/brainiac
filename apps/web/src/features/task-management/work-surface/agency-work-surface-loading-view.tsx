@@ -24,27 +24,27 @@ function TrackerSkeleton() {
   return (
     <div className={agencyTimeTrackerCardClass} aria-hidden>
       <div className={agencyTimeTrackerDescriptionZoneClass}>
-        <Skeleton className="h-5 w-3/4 max-w-xs" />
+        <Skeleton className="h-6 w-3/4 max-w-xs" />
       </div>
       <div className={agencyTimeTrackerRailClass}>
         <div className={agencyTimeTrackerRailCellClass}>
-          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-5 w-24" />
         </div>
         <div className={agencyTimeTrackerRailCellClass}>
-          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-5 w-16" />
         </div>
         <div className={cn(agencyTimeTrackerRailCellClass, "gap-1.5")}>
-          <Skeleton className="size-8 rounded-full" />
-          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="size-9 rounded-md" />
+          <Skeleton className="size-9 rounded-md" />
         </div>
         <div className={agencyTimeTrackerRailCellClass}>
-          <Skeleton className="h-6 w-[5rem]" />
+          <Skeleton className="h-9 w-[5.25rem]" />
         </div>
         <div className={agencyTimeTrackerRailCellClass}>
-          <Skeleton className="h-8 w-[5.5rem] rounded-[2px]" />
+          <Skeleton className="h-9 w-[5.75rem] rounded-md" />
         </div>
         <div className={agencyTimeTrackerRailCellClass}>
-          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="size-9 rounded-md" />
         </div>
       </div>
     </div>
