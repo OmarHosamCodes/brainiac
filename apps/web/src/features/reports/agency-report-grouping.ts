@@ -227,5 +227,5 @@ export function filterEntriesByShowWaste(
   return entries.filter((entry) => isReportEntryWasteVisible(entry, showWaste));
 }
 
-/** Playful wavy strike for waste text cells only — not project or row actions. */
-export const reportEntryWasteTextClass = "agency-waste-strike text-muted";
+/** Muted ink for waste text cells — pair with AgencyWasteBadge (Reports) or AgencyWasteTag (Tracker); not project or row actions. */
+export const reportEntryWasteTextClass = "text-muted";
