@@ -291,7 +291,7 @@
   --color-inverted: var(--inverted);
   --color-inverted-foreground: var(--inverted-foreground);
 
-  --font-sans: "IBM Plex Sans Variable", sans-serif;
+  --font-sans: "Poppins", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
 

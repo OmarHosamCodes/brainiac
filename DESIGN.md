@@ -24,37 +24,37 @@ colors:
   state-info: "#3b82f6"
 typography:
   display:
-    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
     fontSize: "clamp(2.75rem, 7vw, 5.5rem)"
     fontWeight: 600
     lineHeight: 1.05
     letterSpacing: "-0.03em"
   headline:
-    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
     fontSize: "clamp(1.875rem, 4vw, 3rem)"
     fontWeight: 600
     lineHeight: 1.1
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "-0.01em"
   body:
-    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
   body-lg:
-    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
   label:
-    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 1.2
@@ -146,7 +146,7 @@ The system rejects category defaults. No purple gradient heroes, no animated orb
 **Key Characteristics:**
 
 - Restrained color: cool zinc neutrals tinted toward hue ~269 (never true white, never emerald paper). Primary CTAs are monochrome (near-black in light, near-white in dark). Operator Violet is the sole brand accent on ≤10% of any product surface (selection, sidebar active, focus glow).
-- Typographic hierarchy carries the system. IBM Plex Sans (600 display, not shouty 700), IBM Plex Mono for tool traces and metrics.
+- Typographic hierarchy carries the system. Poppins for Latin (600 display, not shouty 700), IBM Plex Sans Arabic for Arabic glyphs, IBM Plex Mono for tool traces and metrics.
 - Surface ladder, not flat paper. Paper → elevated → sunken → hairline. Shadows only for true float (modals, popovers).
 - Radii: 12–16px on cards/inputs; full pills on buttons and badges. No 32px over-round.
 - Marketing may use aurora/mesh and blur-text reveals; product stays quiet. `prefers-reduced-motion` is mandatory.
@@ -195,7 +195,9 @@ The system rejects category defaults. No purple gradient heroes, no animated orb
 
 ## 3. Typography
 
-**Display / Body:** IBM Plex Sans  
+**English (Latin):** Poppins  
+**Arabic:** IBM Plex Sans Arabic  
+**Stack:** `"Poppins", "IBM Plex Sans Arabic", system-ui, sans-serif`  
 **Mono:** IBM Plex Mono
 
 ### Hierarchy
@@ -209,7 +211,7 @@ The system rejects category defaults. No purple gradient heroes, no animated orb
 
 ### Named Rules
 
-**The Single Family Rule.** IBM Plex Sans across the scale. Hierarchy from weight and size.
+**The Bilingual Stack Rule.** Poppins covers Latin; IBM Plex Sans Arabic covers Arabic via unicode-range fallback. Hierarchy from weight and size within that stack.
 
 **The Mono For Truth Rule.** Mono for what the system reports, never running prose or headings.
 
