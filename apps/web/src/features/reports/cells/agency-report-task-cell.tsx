@@ -31,22 +31,25 @@ export function AgencyReportTaskCell({
   onTaskChange,
 }: AgencyReportTaskCellProps) {
   return (
-    <AgencyTaskChooser
-      teamId={teamId}
-      value={row.taskId ?? ""}
-      onValueChange={onTaskChange}
-      projects={projects}
-      tasks={tasks}
-      loading={loading}
-      placeholder="—"
-      contentAlign="start"
-      highlightSearch
-      disabled={disabled}
-      className={cn(
-        "-mx-4 -my-3 h-auto min-h-10 w-[calc(100%+2rem)] justify-start rounded-none border-0 bg-transparent px-4 py-3 text-xs font-normal shadow-none hover:bg-muted/60",
-        agencyFocusRingClass,
-        "motion-reduce:transition-none",
-      )}
-    />
+    // Stretch past the chooser’s inline-flex shrink-wrap so the label fills the cell.
+    <div className="w-full min-w-0 [&>div]:flex [&>div]:w-full [&>div]:max-w-none">
+      <AgencyTaskChooser
+        teamId={teamId}
+        value={row.taskId ?? ""}
+        onValueChange={onTaskChange}
+        projects={projects}
+        tasks={tasks}
+        loading={loading}
+        placeholder="—"
+        contentAlign="start"
+        highlightSearch
+        disabled={disabled}
+        className={cn(
+          "-mx-4 -my-3 h-auto min-h-10 w-[calc(100%+2rem)] justify-start text-start rounded-none border-0 bg-transparent px-4 py-3 text-xs font-normal shadow-none hover:bg-muted/60",
+          agencyFocusRingClass,
+          "motion-reduce:transition-none",
+        )}
+      />
+    </div>
   );
 }

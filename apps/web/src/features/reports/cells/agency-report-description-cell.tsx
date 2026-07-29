@@ -5,7 +5,8 @@ import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
 /** Stretch interactive control to the full table-cell hit area (cancels td px-4 py-3). */
-const reportCellHitClass = "-mx-4 -my-3 flex w-[calc(100%+2rem)] min-h-10 items-center px-4 py-3";
+const reportCellHitClass =
+  "-mx-4 -my-3 flex w-[calc(100%+2rem)] min-h-10 items-center px-4 py-3 text-start";
 
 type AgencyReportDescriptionCellProps = {
   value: string;
@@ -74,8 +75,9 @@ export function AgencyReportDescriptionCell({
         }}
         disabled={disabled}
         autoFocus
+        dir="auto"
         className={cn(
-          "-mx-4 -my-3 h-auto min-h-10 w-[calc(100%+2rem)] rounded-none border-0 bg-transparent px-4 py-3 text-xs shadow-none focus-visible:bg-muted/40 focus-visible:ring-0",
+          "-mx-4 -my-3 h-auto min-h-10 w-[calc(100%+2rem)] rounded-none border-0 bg-transparent px-4 py-3 text-start text-xs shadow-none focus-visible:bg-muted/40 focus-visible:ring-0",
         )}
         aria-label="Description"
       />
@@ -109,7 +111,7 @@ export function AgencyReportDescriptionCell({
         }
       }}
     >
-      <span className="min-w-0 flex-1 truncate">
+      <span className="min-w-0 flex-1 truncate text-start">
         {value || <span className="text-muted">Add description</span>}
       </span>
     </span>

@@ -38,6 +38,10 @@ import { cn } from "@/lib/utils";
 
 const reportCreatorSelectedCellClass = "bg-primary/8 ring-1 ring-inset ring-primary/20";
 
+/** Short dim rule between task ↔ description; not a full cell-height border. */
+const reportTaskDescriptionSepClass =
+  "pointer-events-none absolute top-1/2 right-0 z-[1] h-4 w-px -translate-y-1/2 bg-border/45";
+
 function reportCreatorCellSelectionClass(
   isSelected: boolean,
   field: AgencyReportFieldId,
@@ -104,7 +108,7 @@ export function AgencyReportCreatorTable({
                     </th>
                   ) : null}
                   {showTask ? (
-                    <th scope="col" className="w-40 px-4 py-2.5 font-semibold">
+                    <th scope="col" className="min-w-[14rem] w-[22%] px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.task}
                     </th>
                   ) : null}
@@ -327,34 +331,33 @@ function ReportCreatorRow({
       {showTask ? (
         <td
           className={cn(
-            "max-w-48 px-4 py-3 text-highlighted",
+            "relative min-w-0 px-4 py-3 text-start text-highlighted",
             reportCreatorCellSelectionClass(isSelected, "task"),
             wasteBorder("task"),
             isWaste && agencyWasteStampHostClass,
             isWaste && reportEntryWasteTextClass,
           )}
           title={row.taskTitle || undefined}
-          dir="auto"
         >
+          {showDescription ? <span aria-hidden className={reportTaskDescriptionSepClass} /> : null}
           {isWaste ? (
             <AgencyWasteBadge
               onDismiss={() => onToggleWaste(primaryEntryId)}
               disabled={wastePending || isEditing || isSaving}
             />
           ) : null}
-          <span className="block truncate">{row.taskTitle || "—"}</span>
+          <span className="block truncate text-start">{row.taskTitle || "—"}</span>
         </td>
       ) : null}
       {showDescription ? (
         <td
           className={cn(
-            "max-w-md px-4 py-3",
+            "min-w-0 max-w-md px-4 py-3 text-start",
             reportCreatorCellSelectionClass(isSelected, "description"),
             wasteBorder("description"),
             isWaste && !showTask && agencyWasteStampHostClass,
             isWaste && !isEditing && reportEntryWasteTextClass,
           )}
-          dir="auto"
         >
           {isWaste && !showTask ? (
             <AgencyWasteBadge
@@ -370,13 +373,17 @@ function ReportCreatorRow({
               }
               onKeyDown={handleKeyDown}
               disabled={isSaving}
-              className="h-7 rounded-dense text-xs"
+              dir="auto"
+              className="h-7 rounded-dense text-start text-xs"
               aria-label="Description"
               autoFocus
               onClick={(event) => event.stopPropagation()}
             />
           ) : (
-            <span className="block truncate text-highlighted" title={row.description || undefined}>
+            <span
+              className="block truncate text-start text-highlighted"
+              title={row.description || undefined}
+            >
               {row.description || "—"}
             </span>
           )}

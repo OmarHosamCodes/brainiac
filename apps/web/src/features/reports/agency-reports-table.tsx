@@ -29,6 +29,10 @@ import {
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
 
+/** Short dim rule between task ↔ description; not a full cell-height border. */
+const reportTaskDescriptionSepClass =
+  "pointer-events-none absolute top-1/2 right-0 z-[1] h-4 w-px -translate-y-1/2 bg-border/45";
+
 type AgencyReportsTableProps = {
   teamId: string;
   entries: AgencyReportEntry[];
@@ -120,7 +124,7 @@ export function AgencyReportsTable({
                     </th>
                   ) : null}
                   {showTask ? (
-                    <th scope="col" className="w-40 px-4 py-2.5 font-semibold">
+                    <th scope="col" className="min-w-[14rem] w-[22%] px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.task}
                     </th>
                   ) : null}
@@ -188,13 +192,15 @@ export function AgencyReportsTable({
                         {showTask ? (
                           <td
                             className={cn(
-                              "max-w-48 px-4 py-3 text-highlighted",
+                              "relative min-w-0 px-4 py-3 text-start text-highlighted",
                               wasteBorder("task"),
                               isWaste && agencyWasteStampHostClass,
                               isWaste && reportEntryWasteTextClass,
                             )}
-                            dir="auto"
                           >
+                            {showDescription ? (
+                              <span aria-hidden className={reportTaskDescriptionSepClass} />
+                            ) : null}
                             {isWaste ? (
                               <AgencyWasteBadge
                                 onDismiss={onToggleWaste ? () => onToggleWaste(row) : undefined}
@@ -212,7 +218,10 @@ export function AgencyReportsTable({
                                 onTaskChange={(taskId) => onTaskChange(row, taskId)}
                               />
                             ) : (
-                              <span className="block truncate" title={row.taskTitle || undefined}>
+                              <span
+                                className="block truncate text-start"
+                                title={row.taskTitle || undefined}
+                              >
                                 {row.taskTitle || "—"}
                               </span>
                             )}
@@ -221,12 +230,11 @@ export function AgencyReportsTable({
                         {showDescription ? (
                           <td
                             className={cn(
-                              "max-w-md px-4 py-3 text-highlighted",
+                              "min-w-0 max-w-md px-4 py-3 text-start text-highlighted",
                               wasteBorder("description"),
                               isWaste && !showTask && agencyWasteStampHostClass,
                               isWaste && reportEntryWasteTextClass,
                             )}
-                            dir="auto"
                           >
                             {isWaste && !showTask ? (
                               <AgencyWasteBadge
@@ -241,7 +249,10 @@ export function AgencyReportsTable({
                                 onSave={(description) => onDescriptionChange(row, description)}
                               />
                             ) : (
-                              <span className="block truncate" title={row.description || undefined}>
+                              <span
+                                className="block truncate text-start"
+                                title={row.description || undefined}
+                              >
                                 {row.description || "—"}
                               </span>
                             )}
