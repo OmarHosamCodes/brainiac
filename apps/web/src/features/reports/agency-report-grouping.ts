@@ -116,15 +116,43 @@ export function groupEntriesByClient(entries: AgencyReportEntry[]): ClientGroup[
     }));
 }
 
-export function reportRowAggregationKey(entry: AgencyReportEntry): string {
+export type ReportRowAggregationOptions = {
+  /** When true, collapse same task titles within a project (Create Report). */
+  mergeSameTaskNames?: boolean;
+};
+
+export function normalizeReportTaskTitle(taskTitle: string | null | undefined): string {
+  return (taskTitle ?? "").trim();
+}
+
+export function reportRowAggregationKey(
+  entry: AgencyReportEntry,
+  options: ReportRowAggregationOptions = {},
+): string {
+  if (options.mergeSameTaskNames) {
+    return [entry.projectId, normalizeReportTaskTitle(entry.taskTitle)].join("\0");
+  }
   return [entry.projectId, entry.taskId ?? "", entry.userId, entry.description.trim()].join("\0");
 }
 
-export function aggregateSimilarReportRows(rows: AgencyReportEntry[]): AggregatedReportRow[] {
+function resolveMergedAssignee(entries: AgencyReportEntry[]): { userId: string; userName: string } {
+  const first = entries[0]!;
+  const uniqueNames = new Set(entries.map((entry) => entry.userName));
+  if (uniqueNames.size <= 1) {
+    return { userId: first.userId, userName: first.userName };
+  }
+  return { userId: first.userId, userName: "Multiple" };
+}
+
+export function aggregateSimilarReportRows(
+  rows: AgencyReportEntry[],
+  options: ReportRowAggregationOptions = {},
+): AggregatedReportRow[] {
+  const mergeSameTaskNames = options.mergeSameTaskNames === true;
   const byKey = new Map<string, AggregatedReportRow>();
 
   for (const entry of rows) {
-    const key = reportRowAggregationKey(entry);
+    const key = reportRowAggregationKey(entry, options);
     let aggregated = byKey.get(key);
     if (!aggregated) {
       aggregated = {
@@ -132,9 +160,11 @@ export function aggregateSimilarReportRows(rows: AgencyReportEntry[]): Aggregate
         projectId: entry.projectId,
         projectName: entry.projectName,
         taskId: entry.taskId,
-        taskTitle: entry.taskTitle,
+        taskTitle: mergeSameTaskNames
+          ? normalizeReportTaskTitle(entry.taskTitle) || null
+          : entry.taskTitle,
         taskIsWaste: entry.taskIsWaste,
-        description: entry.description,
+        description: mergeSameTaskNames ? "" : entry.description,
         userId: entry.userId,
         userName: entry.userName,
         durationSeconds: 0,
@@ -146,22 +176,44 @@ export function aggregateSimilarReportRows(rows: AgencyReportEntry[]): Aggregate
     aggregated.durationSeconds += entry.durationSeconds;
     aggregated.entryCount += 1;
     aggregated.entries.push(entry);
+    if (mergeSameTaskNames) {
+      if (entry.taskIsWaste === true) {
+        aggregated.taskIsWaste = true;
+      }
+    }
+  }
+
+  if (mergeSameTaskNames) {
+    for (const aggregated of byKey.values()) {
+      const assignee = resolveMergedAssignee(aggregated.entries);
+      aggregated.userId = assignee.userId;
+      aggregated.userName = assignee.userName;
+      aggregated.description = "";
+    }
   }
 
   return [...byKey.values()].sort((left, right) => {
+    if (mergeSameTaskNames) {
+      const byTitle = (left.taskTitle ?? "").localeCompare(right.taskTitle ?? "");
+      if (byTitle !== 0) return byTitle;
+      return left.userName.localeCompare(right.userName);
+    }
     const byDescription = left.description.localeCompare(right.description);
     if (byDescription !== 0) return byDescription;
     return left.userName.localeCompare(right.userName);
   });
 }
 
-export function groupEntriesForDisplay(entries: AgencyReportEntry[]): DisplayClientGroup[] {
+export function groupEntriesForDisplay(
+  entries: AgencyReportEntry[],
+  options: ReportRowAggregationOptions = {},
+): DisplayClientGroup[] {
   return groupEntriesByClient(entries).map((client) => ({
     clientId: client.clientId,
     clientName: client.clientName,
     totalSeconds: client.totalSeconds,
     projects: client.projects.map((project) => {
-      const rows = aggregateSimilarReportRows(project.rows);
+      const rows = aggregateSimilarReportRows(project.rows, options);
       return {
         projectId: project.projectId,
         projectName: project.projectName,

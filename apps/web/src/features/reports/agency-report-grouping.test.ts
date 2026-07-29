@@ -59,6 +59,93 @@ describe("aggregateSimilarReportRows", () => {
 
     expect(rows).toHaveLength(3);
   });
+
+  test("mergeSameTaskNames collapses same title across task ids, descriptions, and assignees", () => {
+    const rows = aggregateSimilarReportRows(
+      [
+        makeEntry({
+          id: "e1",
+          taskId: "task-a",
+          taskTitle: "Peeling",
+          description: "prep",
+          durationSeconds: 1_800,
+        }),
+        makeEntry({
+          id: "e2",
+          taskId: "task-b",
+          taskTitle: "Peeling",
+          description: "other",
+          userId: "user-2",
+          userName: "Sam",
+          durationSeconds: 900,
+        }),
+        makeEntry({
+          id: "e3",
+          taskId: "task-c",
+          taskTitle: "QA",
+          description: "prep",
+          durationSeconds: 600,
+        }),
+      ],
+      { mergeSameTaskNames: true },
+    );
+
+    expect(rows).toHaveLength(2);
+    const peeling = rows.find((row) => row.taskTitle === "Peeling");
+    expect(peeling?.durationSeconds).toBe(2_700);
+    expect(peeling?.entryCount).toBe(2);
+    expect(peeling?.description).toBe("");
+    expect(peeling?.userName).toBe("Multiple");
+    expect(peeling?.entries.map((entry) => entry.id).sort()).toEqual(["e1", "e2"]);
+  });
+
+  test("mergeSameTaskNames keeps different titles separate and merges empty titles", () => {
+    const rows = aggregateSimilarReportRows(
+      [
+        makeEntry({
+          id: "e1",
+          taskId: "task-a",
+          taskTitle: null,
+          description: "a",
+          durationSeconds: 100,
+        }),
+        makeEntry({
+          id: "e2",
+          taskId: "task-b",
+          taskTitle: "  ",
+          description: "b",
+          durationSeconds: 200,
+        }),
+        makeEntry({
+          id: "e3",
+          taskId: "task-c",
+          taskTitle: "QA",
+          description: "c",
+          durationSeconds: 300,
+        }),
+      ],
+      { mergeSameTaskNames: true },
+    );
+
+    expect(rows).toHaveLength(2);
+    const untitled = rows.find((row) => !row.taskTitle);
+    expect(untitled?.durationSeconds).toBe(300);
+    expect(untitled?.entryCount).toBe(2);
+    expect(rows.find((row) => row.taskTitle === "QA")?.durationSeconds).toBe(300);
+  });
+
+  test("mergeSameTaskNames marks waste when any entry task is waste", () => {
+    const rows = aggregateSimilarReportRows(
+      [
+        makeEntry({ id: "e1", taskId: "task-a", taskTitle: "Cleanup", taskIsWaste: false }),
+        makeEntry({ id: "e2", taskId: "task-b", taskTitle: "Cleanup", taskIsWaste: true }),
+      ],
+      { mergeSameTaskNames: true },
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.taskIsWaste).toBe(true);
+  });
 });
 
 describe("groupEntriesForDisplay", () => {
@@ -118,6 +205,48 @@ describe("groupEntriesForDisplay", () => {
     expect(soulIn?.rows).toHaveLength(2);
     expect(soulIn?.totalSeconds).toBe(3_300);
     expect(groups[0]?.totalSeconds).toBe(3_600);
+  });
+
+  test("mergeSameTaskNames collapses same titles within a project only", () => {
+    const groups = groupEntriesForDisplay(
+      [
+        makeEntry({
+          id: "e1",
+          projectId: "project-a",
+          projectName: "Soul In",
+          taskId: "task-a",
+          taskTitle: "CRM",
+          description: "prep",
+          durationSeconds: 1_000,
+        }),
+        makeEntry({
+          id: "e2",
+          projectId: "project-a",
+          projectName: "Soul In",
+          taskId: "task-b",
+          taskTitle: "CRM",
+          description: "other",
+          durationSeconds: 500,
+        }),
+        makeEntry({
+          id: "e3",
+          projectId: "project-b",
+          projectName: "Website",
+          taskId: "task-c",
+          taskTitle: "CRM",
+          description: "web",
+          durationSeconds: 200,
+        }),
+      ],
+      { mergeSameTaskNames: true },
+    );
+
+    const soulIn = groups[0]?.projects.find((project) => project.projectName === "Soul In");
+    const website = groups[0]?.projects.find((project) => project.projectName === "Website");
+    expect(soulIn?.rows).toHaveLength(1);
+    expect(soulIn?.rows[0]?.durationSeconds).toBe(1_500);
+    expect(website?.rows).toHaveLength(1);
+    expect(website?.rows[0]?.durationSeconds).toBe(200);
   });
 });
 
