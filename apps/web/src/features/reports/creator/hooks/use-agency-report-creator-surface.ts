@@ -7,7 +7,6 @@ import {
   normalizeReportFieldIds,
   type AgencyReportFieldId,
 } from "@/features/reports/agency-report-fields";
-import { formatReportHeaderMeta } from "@/features/reports/agency-report-naming";
 import { parseShowWasteParam } from "@/features/reports/agency-report-show-waste";
 import {
   AGENCY_REPORT_MERGE_TASKS_PARAM,
@@ -325,33 +324,15 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     if (!teamId || exportPhase === "exporting" || !report) return;
     setExportPhase("exporting");
     try {
-      const title = reportName || report.name;
-      const meta = formatReportHeaderMeta(
-        {
-          rangeFrom: report.rangeFrom,
-          rangeTo: report.rangeTo,
-          clientId: report.clientId || undefined,
-          projectId: report.projectId || undefined,
-          memberUserId: report.memberUserId || undefined,
-          createdByUserName: report.createdByUserName,
-          visibleEntryCount: creator.visibleEntries.length,
-        },
-        labelContext,
-      );
       const input = {
         teamId,
-        reportName: title,
+        reportName: reportName || report.name,
         entries,
         excludedEntryIds: creator.excludedEntryIds,
         entryOverrides: creator.entryOverrides,
         visibleFields,
         showWaste,
         mergeSameTaskNames,
-        header: {
-          title,
-          scopeLine: meta.scopeLine,
-          attributionLine: meta.attributionLine,
-        },
       };
       const files =
         mode === "per-client"

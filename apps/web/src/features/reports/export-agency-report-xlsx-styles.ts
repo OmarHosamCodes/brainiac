@@ -15,16 +15,13 @@ export const AGENCY_REPORT_EXPORT_PALETTE = {
 } as const;
 
 export const AGENCY_REPORT_EXPORT_FONT_SIZES = {
-  title: 20,
   client: 16,
+  project: 14,
   header: 12,
   body: 12,
-  meta: 11,
 } as const;
 
 export const AGENCY_REPORT_EXPORT_ROW_HEIGHTS = {
-  title: 32,
-  meta: 18,
   client: 28,
   header: 24,
   data: 22,
@@ -32,17 +29,11 @@ export const AGENCY_REPORT_EXPORT_ROW_HEIGHTS = {
 } as const;
 
 export const AGENCY_REPORT_EXPORT_COLUMN_WIDTHS: Record<AgencyReportFieldId, number> = {
-  project: 22,
+  project: 28,
   task: 28,
   description: 48,
   duration: 14,
   assignee: 20,
-};
-
-export type AgencyReportExportHeader = {
-  title: string;
-  scopeLine: string;
-  attributionLine: string;
 };
 
 type ExcelFont = {
@@ -138,56 +129,6 @@ function styleRange(
   }
 }
 
-/** Cover title + scope/attribution, returns next row index after the spacer. */
-export function applyCoverBlock(
-  sheet: AgencyReportExportSheet,
-  startRow: number,
-  columnCount: number,
-  header: AgencyReportExportHeader,
-): number {
-  let rowIndex = startRow;
-  const mergeEnd = Math.max(columnCount, 1);
-
-  sheet.mergeCells(rowIndex, 1, rowIndex, mergeEnd);
-  const titleCell = sheet.getCell(rowIndex, 1);
-  titleCell.value = header.title;
-  titleCell.font = {
-    name: FONT_NAME,
-    bold: true,
-    size: AGENCY_REPORT_EXPORT_FONT_SIZES.title,
-    color: { argb: AGENCY_REPORT_EXPORT_PALETTE.ink },
-  };
-  titleCell.alignment = { vertical: "middle", horizontal: "left" };
-  sheet.getRow(rowIndex).height = AGENCY_REPORT_EXPORT_ROW_HEIGHTS.title;
-  rowIndex += 1;
-
-  sheet.mergeCells(rowIndex, 1, rowIndex, mergeEnd);
-  const scopeCell = sheet.getCell(rowIndex, 1);
-  scopeCell.value = header.scopeLine;
-  scopeCell.font = {
-    name: FONT_NAME,
-    size: AGENCY_REPORT_EXPORT_FONT_SIZES.meta,
-    color: { argb: AGENCY_REPORT_EXPORT_PALETTE.muted },
-  };
-  sheet.getRow(rowIndex).height = AGENCY_REPORT_EXPORT_ROW_HEIGHTS.meta;
-  rowIndex += 1;
-
-  sheet.mergeCells(rowIndex, 1, rowIndex, mergeEnd);
-  const attributionCell = sheet.getCell(rowIndex, 1);
-  attributionCell.value = header.attributionLine;
-  attributionCell.font = {
-    name: FONT_NAME,
-    size: AGENCY_REPORT_EXPORT_FONT_SIZES.meta,
-    color: { argb: AGENCY_REPORT_EXPORT_PALETTE.muted },
-  };
-  sheet.getRow(rowIndex).height = AGENCY_REPORT_EXPORT_ROW_HEIGHTS.meta;
-  rowIndex += 1;
-
-  // Blank spacer under the cover.
-  rowIndex += 1;
-  return rowIndex;
-}
-
 export function applyClientBanner(
   sheet: AgencyReportExportSheet,
   rowIndex: number,
@@ -247,14 +188,18 @@ export function applyDataRow(
 
   activeFields.forEach((field, index) => {
     const cell = row.getCell(index + 1);
+    const isProject = field === "project";
     cell.font = {
       name: FONT_NAME,
-      size: AGENCY_REPORT_EXPORT_FONT_SIZES.body,
+      bold: isProject,
+      size: isProject
+        ? AGENCY_REPORT_EXPORT_FONT_SIZES.project
+        : AGENCY_REPORT_EXPORT_FONT_SIZES.body,
       color: { argb: AGENCY_REPORT_EXPORT_PALETTE.ink },
     };
     cell.fill = solidFill(fillArgb);
     cell.border = gridBorder;
-    const wrap = field === "task" || field === "description";
+    const wrap = isProject || field === "task" || field === "description";
     cell.alignment = {
       vertical: "middle",
       horizontal: field === "duration" ? "right" : "left",
@@ -272,6 +217,12 @@ export function applyProjectMergeAccent(
   const col = projectColumnIndex + 1;
   sheet.mergeCells(startRow, col, endRow, col);
   const cell = sheet.getCell(startRow, col);
+  cell.font = {
+    name: FONT_NAME,
+    bold: true,
+    size: AGENCY_REPORT_EXPORT_FONT_SIZES.project,
+    color: { argb: AGENCY_REPORT_EXPORT_PALETTE.ink },
+  };
   cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
   cell.border = {
     ...gridBorder,

@@ -23,13 +23,11 @@ import {
 import { DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES } from "@/features/reports/agency-report-merge-tasks";
 import {
   applyClientBanner,
-  applyCoverBlock,
   applyDataRow,
   applyGrandTotal,
   applyHeaderRow,
   applyProjectMergeAccent,
   resolveExportColumnWidths,
-  type AgencyReportExportHeader,
   type AgencyReportExportSheet,
 } from "@/features/reports/export-agency-report-xlsx-styles";
 import { formatDuration } from "@/lib/utils/format-duration";
@@ -41,8 +39,6 @@ export type AgencyReportExportFile = {
   blob: Blob;
 };
 
-export type { AgencyReportExportHeader };
-
 type ExportAgencyReportXlsxInput = {
   teamId: string;
   reportName?: string;
@@ -52,7 +48,6 @@ type ExportAgencyReportXlsxInput = {
   visibleFields?: AgencyReportFieldId[];
   showWaste?: AgencyReportShowWaste;
   mergeSameTaskNames?: boolean;
-  header?: AgencyReportExportHeader;
 };
 
 type AgencyReportExportJob = {
@@ -147,7 +142,6 @@ export function planAgencyReportExportJobs(
 async function writeWorkbookBlob(
   clientGroups: DisplayClientGroup[],
   activeFields: AgencyReportFieldId[],
-  header?: AgencyReportExportHeader,
 ): Promise<Blob> {
   // ponytail: dynamic import keeps exceljs off the main bundle; upgrade path is a dedicated export chunk route
   const ExcelJS = await import("exceljs");
@@ -161,11 +155,6 @@ async function writeWorkbookBlob(
   sheet.columns = resolveExportColumnWidths(activeFields);
 
   let rowIndex = 1;
-
-  if (header) {
-    rowIndex = applyCoverBlock(exportSheet, rowIndex, columnCount, header);
-  }
-
   let dataRowOrdinal = 0;
 
   for (const clientGroup of clientGroups) {
@@ -183,7 +172,7 @@ async function writeWorkbookBlob(
     applyHeaderRow(headerRow, columnCount);
     rowIndex += 1;
 
-    for (const project of clientGroup.projects) {
+    for (const [projectIndex, project] of clientGroup.projects.entries()) {
       const projectStartRow = rowIndex;
 
       for (const [entryIndex, entry] of project.rows.entries()) {
@@ -201,6 +190,11 @@ async function writeWorkbookBlob(
 
       if (projectColumnIndex >= 0 && project.rows.length > 1) {
         applyProjectMergeAccent(exportSheet, projectStartRow, rowIndex - 1, projectColumnIndex);
+      }
+
+      // Blank spacer between projects (not after the last in the client).
+      if (projectIndex < clientGroup.projects.length - 1) {
+        rowIndex += 1;
       }
     }
 
@@ -232,7 +226,6 @@ async function exportAgencyReportFiles(
     visibleFields,
     showWaste = DEFAULT_AGENCY_REPORT_SHOW_WASTE,
     mergeSameTaskNames = DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES,
-    header,
   } = input;
 
   const exportEntries = resolveExportEntries(entries, excludedEntryIds, entryOverrides, showWaste);
@@ -246,7 +239,7 @@ async function exportAgencyReportFiles(
   for (const job of jobs) {
     files.push({
       fileName: job.fileName,
-      blob: await writeWorkbookBlob(job.clientGroups, activeFields, header),
+      blob: await writeWorkbookBlob(job.clientGroups, activeFields),
     });
   }
   return files;

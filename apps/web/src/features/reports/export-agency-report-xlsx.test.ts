@@ -117,8 +117,8 @@ describe("agency report export styles", () => {
   });
 
   test("palette and font sizes stay in the large-type readable range", () => {
-    expect(AGENCY_REPORT_EXPORT_FONT_SIZES.title).toBeGreaterThanOrEqual(18);
     expect(AGENCY_REPORT_EXPORT_FONT_SIZES.client).toBeGreaterThanOrEqual(14);
+    expect(AGENCY_REPORT_EXPORT_FONT_SIZES.project).toBeGreaterThanOrEqual(14);
     expect(AGENCY_REPORT_EXPORT_FONT_SIZES.body).toBeGreaterThanOrEqual(11);
     expect(AGENCY_REPORT_EXPORT_PALETTE.clientBanner).toMatch(/^FF[0-9A-F]{6}$/i);
     expect(AGENCY_REPORT_EXPORT_PALETTE.headerFill).toMatch(/^FF[0-9A-F]{6}$/i);
@@ -126,19 +126,23 @@ describe("agency report export styles", () => {
 });
 
 describe("agency report export workbook smoke", () => {
-  test("writes cover title, client banner fill, and header font size", async () => {
+  test("writes client banner fill, larger project type, and skips cover meta", async () => {
     const file = await exportAgencyReportXlsx({
       teamId: "team-1",
       reportName: "Q1 Acme",
-      entries: [makeEntry({ id: "e1" })],
+      entries: [
+        makeEntry({ id: "e1", projectId: "p1", projectName: "Portal" }),
+        makeEntry({
+          id: "e2",
+          projectId: "p2",
+          projectName: "Mobile",
+          taskId: "task-2",
+          taskTitle: "Ship",
+        }),
+      ],
       excludedEntryIds: new Set(),
       entryOverrides: new Map(),
       visibleFields: allAgencyReportFieldIds(),
-      header: {
-        title: "Q1 Acme",
-        scopeLine: "Q1 2026 · 1 entry",
-        attributionLine: "Created by Alex",
-      },
     });
 
     expect(file.blob.size).toBeGreaterThan(0);
@@ -150,14 +154,8 @@ describe("agency report export workbook smoke", () => {
     const sheet = workbook.getWorksheet("Report");
     expect(sheet).toBeDefined();
 
-    expect(sheet!.getCell(1, 1).value).toBe("Q1 Acme");
-    expect(sheet!.getCell(1, 1).font?.size).toBe(AGENCY_REPORT_EXPORT_FONT_SIZES.title);
-
-    expect(sheet!.getCell(2, 1).value).toBe("Q1 2026 · 1 entry");
-    expect(sheet!.getCell(3, 1).value).toBe("Created by Alex");
-
-    // Row 4 spacer, row 5 client banner
-    const clientCell = sheet!.getCell(5, 1);
+    // No cover: sheet starts with the client banner.
+    const clientCell = sheet!.getCell(1, 1);
     expect(clientCell.value).toBe("Acme");
     expect(clientCell.fill).toMatchObject({
       type: "pattern",
@@ -166,11 +164,20 @@ describe("agency report export workbook smoke", () => {
     });
     expect(clientCell.font?.size).toBe(AGENCY_REPORT_EXPORT_FONT_SIZES.client);
 
-    const headerCell = sheet!.getCell(6, 1);
+    const headerCell = sheet!.getCell(2, 1);
     expect(headerCell.value).toBe("Project");
     expect(headerCell.font?.size).toBe(AGENCY_REPORT_EXPORT_FONT_SIZES.header);
     expect(headerCell.fill).toMatchObject({
       fgColor: { argb: AGENCY_REPORT_EXPORT_PALETTE.headerFill },
     });
+
+    const projectCell = sheet!.getCell(3, 1);
+    expect(projectCell.value).toBe("Mobile");
+    expect(projectCell.font?.size).toBe(AGENCY_REPORT_EXPORT_FONT_SIZES.project);
+    expect(projectCell.font?.bold).toBe(true);
+
+    // Blank spacer between projects, then Portal on the next data row.
+    expect(sheet!.getCell(4, 1).value).toBeNull();
+    expect(sheet!.getCell(5, 1).value).toBe("Portal");
   });
 });
