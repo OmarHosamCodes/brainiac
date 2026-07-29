@@ -15,7 +15,7 @@
 
 ## Learned Workspace Facts
 
-- This repo is the Orch/brainiac Bun monorepo; agency time tracking is a core product surface (`apps/web` task-management / agency work features).
+- This repo is the Orch/brainiac Bun monorepo; agency time tracking is a core product surface (`apps/web` task-management / agency work features); Agency projects soft-delete with confirmation into a trash/archived filter (restore supported; ~30-day retention before purge; soft-deleted projects excluded from all agency listings).
 - Production hosting is on Railway (Postgres; Redis is also used for server-side persistence/cache).
 - Clockify data can be imported with `bun run db:import:clockify`.
 - Sentry issue fix automation is set up to open fix PRs against `dev`.
@@ -23,7 +23,7 @@
 - Authenticated chrome is a left sidebar rail plus a thin connected top bar (breadcrumb, team switcher, notifications, collapse control) in `apps/web/src/features/app-shell/`; spatial dashboard uses `app-shell--spatial` and Agency uses `app-shell--execution` on the same topology; each team has a single agency/team logo used in team settings and the shell profile; global workspace agent composer lives under `apps/web/src/features/workspace-agent/` and is built around shadcn AI elements with streamed answers.
 - The spatial home route is `/canvas` (formerly `/dashboard`); it is a MagicBento-style bento grid (React Bits + gsap) with adaptive glass cards; Canvas chrome/context bar should share the canvas surface background; auth pages keep their original UI (a bento restyle was reverted).
 - Agency’s primary time-tracking nav segment is labeled Tracker (not Work).
-- Dashboard and Reports hour breakdown uses a shared Paid / Waste / Internal composition; on Dashboard, Project share morphs into a Sankey-style flow that splits Internal into billable vs non-billable; Agency Dashboard time-range defaults to the current calendar month clamped to the tenure start/end window (not a quarter); on the live Reports surface waste stays always visible (corner-stamp on the task cell, quiet full-box border), while Create Report waste and field visibility follow ⋮ options (off by default) applied via the command-bar Apply button.
-- Reports aggregated-row entry details reuse the Tracker grouped time-entry log UI, including bulk actions when multiple entries are present.
+- Dashboard and Reports hour breakdown uses a shared Paid / Waste / Internal composition; on Dashboard, Project share morphs into a Sankey-style flow that splits Internal into billable vs non-billable; Agency Dashboard time-range defaults to the current calendar month clamped to the tenure start/end window (not a quarter); on the live Reports surface waste stays always visible (corner-stamp on the task cell, quiet full-box border), while Create Report waste, field visibility, and merge-same-name-tasks follow ⋮ options (off by default) applied via the command-bar Apply button and appear only on the created report.
+- Reports aggregated-row entry details reuse the Tracker grouped time-entry log UI, including bulk actions when multiple entries are present; task names use the full task-cell width; task/description text (Arabic or English) aligns to the start while inputs follow text direction; a dim partial-height vertical separator sits between task and description cells.
 - A weekly Cursor automation produces a canvas report of Cursor-chat vs tracked-time gaps and the proposed additions/new totals before entries are inserted.
 - Browser/Vite code must not import the `@orch/agent` barrel (it pulls dotenv/`process` and crashes the client); use `@orch/agent/types` or `@orch/agent/model-routing` for client-safe values.
