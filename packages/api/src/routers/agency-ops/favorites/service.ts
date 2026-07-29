@@ -1,9 +1,10 @@
 import { ORPCError } from "@orpc/server";
 import { db } from "@orch/db";
 import { agencyOpsProject, agencyOpsProjectTask, agencyOpsUserFavorite } from "@orch/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { createWorkspaceId } from "@orch/workspace";
 import { requireTeamMembership } from "../shared/membership";
+import { getProjectByIdForTeam } from "../shared/lookup-helpers";
 
 export type AgencyFavoritesRecord = {
   projectIds: string[];
@@ -51,7 +52,24 @@ export async function listAgencyFavorites(
   input: { teamId: string },
 ): Promise<AgencyFavoritesRecord> {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
-  return mapFavoriteRows(await listFavoriteRows(input.teamId, actorUserId));
+  const mapped = mapFavoriteRows(await listFavoriteRows(input.teamId, actorUserId));
+  if (mapped.projectIds.length === 0) return mapped;
+
+  const activeProjects = await db
+    .select({ id: agencyOpsProject.id })
+    .from(agencyOpsProject)
+    .where(
+      and(
+        eq(agencyOpsProject.teamId, input.teamId),
+        inArray(agencyOpsProject.id, mapped.projectIds),
+        isNull(agencyOpsProject.deletedAt),
+      ),
+    );
+  const activeIds = new Set(activeProjects.map((row) => row.id));
+  return {
+    ...mapped,
+    projectIds: mapped.projectIds.filter((id) => activeIds.has(id)),
+  };
 }
 
 export async function toggleAgencyFavorite(
@@ -70,16 +88,7 @@ export async function toggleAgencyFavorite(
       throw new ORPCError("BAD_REQUEST", { message: "projectId is required." });
     }
 
-    const [project] = await db
-      .select({ id: agencyOpsProject.id })
-      .from(agencyOpsProject)
-      .where(
-        and(eq(agencyOpsProject.id, input.projectId), eq(agencyOpsProject.teamId, input.teamId)),
-      )
-      .limit(1);
-    if (!project) {
-      throw new ORPCError("NOT_FOUND", { message: "Project was not found." });
-    }
+    await getProjectByIdForTeam(input.teamId, input.projectId);
 
     const [existing] = await db
       .select({ id: agencyOpsUserFavorite.id })

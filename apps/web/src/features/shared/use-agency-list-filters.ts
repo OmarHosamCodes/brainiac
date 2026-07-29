@@ -14,13 +14,16 @@ import {
   groupTasksByProjectTitle,
 } from "@/features/task-management/agency-task-utils";
 import type { AgencyClientArchiveFilter } from "@/features/shared/agency-client-archive-filter";
+import type { AgencyProjectTrashFilter } from "@/features/shared/agency-project-trash-filter";
 import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";
 
 export type { AgencyClientArchiveFilter } from "@/features/shared/agency-client-archive-filter";
+export type { AgencyProjectTrashFilter } from "@/features/shared/agency-project-trash-filter";
 
 export type AgencyListFiltersApplied = {
   filterTerm: string;
   archiveFilter: AgencyClientArchiveFilter;
+  trashFilter: AgencyProjectTrashFilter;
   selectedPeopleIds: string[];
   selectedClientIds: string[];
   selectedProjectIds: string[];
@@ -38,13 +41,14 @@ type UseAgencyListFiltersOptions = {
 export function useAgencyListFilters({ teamId }: UseAgencyListFiltersOptions) {
   const [filterTerm, setFilterTerm] = useState("");
   const [archiveFilter, setArchiveFilter] = useState<AgencyClientArchiveFilter>("nonarchived");
+  const [trashFilter, setTrashFilter] = useState<AgencyProjectTrashFilter>("active");
   const [selectedPeopleIds, setSelectedPeopleIds] = useState<string[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
   const clientsQuery = useAgencyClientsQuery(teamId, { archiveFilter });
-  const projectsQuery = useAgencyProjectsQuery(teamId, { archiveFilter });
+  const projectsQuery = useAgencyProjectsQuery(teamId, { archiveFilter, trashFilter });
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
@@ -137,6 +141,7 @@ export function useAgencyListFilters({ teamId }: UseAgencyListFiltersOptions) {
     () => ({
       filterTerm,
       archiveFilter,
+      trashFilter,
       selectedPeopleIds,
       selectedClientIds,
       selectedProjectIds,
@@ -149,6 +154,7 @@ export function useAgencyListFilters({ teamId }: UseAgencyListFiltersOptions) {
     [
       filterTerm,
       archiveFilter,
+      trashFilter,
       selectedClientIds,
       selectedPeopleIds,
       selectedProjectIds,
@@ -159,6 +165,7 @@ export function useAgencyListFilters({ teamId }: UseAgencyListFiltersOptions) {
   const hasActiveFilters =
     filterTerm.trim() !== "" ||
     archiveFilter !== "nonarchived" ||
+    trashFilter !== "active" ||
     selectedPeopleIds.length > 0 ||
     selectedClientIds.length > 0 ||
     selectedProjectIds.length > 0 ||
@@ -167,6 +174,7 @@ export function useAgencyListFilters({ teamId }: UseAgencyListFiltersOptions) {
   function handleReset() {
     setFilterTerm("");
     setArchiveFilter("nonarchived");
+    setTrashFilter("active");
     setSelectedPeopleIds([]);
     setSelectedClientIds([]);
     setSelectedProjectIds([]);
@@ -179,6 +187,9 @@ export function useAgencyListFilters({ teamId }: UseAgencyListFiltersOptions) {
     archiveFilter,
     onArchiveFilterChange: setArchiveFilter,
     showArchiveFilter: false,
+    trashFilter,
+    onTrashFilterChange: setTrashFilter,
+    showTrashFilter: false,
     selectedPeopleIds,
     onSelectedPeopleIdsChange: setSelectedPeopleIds,
     selectedClientIds,

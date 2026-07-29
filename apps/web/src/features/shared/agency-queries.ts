@@ -15,6 +15,7 @@ import {
 } from "@/features/shared/agency-optimistic";
 import { getQueryClient } from "@/lib/query-client";
 import type { AgencyClientArchiveFilter } from "@/features/shared/agency-client-archive-filter";
+import type { AgencyProjectTrashFilter } from "@/features/shared/agency-project-trash-filter";
 import { orpc, orpcClient } from "@/lib/orpc";
 import {
   adjustPaginatedTotal,
@@ -145,9 +146,14 @@ export async function invalidateAgencyTeamQueries(teamId: string) {
 
 export function useAgencyProjectsQuery(
   teamId: string,
-  options: { clientId?: string; archiveFilter?: AgencyClientArchiveFilter } = {},
+  options: {
+    clientId?: string;
+    archiveFilter?: AgencyClientArchiveFilter;
+    trashFilter?: AgencyProjectTrashFilter;
+  } = {},
 ) {
   const archiveFilter = options.archiveFilter ?? "nonarchived";
+  const trashFilter = options.trashFilter ?? "active";
   const registerProjectsQuery = useAgencyOpsStore((s) => s.registerProjectsQuery);
   const unregisterProjectsQuery = useAgencyOpsStore((s) => s.unregisterProjectsQuery);
 
@@ -155,9 +161,10 @@ export function useAgencyProjectsQuery(
     () => ({
       teamId,
       archiveFilter,
+      trashFilter,
       ...(options.clientId ? { clientId: options.clientId } : {}),
     }),
-    [teamId, archiveFilter, options.clientId],
+    [teamId, archiveFilter, trashFilter, options.clientId],
   );
 
   const queryKey = orpc.agencyOps.projects.list.queryOptions({ input }).queryKey;

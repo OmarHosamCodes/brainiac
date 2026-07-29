@@ -43,6 +43,7 @@ type AgencyProject = {
   clientName: string;
   name: string;
   colorHueId: number | null;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -243,6 +244,18 @@ type ArchiveClientPayload = {
   teamId: string;
   clientId: string;
   clientName: string;
+};
+
+type DeleteProjectPayload = {
+  teamId: string;
+  projectId: string;
+  projectName: string;
+};
+
+type RestoreProjectPayload = {
+  teamId: string;
+  projectId: string;
+  projectName: string;
 };
 
 type UpsertContactPayload = {
@@ -477,6 +490,26 @@ function createAgencyOpsActions(
             ...current,
             items: [project, ...current.items],
             total: current.total + 1,
+          };
+        },
+      );
+    });
+  }
+
+  function patchRemovedProject(teamId: string, projectId: string) {
+    optimistic().deleteProject(teamId, projectId);
+    projectsQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId) return;
+      getQueryClient().setQueryData<AgencyProjectsListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          const nextItems = current.items.filter((project) => project.id !== projectId);
+          if (nextItems.length === current.items.length) return current;
+          return {
+            ...current,
+            items: nextItems,
+            total: Math.max(0, current.total - 1),
           };
         },
       );
@@ -731,6 +764,7 @@ function createAgencyOpsActions(
       clientName: payload.clientName,
       name: payload.name.trim(),
       colorHueId: payload.colorHueId ?? null,
+      deletedAt: null,
       createdAt: nowIso,
       updatedAt: nowIso,
     };
@@ -899,6 +933,7 @@ function createAgencyOpsActions(
       clientName: payload.clientName,
       name,
       colorHueId: null,
+      deletedAt: null,
       createdAt: nowIso,
       updatedAt: nowIso,
     };
@@ -1225,6 +1260,68 @@ function createAgencyOpsActions(
       set((state) => ({
         ...state,
         clientMutationCount: Math.max(0, state.clientMutationCount - 1),
+      }));
+    }
+  }
+
+  async function deleteProject(payload: DeleteProjectPayload) {
+    if (!payload.teamId || !payload.projectId) return;
+
+    const snapshots = snapshotQueries(registryPayloads(projectsQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotProjects(payload.teamId);
+    set((state) => ({ ...state, projectMutationCount: state.projectMutationCount + 1 }));
+
+    try {
+      patchRemovedProject(payload.teamId, payload.projectId);
+
+      await orpcClient.agencyOps.projects.delete({
+        teamId: payload.teamId,
+        projectId: payload.projectId,
+      });
+
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.projects.list.key(),
+      });
+
+      toast.success("Project moved to trash", {
+        description: `${payload.projectName} can be restored for 30 days.`,
+      });
+    } catch (error) {
+      restoreQuerySnapshots(snapshots);
+      optimistic().restoreProjects(payload.teamId, optimisticSnapshot);
+      toast.error("Couldn't delete project", { description: getErrorMessage(error, "Try again.") });
+    } finally {
+      set((state) => ({
+        ...state,
+        projectMutationCount: Math.max(0, state.projectMutationCount - 1),
+      }));
+    }
+  }
+
+  async function restoreProject(payload: RestoreProjectPayload) {
+    if (!payload.teamId || !payload.projectId) return;
+
+    set((state) => ({ ...state, projectMutationCount: state.projectMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.projects.restore({
+        teamId: payload.teamId,
+        projectId: payload.projectId,
+      });
+
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.projects.list.key(),
+      });
+
+      toast.success("Project restored", { description: payload.projectName });
+    } catch (error) {
+      toast.error("Couldn't restore project", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        projectMutationCount: Math.max(0, state.projectMutationCount - 1),
       }));
     }
   }
@@ -1585,6 +1682,8 @@ function createAgencyOpsActions(
     archiveClient,
     createProject,
     createProjectWithJourney,
+    deleteProject,
+    restoreProject,
     toggleFavorite,
     createProjectTask,
     patchProjectTaskBlueprintDescription,

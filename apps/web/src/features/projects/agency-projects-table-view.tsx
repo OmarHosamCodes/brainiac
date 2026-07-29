@@ -1,6 +1,14 @@
-import { AlertTriangle, Building2, FolderKanban, Plus } from "lucide-react";
+import { AlertTriangle, Building2, FolderKanban, Loader2, Plus } from "lucide-react";
 
 import { Button } from "@/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/dialog";
 import { Skeleton } from "@/ui/skeleton";
 import { AgencyProjectsVirtualTable } from "@/features/projects/agency-projects-virtual-table";
 import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/features/shared/agency-ui";
@@ -30,6 +38,12 @@ export function AgencyProjectsTableView({
     clients,
     projects,
     refetchProjects,
+    isProjectMutationPending,
+    pendingDeleteProject,
+    requestDeleteProject,
+    cancelDeleteProject,
+    confirmDeleteProject,
+    restoreProject,
   } = viewModel;
 
   if (isLoading) {
@@ -85,26 +99,69 @@ export function AgencyProjectsTableView({
     );
   }
 
-  if (filteredProjects.length === 0) {
-    return (
-      <div className="rounded-2xl border border-default bg-default p-8 text-center">
-        <p className="text-sm font-bold text-highlighted">No projects match.</p>
-        <p className="mt-1 text-xs text-muted">Try a different search.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="agency-projects">
-      <AgencyProjectsVirtualTable
-        projects={filteredProjects}
-        hoursThisWeekByProject={hoursThisWeekByProject}
-        budgetsByProject={budgetsByProject}
-        budgetPctFor={budgetPctFor}
-        budgetToneFor={budgetToneFor}
-        searchQuery={searchQuery}
-        onSelect={onSelect}
-      />
-    </div>
+    <>
+      {filteredProjects.length === 0 ? (
+        <div className="rounded-2xl border border-default bg-default p-8 text-center">
+          <p className="text-sm font-bold text-highlighted">No projects match.</p>
+          <p className="mt-1 text-xs text-muted">Try a different search or trash filter.</p>
+        </div>
+      ) : (
+        <div className="agency-projects">
+          <AgencyProjectsVirtualTable
+            projects={filteredProjects}
+            hoursThisWeekByProject={hoursThisWeekByProject}
+            budgetsByProject={budgetsByProject}
+            budgetPctFor={budgetPctFor}
+            budgetToneFor={budgetToneFor}
+            searchQuery={searchQuery}
+            onSelect={onSelect}
+            isProjectMutationPending={isProjectMutationPending}
+            onRequestDelete={requestDeleteProject}
+            onRestore={restoreProject}
+          />
+        </div>
+      )}
+
+      <Dialog
+        open={Boolean(pendingDeleteProject)}
+        onOpenChange={(open) => {
+          if (!open) cancelDeleteProject();
+        }}
+      >
+        <DialogContent className="max-w-md" showCloseButton={!isProjectMutationPending}>
+          <DialogHeader>
+            <DialogTitle>Delete "{pendingDeleteProject?.name ?? "this project"}"?</DialogTitle>
+            <DialogDescription>
+              Moves the project to trash for 30 days. It disappears from Agency listings and
+              choosers. Time entries stay; you can restore anytime until permanent delete.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              disabled={isProjectMutationPending}
+              onClick={cancelDeleteProject}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isProjectMutationPending || !pendingDeleteProject}
+              onClick={confirmDeleteProject}
+            >
+              {isProjectMutationPending ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+                  Moving…
+                </>
+              ) : (
+                "Move to trash"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -465,6 +465,7 @@ function ProjectsFiltersRoot({
               <AgencyListFilterCommandBar
                 {...listFilters.barProps}
                 showArchiveFilter
+                showTrashFilter
                 searchPlaceholder="Search projects"
                 trailingActions={
                   <Button

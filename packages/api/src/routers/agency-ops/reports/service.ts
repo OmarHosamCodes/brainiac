@@ -182,6 +182,7 @@ async function getReportRows(
     .where(
       and(
         eq(agencyOpsProject.teamId, input.teamId),
+        isNull(agencyOpsProject.deletedAt),
         ...(() => {
           const scopedFilters: Parameters<typeof and>[0][] = [];
           const clientIds = resolveReportEntityIds(input.clientId, input.clientIds);

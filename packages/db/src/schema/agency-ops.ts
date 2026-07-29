@@ -75,10 +75,12 @@ export const agencyOpsProject = pgTable(
       .defaultNow()
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
+    deletedAt: timestamp("deleted_at"),
   },
   (table) => [
     index("agency_ops_project_team_idx").on(table.teamId),
     index("agency_ops_project_team_client_idx").on(table.teamId, table.clientId),
+    index("agency_ops_project_team_deleted_idx").on(table.teamId, table.deletedAt),
   ],
 );
 

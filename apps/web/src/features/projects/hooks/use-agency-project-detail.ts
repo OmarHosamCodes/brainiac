@@ -3,6 +3,10 @@ import { useMemo, useState } from "react";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useAgencyProjectJourney } from "@/features/projects/use-agency-project-journey";
+import {
+  selectIsProjectMutationPending,
+  useAgencyOpsStore,
+} from "@/features/shared/stores/agency-ops";
 
 export type ActivitySort = "newest" | "oldest" | "longest";
 
@@ -36,6 +40,9 @@ export type AgencyProjectDetailViewModel = {
   setJourneyExpandedMobile: (expanded: boolean | ((val: boolean) => boolean)) => void;
   journeyState: ReturnType<typeof useAgencyProjectJourney>;
   retryLoad: () => void;
+  isTrashed: boolean;
+  isProjectMutationPending: boolean;
+  restoreProject: () => void;
 };
 
 type UseAgencyProjectDetailOptions = {
@@ -47,6 +54,8 @@ export function useAgencyProjectDetail({
   teamId,
   projectId,
 }: UseAgencyProjectDetailOptions): AgencyProjectDetailViewModel {
+  const agencyOps = useAgencyOpsStore();
+  const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
   const range = useMemo(() => {
     const now = new Date();
     const start = new Date(
@@ -66,7 +75,9 @@ export function useAgencyProjectDetail({
   });
 
   const projectsQuery = useQuery({
-    ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
+    ...orpc.agencyOps.projects.list.queryOptions({
+      input: { teamId, trashFilter: "all" },
+    }),
     enabled: Boolean(teamId),
   });
 
@@ -175,6 +186,15 @@ export function useAgencyProjectDetail({
     void budgetsQuery.refetch();
   }
 
+  function restoreProject() {
+    if (!project || !teamId) return;
+    void agencyOps.restoreProject({
+      teamId,
+      projectId: project.id,
+      projectName: project.name,
+    });
+  }
+
   return {
     teamId,
     projectId,
@@ -196,5 +216,8 @@ export function useAgencyProjectDetail({
     setJourneyExpandedMobile,
     journeyState,
     retryLoad,
+    isTrashed: Boolean(project?.deletedAt),
+    isProjectMutationPending,
+    restoreProject,
   };
 }

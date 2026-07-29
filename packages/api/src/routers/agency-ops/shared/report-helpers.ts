@@ -12,6 +12,8 @@ export type ReportEntityFilterInput = {
 
 export type AgencyClientArchiveFilter = "all" | "archived" | "nonarchived";
 
+export type AgencyProjectTrashFilter = "active" | "trashed" | "all";
+
 export function resolveReportEntityIds(
   singular: string | undefined,
   plural: string[] | undefined,

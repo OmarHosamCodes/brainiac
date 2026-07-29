@@ -3,11 +3,16 @@ import { agencyOpsClient, agencyOpsProject, workspaceTeamMember } from "@orch/db
 import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 
-export async function getProjectByIdForTeam(teamId: string, projectId: string) {
+export async function getProjectByIdForTeam(
+  teamId: string,
+  projectId: string,
+  options?: { includeDeleted?: boolean },
+) {
   const [project] = await db
     .select({
       id: agencyOpsProject.id,
       clientId: agencyOpsProject.clientId,
+      deletedAt: agencyOpsProject.deletedAt,
     })
     .from(agencyOpsProject)
     .where(and(eq(agencyOpsProject.id, projectId), eq(agencyOpsProject.teamId, teamId)))
@@ -19,7 +24,13 @@ export async function getProjectByIdForTeam(teamId: string, projectId: string) {
     });
   }
 
-  return project;
+  if (!options?.includeDeleted && project.deletedAt) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Project is in trash. Restore it first.",
+    });
+  }
+
+  return { id: project.id, clientId: project.clientId, deletedAt: project.deletedAt };
 }
 
 export async function getClientByIdForTeam(teamId: string, clientId: string) {

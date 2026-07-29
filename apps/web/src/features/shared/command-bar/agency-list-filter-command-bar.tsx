@@ -14,12 +14,19 @@ import {
 import { Input } from "@/ui/input";
 import { agencyInputPlaceholderClass } from "@/features/shared/agency-ui";
 import type { AgencyClientArchiveFilter } from "@/features/shared/agency-client-archive-filter";
+import type { AgencyProjectTrashFilter } from "@/features/shared/agency-project-trash-filter";
 import { cn } from "@/lib/utils";
 
 const ARCHIVE_STATUS_OPTIONS: AgencyMultiSelectStatusFilter["options"] = [
   { value: "all", label: "All" },
   { value: "nonarchived", label: "Active" },
   { value: "archived", label: "Archived" },
+];
+
+const TRASH_STATUS_OPTIONS: AgencyMultiSelectStatusFilter["options"] = [
+  { value: "active", label: "Active" },
+  { value: "trashed", label: "In trash" },
+  { value: "all", label: "All" },
 ];
 
 type AgencyListFilterCommandBarProps = {
@@ -29,6 +36,9 @@ type AgencyListFilterCommandBarProps = {
   archiveFilter?: AgencyClientArchiveFilter;
   onArchiveFilterChange?: (filter: AgencyClientArchiveFilter) => void;
   showArchiveFilter?: boolean;
+  trashFilter?: AgencyProjectTrashFilter;
+  onTrashFilterChange?: (filter: AgencyProjectTrashFilter) => void;
+  showTrashFilter?: boolean;
   selectedPeopleIds: string[];
   onSelectedPeopleIdsChange: (values: string[]) => void;
   selectedClientIds: string[];
@@ -57,6 +67,9 @@ export function AgencyListFilterCommandBar({
   archiveFilter = "nonarchived",
   onArchiveFilterChange,
   showArchiveFilter = false,
+  trashFilter = "active",
+  onTrashFilterChange,
+  showTrashFilter = false,
   selectedPeopleIds,
   onSelectedPeopleIdsChange,
   selectedClientIds,
@@ -84,6 +97,16 @@ export function AgencyListFilterCommandBar({
           value: archiveFilter,
           options: ARCHIVE_STATUS_OPTIONS,
           onChange: (value) => onArchiveFilterChange(value as AgencyClientArchiveFilter),
+        }
+      : undefined;
+
+  const trashStatusFilter: AgencyMultiSelectStatusFilter | undefined =
+    showTrashFilter && onTrashFilterChange
+      ? {
+          label: "Show",
+          value: trashFilter,
+          options: TRASH_STATUS_OPTIONS,
+          onChange: (value) => onTrashFilterChange(value as AgencyProjectTrashFilter),
         }
       : undefined;
 
@@ -127,7 +150,7 @@ export function AgencyListFilterCommandBar({
         onValuesChange={onSelectedProjectIdsChange}
         disabled={projectsLoading}
         searchPlaceholder="Search projects or clients"
-        statusFilter={archiveStatusFilter}
+        statusFilter={trashStatusFilter ?? archiveStatusFilter}
       />
       <AgencyMultiSelectFilter
         label="All Tasks"

@@ -1,5 +1,6 @@
 import { isNotNull, isNull, eq, and, asc, count, inArray } from "drizzle-orm";
 import {
+  agencyOpsActiveTimer,
   agencyOpsClient,
   agencyOpsProject,
   agencyOpsTimeEntry,
@@ -26,7 +27,10 @@ import {
   getProjectByIdForTeam,
   requireTeamMember,
 } from "../shared/lookup-helpers";
-import { type AgencyClientArchiveFilter } from "../shared/report-helpers";
+import {
+  type AgencyClientArchiveFilter,
+  type AgencyProjectTrashFilter,
+} from "../shared/report-helpers";
 import {
   getJourneyRowForProject,
   syncJourneyStepStatuses,
@@ -42,6 +46,7 @@ type AgencyProjectRecord = {
   clientName: string;
   name: string;
   colorHueId: number | null;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -77,6 +82,7 @@ function mapProjectRow(row: {
   clientName: string;
   name: string;
   colorHueId: number | null;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }): AgencyProjectRecord {
@@ -87,6 +93,7 @@ function mapProjectRow(row: {
     clientName: row.clientName,
     name: row.name,
     colorHueId: row.colorHueId,
+    deletedAt: row.deletedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -106,16 +113,25 @@ export async function listAgencyProjects(
     teamId: string;
     clientId?: string;
     archiveFilter?: AgencyClientArchiveFilter;
+    trashFilter?: AgencyProjectTrashFilter;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
   const archiveFilter = input.archiveFilter ?? "nonarchived";
+  const trashFilter = input.trashFilter ?? "active";
   const clientArchiveFilters = [];
   if (archiveFilter === "archived") {
     clientArchiveFilters.push(isNotNull(agencyOpsClient.archivedAt));
   } else if (archiveFilter === "nonarchived") {
     clientArchiveFilters.push(isNull(agencyOpsClient.archivedAt));
+  }
+
+  const projectTrashFilters = [];
+  if (trashFilter === "trashed") {
+    projectTrashFilters.push(isNotNull(agencyOpsProject.deletedAt));
+  } else if (trashFilter === "active") {
+    projectTrashFilters.push(isNull(agencyOpsProject.deletedAt));
   }
 
   const rows = await db
@@ -126,6 +142,7 @@ export async function listAgencyProjects(
       clientName: agencyOpsClient.name,
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
+      deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
     })
@@ -135,6 +152,7 @@ export async function listAgencyProjects(
       and(
         eq(agencyOpsProject.teamId, input.teamId),
         ...clientArchiveFilters,
+        ...projectTrashFilters,
         input.clientId ? eq(agencyOpsProject.clientId, input.clientId) : undefined,
       ),
     )
@@ -203,6 +221,7 @@ export async function createAgencyProject(
       clientId: agencyOpsProject.clientId,
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
+      deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
     });
@@ -513,6 +532,7 @@ export async function createAgencyProjectWithJourney(
       clientId: agencyOpsProject.clientId,
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
+      deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
     })
@@ -541,7 +561,7 @@ export async function getAgencyProjectJourney(
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
-  await getProjectByIdForTeam(input.teamId, input.projectId);
+  await getProjectByIdForTeam(input.teamId, input.projectId, { includeDeleted: true });
   return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
 }
 
@@ -843,6 +863,7 @@ export async function updateAgencyProject(
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
 
   if (input.clientId) {
     await getClientByIdForTeam(input.teamId, input.clientId);
@@ -862,13 +883,20 @@ export async function updateAgencyProject(
   const [updated] = await db
     .update(agencyOpsProject)
     .set(patch)
-    .where(and(eq(agencyOpsProject.teamId, input.teamId), eq(agencyOpsProject.id, input.projectId)))
+    .where(
+      and(
+        eq(agencyOpsProject.teamId, input.teamId),
+        eq(agencyOpsProject.id, input.projectId),
+        isNull(agencyOpsProject.deletedAt),
+      ),
+    )
     .returning({
       id: agencyOpsProject.id,
       teamId: agencyOpsProject.teamId,
       clientId: agencyOpsProject.clientId,
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
+      deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
     });
@@ -887,4 +915,69 @@ export async function updateAgencyProject(
     ...updated,
     clientName: client?.name ?? "Unknown",
   });
+}
+
+export async function deleteAgencyProject(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  const project = await getProjectByIdForTeam(input.teamId, input.projectId, {
+    includeDeleted: true,
+  });
+
+  if (project.deletedAt) {
+    return { projectId: input.projectId, deleted: true as const };
+  }
+
+  const [activeTimer] = await db
+    .select({ id: agencyOpsActiveTimer.id })
+    .from(agencyOpsActiveTimer)
+    .where(
+      and(
+        eq(agencyOpsActiveTimer.teamId, input.teamId),
+        eq(agencyOpsActiveTimer.projectId, input.projectId),
+      ),
+    )
+    .limit(1);
+
+  if (activeTimer) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Stop the active timer on this project before moving it to trash.",
+    });
+  }
+
+  const now = new Date();
+  await db
+    .update(agencyOpsProject)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(
+      and(eq(agencyOpsProject.teamId, input.teamId), eq(agencyOpsProject.id, input.projectId)),
+    );
+
+  return { projectId: input.projectId, deleted: true as const };
+}
+
+export async function restoreAgencyProject(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getProjectByIdForTeam(input.teamId, input.projectId, { includeDeleted: true });
+
+  const now = new Date();
+  await db
+    .update(agencyOpsProject)
+    .set({ deletedAt: null, updatedAt: now })
+    .where(
+      and(eq(agencyOpsProject.teamId, input.teamId), eq(agencyOpsProject.id, input.projectId)),
+    );
+
+  return { projectId: input.projectId, deleted: false as const };
 }

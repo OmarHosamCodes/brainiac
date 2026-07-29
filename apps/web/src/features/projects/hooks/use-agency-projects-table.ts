@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAgencyProjectsActions } from "@/features/shared/agency-segment-filters";
 import type { AgencyListFiltersApplied } from "@/features/shared/use-agency-list-filters";
 import {
@@ -8,6 +8,10 @@ import {
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
+import {
+  selectIsProjectMutationPending,
+  useAgencyOpsStore,
+} from "@/features/shared/stores/agency-ops";
 import { orpc } from "@/lib/orpc";
 import { getTaskGroupKey } from "@/features/task-management/agency-task-utils";
 import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
@@ -22,9 +26,17 @@ function getWeekStartUtc(): Date {
   return date;
 }
 
+export type AgencyProjectsTableProject = {
+  id: string;
+  name: string;
+  clientId: string;
+  clientName: string;
+  deletedAt: string | null;
+};
+
 export type AgencyProjectsTableViewModel = {
   openNewProject: () => void;
-  filteredProjects: any[];
+  filteredProjects: AgencyProjectsTableProject[];
   hoursThisWeekByProject: Map<string, number>;
   budgetsByProject: Map<string, any>;
   budgetPctFor: (projectId: string) => number;
@@ -33,8 +45,14 @@ export type AgencyProjectsTableViewModel = {
   isError: boolean;
   errorMessage: string;
   clients: any[];
-  projects: any[];
+  projects: AgencyProjectsTableProject[];
   refetchProjects: () => void;
+  isProjectMutationPending: boolean;
+  pendingDeleteProject: AgencyProjectsTableProject | null;
+  requestDeleteProject: (project: AgencyProjectsTableProject) => void;
+  cancelDeleteProject: () => void;
+  confirmDeleteProject: () => void;
+  restoreProject: (project: AgencyProjectsTableProject) => void;
 };
 
 type UseAgencyProjectsTableOptions = {
@@ -47,8 +65,15 @@ export function useAgencyProjectsTable({
   filters,
 }: UseAgencyProjectsTableOptions): AgencyProjectsTableViewModel {
   const { openNewProject } = useAgencyProjectsActions();
+  const agencyOps = useAgencyOpsStore();
+  const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
+  const [pendingDeleteProject, setPendingDeleteProject] =
+    useState<AgencyProjectsTableProject | null>(null);
 
-  const projectsQuery = useAgencyProjectsQuery(teamId, { archiveFilter: filters.archiveFilter });
+  const projectsQuery = useAgencyProjectsQuery(teamId, {
+    archiveFilter: filters.archiveFilter,
+    trashFilter: filters.trashFilter,
+  });
   const clientsQuery = useAgencyClientsQuery(teamId, { archiveFilter: filters.archiveFilter });
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
   const tasksQuery = useAgencyProjectTasksQuery(teamId, {
@@ -69,7 +94,13 @@ export function useAgencyProjectsTable({
     return map;
   }, [budgetsQuery.data?.items]);
 
-  const projects = projectsQuery.data?.items ?? [];
+  const projects = (projectsQuery.data?.items ?? []).map((project) => ({
+    id: project.id,
+    name: project.name,
+    clientId: project.clientId,
+    clientName: project.clientName,
+    deletedAt: project.deletedAt ?? null,
+  }));
   const clients = clientsQuery.data?.items ?? [];
   const entries = entriesQuery.data?.items ?? [];
   const tasks = tasksQuery.data?.items ?? [];
@@ -137,6 +168,35 @@ export function useAgencyProjectsTable({
     void projectsQuery.refetch();
   }
 
+  function requestDeleteProject(project: AgencyProjectsTableProject) {
+    setPendingDeleteProject(project);
+  }
+
+  function cancelDeleteProject() {
+    if (isProjectMutationPending) return;
+    setPendingDeleteProject(null);
+  }
+
+  function confirmDeleteProject() {
+    if (!pendingDeleteProject || !teamId) return;
+    const project = pendingDeleteProject;
+    setPendingDeleteProject(null);
+    void agencyOps.deleteProject({
+      teamId,
+      projectId: project.id,
+      projectName: project.name,
+    });
+  }
+
+  function restoreProject(project: AgencyProjectsTableProject) {
+    if (!teamId) return;
+    void agencyOps.restoreProject({
+      teamId,
+      projectId: project.id,
+      projectName: project.name,
+    });
+  }
+
   return {
     openNewProject,
     filteredProjects,
@@ -150,5 +210,11 @@ export function useAgencyProjectsTable({
     clients,
     projects,
     refetchProjects,
+    isProjectMutationPending,
+    pendingDeleteProject,
+    requestDeleteProject,
+    cancelDeleteProject,
+    confirmDeleteProject,
+    restoreProject,
   };
 }

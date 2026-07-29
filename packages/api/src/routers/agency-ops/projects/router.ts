@@ -5,12 +5,15 @@ import {
   agencyProjectSchema,
   agencyProjectJourneySchema,
   agencyProjectColorHueIdSchema,
+  agencyProjectTrashFilterSchema,
 } from "../shared/schemas";
 import {
   listAgencyProjects,
   createAgencyProject,
   createAgencyProjectWithJourney,
   updateAgencyProject,
+  deleteAgencyProject,
+  restoreAgencyProject,
   getAgencyProjectJourney,
   updateAgencyProjectJourneySteps,
   addAgencyProjectJourneyStep,
@@ -25,6 +28,7 @@ export const projectsRouter = {
         teamScopedInputSchema.extend({
           clientId: z.string().min(1).optional(),
           archiveFilter: z.enum(["all", "archived", "nonarchived"]).optional(),
+          trashFilter: agencyProjectTrashFilterSchema.optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -159,6 +163,28 @@ export const projectsRouter = {
           await updateAgencyProject(context.session.user.id, input),
         );
         return project;
+      }),
+    delete: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          projectId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ projectId: z.string().min(1), deleted: z.literal(true) })
+          .parse(await deleteAgencyProject(context.session.user.id, input));
+      }),
+    restore: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          projectId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ projectId: z.string().min(1), deleted: z.literal(false) })
+          .parse(await restoreAgencyProject(context.session.user.id, input));
       }),
   },
 };

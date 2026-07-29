@@ -30,6 +30,8 @@ export const agencyClientSchema = z.object({
 
 export const agencyProjectColorHueIdSchema = z.number().int().min(1).max(12);
 
+export const agencyProjectTrashFilterSchema = z.enum(["active", "trashed", "all"]);
+
 export const agencyProjectSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
@@ -37,6 +39,7 @@ export const agencyProjectSchema = z.object({
   clientName: z.string().min(1),
   name: z.string().min(1),
   colorHueId: agencyProjectColorHueIdSchema.nullable(),
+  deletedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
