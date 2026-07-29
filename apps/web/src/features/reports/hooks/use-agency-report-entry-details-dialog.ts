@@ -3,7 +3,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import type { AgencyReportEntry } from "@/features/reports/agency-report-grouping";
-import { reportRowAggregationKey } from "@/features/reports/agency-report-grouping";
+import {
+  reportRowAggregationKey,
+  type ReportRowAggregationOptions,
+} from "@/features/reports/agency-report-grouping";
 import {
   invalidateAgencyTeamQueries,
   useAgencyProjectTasksForChooserQuery,
@@ -37,9 +40,10 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 export function selectEntriesForDetailsRow(
   entries: AgencyReportEntry[],
   rowKey: string | null,
+  options: ReportRowAggregationOptions = {},
 ): AgencyReportEntry[] {
   if (!rowKey) return [];
-  return entries.filter((entry) => reportRowAggregationKey(entry) === rowKey);
+  return entries.filter((entry) => reportRowAggregationKey(entry, options) === rowKey);
 }
 
 export function reportEntryDetailsDialogCopy(label: string, entryCount: number) {

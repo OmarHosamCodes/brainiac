@@ -67,6 +67,20 @@ describe("selectEntriesForDetailsRow", () => {
     const dayCount = weeks.reduce((sum, week) => sum + week.days.length, 0);
     expect(dayCount).toBe(2);
   });
+
+  test("honors mergeSameTaskNames when selecting details for a merged row", () => {
+    const matching = [
+      makeEntry({ id: "e1", taskId: "task-a", taskTitle: "Peeling", description: "a" }),
+      makeEntry({ id: "e2", taskId: "task-b", taskTitle: "Peeling", description: "b" }),
+    ];
+    const other = makeEntry({ id: "e3", taskId: "task-c", taskTitle: "QA", description: "c" });
+    const rowKey = reportRowAggregationKey(matching[0]!, { mergeSameTaskNames: true });
+
+    const selected = selectEntriesForDetailsRow([...matching, other], rowKey, {
+      mergeSameTaskNames: true,
+    });
+    expect(selected.map((entry) => entry.id).sort()).toEqual(["e1", "e2"]);
+  });
 });
 
 describe("reportEntryDetailsDialogCopy", () => {
