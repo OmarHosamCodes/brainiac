@@ -8,6 +8,10 @@ import {
   type AgencyReportFieldId,
 } from "@/features/reports/agency-report-fields";
 import { parseShowWasteParam } from "@/features/reports/agency-report-show-waste";
+import {
+  AGENCY_REPORT_MERGE_TASKS_PARAM,
+  parseMergeSameTaskNamesParam,
+} from "@/features/reports/agency-report-merge-tasks";
 import { fetchAllReportEntries } from "@/features/reports/fetch-report-entries";
 import { useAgencyReportAutosave } from "@/features/reports/use-agency-report-autosave";
 import { useAgencyReportCreator } from "@/features/reports/use-agency-report-creator";
@@ -15,8 +19,31 @@ import { useAgencyReportLabelContext } from "@/features/reports/use-agency-repor
 import { draftToIsoRange, type TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
 import { orpcClient } from "@/lib/orpc";
 import { invalidateAgencyTeamQueries } from "@/features/shared/agency-queries";
-import { exportAgencyReportXlsx } from "@/features/reports/export-agency-report-xlsx";
+import {
+  exportAgencyReportXlsx,
+  exportAgencyReportXlsxPerClient,
+  type AgencyReportExportMode,
+} from "@/features/reports/export-agency-report-xlsx";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+
+const PER_CLIENT_DOWNLOAD_STAGGER_MS = 150;
+
+function downloadBlobFile(fileName: string, blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
 
 export type UseAgencyReportCreatorSurfaceProps = {
   teamId: string;
@@ -64,6 +91,11 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
 
   const showWaste = useMemo(
     () => parseShowWasteParam(searchParams.get("showWaste")),
+    [searchParams],
+  );
+
+  const mergeSameTaskNames = useMemo(
+    () => parseMergeSameTaskNamesParam(searchParams.get(AGENCY_REPORT_MERGE_TASKS_PARAM)),
     [searchParams],
   );
 
@@ -270,11 +302,11 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [creator, handleExcludeSelected, handleToggleWaste, handleUndoExclude, report]);
 
-  async function handleExport() {
+  async function handleExport(mode: AgencyReportExportMode = "combined") {
     if (!teamId || exportPhase === "exporting" || !report) return;
     setExportPhase("exporting");
     try {
-      const { fileName, blob } = await exportAgencyReportXlsx({
+      const input = {
         teamId,
         reportName: reportName || report.name,
         entries,
@@ -282,15 +314,28 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
         entryOverrides: creator.entryOverrides,
         visibleFields,
         showWaste,
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+        mergeSameTaskNames,
+      };
+      const files =
+        mode === "per-client"
+          ? await exportAgencyReportXlsxPerClient(input)
+          : [await exportAgencyReportXlsx(input)];
+
+      if (files.length === 0) {
+        toast.error("Nothing to export", {
+          description: "No clients remain after the current filters.",
+        });
+        setExportPhase("idle");
+        return;
+      }
+
+      for (const [index, file] of files.entries()) {
+        downloadBlobFile(file.fileName, file.blob);
+        if (index < files.length - 1) {
+          await delay(PER_CLIENT_DOWNLOAD_STAGGER_MS);
+        }
+      }
+
       autosave.queueActivity({ action: "exported" });
       setExportPhase("exported");
       window.setTimeout(() => {
@@ -361,6 +406,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     setReportName,
     labelContext,
     visibleFields,
+    mergeSameTaskNames,
     rangeReady,
     entriesQueryPending: entriesQuery.isPending,
     entriesQueryError: entriesQuery.isError,

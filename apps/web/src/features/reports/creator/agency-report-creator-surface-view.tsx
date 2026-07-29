@@ -76,7 +76,7 @@ export function AgencyReportCreatorSurfaceView({
         lastSavedAt={vm.autosave.lastSavedAt}
         onRetrySave={vm.autosave.retry}
         exportPhase={vm.exportPhase}
-        onExport={() => void vm.handleExport()}
+        onExport={(mode) => void vm.handleExport(mode)}
         activityMenu={activityMenu}
         deletingReport={vm.deletingReport}
         onDeleteReport={() => void vm.handleDeleteReport()}
@@ -119,6 +119,7 @@ export function AgencyReportCreatorSurfaceView({
         <AgencyReportCreatorTable
           creator={vm.creator}
           visibleFields={vm.visibleFields}
+          mergeSameTaskNames={vm.mergeSameTaskNames}
           onSaveEdit={vm.handleSaveEdit}
           onExcludeEntry={vm.handleExcludeEntry}
           onToggleWaste={(entryId) => void vm.handleToggleWaste(entryId)}

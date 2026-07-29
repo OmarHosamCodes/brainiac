@@ -1,4 +1,4 @@
-import { ArrowLeft, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/ui/button";
@@ -10,6 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Skeleton } from "@/ui/skeleton";
@@ -18,6 +24,7 @@ import {
   formatReportHeaderMeta,
   type AgencyReportHeaderLabelContext,
 } from "@/features/reports/agency-report-naming";
+import type { AgencyReportExportMode } from "@/features/reports/export-agency-report-xlsx";
 import type { AgencyReportAutosaveState } from "@/features/reports/use-agency-report-autosave";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
@@ -178,7 +185,7 @@ type ReportHeaderActionsProps = {
   onUndo: () => void;
   exportPhase: "idle" | "exporting" | "exported";
   exportDisabled: boolean;
-  onExport: () => void;
+  onExport: (mode: AgencyReportExportMode) => void;
   activityMenu: ReactNode;
   deleteDisabled: boolean;
   deletingReport: boolean;
@@ -208,25 +215,45 @@ function ReportHeaderActions({
         </Button>
       ) : null}
       {activityMenu}
-      <Button
-        variant="secondary"
-        size="sm"
-        className="h-9"
-        disabled={exportDisabled || exporting}
-        onClick={onExport}
-        title="Downloads .xlsx for Google Sheets"
-      >
-        {exporting ? (
-          <>
-            <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
-            Exporting…
-          </>
-        ) : exported ? (
-          "Exported"
-        ) : (
-          "Export"
-        )}
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-9 gap-1.5"
+            disabled={exportDisabled || exporting}
+            title="Downloads .xlsx for Google Sheets"
+          >
+            {exporting ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+                Exporting…
+              </>
+            ) : exported ? (
+              "Exported"
+            ) : (
+              <>
+                Export
+                <ChevronDown className="size-3.5 opacity-70" aria-hidden />
+              </>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48 p-1">
+          <DropdownMenuItem
+            disabled={exportDisabled || exporting}
+            onSelect={() => onExport("combined")}
+          >
+            Export
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={exportDisabled || exporting}
+            onSelect={() => onExport("per-client")}
+          >
+            Export per client
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -285,7 +312,7 @@ export type AgencyReportCreatorHeaderProps = {
   lastSavedAt: Date | null;
   onRetrySave: () => void;
   exportPhase: "idle" | "exporting" | "exported";
-  onExport: () => void;
+  onExport: (mode: AgencyReportExportMode) => void;
   activityMenu: ReactNode;
   deletingReport: boolean;
   onDeleteReport: () => void;

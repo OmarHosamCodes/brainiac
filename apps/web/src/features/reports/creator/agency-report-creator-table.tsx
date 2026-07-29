@@ -32,6 +32,7 @@ import {
   reportEntryWasteTextClass,
   type AggregatedReportRow,
 } from "@/features/reports/agency-report-grouping";
+import { DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES } from "@/features/reports/agency-report-merge-tasks";
 import { applyDurationToDraft, entryToDraft } from "@/features/time-tracking/time-entry-draft";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
@@ -54,6 +55,7 @@ function reportCreatorCellSelectionClass(
 type AgencyReportCreatorTableProps = {
   creator: AgencyReportCreatorState;
   visibleFields?: AgencyReportFieldId[];
+  mergeSameTaskNames?: boolean;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onExcludeEntry: (entryId: string) => void;
   onToggleWaste: (entryId: string) => void;
@@ -64,6 +66,7 @@ type AgencyReportCreatorTableProps = {
 export function AgencyReportCreatorTable({
   creator,
   visibleFields = allAgencyReportFieldIds(),
+  mergeSameTaskNames = DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES,
   onSaveEdit,
   onExcludeEntry,
   onToggleWaste,
@@ -71,7 +74,7 @@ export function AgencyReportCreatorTable({
   wastePending = false,
 }: AgencyReportCreatorTableProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
-  const clientGroups = groupEntriesForDisplay(creator.visibleEntries);
+  const clientGroups = groupEntriesForDisplay(creator.visibleEntries, { mergeSameTaskNames });
   const totalSeconds = creator.visibleEntries.reduce(
     (sum, entry) => sum + entry.durationSeconds,
     0,
