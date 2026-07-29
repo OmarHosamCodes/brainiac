@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { fetchAllReportEntries } from "@/features/reports/fetch-report-entries";
@@ -16,6 +17,8 @@ import { selectEntriesForDetailsRow } from "@/features/reports/hooks/use-agency-
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
 
+const SAVED_TICK_MS = 1200;
+
 export type UseAgencyReportsSurfaceProps = {
   teamId: string;
   filters: AgencyTimeRangeFilters;
@@ -23,6 +26,8 @@ export type UseAgencyReportsSurfaceProps = {
 
 export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSurfaceProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const deletingEntryIds = useAgencyTimeTrackingStore((state) => state.deletingEntryIds);
   const {
@@ -37,10 +42,35 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     showWaste,
   } = filters;
   const [updatingRowKeys, setUpdatingRowKeys] = useState<Set<string>>(() => new Set());
+  const [savedRowKeys, setSavedRowKeys] = useState<Set<string>>(() => new Set());
   const [wastePendingRowKeys, setWastePendingRowKeys] = useState<Set<string>>(() => new Set());
   const [detailsRowKey, setDetailsRowKey] = useState<string | null>(null);
   const [detailsRowLabel, setDetailsRowLabel] = useState("");
+  const savedTickTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
+  useEffect(() => {
+    return () => {
+      for (const timer of savedTickTimersRef.current.values()) {
+        clearTimeout(timer);
+      }
+      savedTickTimersRef.current.clear();
+    };
+  }, []);
+
+  const flashSavedRow = useCallback((rowKey: string) => {
+    setSavedRowKeys((current) => new Set(current).add(rowKey));
+    const existing = savedTickTimersRef.current.get(rowKey);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      setSavedRowKeys((current) => {
+        const next = new Set(current);
+        next.delete(rowKey);
+        return next;
+      });
+      savedTickTimersRef.current.delete(rowKey);
+    }, SAVED_TICK_MS);
+    savedTickTimersRef.current.set(rowKey, timer);
+  }, []);
   const appliedFilters = {
     clientId,
     projectId,
@@ -129,6 +159,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
       setUpdatingRowKeys((current) => new Set(current).add(row.key));
       try {
         await descriptionChangeMutation.mutateAsync({ row, description });
+        flashSavedRow(row.key);
       } finally {
         setUpdatingRowKeys((current) => {
           const next = new Set(current);
@@ -137,7 +168,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
         });
       }
     },
-    [descriptionChangeMutation, teamId],
+    [descriptionChangeMutation, flashSavedRow, teamId],
   );
 
   const handleTaskChange = useCallback(
@@ -147,6 +178,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
       setUpdatingRowKeys((current) => new Set(current).add(row.key));
       try {
         await taskChangeMutation.mutateAsync({ row, taskId });
+        flashSavedRow(row.key);
       } finally {
         setUpdatingRowKeys((current) => {
           const next = new Set(current);
@@ -155,9 +187,8 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
         });
       }
     },
-    [taskChangeMutation, teamId],
+    [flashSavedRow, taskChangeMutation, teamId],
   );
-
   const handleDeleteRow = useCallback(
     async (row: AggregatedReportRow) => {
       if (!teamId || row.entries.length === 0) return;
@@ -188,7 +219,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
         );
         void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
         void invalidateAgencyTeamQueries(teamId);
-        toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
+        flashSavedRow(row.key);
       } catch (error) {
         toast.error("Couldn't update entry", {
           description: getErrorMessage(error, "Try again."),
@@ -201,9 +232,14 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
         });
       }
     },
-    [queryClient, teamId],
+    [flashSavedRow, queryClient, teamId],
   );
 
+  const handleGoToTracker = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.set("section", "work");
+    navigate(`/agency?${next.toString()}`);
+  }, [navigate, searchParams]);
   const handleEditDetails = useCallback((row: AggregatedReportRow) => {
     if (row.entries.length === 0) return;
     setDetailsRowKey(row.key);
@@ -248,6 +284,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     tasks,
     tasksLoading: tasksQuery.isLoading,
     updatingRowKeys,
+    savedRowKeys,
     deletingEntryIds,
     wastePendingRowKeys,
     visibleFields: fields,
@@ -261,6 +298,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     onDetailsOpenChange: handleDetailsOpenChange,
     onDeleteRow: handleDeleteRow,
     onToggleWaste: handleToggleWaste,
+    onGoToTracker: handleGoToTracker,
   };
 }
 

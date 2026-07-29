@@ -17,6 +17,7 @@ const reportItemClass = cn(
 export type SavedReportsListBodyViewProps = {
   items: SavedReportListItem[];
   onSelect: (reportId: string) => void;
+  activeReportId?: string | null;
   searchable?: boolean;
   compact?: boolean;
   vm: SavedReportsListBodyViewModel;
@@ -25,6 +26,7 @@ export type SavedReportsListBodyViewProps = {
 export function SavedReportsListBodyView({
   items,
   onSelect,
+  activeReportId = null,
   searchable = true,
   compact = false,
   vm,
@@ -40,7 +42,7 @@ export function SavedReportsListBodyView({
   return (
     <>
       {searchable ? (
-        <div className="border-b border-default p-2">
+        <div className="border-b border-default/55 p-2">
           <Input
             value={vm.searchTerm}
             onChange={(event) => vm.setSearchTerm(event.target.value)}
@@ -55,24 +57,37 @@ export function SavedReportsListBodyView({
         ) : (
           vm.grouped.map((section) => (
             <div key={section.group.key} className="mb-2 last:mb-0">
-              <p className="px-2 py-1 text-[10px] font-semibold tracking-wide text-muted uppercase">
+              <p className="px-2 py-1 text-[10px] font-semibold tracking-wide text-muted">
                 {section.group.label}
               </p>
-              {section.items.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={reportItemClass}
-                  onClick={() => onSelect(item.id)}
-                >
-                  <span className="truncate text-xs font-semibold text-highlighted">
-                    {item.name}
-                  </span>
-                  <span className="text-[11px] text-muted">
-                    {item.createdByUserName} · edited {formatRelativeReportTime(item.updatedAt)}
-                  </span>
-                </button>
-              ))}
+              {section.items.map((item) => {
+                const selected = item.id === activeReportId;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={cn(
+                      reportItemClass,
+                      "duration-150 active:scale-[0.99] motion-reduce:active:scale-100",
+                      selected && "bg-primary/10 text-primary hover:bg-primary/10",
+                    )}
+                    aria-current={selected ? "true" : undefined}
+                    onClick={() => onSelect(item.id)}
+                  >
+                    <span
+                      className={cn(
+                        "truncate text-xs font-semibold",
+                        selected ? "text-primary" : "text-highlighted",
+                      )}
+                    >
+                      {item.name}
+                    </span>
+                    <span className="text-[11px] text-muted">
+                      {item.createdByUserName} · edited {formatRelativeReportTime(item.updatedAt)}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ))
         )}

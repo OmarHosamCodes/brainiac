@@ -1,3 +1,5 @@
+import { motion } from "motion/react";
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/ui/dialog";
 import { Button } from "@/ui/button";
 import { AgencyTimeEntryWeekGroupView } from "@/features/time-tracking/entries/agency-time-entry-week-group-view";
@@ -29,7 +31,7 @@ export function AgencyReportEntryDetailsDialogView({
         className="flex max-h-[85vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
         showCloseButton
       >
-        <DialogHeader className="shrink-0 space-y-1 border-b border-default px-5 py-4 pr-14 text-left">
+        <DialogHeader className="shrink-0 space-y-1 border-b border-default/55 px-5 py-4 pr-14 text-left">
           <DialogTitle className="truncate text-base font-bold text-highlighted">
             {viewModel.title}
           </DialogTitle>
@@ -47,12 +49,14 @@ export function AgencyReportEntryDetailsDialogView({
             </Button>
           </div>
         ) : (
-          <div
+          <motion.div
             className={cn(
               agencyWorkTableBodyScrollClass,
-              // Cap height so long weeks scroll; neutralize Tracker page surface bands.
               "max-h-[calc(85vh-5.5rem)] px-4 pb-4 [&_.bg-background]:bg-transparent",
             )}
+            initial={viewModel.prefersReducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.18, ease: [0.25, 1, 0.5, 1] }}
           >
             <div className={cn(agencyTimeWeekStackClass, "bg-transparent")}>
               {viewModel.weekGroups.map((week) => (
@@ -81,7 +85,7 @@ export function AgencyReportEntryDetailsDialogView({
                 />
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
       </DialogContent>
     </Dialog>

@@ -1,5 +1,5 @@
-import { Check, ChevronDown, MoreHorizontal } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Check, ChevronDown, MoreVertical } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import {
   AgencyCommandBarActions,
@@ -322,7 +322,7 @@ function ReportsOptionsMenu({
           aria-label="Report options"
           title="Report options"
         >
-          <MoreHorizontal className="size-4" aria-hidden />
+          <MoreVertical className="size-4" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44 p-1">
@@ -476,6 +476,18 @@ export function AgencyDashboardCommandBar({
 }: AgencyDashboardCommandBarProps) {
   const showClientFilter = Boolean(clients && onClientIdsChange);
   const showReportsOptions = Boolean(onFieldIdsChange && fieldIds && onShowWasteChange);
+  const [applyPulse, setApplyPulse] = useState(false);
+
+  useEffect(() => {
+    if (!applyPulse) return;
+    const timer = window.setTimeout(() => setApplyPulse(false), 220);
+    return () => window.clearTimeout(timer);
+  }, [applyPulse]);
+
+  function handleApplyClick() {
+    onApply();
+    setApplyPulse(true);
+  }
 
   const hasActiveFilters = Boolean(
     rangePreset !== defaultRangePreset ||
@@ -567,7 +579,16 @@ export function AgencyDashboardCommandBar({
             onShowWasteChange={onShowWasteChange!}
           />
         ) : null}
-        <Button variant="secondary" size="sm" disabled={!hasPendingChanges} onClick={onApply}>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={!hasPendingChanges}
+          onClick={handleApplyClick}
+          className={cn(
+            "transition-[box-shadow,transform] duration-200 ease-out motion-reduce:transition-none",
+            applyPulse && "shadow-[0_0_0_3px_oklch(0.488_0.243_264.376_/_0.22)]",
+          )}
+        >
           Apply
         </Button>
         {hasActiveFilters ? <AgencyCommandBarResetButton onClick={onReset} /> : null}

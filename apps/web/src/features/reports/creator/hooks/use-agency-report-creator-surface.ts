@@ -43,7 +43,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
 
   const report = reportQuery.data;
 
-  const [exporting, setExporting] = useState(false);
+  const [exportPhase, setExportPhase] = useState<"idle" | "exporting" | "exported">("idle");
   const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
   const [wastePending, setWastePending] = useState(false);
   const [deletingReport, setDeletingReport] = useState(false);
@@ -143,7 +143,6 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
       creator.applyEntryOverride(variables.entryId, updated);
       autosave.queueActivity({ action: "entry_edited", payload: { entryId: variables.entryId } });
       void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
-      toast.success("Entry updated");
     },
     onError: (error) => {
       toast.error("Couldn't save entry", {
@@ -183,7 +182,6 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
         autosave.queueActivity({ action: "waste_toggled", payload: { isWaste: nextIsWaste } });
         void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
         void invalidateAgencyTeamQueries(teamId);
-        toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
       } catch (error) {
         toast.error("Couldn't update entry", {
           description: getErrorMessage(error, "Try again."),
@@ -273,8 +271,8 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   }, [creator, handleExcludeSelected, handleToggleWaste, handleUndoExclude, report]);
 
   async function handleExport() {
-    if (!teamId || exporting || !report) return;
-    setExporting(true);
+    if (!teamId || exportPhase === "exporting" || !report) return;
+    setExportPhase("exporting");
     try {
       const { fileName, blob } = await exportAgencyReportXlsx({
         teamId,
@@ -294,13 +292,15 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       autosave.queueActivity({ action: "exported" });
-      toast.success(`${reportName || report.name} exported`);
+      setExportPhase("exported");
+      window.setTimeout(() => {
+        setExportPhase((current) => (current === "exported" ? "idle" : current));
+      }, 1600);
     } catch (error) {
+      setExportPhase("idle");
       toast.error("Export failed", {
         description: getErrorMessage(error, "Try again."),
       });
-    } finally {
-      setExporting(false);
     }
   }
 
@@ -353,7 +353,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     errorMessage,
     refetch,
     onBackToReports,
-    exporting,
+    exportPhase,
     savingEntryId,
     wastePending,
     deletingReport,

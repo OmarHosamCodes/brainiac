@@ -35,7 +35,10 @@ function ReportSaveStatus({ state, lastSavedAt, onRetry }: ReportSaveStatusProps
   if (state === "error") {
     return (
       <span className="inline-flex items-center gap-1 font-mono text-[11px] text-error">
-        Save failed
+        Error
+        <span aria-hidden className="text-error/60">
+          ·
+        </span>
         <Button variant="link" size="sm" className="h-auto px-0 py-0 text-[11px]" onClick={onRetry}>
           Retry
         </Button>
@@ -173,7 +176,7 @@ function ReportHeaderMeta({
 type ReportHeaderActionsProps = {
   canUndo: boolean;
   onUndo: () => void;
-  exporting: boolean;
+  exportPhase: "idle" | "exporting" | "exported";
   exportDisabled: boolean;
   onExport: () => void;
   activityMenu: ReactNode;
@@ -185,7 +188,7 @@ type ReportHeaderActionsProps = {
 function ReportHeaderActions({
   canUndo,
   onUndo,
-  exporting,
+  exportPhase,
   exportDisabled,
   onExport,
   activityMenu,
@@ -194,6 +197,8 @@ function ReportHeaderActions({
   onRequestDelete,
 }: ReportHeaderActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const exporting = exportPhase === "exporting";
+  const exported = exportPhase === "exported";
 
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 pl-10 sm:pl-0">
@@ -216,8 +221,10 @@ function ReportHeaderActions({
             <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
             Exporting…
           </>
+        ) : exported ? (
+          "Exported"
         ) : (
-          "Export to Sheets"
+          "Export"
         )}
       </Button>
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
@@ -277,7 +284,7 @@ export type AgencyReportCreatorHeaderProps = {
   autosaveState: AgencyReportAutosaveState;
   lastSavedAt: Date | null;
   onRetrySave: () => void;
-  exporting: boolean;
+  exportPhase: "idle" | "exporting" | "exported";
   onExport: () => void;
   activityMenu: ReactNode;
   deletingReport: boolean;
@@ -298,7 +305,7 @@ export function AgencyReportCreatorHeader({
   autosaveState,
   lastSavedAt,
   onRetrySave,
-  exporting,
+  exportPhase,
   onExport,
   activityMenu,
   deletingReport,
@@ -358,7 +365,7 @@ export function AgencyReportCreatorHeader({
           <ReportHeaderActions
             canUndo={canUndo}
             onUndo={onUndo}
-            exporting={exporting}
+            exportPhase={exportPhase}
             exportDisabled={visibleEntryCount === 0}
             onExport={onExport}
             activityMenu={activityMenu}

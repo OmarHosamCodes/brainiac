@@ -5,6 +5,7 @@ import type { TimeEntryDraft } from "@/features/time-tracking/agency-time-entry"
 import type { CollapsedEntryGroup } from "@/features/time-tracking/group-time-entries";
 
 import { AgencyTimeEntryRowView } from "@/features/time-tracking/entries/agency-time-entry-row-view";
+import { AgencyCollapse } from "@/features/shared/agency-collapse";
 import {
   agencyTimeEntryGroupBorderClass,
   agencyTimeEntryMultiChildClass,
@@ -71,19 +72,21 @@ export function AgencyTimeEntryRowContainer({
   return (
     <div className={cn(omitBottomBorder ? undefined : agencyTimeEntryGroupBorderClass)}>
       <AgencyTimeEntryRowView view={view} className="border-b-0" />
-      {view.expandedChildGroups.map((childGroup, index) => (
-        <AgencyTimeEntryRowContainer
-          key={childGroup.entries[0]!.id}
-          {...props}
-          group={childGroup}
-          expanded={false}
-          multiGroupChild
-          highlighted={
-            props.highlighted === true && childGroup.entries[0]?.id === props.group.entries[0]?.id
-          }
-          omitBottomBorder={index === view.expandedChildGroups.length - 1}
-        />
-      ))}
+      <AgencyCollapse open={view.expandedChildGroups.length > 0}>
+        {view.expandedChildGroups.map((childGroup, index) => (
+          <AgencyTimeEntryRowContainer
+            key={childGroup.entries[0]!.id}
+            {...props}
+            group={childGroup}
+            expanded={false}
+            multiGroupChild
+            highlighted={
+              props.highlighted === true && childGroup.entries[0]?.id === props.group.entries[0]?.id
+            }
+            omitBottomBorder={index === view.expandedChildGroups.length - 1}
+          />
+        ))}
+      </AgencyCollapse>
     </div>
   );
 }

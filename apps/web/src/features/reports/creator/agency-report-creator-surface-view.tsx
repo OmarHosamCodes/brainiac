@@ -75,7 +75,7 @@ export function AgencyReportCreatorSurfaceView({
         autosaveState={vm.autosave.state}
         lastSavedAt={vm.autosave.lastSavedAt}
         onRetrySave={vm.autosave.retry}
-        exporting={vm.exporting}
+        exportPhase={vm.exportPhase}
         onExport={() => void vm.handleExport()}
         activityMenu={activityMenu}
         deletingReport={vm.deletingReport}

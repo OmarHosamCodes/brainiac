@@ -31,6 +31,7 @@ import {
   useAgencyTimeTrackingStore,
 } from "@/features/time-tracking/stores/agency-time-tracking";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
+import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 export function selectEntriesForDetailsRow(
@@ -76,6 +77,7 @@ export type AgencyReportEntryDetailsDialogViewModel = {
   bulkFieldEditOpen: boolean;
   bulkDraft: AgencyDayBulkDraft;
   wastePending: boolean;
+  prefersReducedMotion: boolean;
   onToggleGroupExpand: (collapseKey: string) => void;
   onRestart: (group: CollapsedEntryGroup) => void;
   onDeleteGroup: (entryIds: string[]) => void;
@@ -118,6 +120,7 @@ export function useAgencyReportEntryDetailsDialog({
   onOpenChange,
 }: UseAgencyReportEntryDetailsDialogOptions): AgencyReportEntryDetailsDialogViewModel {
   const queryClient = useQueryClient();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const deletingEntryIds = useAgencyTimeTrackingStore((state) => state.deletingEntryIds);
   const updatingEntryIds = useAgencyTimeTrackingStore((state) => state.updatingEntryIds);
@@ -414,6 +417,7 @@ export function useAgencyReportEntryDetailsDialog({
     bulkFieldEditOpen,
     bulkDraft,
     wastePending,
+    prefersReducedMotion,
     onToggleGroupExpand: toggleGroupExpand,
     onRestart: (group) => void restartEntry(group),
     onDeleteGroup: (entryIds) => void deleteGroupEntries(entryIds),

@@ -23,12 +23,12 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
           <Skeleton className="h-4 w-40" />
           <Skeleton className="h-3 w-24" />
         </div>
-        <div className="overflow-hidden rounded-dense border border-default bg-default">
-          <div className="border-b border-default bg-elevated/65 px-4 py-2.5">
+        <div className="overflow-hidden rounded-dense border border-default/55 bg-default">
+          <div className="border-b border-default/50 bg-elevated/45 px-4 py-2.5">
             <Skeleton className="h-3 w-64" />
           </div>
           {Array.from({ length: 8 }, (_, index) => (
-            <div key={index} className="border-b border-default px-4 py-3 last:border-b-0">
+            <div key={index} className="border-b border-default/40 px-4 py-3 last:border-b-0">
               <Skeleton className="h-4 w-full max-w-md" />
             </div>
           ))}
@@ -58,8 +58,11 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
           No time tracked in this range.
         </p>
         <p className="mt-1 text-xs text-muted">
-          Start a timer on Work, or widen the date range and clear filters to see entries.
+          Start a timer on Tracker, or widen the date range and Reset filters above.
         </p>
+        <Button variant="secondary" size="sm" className="mt-3" onClick={vm.onGoToTracker}>
+          Open Tracker
+        </Button>
       </div>
     );
   }
@@ -79,6 +82,7 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
         tasks={vm.tasks}
         tasksLoading={vm.tasksLoading}
         updatingRowKeys={vm.updatingRowKeys}
+        savedRowKeys={vm.savedRowKeys}
         deletingEntryIds={vm.deletingEntryIds}
         wastePendingRowKeys={vm.wastePendingRowKeys}
         onTaskChange={vm.onTaskChange}

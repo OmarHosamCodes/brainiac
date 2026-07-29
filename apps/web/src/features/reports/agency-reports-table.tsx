@@ -46,6 +46,7 @@ type AgencyReportsTableProps = {
   >;
   tasksLoading?: boolean;
   updatingRowKeys?: ReadonlySet<string>;
+  savedRowKeys?: ReadonlySet<string>;
   deletingEntryIds?: readonly string[];
   wastePendingRowKeys?: ReadonlySet<string>;
   onTaskChange?: (row: AggregatedReportRow, taskId: string) => void;
@@ -65,6 +66,7 @@ export function AgencyReportsTable({
   tasks = [],
   tasksLoading = false,
   updatingRowKeys,
+  savedRowKeys,
   deletingEntryIds = [],
   wastePendingRowKeys,
   onTaskChange,
@@ -105,13 +107,13 @@ export function AgencyReportsTable({
               {" total"}
             </p>
           </div>
-          <div className="overflow-x-auto rounded-dense border border-default bg-default">
+          <div className="overflow-x-auto rounded-dense border border-default/55 bg-default">
             <table className="w-full min-w-[48rem] border-separate border-spacing-0 text-xs">
               <caption className="sr-only">
                 Time entries for {clientGroup.clientName}, grouped by project and task
               </caption>
-              <thead className="border-b border-default bg-elevated/65">
-                <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+              <thead className="border-b border-default/50 bg-elevated/45">
+                <tr className="text-left text-[11px] font-semibold tracking-wide text-muted">
                   {showProject ? (
                     <th scope="col" className="w-40 px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.project}
@@ -288,6 +290,8 @@ export function AgencyReportsTable({
                                 deletingEntryIdSet.has(entry.id),
                               )}
                               wastePending={wastePendingRowKeys?.has(row.key)}
+                              saving={updatingRowKeys?.has(row.key)}
+                              justSaved={savedRowKeys?.has(row.key)}
                               onEditDetails={
                                 onEditDetails && row.entries.length > 0
                                   ? () => onEditDetails(row)

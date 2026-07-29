@@ -111,7 +111,7 @@ function WasteDismissButton({
         "disabled:pointer-events-none disabled:opacity-50",
         tone === "solid"
           ? "text-destructive-foreground/80 hover:bg-destructive-foreground/15 hover:text-destructive-foreground"
-          : "text-destructive/80 hover:bg-destructive/15 hover:text-destructive",
+          : "text-destructive/70 hover:bg-destructive/10 hover:text-destructive",
       )}
       aria-label="Unmark as waste"
       disabled={disabled}

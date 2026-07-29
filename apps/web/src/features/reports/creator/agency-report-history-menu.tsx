@@ -1,5 +1,6 @@
 import { FileText } from "lucide-react";
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -22,6 +23,8 @@ export function AgencyReportHistoryMenu({
   onSelectReport,
 }: AgencyReportHistoryMenuProps) {
   const [open, setOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const activeReportId = searchParams.get("report");
   const reportsQuery = useSavedReportsList({ teamId, enabled: open });
 
   function handleSelect(reportId: string) {
@@ -43,7 +46,7 @@ export function AgencyReportHistoryMenu({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
-        <div className="border-b border-default px-3 py-2.5">
+        <div className="border-b border-default/55 px-3 py-2.5">
           <p className="text-sm font-semibold text-highlighted">Reports</p>
           <p className="text-xs text-muted">Open a saved report.</p>
         </div>
@@ -55,6 +58,7 @@ export function AgencyReportHistoryMenu({
           <SavedReportsListBody
             items={reportsQuery.data?.items ?? []}
             searchContext={searchContext}
+            activeReportId={activeReportId}
             onSelect={handleSelect}
           />
         )}

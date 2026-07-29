@@ -1,4 +1,4 @@
-import { Loader2, MoreVertical, Pencil, Trash2, TrashIcon } from "lucide-react";
+import { Check, Loader2, MoreVertical, Pencil, Trash2, TrashIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/ui/button";
@@ -21,6 +21,9 @@ type AgencyReportRowActionsProps = {
   taskIsWaste: boolean | null;
   deleting?: boolean;
   wastePending?: boolean;
+  /** Calm pending → saved tick after a successful row edit. */
+  saving?: boolean;
+  justSaved?: boolean;
   onEditDetails?: () => void;
   onDelete: () => void;
   onToggleWaste?: () => void;
@@ -33,6 +36,8 @@ export function AgencyReportRowActions({
   taskIsWaste,
   deleting = false,
   wastePending = false,
+  saving = false,
+  justSaved = false,
   onEditDetails,
   onDelete,
   onToggleWaste,
@@ -41,7 +46,7 @@ export function AgencyReportRowActions({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const canToggleWaste = Boolean(onToggleWaste);
   const isWaste = taskIsWaste === true;
-  const pending = deleting || wastePending;
+  const pending = deleting || wastePending || saving;
   const entryLabel = entryCount === 1 ? "1 time entry" : `${entryCount} time entries`;
 
   return (
@@ -53,11 +58,13 @@ export function AgencyReportRowActions({
             size="sm"
             className={cn("h-8 w-8 p-0", agencyFocusRingClass)}
             disabled={pending}
-            aria-label={`Actions for ${label}`}
+            aria-label={justSaved ? `${label} saved` : `Actions for ${label}`}
             onClick={(event) => event.stopPropagation()}
           >
             {pending ? (
               <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+            ) : justSaved ? (
+              <Check className="size-3.5 text-success" aria-hidden />
             ) : (
               <MoreVertical className="size-3.5" />
             )}
