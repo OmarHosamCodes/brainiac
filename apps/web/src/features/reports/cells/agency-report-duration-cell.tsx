@@ -25,12 +25,7 @@ export function AgencyReportDurationCell({ row, onEditDetails }: AgencyReportDur
 
   if (!onEditDetails) {
     return (
-      <span className="inline-flex min-h-10 items-center gap-1 font-mono tabular-nums">
-        <span>{duration}</span>
-        {grouped ? (
-          <span className="text-[10px] font-sans font-semibold text-dimmed">x{row.entryCount}</span>
-        ) : null}
-      </span>
+      <span className="inline-flex min-h-10 items-center font-mono tabular-nums">{duration}</span>
     );
   }
 

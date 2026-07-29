@@ -19,7 +19,13 @@ export function resolveReportEntityIds(
   plural: string[] | undefined,
 ): string[] {
   if (plural && plural.length > 0) return plural;
-  if (singular) return [singular];
+  // Saved reports store multi-select filters as comma-joined singular fields.
+  if (singular) {
+    return singular
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
   return [];
 }
 
