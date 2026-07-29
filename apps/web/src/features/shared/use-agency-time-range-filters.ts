@@ -13,6 +13,7 @@ import {
   DEFAULT_AGENCY_REPORT_SHOW_WASTE,
   type AgencyReportShowWaste,
 } from "@/features/reports/agency-report-show-waste";
+import { DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES } from "@/features/reports/agency-report-merge-tasks";
 import { fetchAllReportEntries } from "@/features/reports/fetch-report-entries";
 import { orpc } from "@/lib/orpc";
 import { useAgencyClientsQuery } from "@/features/shared/agency-queries";
@@ -54,6 +55,7 @@ export type AgencyTimeRangeFilters = {
   memberUserIds?: string[];
   fields?: AgencyReportFieldId[];
   showWaste?: AgencyReportShowWaste;
+  mergeSameTaskNames?: boolean;
 };
 
 export type AgencyTimeRangeFilterSnapshot = {
@@ -70,6 +72,7 @@ export type AgencyTimeRangeFilterSnapshot = {
   memberUserIds: string[];
   fieldIds: AgencyReportFieldId[];
   showWaste: AgencyReportShowWaste;
+  mergeSameTaskNames: boolean;
   tenureMonthIndexes: number[];
   range: { from: string; to: string };
 };
@@ -81,11 +84,13 @@ type UseAgencyTimeRangeFiltersOptions = {
   fetchEntries?: boolean;
   initialFieldIds?: AgencyReportFieldId[];
   initialShowWaste?: AgencyReportShowWaste;
+  initialMergeSameTaskNames?: boolean;
   onFiltersApplied?: (snapshot: Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt">) => void;
-  /** Instant view-option changes (fields / show waste) — keep URL sync off the Apply path. */
+  /** Instant view-option changes (fields / show waste / merge) — keep URL sync off the Apply path. */
   onViewOptionsChange?: (options: {
     fieldIds: AgencyReportFieldId[];
     showWaste: AgencyReportShowWaste;
+    mergeSameTaskNames: boolean;
   }) => void;
 };
 
@@ -179,20 +184,28 @@ export function useAgencyTimeRangeFilters({
   fetchEntries = false,
   initialFieldIds,
   initialShowWaste,
+  initialMergeSameTaskNames,
   onFiltersApplied,
   onViewOptionsChange,
 }: UseAgencyTimeRangeFiltersOptions) {
   const defaultFieldIds = allAgencyReportFieldIds();
   const startingFieldIds = initialFieldIds ?? defaultFieldIds;
   const startingShowWaste = initialShowWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE;
+  const startingMergeSameTaskNames =
+    initialMergeSameTaskNames ?? DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES;
   const now = useMemo(() => new Date(), []);
   const viewOptionsRef = useRef({
     fieldIds: startingFieldIds,
     showWaste: startingShowWaste,
+    mergeSameTaskNames: startingMergeSameTaskNames,
   });
 
-  function syncViewOptions(fieldIds: AgencyReportFieldId[], showWaste: AgencyReportShowWaste) {
-    viewOptionsRef.current = { fieldIds, showWaste };
+  function syncViewOptions(
+    fieldIds: AgencyReportFieldId[],
+    showWaste: AgencyReportShowWaste,
+    mergeSameTaskNames: boolean,
+  ) {
+    viewOptionsRef.current = { fieldIds, showWaste, mergeSameTaskNames };
     onViewOptionsChange?.(viewOptionsRef.current);
   }
 
@@ -226,6 +239,9 @@ export function useAgencyTimeRangeFilters({
   const [appliedFieldIds, setAppliedFieldIds] = useState<AgencyReportFieldId[]>(startingFieldIds);
   const [appliedShowWaste, setAppliedShowWaste] =
     useState<AgencyReportShowWaste>(startingShowWaste);
+  const [appliedMergeSameTaskNames, setAppliedMergeSameTaskNames] = useState(
+    startingMergeSameTaskNames,
+  );
   // null = unset (current tenure month); [] = explicit All Quarter
   const [appliedTenureMonthIndexes, setAppliedTenureMonthIndexes] = useState<number[] | null>(null);
   const effectiveAppliedTenureMonthIndexes = appliedTenureMonthIndexes ?? defaultTenureMonthIndexes;
@@ -241,6 +257,9 @@ export function useAgencyTimeRangeFilters({
   const [draftMemberUserIds, setDraftMemberUserIds] = useState<string[]>([]);
   const [draftFieldIds, setDraftFieldIds] = useState<AgencyReportFieldId[]>(startingFieldIds);
   const [draftShowWaste, setDraftShowWaste] = useState<AgencyReportShowWaste>(startingShowWaste);
+  const [draftMergeSameTaskNames, setDraftMergeSameTaskNames] = useState(
+    startingMergeSameTaskNames,
+  );
   const [draftTenureMonthIndexes, setDraftTenureMonthIndexes] = useState<number[] | null>(null);
   const effectiveDraftTenureMonthIndexes = draftTenureMonthIndexes ?? defaultTenureMonthIndexes;
 
@@ -266,7 +285,8 @@ export function useAgencyTimeRangeFilters({
     (includeClientFilter && !sameIdList(draftClientIds, appliedClientIds)) ||
     (includeFieldsFilter &&
       (!areSameReportFieldSets(draftFieldIds, appliedFieldIds) ||
-        !areSameShowWaste(draftShowWaste, appliedShowWaste))) ||
+        !areSameShowWaste(draftShowWaste, appliedShowWaste) ||
+        draftMergeSameTaskNames !== appliedMergeSameTaskNames)) ||
     (effectiveDraftRangePreset === "custom" &&
       (draftCustomFromDate !== appliedCustomFromDate || draftCustomToDate !== appliedCustomToDate));
 
@@ -296,12 +316,19 @@ export function useAgencyTimeRangeFilters({
       clientIds: appliedClientIds.length > 0 ? appliedClientIds : undefined,
       projectIds: appliedProjectIds.length > 0 ? appliedProjectIds : undefined,
       memberUserIds: appliedMemberUserIds.length > 0 ? appliedMemberUserIds : undefined,
-      ...(includeFieldsFilter ? { fields: appliedFieldIds, showWaste: appliedShowWaste } : {}),
+      ...(includeFieldsFilter
+        ? {
+            fields: appliedFieldIds,
+            showWaste: appliedShowWaste,
+            mergeSameTaskNames: appliedMergeSameTaskNames,
+          }
+        : {}),
     }),
     [
       appliedClientIds,
       appliedFieldIds,
       appliedMemberUserIds,
+      appliedMergeSameTaskNames,
       appliedProjectIds,
       appliedShowWaste,
       includeFieldsFilter,
@@ -382,6 +409,7 @@ export function useAgencyTimeRangeFilters({
     memberUserIds: string[],
     fieldIds: AgencyReportFieldId[],
     showWaste: AgencyReportShowWaste,
+    mergeSameTaskNames: boolean,
     tenureMonthIndexes: number[],
   ): Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt"> {
     return {
@@ -397,6 +425,7 @@ export function useAgencyTimeRangeFilters({
       memberUserIds,
       fieldIds,
       showWaste,
+      mergeSameTaskNames,
       tenureMonthIndexes,
       range: resolveRangeFromPreset(
         preset,
@@ -412,6 +441,7 @@ export function useAgencyTimeRangeFilters({
   function handleApply() {
     const nextFieldIds = draftFieldIds.length > 0 ? draftFieldIds : defaultFieldIds;
     const nextShowWaste = draftShowWaste;
+    const nextMergeSameTaskNames = draftMergeSameTaskNames;
     if (draftFieldIds.length === 0) {
       setDraftFieldIds(nextFieldIds);
     }
@@ -426,6 +456,7 @@ export function useAgencyTimeRangeFilters({
           draftMemberUserIds,
           nextFieldIds,
           nextShowWaste,
+          nextMergeSameTaskNames,
           effectiveDraftTenureMonthIndexes,
         ),
       );
@@ -440,7 +471,8 @@ export function useAgencyTimeRangeFilters({
     if (includeFieldsFilter) {
       setAppliedFieldIds(nextFieldIds);
       setAppliedShowWaste(nextShowWaste);
-      syncViewOptions(nextFieldIds, nextShowWaste);
+      setAppliedMergeSameTaskNames(nextMergeSameTaskNames);
+      syncViewOptions(nextFieldIds, nextShowWaste, nextMergeSameTaskNames);
     }
   }
 
@@ -459,7 +491,13 @@ export function useAgencyTimeRangeFilters({
       setAppliedFieldIds(defaultFieldIds);
       setDraftShowWaste(DEFAULT_AGENCY_REPORT_SHOW_WASTE);
       setAppliedShowWaste(DEFAULT_AGENCY_REPORT_SHOW_WASTE);
-      syncViewOptions(defaultFieldIds, DEFAULT_AGENCY_REPORT_SHOW_WASTE);
+      setDraftMergeSameTaskNames(DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES);
+      setAppliedMergeSameTaskNames(DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES);
+      syncViewOptions(
+        defaultFieldIds,
+        DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+        DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES,
+      );
     }
     setAppliedRangePreset(null);
   }
@@ -474,6 +512,7 @@ export function useAgencyTimeRangeFilters({
       appliedMemberUserIds,
       appliedFieldIds,
       appliedShowWaste,
+      appliedMergeSameTaskNames,
       effectiveAppliedTenureMonthIndexes,
     );
   }
@@ -504,6 +543,8 @@ export function useAgencyTimeRangeFilters({
       tenureMonthIndexes.every((index, offset) => index === defaultTenureMonthIndexes[offset]);
     const storedTenureMonthIndexes = sameAsDefault ? null : tenureMonthIndexes;
     const showWaste = snapshot.showWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE;
+    const mergeSameTaskNames =
+      snapshot.mergeSameTaskNames ?? DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES;
 
     setDraftRangePreset(storedPreset);
     setDraftCustomFromDate(snapshot.customFromDate);
@@ -513,6 +554,7 @@ export function useAgencyTimeRangeFilters({
     setDraftMemberUserIds(memberUserIds);
     setDraftFieldIds(snapshot.fieldIds);
     setDraftShowWaste(showWaste);
+    setDraftMergeSameTaskNames(mergeSameTaskNames);
     setDraftTenureMonthIndexes(storedTenureMonthIndexes);
     setAppliedRangePreset(storedPreset);
     setAppliedCustomFromDate(snapshot.customFromDate);
@@ -522,8 +564,9 @@ export function useAgencyTimeRangeFilters({
     setAppliedMemberUserIds(memberUserIds);
     setAppliedFieldIds(snapshot.fieldIds);
     setAppliedShowWaste(showWaste);
+    setAppliedMergeSameTaskNames(mergeSameTaskNames);
     setAppliedTenureMonthIndexes(storedTenureMonthIndexes);
-    viewOptionsRef.current = { fieldIds: snapshot.fieldIds, showWaste };
+    viewOptionsRef.current = { fieldIds: snapshot.fieldIds, showWaste, mergeSameTaskNames };
   }
 
   const isLoading =
@@ -572,6 +615,8 @@ export function useAgencyTimeRangeFilters({
           defaultFieldIds,
           showWaste: draftShowWaste,
           onShowWasteChange: setDraftShowWaste,
+          mergeSameTaskNames: draftMergeSameTaskNames,
+          onMergeSameTaskNamesChange: setDraftMergeSameTaskNames,
         }
       : {}),
   };

@@ -39,6 +39,10 @@ import {
   type AgencyReportShowWaste,
   type AgencyReportShowWasteSource,
 } from "@/features/reports/agency-report-show-waste";
+import {
+  AGENCY_REPORT_MERGE_SAME_TASK_NAMES_LABEL,
+  DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES,
+} from "@/features/reports/agency-report-merge-tasks";
 import type { TenureQuarterMonth } from "@/features/resourcing/tenure-utils";
 import { cn } from "@/lib/utils";
 
@@ -108,6 +112,8 @@ type AgencyDashboardCommandBarProps = {
   defaultFieldIds?: AgencyReportFieldId[];
   showWaste?: AgencyReportShowWaste;
   onShowWasteChange?: (showWaste: AgencyReportShowWaste) => void;
+  mergeSameTaskNames?: boolean;
+  onMergeSameTaskNamesChange?: (mergeSameTaskNames: boolean) => void;
   trailingActions?: ReactNode;
   shellClassName?: string;
 };
@@ -275,12 +281,16 @@ function ReportsOptionsMenu({
   defaultFieldIds,
   showWaste,
   onShowWasteChange,
+  mergeSameTaskNames,
+  onMergeSameTaskNamesChange,
 }: {
   fieldIds: AgencyReportFieldId[];
   onFieldIdsChange: (fieldIds: AgencyReportFieldId[]) => void;
   defaultFieldIds: AgencyReportFieldId[];
   showWaste: AgencyReportShowWaste;
   onShowWasteChange: (showWaste: AgencyReportShowWaste) => void;
+  mergeSameTaskNames: boolean;
+  onMergeSameTaskNamesChange: (mergeSameTaskNames: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const allFieldsSelected = areSameReportFieldSets(fieldIds, defaultFieldIds);
@@ -325,7 +335,7 @@ function ReportsOptionsMenu({
           <MoreVertical className="size-4" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44 p-1">
+      <DropdownMenuContent align="end" className="w-52 p-1">
         <DropdownMenuSub>
           <DropdownMenuSubTrigger
             className={cn(filterOptionButtonClass, "data-open:bg-default/80")}
@@ -433,6 +443,25 @@ function ReportsOptionsMenu({
             </div>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+
+        <label
+          className={cn(
+            filterOptionButtonClass,
+            "justify-start gap-2.5",
+            mergeSameTaskNames && "bg-primary/10 text-primary",
+          )}
+          onPointerDown={(event) => event.preventDefault()}
+        >
+          <Checkbox
+            checked={mergeSameTaskNames}
+            className="size-3.5"
+            aria-label={AGENCY_REPORT_MERGE_SAME_TASK_NAMES_LABEL}
+            onCheckedChange={(next) => onMergeSameTaskNamesChange(next === true)}
+          />
+          <span className="min-w-0 flex-1 truncate">
+            {AGENCY_REPORT_MERGE_SAME_TASK_NAMES_LABEL}
+          </span>
+        </label>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -471,11 +500,15 @@ export function AgencyDashboardCommandBar({
   defaultFieldIds = allAgencyReportFieldIds(),
   showWaste = DEFAULT_AGENCY_REPORT_SHOW_WASTE,
   onShowWasteChange,
+  mergeSameTaskNames = DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES,
+  onMergeSameTaskNamesChange,
   trailingActions,
   shellClassName,
 }: AgencyDashboardCommandBarProps) {
   const showClientFilter = Boolean(clients && onClientIdsChange);
-  const showReportsOptions = Boolean(onFieldIdsChange && fieldIds && onShowWasteChange);
+  const showReportsOptions = Boolean(
+    onFieldIdsChange && fieldIds && onShowWasteChange && onMergeSameTaskNamesChange,
+  );
   const [applyPulse, setApplyPulse] = useState(false);
 
   useEffect(() => {
@@ -496,7 +529,8 @@ export function AgencyDashboardCommandBar({
     projectIds.length > 0 ||
     memberUserIds.length > 0 ||
     (showReportsOptions && fieldIds && !areSameReportFieldSets(fieldIds, defaultFieldIds)) ||
-    (showReportsOptions && !areSameShowWaste(showWaste, DEFAULT_AGENCY_REPORT_SHOW_WASTE)),
+    (showReportsOptions && !areSameShowWaste(showWaste, DEFAULT_AGENCY_REPORT_SHOW_WASTE)) ||
+    (showReportsOptions && mergeSameTaskNames !== DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES),
   );
 
   const clientOptions = clients?.map((client) => ({ value: client.id, label: client.name })) ?? [];
@@ -577,6 +611,8 @@ export function AgencyDashboardCommandBar({
             defaultFieldIds={defaultFieldIds}
             showWaste={showWaste}
             onShowWasteChange={onShowWasteChange!}
+            mergeSameTaskNames={mergeSameTaskNames}
+            onMergeSameTaskNamesChange={onMergeSameTaskNamesChange!}
           />
         ) : null}
         <Button

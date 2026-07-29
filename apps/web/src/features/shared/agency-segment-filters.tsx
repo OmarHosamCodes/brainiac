@@ -27,6 +27,11 @@ import {
   parseShowWasteParam,
   serializeShowWasteParam,
 } from "@/features/reports/agency-report-show-waste";
+import {
+  AGENCY_REPORT_MERGE_TASKS_PARAM,
+  parseMergeSameTaskNamesParam,
+  serializeMergeSameTaskNamesParam,
+} from "@/features/reports/agency-report-merge-tasks";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -142,14 +147,27 @@ function ReportsFiltersRoot({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once from the landing URL
     [],
   );
+  const initialMergeSameTaskNames = useMemo(
+    () => parseMergeSameTaskNamesParam(searchParams.get(AGENCY_REPORT_MERGE_TASKS_PARAM)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once from the landing URL
+    [],
+  );
 
   const syncReportFilterParams = useCallback(
-    (fieldIds: typeof initialFieldIds, showWaste: typeof initialShowWaste) => {
+    (
+      fieldIds: typeof initialFieldIds,
+      showWaste: typeof initialShowWaste,
+      mergeSameTaskNames: typeof initialMergeSameTaskNames,
+    ) => {
       const currentFields = parseReportFieldsParam(searchParams.get("fields"));
       const currentShowWaste = parseShowWasteParam(searchParams.get("showWaste"));
+      const currentMergeSameTaskNames = parseMergeSameTaskNamesParam(
+        searchParams.get(AGENCY_REPORT_MERGE_TASKS_PARAM),
+      );
       if (
         areSameReportFieldSets(fieldIds, currentFields) &&
-        areSameShowWaste(showWaste, currentShowWaste)
+        areSameShowWaste(showWaste, currentShowWaste) &&
+        mergeSameTaskNames === currentMergeSameTaskNames
       ) {
         return;
       }
@@ -164,6 +182,12 @@ function ReportsFiltersRoot({
         next.delete("showWaste");
       } else {
         next.set("showWaste", serializeShowWasteParam(showWaste));
+      }
+      const mergeParam = serializeMergeSameTaskNamesParam(mergeSameTaskNames);
+      if (!mergeParam) {
+        next.delete(AGENCY_REPORT_MERGE_TASKS_PARAM);
+      } else {
+        next.set(AGENCY_REPORT_MERGE_TASKS_PARAM, mergeParam);
       }
       // Router updates are secondary; don't block the table paint.
       startTransition(() => {
@@ -180,8 +204,9 @@ function ReportsFiltersRoot({
     fetchEntries: true,
     initialFieldIds,
     initialShowWaste,
-    onViewOptionsChange: ({ fieldIds, showWaste }) => {
-      syncReportFilterParams(fieldIds, showWaste);
+    initialMergeSameTaskNames,
+    onViewOptionsChange: ({ fieldIds, showWaste, mergeSameTaskNames }) => {
+      syncReportFilterParams(fieldIds, showWaste, mergeSameTaskNames);
     },
   });
 
@@ -191,7 +216,10 @@ function ReportsFiltersRoot({
   };
 
   const openSavedReport = useCallback(
-    (reportId: string, options?: { preserveShowWaste?: boolean }) => {
+    (
+      reportId: string,
+      options?: { preserveShowWaste?: boolean; preserveMergeSameTaskNames?: boolean },
+    ) => {
       const next = new URLSearchParams(searchParams);
       next.set("section", "reports");
       next.set("report", reportId);
@@ -203,6 +231,9 @@ function ReportsFiltersRoot({
       next.delete("fields");
       if (!options?.preserveShowWaste) {
         next.delete("showWaste");
+      }
+      if (!options?.preserveMergeSameTaskNames) {
+        next.delete(AGENCY_REPORT_MERGE_TASKS_PARAM);
       }
       navigate(`/agency?${next.toString()}`);
     },
@@ -243,7 +274,10 @@ function ReportsFiltersRoot({
         fieldIds: snapshot.fieldIds,
       });
 
-      openSavedReport(report.id, { preserveShowWaste: true });
+      openSavedReport(report.id, {
+        preserveShowWaste: true,
+        preserveMergeSameTaskNames: true,
+      });
     } catch (error) {
       toast.error("Couldn't create report", {
         description: getErrorMessage(error, "Try again."),
