@@ -75,10 +75,13 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   const [wastePending, setWastePending] = useState(false);
   const [deletingReport, setDeletingReport] = useState(false);
   const [reportName, setReportName] = useState("");
+  /** Autosave only sees committed titles — drafts while renaming must not flush mid-keystroke. */
+  const [committedReportName, setCommittedReportName] = useState("");
 
   useEffect(() => {
     if (report?.name) {
       setReportName(report.name);
+      setCommittedReportName(report.name);
     }
   }, [report?.id, report?.name]);
 
@@ -161,9 +164,9 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   const autosave = useAgencyReportAutosave({
     teamId,
     reportId,
-    name: reportName,
+    name: committedReportName,
     excludedEntryIds: creator.excludedEntryIds,
-    enabled: Boolean(reportName && report),
+    enabled: Boolean(committedReportName && report),
     initialBaseline: report
       ? {
           name: report.name,
@@ -368,6 +371,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   }
 
   function handleRenameCommitted(trimmed: string) {
+    setCommittedReportName(trimmed);
     if (report && trimmed !== report.name) {
       autosave.queueActivity({ action: "renamed", payload: { name: trimmed } });
     }

@@ -210,18 +210,25 @@ export function useAgencyReportAutosave({
     }
   }, [enabled, excludedEntryIds, name, scheduleFlush]);
 
+  // Keep stable flush/clearTimers for unmount + pagehide so name edits don't
+  // re-bind this effect and immediately flush on every keystroke.
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+  const clearTimersRef = useRef(clearTimers);
+  clearTimersRef.current = clearTimers;
+
   useEffect(() => {
     function handlePageHide() {
-      void flush();
+      void flushRef.current();
     }
 
     window.addEventListener("pagehide", handlePageHide);
     return () => {
       window.removeEventListener("pagehide", handlePageHide);
-      void flush();
-      clearTimers();
+      void flushRef.current();
+      clearTimersRef.current();
     };
-  }, [clearTimers, flush]);
+  }, []);
 
   return {
     state,
