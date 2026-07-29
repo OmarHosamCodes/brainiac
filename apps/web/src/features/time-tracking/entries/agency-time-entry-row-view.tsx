@@ -33,6 +33,7 @@ import {
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import { reportEntryWasteTextClass } from "@/features/reports/agency-report-grouping";
+import { AgencyWasteTag } from "@/features/shared/agency-waste-badge";
 import { agentScopeableProps } from "@/features/shared/agent-scopeable";
 import { cn } from "@/lib/utils";
 
@@ -114,9 +115,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         label: descriptionDraft.trim() || durationLabel || "Time entry",
       })}
     >
-      <div
-        className={cn(agencyTimeEntryMainClass, "gap-3 pr-2", isWaste && reportEntryWasteTextClass)}
-      >
+      <div className={cn(agencyTimeEntryMainClass, "gap-3 pr-2")}>
         {isMulti ? (
           <div className={descriptionLeadingSlotClass}>
             <button
@@ -142,11 +141,17 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
           placeholder="Add description"
           className={cn(
             agencyWorkTitleClass,
-            "field-sizing-content h-[40px] w-auto min-w-0 max-w-[14rem] shrink border-0 bg-transparent px-0 font-normal shadow-none focus-visible:ring-0",
+            "field-sizing-content h-8 w-auto min-w-0 max-w-[14rem] shrink border-0 bg-transparent px-0 py-0 font-normal leading-8 shadow-none focus-visible:ring-0",
+            isWaste && reportEntryWasteTextClass,
           )}
           aria-label={isMulti ? "Edit description for all entries in group" : "Add description"}
         />
-        <div className="min-w-0 max-w-[min(100%,18rem)] shrink truncate">
+        <div
+          className={cn(
+            "flex h-8 min-w-0 max-w-[min(100%,18rem)] shrink items-center truncate",
+            isWaste && reportEntryWasteTextClass,
+          )}
+        >
           <AgencyTaskChooser
             teamId={view.teamId}
             value={editDraft.taskId}
@@ -162,9 +167,15 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             highlightSearch
             contentAlign="start"
             disabled={editSaving || rowUpdating}
-            className={cn(taskChooserTriggerClass, "max-w-full")}
+            className={cn(taskChooserTriggerClass, "h-8 max-w-full")}
           />
         </div>
+        {isWaste ? (
+          <AgencyWasteTag
+            onDismiss={!isMulti ? onToggleWaste : undefined}
+            disabled={rowWastePending || rowUpdating || editSaving}
+          />
+        ) : null}
         {/* Absorbs leftover width so the right action rail stays fixed. */}
         <div className="min-w-0 flex-1" aria-hidden />
       </div>
