@@ -64,8 +64,8 @@ export function buildHourBreakdownSegments(
       shortLabel: "Waste",
       purpose: "External time marked as non-billable or waste.",
       seconds: wasteSeconds,
-      barClass: "bg-warning",
-      dotClass: "bg-warning",
+      barClass: "bg-destructive",
+      dotClass: "bg-destructive",
     },
     {
       id: "internalBillable",
@@ -218,7 +218,7 @@ export function buildHourBreakdownFlowLayout(
         id: "external-waste",
         source: { x0: paidSourceEnd, x1: externalNode.x1 },
         target: { x0: shares.paid, x1: externalWidth },
-        fillClass: "fill-warning/35",
+        fillClass: "fill-destructive/35",
       },
       {
         id: "internal-billable",
