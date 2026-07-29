@@ -21,6 +21,12 @@ import {
 } from "@/features/reports/agency-report-fields";
 import { agencyMetricClass } from "@/features/shared/agency-ui";
 import {
+  AgencyWasteBadge,
+  agencyWasteReportCellBorderClass,
+  agencyWasteStampHostClass,
+  resolveAgencyWasteReportBorderSegment,
+} from "@/features/shared/agency-waste-badge";
+import {
   groupEntriesForDisplay,
   isReportEntryWaste,
   reportEntryWasteTextClass,
@@ -86,7 +92,7 @@ export function AgencyReportCreatorTable({
             </p>
           </div>
           <div className="overflow-x-auto rounded-dense border border-default bg-default">
-            <table className="w-full min-w-[40rem] text-xs">
+            <table className="w-full min-w-[40rem] border-separate border-spacing-0 text-xs">
               <caption className="sr-only">
                 Time entries for {clientGroup.clientName}, grouped by project and task
               </caption>
@@ -284,6 +290,19 @@ function ReportCreatorRow({
   }
 
   const isWaste = isReportEntryWaste(row);
+  const wasteBorderVisible = {
+    task: showTask,
+    description: showDescription,
+    duration: showDuration,
+    assignee: showAssignee,
+    actions: true,
+  };
+  const wasteBorder = (column: keyof typeof wasteBorderVisible) =>
+    isWaste
+      ? agencyWasteReportCellBorderClass(
+          resolveAgencyWasteReportBorderSegment(column, wasteBorderVisible),
+        )
+      : undefined;
   const rowElement = (
     <motion.tr
       layout={!prefersReducedMotion}
@@ -292,7 +311,10 @@ function ReportCreatorRow({
       exit={
         prefersReducedMotion ? undefined : { opacity: 0, height: 0, transition: { duration: 0.2 } }
       }
-      className="border-b border-default transition-colors duration-150 last:border-b-0"
+      className={cn(
+        "transition-colors duration-150",
+        !isWaste && "border-b border-default last:border-b-0",
+      )}
     >
       {showProject && rowIndex === 0 ? (
         <td
@@ -305,14 +327,22 @@ function ReportCreatorRow({
       {showTask ? (
         <td
           className={cn(
-            "max-w-48 truncate px-4 py-3 text-highlighted",
+            "max-w-48 px-4 py-3 text-highlighted",
             reportCreatorCellSelectionClass(isSelected, "task"),
+            wasteBorder("task"),
+            isWaste && agencyWasteStampHostClass,
             isWaste && reportEntryWasteTextClass,
           )}
           title={row.taskTitle || undefined}
           dir="auto"
         >
-          {row.taskTitle || "—"}
+          {isWaste ? (
+            <AgencyWasteBadge
+              onDismiss={() => onToggleWaste(primaryEntryId)}
+              disabled={wastePending || isEditing || isSaving}
+            />
+          ) : null}
+          <span className="block truncate">{row.taskTitle || "—"}</span>
         </td>
       ) : null}
       {showDescription ? (
@@ -320,10 +350,18 @@ function ReportCreatorRow({
           className={cn(
             "max-w-md px-4 py-3",
             reportCreatorCellSelectionClass(isSelected, "description"),
+            wasteBorder("description"),
+            isWaste && !showTask && agencyWasteStampHostClass,
             isWaste && !isEditing && reportEntryWasteTextClass,
           )}
           dir="auto"
         >
+          {isWaste && !showTask ? (
+            <AgencyWasteBadge
+              onDismiss={() => onToggleWaste(primaryEntryId)}
+              disabled={wastePending || isEditing || isSaving}
+            />
+          ) : null}
           {isEditing ? (
             <Input
               value={draft.description}
@@ -349,6 +387,7 @@ function ReportCreatorRow({
           className={cn(
             "px-4 py-3 text-right text-muted",
             reportCreatorCellSelectionClass(isSelected, "duration"),
+            wasteBorder("duration"),
             isWaste && !isEditing && reportEntryWasteTextClass,
           )}
         >
@@ -378,13 +417,14 @@ function ReportCreatorRow({
           className={cn(
             "px-4 py-3 text-highlighted",
             reportCreatorCellSelectionClass(isSelected, "assignee"),
+            wasteBorder("assignee"),
             isWaste && reportEntryWasteTextClass,
           )}
         >
           {row.userName}
         </td>
       ) : null}
-      <td className="px-2 py-3 text-right">
+      <td className={cn("px-2 py-3 text-right", wasteBorder("actions"))}>
         <AgencyReportCreatorRowActions
           label={rowLabel}
           taskId={row.taskId}
