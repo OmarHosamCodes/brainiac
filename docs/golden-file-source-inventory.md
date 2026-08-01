@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 492 |
+| golden-feature | 499 |
 | server-operation | 12 |
 | shared-infrastructure | 264 |
 | static-presentation | 15 |
@@ -49,7 +49,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | projects | 24 |
 | reports | 54 |
 | repository | 13 |
-| resourcing | 16 |
+| resourcing | 23 |
 | server-platform | 21 |
 | settings | 1 |
 | task-management | 41 |
@@ -263,7 +263,13 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/reports/use-agency-report-creator.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/reports/use-agency-report-creator.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/reports/use-agency-report-label-context.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
-| `apps/web/src/features/resourcing/agency-resourcing-surface.tsx` | resourcing | web-query | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical web-query layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/resourcing/agency-resourcing-surface.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/resourcing/agency-resourcing-workload-view.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/resourcing/hooks/use-agency-resourcing-workload.ts` | resourcing | feature-hook | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
+| `apps/web/src/features/resourcing/resourcing-team-presence.test.ts` | resourcing | test | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/resourcing/resourcing-team-presence.ts` | resourcing | domain-logic | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/resourcing/resourcing-workload-heat.test.ts` | resourcing | test | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/resourcing/resourcing-workload-heat.ts` | resourcing | domain-logic | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/resourcing/tenure-utils.test.ts` | resourcing | test | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/resourcing/tenure-utils.ts` | resourcing | domain-logic | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/resourcing/tenure/agency-settings-tenure-member-detail.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
