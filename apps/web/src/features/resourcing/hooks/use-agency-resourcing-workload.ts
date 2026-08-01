@@ -371,7 +371,7 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
         day: "numeric",
         timeZone: "UTC",
       });
-    return `${fmt(first)} → ${fmt(last)}`.toUpperCase();
+    return `${fmt(first)} → ${fmt(last)}`;
   }, [filmstripDays]);
 
   const nameByUserId = useMemo(() => {

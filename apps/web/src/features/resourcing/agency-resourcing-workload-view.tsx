@@ -3,9 +3,9 @@ import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import {
-  agencyLabelClass,
   agencySectionTitleClass,
   agencyWorkMetaClass,
+  agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import type { AgencyResourcingWorkloadViewModel } from "@/features/resourcing/hooks/use-agency-resourcing-workload";
 import {
@@ -51,18 +51,34 @@ function isWeekendDate(dateKey: string): boolean {
   return day === 0 || day === 6;
 }
 
-function agendaDateLabel(startDate: string, endDate: string): { month: string; days: string } {
+/** Compact leave range for agenda rows — handles same-day, same-month, and cross-month. */
+export function formatAgendaRange(startDate: string, endDate: string): string {
   const start = new Date(`${startDate}T00:00:00Z`);
   const end = new Date(`${endDate}T00:00:00Z`);
-  const month = start
-    .toLocaleDateString(undefined, { month: "short", timeZone: "UTC" })
-    .toUpperCase();
-  const startDay = start.getUTCDate();
-  const endDay = end.getUTCDate();
-  return {
-    month,
-    days: startDay === endDay ? String(startDay) : `${startDay}–${endDay}`,
-  };
+  const startLabel = start.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  if (startDate === endDate) return startLabel;
+  if (startDate.slice(0, 7) === endDate.slice(0, 7)) {
+    return `${startLabel}–${end.getUTCDate()}`;
+  }
+  const endLabel = end.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  return `${startLabel} – ${endLabel}`;
+}
+
+function LegendSwatch({ tone }: { tone: "working" | "out" }) {
+  return (
+    <i
+      className={cn("size-2 shrink-0 rounded-sm", tone === "working" ? "bg-success" : "bg-warning")}
+      aria-hidden
+    />
+  );
 }
 
 export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWorkloadViewProps) {
@@ -117,21 +133,18 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
     <div className="flex w-full flex-col gap-4 pb-2">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className={cn(agencyLabelClass, "mb-1")}>Resourcing</p>
           <h1 className={cn(agencySectionTitleClass, "text-balance")}>Working overview</h1>
-          <p className={cn(agencyWorkMetaClass, "mt-1 max-w-2xl")}>
-            Daily coverage, monthly presence, upcoming leave and individual availability in one
-            connected workspace.
+          <p className={cn(agencyWorkMetaClass, "mt-1 max-w-2xl text-pretty")}>
+            Daily coverage, monthly presence, upcoming leave, and individual availability in one
+            workspace.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
-            Export
-          </Button>
-          <Button type="button" size="sm" onClick={openLeaveRequest}>
-            Request time off
-          </Button>
-          <div className="border-default bg-muted/40 flex items-center gap-0.5 rounded-full border p-0.5">
+          <div
+            className="border-default bg-muted/40 flex items-center gap-0.5 rounded-full border p-0.5"
+            role="group"
+            aria-label="Planning period"
+          >
             {GRAINS.map((item) => {
               const active = item.id === grain;
               return (
@@ -141,7 +154,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                   aria-pressed={active}
                   onClick={() => setGrain(item.id)}
                   className={cn(
-                    "min-h-8 rounded-full px-2.5 text-xs font-semibold transition-colors duration-150 ease-out",
+                    "min-h-9 min-w-9 rounded-full px-2.5 text-xs font-semibold transition-colors duration-150 ease-out",
                     shellFocusRingClass,
                     active
                       ? "bg-card text-highlighted shadow-sm"
@@ -178,19 +191,25 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
               <ChevronRight className="size-4" />
             </Button>
           </div>
+          <Button type="button" variant="outline" size="sm" onClick={exportCsv}>
+            Export
+          </Button>
+          <Button type="button" size="sm" onClick={openLeaveRequest}>
+            Request time off
+          </Button>
         </div>
       </header>
 
       {isError ? (
         <div
-          className="border-destructive/40 bg-destructive/5 text-foreground flex items-center gap-3 rounded-xl border px-3.5 py-3"
+          className="border-destructive/40 bg-destructive/5 text-foreground flex flex-wrap items-center gap-3 rounded-xl border px-3.5 py-3"
           role="alert"
         >
           <AlertTriangle className="text-destructive size-4 shrink-0" />
-          <p className="text-sm">
+          <p className="min-w-0 flex-1 text-sm">
             <span className="font-semibold">Resourcing data is offline.</span> {errorMessage}
           </p>
-          <Button type="button" variant="outline" size="sm" className="ms-auto" onClick={refetch}>
+          <Button type="button" variant="outline" size="sm" onClick={refetch}>
             Retry
           </Button>
         </div>
@@ -203,6 +222,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
             <Skeleton className="h-[28rem] w-full rounded-2xl" />
             <Skeleton className="h-[28rem] w-full rounded-2xl" />
           </div>
+          <Skeleton className="h-40 w-full rounded-2xl" />
         </div>
       ) : (
         <>
@@ -216,7 +236,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                 <strong className="text-highlighted font-mono text-xl font-medium leading-none tabular-nums">
                   {briefingDayNumber}
                 </strong>
-                <span className="text-muted mt-0.5 text-[9px] font-semibold tracking-[0.08em]">
+                <span className="text-muted mt-1 text-[11px] font-semibold tracking-wide">
                   {briefingWeekday}
                 </span>
               </div>
@@ -224,10 +244,10 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                 <h2 className="text-highlighted text-lg font-semibold tracking-tight text-balance sm:text-xl">
                   {briefingHeadline}
                 </h2>
-                <p className={cn(agencyWorkMetaClass, "mt-1")}>{briefingSentence}</p>
+                <p className={cn(agencyWorkMetaClass, "mt-1 text-pretty")}>{briefingSentence}</p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 ps-18 sm:ps-0">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
@@ -239,52 +259,48 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                 <span className="size-1.5 rounded-full bg-current" aria-hidden />
                 {selectedOut.length} out
               </span>
-              <span className="bg-muted text-muted-foreground rounded-full px-3 py-1.5 font-mono text-[11px] font-medium tabular-nums">
+              <span className="bg-muted text-muted-foreground rounded-full px-3 py-1.5 font-mono text-xs font-medium tabular-nums">
                 {coveragePct}% coverage
               </span>
             </div>
           </section>
 
-          <div className="grid shrink-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_23rem]">
+          <div className="grid shrink-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="flex min-w-0 flex-col gap-4">
               <section className="border-default bg-card overflow-hidden rounded-2xl border">
-                <header className="border-default flex flex-wrap items-center gap-3 border-b px-4 py-3.5">
+                <header className="border-default flex flex-wrap items-start gap-3 border-b px-4 py-3.5">
                   <div className="min-w-0">
-                    <h2 className="text-highlighted text-sm font-semibold tracking-tight">
-                      {focusMonthLabel} presence
-                    </h2>
-                    <p className={agencyWorkMetaClass}>
-                      Select a day to update the whole workspace
-                    </p>
+                    <h2 className={agencyWorkTitleClass}>{focusMonthLabel} presence</h2>
+                    <p className={agencyWorkMetaClass}>Select a day to update the workspace</p>
                   </div>
                   <div className={cn(agencyWorkMetaClass, "ms-auto flex items-center gap-4")}>
                     <span className="inline-flex items-center gap-1.5">
-                      <i className="bg-success size-2 rounded-sm" aria-hidden />
+                      <LegendSwatch tone="working" />
                       Working
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <i className="bg-warning size-2 rounded-sm" aria-hidden />
-                      Out / leave
+                      <LegendSwatch tone="out" />
+                      Out
                     </span>
                   </div>
                 </header>
                 <div
-                  className="bg-muted/40 text-muted grid grid-cols-7 border-b border-border text-[9px] font-semibold tracking-[0.08em] uppercase"
+                  className="bg-muted/40 text-muted grid grid-cols-7 border-b border-border text-[11px] font-semibold"
                   aria-hidden
                 >
                   {PRESENCE_WEEKDAY_LABELS.map((label) => (
-                    <span key={label} className="px-2.5 py-2">
+                    <span key={label} className="px-2 py-2">
                       {label}
                     </span>
                   ))}
                 </div>
-                <div className="grid grid-cols-7 overflow-x-auto">
+                <div className="grid min-w-[40rem] grid-cols-7 sm:min-w-0">
                   {calendarDays.map((cell, index) => {
                     if (!cell.date || cell.dayOfMonth == null) {
                       return (
                         <div
                           key={`pad-${index}`}
-                          className="bg-muted/30 text-muted min-h-24 border-e border-b border-border p-2.5 last:border-e-0"
+                          className="bg-muted/30 min-h-[5.5rem] border-e border-b border-border p-2.5 [&:nth-child(7n)]:border-e-0"
                         />
                       );
                     }
@@ -304,30 +320,28 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                         aria-label={`${focusMonthLabel} ${cell.dayOfMonth}: ${cell.working.length} working, ${cell.out.length} out`}
                         onClick={() => selectDate(cell.date!)}
                         className={cn(
-                          "relative min-h-24 border-e border-b border-border p-2.5 text-start transition-colors",
+                          "relative min-h-[5.5rem] border-e border-b border-border p-2.5 text-start transition-colors duration-150 ease-out",
                           shellFocusRingClass,
                           "[&:nth-child(7n)]:border-e-0",
                           weekend
                             ? "bg-muted/35 text-muted cursor-default"
                             : "bg-card hover:bg-muted/40",
-                          selected &&
-                            !weekend &&
-                            "z-[1] shadow-[inset_0_0_0_2px_var(--color-primary)]",
+                          selected && !weekend && "z-[1] ring-primary ring-2 ring-inset",
                         )}
                       >
-                        <span className="flex items-center justify-between font-mono text-[10px] font-medium tabular-nums">
+                        <span className="flex items-center justify-between font-mono text-xs font-medium tabular-nums">
                           <span>{cell.dayOfMonth}</span>
                           {!weekend ? (
                             <span className="text-muted">
-                              {cell.working.length} / {memberCount || "–"}
+                              {cell.working.length}/{memberCount || "–"}
                             </span>
                           ) : null}
                         </span>
                         {weekend ? (
-                          <span className="text-muted mt-2 block text-[9px]">Weekend</span>
+                          <span className="text-muted mt-2 block text-xs">Weekend</span>
                         ) : (
                           <>
-                            <span className="mt-3 flex ps-1">
+                            <span className="mt-2.5 flex ps-1">
                               {workingPreview.map((person) => (
                                 <AgencyMemberAvatar
                                   key={person.userId}
@@ -339,7 +353,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                             </span>
                             <span
                               className={cn(
-                                "mt-2 block truncate text-[9px]",
+                                "mt-2 block truncate text-xs",
                                 cell.out.length > 0 ? "text-warning" : "text-muted",
                               )}
                             >
@@ -354,61 +368,67 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
               </section>
 
               <section className="border-default bg-card overflow-hidden rounded-2xl border">
-                <header className="border-default flex flex-wrap items-center gap-3 border-b px-4 py-3.5">
+                <header className="border-default flex flex-wrap items-start gap-3 border-b px-4 py-3.5">
                   <div className="min-w-0">
-                    <h2 className="text-highlighted text-sm font-semibold tracking-tight">
-                      Daily capacity strip
-                    </h2>
+                    <h2 className={agencyWorkTitleClass}>Daily capacity strip</h2>
                     <p className={agencyWorkMetaClass}>Two working weeks at a glance</p>
                   </div>
-                  <span className="text-muted ms-auto font-mono text-[11px] tracking-wide">
-                    {filmstripRangeLabel}
-                  </span>
+                  {filmstripRangeLabel ? (
+                    <span className="text-muted ms-auto font-mono text-xs tabular-nums">
+                      {filmstripRangeLabel}
+                    </span>
+                  ) : null}
                 </header>
-                <div className="bg-border grid auto-cols-[minmax(5.5rem,1fr)] grid-flow-col gap-px overflow-x-auto sm:grid-flow-row sm:grid-cols-10">
-                  {filmstripDays.map((day) => {
-                    const selected = day.date === selectedDate;
-                    const heightPct =
-                      day.memberCount > 0
-                        ? Math.round((day.workingCount / day.memberCount) * 100)
-                        : 0;
-                    return (
-                      <button
-                        key={day.date}
-                        type="button"
-                        aria-pressed={selected}
-                        aria-label={`${day.weekdayShort} ${day.dayOfMonth}: ${day.workingCount} working`}
-                        onClick={() => selectDate(day.date)}
-                        className={cn(
-                          "bg-card flex min-h-36 flex-col items-center px-2 py-3 transition-colors",
-                          shellFocusRingClass,
-                          selected
-                            ? "bg-muted/50 shadow-[inset_0_-2px_0_0_var(--color-foreground)]"
-                            : "hover:bg-muted/30",
-                        )}
-                      >
-                        <span className="text-muted text-[9px] font-semibold tracking-[0.08em] uppercase">
-                          {day.weekdayShort}
-                        </span>
-                        <strong className="text-highlighted mt-0.5 font-mono text-[11px] font-medium tabular-nums">
-                          {day.dayOfMonth}
-                        </strong>
-                        <span
-                          className="bg-muted mt-3 flex h-16 w-6 items-end overflow-hidden rounded-t-md rounded-b-sm"
-                          aria-hidden
+                {filmstripDays.length === 0 ? (
+                  <p className={cn(agencyWorkMetaClass, "px-4 py-6")}>
+                    Select a weekday to see nearby capacity.
+                  </p>
+                ) : (
+                  <div className="bg-border grid auto-cols-[minmax(5.5rem,1fr)] grid-flow-col gap-px overflow-x-auto sm:grid-flow-row sm:grid-cols-10">
+                    {filmstripDays.map((day) => {
+                      const selected = day.date === selectedDate;
+                      const heightPct =
+                        day.memberCount > 0
+                          ? Math.round((day.workingCount / day.memberCount) * 100)
+                          : 0;
+                      return (
+                        <button
+                          key={day.date}
+                          type="button"
+                          aria-pressed={selected}
+                          aria-label={`${day.weekdayShort} ${day.dayOfMonth}: ${day.workingCount} working`}
+                          onClick={() => selectDate(day.date)}
+                          className={cn(
+                            "bg-card flex min-h-36 flex-col items-center px-2 py-3 transition-colors duration-150 ease-out",
+                            shellFocusRingClass,
+                            selected
+                              ? "bg-muted/50 shadow-[inset_0_-2px_0_0_var(--color-primary)]"
+                              : "hover:bg-muted/30",
+                          )}
                         >
+                          <span className="text-muted text-[11px] font-semibold tracking-wide">
+                            {day.weekdayShort}
+                          </span>
+                          <strong className="text-highlighted mt-0.5 font-mono text-xs font-medium tabular-nums">
+                            {day.dayOfMonth}
+                          </strong>
                           <span
-                            className="bg-foreground w-full rounded-t-[5px] rounded-b-sm"
-                            style={{ height: `${heightPct}%` }}
-                          />
-                        </span>
-                        <small className="text-muted mt-2 text-[9px]">
-                          {day.workingCount} working
-                        </small>
-                      </button>
-                    );
-                  })}
-                </div>
+                            className="bg-muted mt-3 flex h-16 w-6 items-end overflow-hidden rounded-t-md rounded-b-sm"
+                            aria-hidden
+                          >
+                            <span
+                              className="bg-foreground w-full rounded-t-[5px] rounded-b-sm transition-[height] duration-200 ease-out motion-reduce:transition-none"
+                              style={{ height: `${heightPct}%` }}
+                            />
+                          </span>
+                          <small className="text-muted mt-2 text-xs">
+                            {day.workingCount} working
+                          </small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             </div>
 
@@ -417,44 +437,31 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
               aria-label="Selected day and upcoming absence details"
             >
               <section className="border-default bg-card rounded-2xl border p-4">
-                <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-4">
+                <div className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-4 sm:grid-cols-[7.25rem_minmax(0,1fr)]">
                   <div
-                    className="relative grid size-[7.25rem] place-items-center rounded-full"
+                    className="relative grid size-[6.5rem] place-items-center rounded-full sm:size-[7.25rem]"
                     style={{
                       background: `conic-gradient(var(--color-success) 0 ${workingAngle}deg, var(--color-warning) ${workingAngle}deg 360deg)`,
                     }}
                     role="img"
                     aria-label={`${selectedWorkingCount} of ${memberCount} people working`}
                   >
-                    <div className="bg-card absolute inset-[17px] rounded-full" />
+                    <div className="bg-card absolute inset-4 rounded-full sm:inset-[17px]" />
                     <div className="relative text-center">
-                      <strong className="text-highlighted block font-mono text-[1.7rem] font-medium leading-none tabular-nums">
+                      <strong className="text-highlighted block font-mono text-2xl font-medium leading-none tabular-nums">
                         {selectedWorkingCount}
                       </strong>
-                      <span className="text-muted text-[9px]">of {memberCount}</span>
+                      <span className="text-muted text-xs">of {memberCount}</span>
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <p className={agencyLabelClass}>Selected day</p>
-                    <h2 className="text-highlighted mt-1 text-base font-semibold tracking-tight">
-                      {selectedDayLabel}
-                    </h2>
+                    <h2 className={agencyWorkTitleClass}>{selectedDayLabel}</h2>
                     <p className={cn(agencyWorkMetaClass, "mt-1")}>{selectedDaySummary}</p>
-                    <div className={cn(agencyWorkMetaClass, "mt-3 flex items-center gap-4")}>
-                      <span className="inline-flex items-center gap-1.5">
-                        <i className="bg-success size-2 rounded-sm" aria-hidden />
-                        Working
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <i className="bg-warning size-2 rounded-sm" aria-hidden />
-                        Out
-                      </span>
-                    </div>
                   </div>
                 </div>
                 <div className="border-default mt-4 border-t">
                   {selectedOut.length === 0 ? (
-                    <div className="bg-muted/50 text-muted mt-3.5 rounded-xl px-3.5 py-3 text-xs">
+                    <div className="bg-muted/50 mt-3.5 rounded-xl px-3.5 py-3 text-xs text-muted">
                       <strong className="text-foreground">No one is out.</strong>
                       <br />
                       Full-team coverage for this day.
@@ -474,11 +481,11 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                           <strong className="text-highlighted block truncate text-xs font-semibold">
                             {person.userName}
                           </strong>
-                          <small className="text-muted text-[10px]">
+                          <small className="text-muted text-xs">
                             {person.leaveReason ?? person.leaveType}
                           </small>
                         </span>
-                        <span className="bg-warning/15 text-warning ms-auto inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold">
+                        <span className="bg-warning/15 text-warning ms-auto inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold">
                           <span className="size-1.5 rounded-full bg-current" aria-hidden />
                           Out
                         </span>
@@ -490,9 +497,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
 
               <section className="border-default bg-card overflow-hidden rounded-2xl border">
                 <header className="border-default border-b px-4 py-3.5">
-                  <h2 className="text-highlighted text-sm font-semibold tracking-tight">
-                    Upcoming absence agenda
-                  </h2>
+                  <h2 className={agencyWorkTitleClass}>Upcoming absence agenda</h2>
                   <p className={agencyWorkMetaClass}>Next exceptions needing coverage</p>
                 </header>
                 <div className="px-4 py-1">
@@ -501,30 +506,28 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                       No upcoming leave in this window.
                     </p>
                   ) : (
-                    agenda.map((item) => {
-                      const label = agendaDateLabel(item.startDate, item.endDate);
-                      return (
-                        <div
-                          key={item.id}
-                          className="border-default grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-2.5 border-b py-3 last:border-b-0"
-                        >
-                          <span className="text-muted font-mono text-[9px] font-medium tracking-[0.08em] uppercase">
-                            {label.month}
-                            <br />
-                            {label.days}
-                          </span>
-                          <span className="min-w-0">
-                            <strong className="text-highlighted block truncate text-xs font-semibold">
-                              {item.userName}
-                            </strong>
-                            <small className="text-muted text-[9px]">{item.type}</small>
-                          </span>
-                          <span className="text-muted font-mono text-[9px] font-medium tracking-wide">
-                            {item.daySpan} {item.daySpan === 1 ? "DAY" : "DAYS"}
-                          </span>
-                        </div>
-                      );
-                    })
+                    agenda.map((item) => (
+                      <div
+                        key={item.id}
+                        className="border-default grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b py-3 last:border-b-0"
+                      >
+                        <span className="min-w-0">
+                          <strong className="text-highlighted block truncate text-xs font-semibold">
+                            {item.userName}
+                          </strong>
+                          <small className="text-muted block text-xs">
+                            {item.type}
+                            <span className="text-muted/80">
+                              {" "}
+                              · {formatAgendaRange(item.startDate, item.endDate)}
+                            </span>
+                          </small>
+                        </span>
+                        <span className="text-muted shrink-0 font-mono text-xs font-medium tabular-nums">
+                          {item.daySpan} {item.daySpan === 1 ? "day" : "days"}
+                        </span>
+                      </div>
+                    ))
                   )}
                 </div>
               </section>
@@ -533,9 +536,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
 
           <section className="border-default bg-card shrink-0 overflow-hidden rounded-2xl border">
             <header className="border-default border-b px-4 py-3.5">
-              <h2 className="text-highlighted text-sm font-semibold tracking-tight">
-                Person availability
-              </h2>
+              <h2 className={agencyWorkTitleClass}>Person availability</h2>
               <p className={agencyWorkMetaClass}>
                 Select a teammate to inspect their month without leaving the team view
               </p>
@@ -558,9 +559,9 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                     title={row.userName}
                     onClick={() => selectPerson(row.userId)}
                     className={cn(
-                      "rounded-full p-0.5 transition-shadow",
+                      "inline-flex min-h-11 min-w-11 items-center justify-center rounded-full p-0.5 transition-shadow duration-150 ease-out",
                       shellFocusRingClass,
-                      active && "shadow-[0_0_0_2px_var(--color-foreground)]",
+                      active && "ring-primary ring-2",
                     )}
                   >
                     <AgencyMemberAvatar
@@ -574,7 +575,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
               })}
             </div>
             {selectedPerson ? (
-              <div className="grid items-center gap-6 p-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
+              <div className="grid items-start gap-5 p-4 lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-center">
                 <div className="flex items-center gap-2.5">
                   <AgencyMemberAvatar
                     name={selectedPerson.userName}
@@ -585,27 +586,25 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                     <h3 className="text-highlighted truncate text-sm font-semibold">
                       {selectedPerson.userName}
                     </h3>
-                    <p className={agencyWorkMetaClass}>Team member</p>
-                  </div>
-                  <div className="ms-auto text-end">
-                    <strong className="text-highlighted block font-mono text-sm font-medium tabular-nums">
-                      {selectedPersonOutDays} {selectedPersonOutDays === 1 ? "day" : "days"}
-                    </strong>
-                    <span className="text-muted text-[9px]">out this month</span>
+                    <p className={agencyWorkMetaClass}>
+                      {selectedPersonOutDays} {selectedPersonOutDays === 1 ? "day" : "days"} out
+                      this month
+                    </p>
                   </div>
                 </div>
                 <div
-                  className="grid grid-cols-7 gap-1.5 sm:grid-cols-[repeat(10,minmax(0,1fr))] lg:grid-cols-[repeat(15,minmax(0,1fr))]"
+                  className="grid grid-cols-7 gap-1.5 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-[repeat(auto-fill,minmax(1.75rem,1fr))]"
                   aria-label={`${selectedPerson.userName} ${focusMonthLabel} availability`}
                 >
                   {selectedPersonMonthDays.map((day) => (
                     <span
                       key={day.date}
                       className={cn(
-                        "border-default text-muted grid min-h-8 place-items-center rounded-md border font-mono text-[8px] font-medium",
+                        "border-default text-muted grid aspect-square min-h-7 place-items-center rounded-md border font-mono text-[11px] font-medium tabular-nums",
                         day.off && "border-warning/50 bg-warning/15 text-foreground",
                       )}
                       aria-label={`${day.date}: ${day.off ? day.off.type : "working"}`}
+                      title={day.off ? (day.off.reason ?? day.off.type) : "Working"}
                     >
                       {Number(day.date.slice(8, 10))}
                     </span>
@@ -628,7 +627,9 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogDescription className={agencyLabelClass}>Resourcing request</DialogDescription>
+            <DialogDescription className="text-muted text-xs font-semibold tracking-wide uppercase">
+              Resourcing request
+            </DialogDescription>
             <DialogTitle>Request time off</DialogTitle>
           </DialogHeader>
           <form
