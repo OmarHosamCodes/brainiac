@@ -82,7 +82,9 @@ export type AgencyMemberProfileViewModel = {
     leaveSummary: string;
     timeline: Array<{
       date: string;
-      label: string;
+      title: string;
+      subtitle: string;
+      countLabel: string;
       open: boolean;
       items: Array<
         | {
@@ -96,11 +98,13 @@ export type AgencyMemberProfileViewModel = {
         | {
             kind: "activity";
             id: string;
-            summary: string;
-            projectName: string | null;
-            isWaste: boolean;
+            eventType: "time_logged" | "waste_marked" | "leave";
+            kindLabel: string;
+            title: string;
+            body: string | null;
+            meta: string | null;
             timeLabel: string;
-            durationLabel: string;
+            durationLabel: string | null;
           }
       >;
     }>;
@@ -137,13 +141,38 @@ function todayKey(utcOffsetMinutes: number) {
   return `${y}-${m}-${day}`;
 }
 
-function formatDayLabel(dateKey: string, today: string) {
-  if (dateKey === today) return `Today · ${dateKey}`;
+function formatDayParts(dateKey: string, today: string): { title: string; subtitle: string } {
+  const date = new Date(`${dateKey}T12:00:00.000Z`);
+  const weekday = date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  if (dateKey === today) return { title: "Today", subtitle: weekday };
   const yesterday = new Date(`${today}T00:00:00.000Z`);
   yesterday.setUTCDate(yesterday.getUTCDate() - 1);
   const yKey = yesterday.toISOString().slice(0, 10);
-  if (dateKey === yKey) return `Yesterday · ${dateKey}`;
-  return dateKey;
+  if (dateKey === yKey) return { title: "Yesterday", subtitle: weekday };
+  return {
+    title: weekday,
+    subtitle: date.toLocaleDateString(undefined, { year: "numeric", timeZone: "UTC" }),
+  };
+}
+
+function activityKindLabel(eventType: "time_logged" | "waste_marked" | "leave") {
+  switch (eventType) {
+    case "time_logged":
+      return "Activity";
+    case "waste_marked":
+      return "Waste";
+    case "leave":
+      return "Leave";
+    default: {
+      const _exhaustive: never = eventType;
+      return _exhaustive;
+    }
+  }
 }
 
 function shortHours(totalSeconds: number) {
@@ -365,9 +394,21 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
           (expandedDays[day.date] === undefined &&
             !data.timeline.some((entry) => entry.date === today) &&
             index === 0);
+        const parts = formatDayParts(day.date, today);
+        const reviewCount = day.items.filter((item) => item.kind === "review").length;
+        const activityCount = day.items.length - reviewCount;
+        const countLabel = [
+          reviewCount > 0 ? `${reviewCount} review` : null,
+          `${activityCount} activity`,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
         return {
           date: day.date,
-          label: formatDayLabel(day.date, today),
+          title: parts.title,
+          subtitle: parts.subtitle,
+          countLabel,
           open: expandedDays[day.date] ?? defaultOpen,
           items: day.items.map((item) => {
             if (item.kind === "review") {
@@ -394,14 +435,17 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
             return {
               kind: "activity" as const,
               id: item.id,
-              summary: item.summary,
-              projectName: item.projectName,
-              isWaste: item.isWaste,
+              eventType: item.eventType,
+              kindLabel: activityKindLabel(item.eventType),
+              title: item.title,
+              body: item.body,
+              meta: item.meta,
               timeLabel: new Date(item.createdAt).toLocaleTimeString(undefined, {
                 hour: "numeric",
                 minute: "2-digit",
               }),
-              durationLabel: formatDuration(item.durationSeconds, "short"),
+              durationLabel:
+                item.durationSeconds == null ? null : formatDuration(item.durationSeconds, "short"),
             };
           }),
         };

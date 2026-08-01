@@ -33,14 +33,24 @@ export function AgencyMemberProfilePage() {
   }, [selectedTeamId, setCurrentAgencyTeamId]);
 
   if (session.isPending) {
-    return <div className={cn(agencyEmptyPanelClass, "m-6")}>Loading profile…</div>;
+    return (
+      <div className="h-full min-h-0 overflow-y-auto">
+        <div className={cn(agencyEmptyPanelClass, "m-6")}>Loading profile…</div>
+      </div>
+    );
   }
 
   if (!subjectUserId) {
     return (
-      <div className={cn(agencyErrorPanelClass, "m-6")}>Sign in to view your Agency profile.</div>
+      <div className="h-full min-h-0 overflow-y-auto">
+        <div className={cn(agencyErrorPanelClass, "m-6")}>Sign in to view your Agency profile.</div>
+      </div>
     );
   }
 
-  return <AgencyMemberProfile subjectUserId={subjectUserId} />;
+  return (
+    <div className="h-full min-h-0 overflow-y-auto bg-background text-foreground">
+      <AgencyMemberProfile subjectUserId={subjectUserId} />
+    </div>
+  );
 }

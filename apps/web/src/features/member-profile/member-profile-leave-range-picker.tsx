@@ -1,0 +1,195 @@
+import { CalendarRange } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
+import type { DateRange } from "react-day-picker";
+
+import { agencyFocusRingClass } from "@/features/shared/agency-ui";
+import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
+import { cn } from "@/lib/utils";
+import { Button } from "@/ui/button";
+import { Calendar } from "@/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
+
+/** Matches `--motion-ease-out` (ease-out-quart). */
+const EASE: [number, number, number, number] = [0.25, 1, 0.5, 1];
+
+function parseLocalDateKey(value: string): Date | undefined {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return undefined;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function formatLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDisplayDay(value: string): string {
+  const date = parseLocalDateKey(value);
+  if (!date) return value || "Pick a date";
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function rangeLabel(startDate: string, endDate: string): string {
+  if (!startDate || !endDate) return "Select leave dates";
+  if (startDate === endDate) return formatDisplayDay(startDate);
+  return `${formatDisplayDay(startDate)} → ${formatDisplayDay(endDate)}`;
+}
+
+type MemberProfileLeaveRangePickerProps = {
+  startDate: string;
+  endDate: string;
+  onRangeChange: (next: { startDate: string; endDate: string }) => void;
+};
+
+export function MemberProfileLeaveRangePicker({
+  startDate,
+  endDate,
+  onRangeChange,
+}: MemberProfileLeaveRangePickerProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [open, setOpen] = useState(false);
+  const [draftStart, setDraftStart] = useState(startDate);
+  const [draftEnd, setDraftEnd] = useState(endDate);
+  const [justConfirmed, setJustConfirmed] = useState(false);
+
+  const from = parseLocalDateKey(draftStart);
+  const to = parseLocalDateKey(draftEnd);
+  const selected: DateRange | undefined = from ? { from, to: to ?? from } : undefined;
+  const canConfirm = Boolean(draftStart && draftEnd && draftEnd >= draftStart);
+  const committedLabel = rangeLabel(startDate, endDate);
+  const draftLabel = rangeLabel(draftStart, draftEnd);
+
+  function openPicker(nextOpen: boolean) {
+    if (nextOpen) {
+      setDraftStart(startDate);
+      setDraftEnd(endDate);
+      setJustConfirmed(false);
+      setOpen(true);
+      return;
+    }
+    setDraftStart(startDate);
+    setDraftEnd(endDate);
+    setOpen(false);
+  }
+
+  function confirmRange() {
+    if (!canConfirm) return;
+    onRangeChange({ startDate: draftStart, endDate: draftEnd });
+    setJustConfirmed(true);
+    setOpen(false);
+    window.setTimeout(() => setJustConfirmed(false), prefersReducedMotion ? 0 : 420);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={openPicker}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          id="leave-range"
+          className={cn(
+            "h-auto min-h-10 w-full justify-start gap-2 overflow-hidden px-3 py-2 text-left font-normal",
+            "transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out",
+            "hover:border-border hover:bg-muted/80",
+            "active:scale-[0.98]",
+            "data-[state=open]:border-primary/40 data-[state=open]:bg-muted data-[state=open]:shadow-sm",
+            justConfirmed && "border-primary/35 ring-1 ring-primary/20",
+            "motion-reduce:transition-none motion-reduce:active:scale-100",
+            agencyFocusRingClass,
+          )}
+          aria-label="Leave date range"
+          aria-expanded={open}
+        >
+          <motion.span
+            className="inline-flex shrink-0"
+            animate={
+              prefersReducedMotion
+                ? undefined
+                : { rotate: open ? 10 : 0, scale: open || justConfirmed ? 1.12 : 1 }
+            }
+            transition={{ duration: 0.2, ease: EASE }}
+          >
+            <CalendarRange
+              className={cn(
+                "size-4 text-muted-foreground transition-colors duration-200 ease-out motion-reduce:transition-none",
+                (open || justConfirmed) && "text-primary",
+              )}
+              aria-hidden
+            />
+          </motion.span>
+          <span className="relative min-h-5 min-w-0 flex-1 overflow-hidden">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={committedLabel}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: EASE }}
+                className="block truncate text-sm text-foreground"
+              >
+                {committedLabel}
+              </motion.span>
+            </AnimatePresence>
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto overflow-hidden p-0" sideOffset={8}>
+        <Calendar
+          mode="range"
+          numberOfMonths={2}
+          captionLayout="dropdown"
+          selected={selected}
+          defaultMonth={from ?? new Date()}
+          onSelect={(range: DateRange | undefined) => {
+            if (!range?.from) return;
+            setDraftStart(formatLocalDateKey(range.from));
+            setDraftEnd(formatLocalDateKey(range.to ?? range.from));
+          }}
+          autoFocus
+        />
+        <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
+          <div className="relative min-h-4 min-w-0 flex-1 overflow-hidden">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.p
+                key={draftLabel}
+                initial={prefersReducedMotion ? false : { opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={prefersReducedMotion ? undefined : { opacity: 0, x: -8 }}
+                transition={{ duration: 0.16, ease: EASE }}
+                className="truncate text-xs text-foreground/70"
+              >
+                {draftLabel}
+              </motion.p>
+            </AnimatePresence>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => openPicker(false)}>
+              Cancel
+            </Button>
+            <motion.div
+              animate={
+                prefersReducedMotion
+                  ? undefined
+                  : { scale: canConfirm ? 1 : 0.98, opacity: canConfirm ? 1 : 0.55 }
+              }
+              transition={{ duration: 0.16, ease: EASE }}
+            >
+              <Button type="button" size="sm" disabled={!canConfirm} onClick={confirmRange}>
+                Confirm
+              </Button>
+            </motion.div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

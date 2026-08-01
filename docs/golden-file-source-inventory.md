@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 485 |
+| golden-feature | 489 |
 | server-operation | 12 |
 | shared-infrastructure | 264 |
 | static-presentation | 15 |
@@ -43,7 +43,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | environment | 5 |
 | integrations | 2 |
 | marketing | 16 |
-| member-profile | 12 |
+| member-profile | 16 |
 | notifications | 20 |
 | performance | 8 |
 | projects | 24 |
@@ -185,8 +185,10 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/member-profile/agency-member-profile.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/containers/agency-member-profile-container.tsx` | member-profile | container | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/member-profile/hooks/use-agency-member-profile.ts` | member-profile | feature-hook | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
+| `apps/web/src/features/member-profile/member-profile-date-picker.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/member-profile-heat-layout.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/member-profile/member-profile-heat-layout.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/member-profile/member-profile-leave-range-picker.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/stores/agency-member-profile.ts` | member-profile | client-state | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical client-state layer. | content: oRPC procedures or clients, Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/notifications/agency-notifications.tsx` | notifications | web-query | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical web-query layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/notifications/notifications-queries.test.ts` | notifications | test | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical test layer. | content: Bun test declarations, oRPC procedures or clients, TanStack Query orchestration; structure: test filename |
@@ -662,6 +664,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agency-ops/live/router.ts` | agency-shared | api-router | golden-feature | agency-platform | Feature-owned agency-shared artifact in the canonical api-router layer. | content: oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
 | `packages/api/src/routers/agency-ops/member-profile/member-profile-heat.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/member-profile/member-profile-heat.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/agency-ops/member-profile/member-profile-timeline.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/member-profile/member-profile-timeline.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/member-profile/router.ts` | member-profile | api-router | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical api-router layer. | content: oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
 | `packages/api/src/routers/agency-ops/member-profile/schemas.ts` | member-profile | api-contract | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical api-contract layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/member-profile/service.ts` | member-profile | api-service | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |

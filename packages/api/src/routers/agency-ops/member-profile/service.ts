@@ -14,6 +14,7 @@ import { and, asc, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { requireTeamMembership } from "../shared/membership";
 import { localDateKeyFromInstant } from "../time-tracking/local-week-bounds";
 import { buildHeatDays, expandLeaveDays } from "./member-profile-heat";
+import { buildLeaveActivity, buildTimeEntryActivity } from "./member-profile-timeline";
 import type { memberLeaveSchema, memberProfileSchema, memberReviewSchema } from "./schemas";
 import type { z } from "zod";
 
@@ -197,10 +198,11 @@ export async function getMemberProfile(
         id: string;
         date: string;
         createdAt: string;
-        summary: string;
-        projectName: string | null;
-        durationSeconds: number;
-        isWaste: boolean;
+        eventType: "time_logged" | "waste_marked" | "leave";
+        title: string;
+        body: string | null;
+        meta: string | null;
+        durationSeconds: number | null;
       };
 
   const itemsByDate = new Map<string, TimelineItem[]>();
@@ -223,33 +225,46 @@ export async function getMemberProfile(
 
   for (const entry of entries.slice(0, 400)) {
     const date = localDateKeyFromInstant(entry.startedAt, input.utcOffsetMinutes);
-    const hours = Math.floor(entry.durationSeconds / 3600);
-    const minutes = Math.floor((entry.durationSeconds % 3600) / 60);
-    const durationLabel = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-    const description = entry.description.trim();
-    const summary = description
-      ? `Logged ${durationLabel}: ${description}`
-      : `Logged ${durationLabel}`;
-    const item: TimelineItem = {
-      kind: "activity",
+    const item = buildTimeEntryActivity({
       id: entry.id,
       date,
       createdAt: entry.updatedAt.toISOString(),
-      summary,
+      description: entry.description,
       projectName: entry.projectName,
       durationSeconds: entry.durationSeconds,
       isWaste: entry.isWaste,
-    };
+    });
     const list = itemsByDate.get(date) ?? [];
     list.push(item);
     itemsByDate.set(date, list);
+  }
+
+  for (const row of leave) {
+    const item = buildLeaveActivity({
+      id: row.id,
+      type: row.type,
+      reason: row.reason,
+      startDate: row.startDate,
+      endDate: row.endDate,
+      createdAt: row.createdAt,
+      windowStart: startDate,
+      windowEnd: endDate,
+    });
+    if (!item) continue;
+    const list = itemsByDate.get(item.date) ?? [];
+    list.push(item);
+    itemsByDate.set(item.date, list);
   }
 
   const timeline = [...itemsByDate.entries()]
     .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
     .map(([date, items]) => ({
       date,
-      items: items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
+      items: items.sort((a, b) => {
+        if (a.kind === "review" && b.kind !== "review") return -1;
+        if (a.kind !== "review" && b.kind === "review") return 1;
+        return a.createdAt < b.createdAt ? 1 : -1;
+      }),
     }));
 
   const isSelf = actorUserId === input.userId;

@@ -59,10 +59,11 @@ export const memberProfileTimelineItemSchema = z.discriminatedUnion("kind", [
     id: z.string().min(1),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     createdAt: z.string().datetime(),
-    summary: z.string().min(1),
-    projectName: z.string().nullable(),
-    durationSeconds: z.number().int().nonnegative(),
-    isWaste: z.boolean(),
+    eventType: z.enum(["time_logged", "waste_marked", "leave"]),
+    title: z.string().min(1),
+    body: z.string().nullable(),
+    meta: z.string().nullable(),
+    durationSeconds: z.number().int().nonnegative().nullable(),
   }),
 ]);
 
