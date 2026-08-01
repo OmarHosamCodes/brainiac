@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { protectedProProcedure } from "../../../procedures";
 import { teamScopedInputSchema } from "../shared/schemas";
-import { listMemberCapacity, setMemberCapacity } from "./service";
+import {
+  listMemberCapacity,
+  listTeamActivityHeat,
+  listTeamLeave,
+  setMemberCapacity,
+} from "./service";
+import { memberLeaveSchema, memberProfileHeatDaySchema } from "../member-profile/schemas";
 import {
   getTenurePolicy,
   upsertTenurePolicy,
@@ -15,6 +21,45 @@ import {
 } from "./tenure-service";
 
 export const resourcingRouter = {
+  leave: {
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ items: z.array(memberLeaveSchema) })
+          .parse(await listTeamLeave(context.session.user.id, input));
+      }),
+  },
+  activityHeat: {
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          utcOffsetMinutes: z.number().int().min(-840).max(840),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            toDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+            members: z.array(
+              z.object({
+                userId: z.string().min(1),
+                userName: z.string().min(1),
+                days: z.array(memberProfileHeatDaySchema),
+              }),
+            ),
+          })
+          .parse(await listTeamActivityHeat(context.session.user.id, input));
+      }),
+  },
   capacity: {
     list: protectedProProcedure
       .input(

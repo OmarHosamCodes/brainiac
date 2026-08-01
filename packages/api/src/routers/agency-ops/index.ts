@@ -29,6 +29,8 @@ export const agencyOpsRouter = {
   rates: billingRouter.rates,
   invoices: billingRouter.invoices,
   capacity: resourcingRouter.capacity,
+  leave: resourcingRouter.leave,
+  activityHeat: resourcingRouter.activityHeat,
   tenure: resourcingRouter.tenure,
   memberProfile: memberProfileRouter.memberProfile,
   integrations: integrationsRouter.integrations,
