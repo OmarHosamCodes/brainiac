@@ -68,22 +68,22 @@ Process lane: **Superpowers** (`brainstorming` → `writing-plans` → implement
 
 ## Attach recipes
 
-| Job | Attach |
-|-----|--------|
+| Job                       | Attach                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------- |
 | Agency Tracker/Reports UI | impeccable · cognitive-walkthrough · dashboard-ui-design · ide-browser · shadcn |
-| New API + DB feature | brainstorming · writing-plans · hono · bun · (context7) |
-| Prod bug → PR | systematic-debugging · Sentry · review-and-ship · Bugbot |
+| New API + DB feature      | brainstorming · writing-plans · hono · bun · (context7)                         |
+| Prod bug → PR             | systematic-debugging · Sentry · review-and-ship · Bugbot                        |
 
 ## Mute for brainiac
 
-| Item | Action |
-|------|--------|
-| `nuxt-ui`, `vue-pinia-best-practices` | Ignore (wrong stack) |
-| Compound Engineering vs Superpowers | Superpowers wins unless user says CE |
-| `plugin-railway` (error) | Use `user-railway` |
-| `user-open-design` (error) | Skip until daemon healthy; do not block on it |
-| Standalone Mobbin MCP | Prefer design-inspiration’s Mobbin tools |
-| ui-scaffolding token regen on Orch | Skip — keep existing shadcn theme |
+| Item                                  | Action                                        |
+| ------------------------------------- | --------------------------------------------- |
+| `nuxt-ui`, `vue-pinia-best-practices` | Ignore (wrong stack)                          |
+| Compound Engineering vs Superpowers   | Superpowers wins unless user says CE          |
+| `plugin-railway` (error)              | Use `user-railway`                            |
+| `user-open-design` (error)            | Skip until daemon healthy; do not block on it |
+| Standalone Mobbin MCP                 | Prefer design-inspiration’s Mobbin tools      |
+| ui-scaffolding token regen on Orch    | Skip — keep existing shadcn theme             |
 
 ## Detail
 

@@ -1,4 +1,4 @@
-import { LogIn } from "lucide-react";
+import { LogIn, Settings, UserRound } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -12,6 +12,13 @@ import { getServerUrl } from "@/lib/env";
 import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
 import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown-menu";
 import { Skeleton } from "@/ui/skeleton";
 
 type AppShellAccountMenuProps = {
@@ -75,67 +82,84 @@ export function AppShellAccountMenu({ variant = "icon" }: AppShellAccountMenuPro
 
   return (
     <>
-      {variant === "sidebar" ? (
-        <button
-          type="button"
-          className={cn(
-            "app-shell__rail-link app-shell__rail-header text-muted transition-colors hover:bg-sidebar-accent",
-            shellFocusRingClass,
-          )}
-          aria-label={`Open settings for ${userName}`}
-          title={userName}
-          onClick={() => setSettingsOpen(true)}
-        >
-          <span className="relative shrink-0">
-            <AgencyMemberAvatar
-              name={userName}
-              userId={user.id}
-              avatarUrl={avatarUrl}
-              size="md"
-              alt={userName}
-              className="size-7 rounded-lg"
-            />
-            {updateAvailable ? (
-              <span
-                className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
-                aria-hidden="true"
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {variant === "sidebar" ? (
+            <button
+              type="button"
+              className={cn(
+                "app-shell__rail-link app-shell__rail-header text-muted transition-colors hover:bg-sidebar-accent",
+                shellFocusRingClass,
+              )}
+              aria-label={`Account menu for ${userName}`}
+              title={userName}
+            >
+              <span className="relative shrink-0">
+                <AgencyMemberAvatar
+                  name={userName}
+                  userId={user.id}
+                  avatarUrl={avatarUrl}
+                  size="md"
+                  alt={userName}
+                  className="size-7 rounded-lg"
+                />
+                {updateAvailable ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </span>
+              <span className="rail-label flex min-w-0 flex-1 flex-col text-left leading-tight">
+                <span className="truncate text-[13px] font-semibold text-highlighted">
+                  {userName}
+                </span>
+                <span className="truncate text-[11px] font-medium text-muted">
+                  {isPro ? "Pro plan" : "Free plan"}
+                </span>
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={cn(
+                "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-colors hover:border-ring hover:bg-elevated focus-visible:border-ring focus-visible:bg-elevated active:scale-95",
+                shellFocusRingClass,
+              )}
+              aria-label={`Account menu for ${userName}`}
+              title={userName}
+            >
+              <AgencyMemberAvatar
+                name={userName}
+                userId={user.id}
+                avatarUrl={avatarUrl}
+                size="md"
+                alt={userName}
+                className="size-full rounded-full"
               />
-            ) : null}
-          </span>
-          <span className="rail-label flex min-w-0 flex-1 flex-col text-left leading-tight">
-            <span className="truncate text-[13px] font-semibold text-highlighted">{userName}</span>
-            <span className="truncate text-[11px] font-medium text-muted">
-              {isPro ? "Pro plan" : "Free plan"}
-            </span>
-          </span>
-        </button>
-      ) : (
-        <button
-          type="button"
-          className={cn(
-            "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-colors hover:border-ring hover:bg-elevated focus-visible:border-ring focus-visible:bg-elevated active:scale-95",
-            shellFocusRingClass,
+              {updateAvailable || isPro ? (
+                <span
+                  className="absolute right-[0.35rem] top-[0.35rem] size-[0.3rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
+                  aria-hidden="true"
+                />
+              ) : null}
+            </button>
           )}
-          aria-label={`Open settings for ${userName}`}
-          title={userName}
-          onClick={() => setSettingsOpen(true)}
-        >
-          <AgencyMemberAvatar
-            name={userName}
-            userId={user.id}
-            avatarUrl={avatarUrl}
-            size="md"
-            alt={userName}
-            className="size-full rounded-full"
-          />
-          {updateAvailable || isPro ? (
-            <span
-              className="absolute right-[0.35rem] top-[0.35rem] size-[0.3rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
-              aria-hidden="true"
-            />
-          ) : null}
-        </button>
-      )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" side="top" className="w-52">
+          <DropdownMenuItem asChild>
+            <Link to="/agency/me">
+              <UserRound className="size-4" aria-hidden />
+              Agency profile
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
+            <Settings className="size-4" aria-hidden />
+            Account settings
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>

@@ -13,6 +13,7 @@ type AgencySegmentBodyProps = {
   selectedClientId: string;
   onSelectProject: (projectId: string) => void;
   onSelectClient: (clientId: string) => void;
+  onSelectMember: (userId: string) => void;
   onCloseProject: () => void;
 };
 
@@ -23,6 +24,7 @@ export function AgencySegmentBody({
   selectedClientId,
   onSelectProject,
   onSelectClient,
+  onSelectMember,
   onCloseProject,
 }: AgencySegmentBodyProps) {
   const surfaceFilters = useAgencySegmentSurfaceFilters();
@@ -34,6 +36,7 @@ export function AgencySegmentBody({
         filters={surfaceFilters.applied}
         onSelectProject={onSelectProject}
         onSelectClient={onSelectClient}
+        onSelectMember={onSelectMember}
       />
     );
   }

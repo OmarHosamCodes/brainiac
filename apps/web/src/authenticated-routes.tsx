@@ -15,6 +15,11 @@ const CanvasPage = lazy(() =>
 const AgencyPage = lazy(() =>
   import("@/pages/agency-page").then((module) => ({ default: module.AgencyPage })),
 );
+const AgencyMemberProfilePage = lazy(() =>
+  import("@/pages/agency-member-profile-page").then((module) => ({
+    default: module.AgencyMemberProfilePage,
+  })),
+);
 const BillingSuccessPage = lazy(() =>
   import("@/pages/billing-success-page").then((module) => ({
     default: module.BillingSuccessPage,
@@ -61,6 +66,8 @@ export function AuthenticatedRoutes() {
             <Route path="/canvas" element={<CanvasPage />} />
             <Route path="/dashboard" element={<Navigate to="/canvas" replace />} />
             <Route path="/agency" element={<AgencyPage />} />
+            <Route path="/agency/me" element={<AgencyMemberProfilePage />} />
+            <Route path="/agency/members/:userId" element={<AgencyMemberProfilePage />} />
             <Route path="/billing/success" element={<BillingSuccessPage />} />
             <Route path="/node/:id" element={<NodePage />} />
           </Route>

@@ -10,6 +10,7 @@ import { billingRouter } from "./billing/router";
 import { resourcingRouter } from "./resourcing/router";
 import { integrationsRouter } from "./integrations/router";
 import { liveRouter } from "./live/router";
+import { memberProfileRouter } from "./member-profile/router";
 
 export const agencyOpsRouter = {
   live: liveRouter.live,
@@ -29,5 +30,6 @@ export const agencyOpsRouter = {
   invoices: billingRouter.invoices,
   capacity: resourcingRouter.capacity,
   tenure: resourcingRouter.tenure,
+  memberProfile: memberProfileRouter.memberProfile,
   integrations: integrationsRouter.integrations,
 };

@@ -752,3 +752,70 @@ export const agencyOpsTenureQuarterExemption = pgTable(
     ),
   ],
 );
+
+/** Calendar leave: member-specific (`userId` set) or team-wide holiday (`userId` null). */
+export type AgencyOpsMemberLeaveType = "pto" | "sick" | "team_holiday" | "other";
+
+export const agencyOpsMemberLeave = pgTable(
+  "agency_ops_member_leave",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    /** Null = team-wide holiday inherited by every member profile. */
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    startDate: text("start_date").notNull(),
+    endDate: text("end_date").notNull(),
+    type: text("type").$type<AgencyOpsMemberLeaveType>().notNull(),
+    reason: text("reason"),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_member_leave_team_idx").on(table.teamId),
+    index("agency_ops_member_leave_team_user_idx").on(table.teamId, table.userId),
+    index("agency_ops_member_leave_team_dates_idx").on(
+      table.teamId,
+      table.startDate,
+      table.endDate,
+    ),
+  ],
+);
+
+export const agencyOpsMemberReview = pgTable(
+  "agency_ops_member_review",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    subjectUserId: text("subject_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    authorUserId: text("author_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    reviewDate: text("review_date").notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_member_review_team_subject_idx").on(table.teamId, table.subjectUserId),
+    index("agency_ops_member_review_team_subject_date_idx").on(
+      table.teamId,
+      table.subjectUserId,
+      table.reviewDate,
+    ),
+  ],
+);

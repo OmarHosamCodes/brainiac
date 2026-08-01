@@ -109,6 +109,7 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
     breakdownPanelId,
     onSelectProject,
     onSelectClient,
+    onSelectMember,
     refetch,
   } = viewModel;
 
@@ -317,9 +318,16 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
                                 alt={member.userName}
                               />
                               <div className="min-w-0">
-                                <p className="truncate font-bold text-highlighted">
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    "truncate font-bold text-highlighted hover:underline",
+                                    agencyFocusRingClass,
+                                  )}
+                                  onClick={() => onSelectMember?.(member.userId)}
+                                >
                                   {member.userName}
-                                </p>
+                                </button>
                                 <p className="truncate text-[11px] text-muted">
                                   {member.userEmail}
                                 </p>

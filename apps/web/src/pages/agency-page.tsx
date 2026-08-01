@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
@@ -63,6 +63,7 @@ export function AgencyPage() {
   const teams = teamsQuery.data?.items ?? [];
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const selectedTeamId = useTeamStore((s) => s.selectedTeamId);
   const syncSelectedTeam = useTeamStore((s) => s.syncSelectedTeam);
   const sectionParam = searchParams.get("section");
@@ -169,6 +170,10 @@ export function AgencyPage() {
     setSearchParams(next);
   }
 
+  function openMember(userId: string) {
+    navigate(`/agency/members/${userId}`);
+  }
+
   function closeProject() {
     const next = new URLSearchParams(searchParams);
     next.set("section", "projects");
@@ -243,6 +248,7 @@ export function AgencyPage() {
                       selectedClientId={selectedClientId}
                       onSelectProject={openProject}
                       onSelectClient={openClient}
+                      onSelectMember={openMember}
                       onCloseProject={closeProject}
                     />
                   ) : null}
