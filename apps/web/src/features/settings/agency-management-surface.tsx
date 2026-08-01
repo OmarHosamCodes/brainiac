@@ -1,18 +1,16 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { AgencyBillingSurface } from "@/features/billing/agency-billing-surface";
+import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { AgencyResourcingSurface } from "@/features/resourcing/agency-resourcing-surface";
-import { AgencySettingsRatesPane } from "@/features/billing/agency-settings-rates-pane";
-import { AgencySettingsTenurePane } from "@/features/resourcing/tenure/agency-settings-tenure-pane";
-import { AgencySettingsTagsPane } from "@/features/time-tracking/agency-settings-tags-pane";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
-  AGENCY_MANAGEMENT_PANES,
+  AGENCY_MANAGEMENT_HUBS,
+  agencyManagementPaneLabel,
   isAgencyManagementPaneId,
   type AgencyManagementPaneId,
 } from "@/features/shared/agency-management-sections";
-import { LucideIcon } from "@/lib/lucide-icon";
+import { agencyLabelClass, agencySectionTitleClass } from "@/features/shared/agency-ui";
+import { cn } from "@/lib/utils";
 
 type AgencyManagementSurfaceProps = {
   teamId: string;
@@ -21,11 +19,9 @@ type AgencyManagementSurfaceProps = {
 export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const paneFromRoute: AgencyManagementPaneId = isAgencyManagementPaneId(searchParams.get("manage"))
+  const activePane: AgencyManagementPaneId = isAgencyManagementPaneId(searchParams.get("manage"))
     ? (searchParams.get("manage") as AgencyManagementPaneId)
     : "resourcing";
-
-  const activePane = paneFromRoute;
 
   useEffect(() => {
     const section = searchParams.get("section");
@@ -51,41 +47,78 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
     setSearchParams(next, { replace: true });
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <Tabs
-        value={activePane}
-        onValueChange={(value) => {
-          if (isAgencyManagementPaneId(value)) setActivePane(value);
-        }}
-      >
-        <TabsList className="max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {AGENCY_MANAGEMENT_PANES.map((pane) => (
-            <TabsTrigger key={pane.id} value={pane.id}>
-              <LucideIcon name={pane.icon} className="size-3.5" />
-              <span>{pane.label}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+  const activeLabel = agencyManagementPaneLabel(activePane);
 
-        <div className="pb-4">
-          <TabsContent value="resourcing">
-            <AgencyResourcingSurface teamId={teamId} />
-          </TabsContent>
-          <TabsContent value="invoices">
-            <AgencyBillingSurface teamId={teamId} />
-          </TabsContent>
-          <TabsContent value="rates">
-            <AgencySettingsRatesPane teamId={teamId} active={activePane === "rates"} />
-          </TabsContent>
-          <TabsContent value="tags">
-            <AgencySettingsTagsPane teamId={teamId} active={activePane === "tags"} />
-          </TabsContent>
-          <TabsContent value="tenure">
-            <AgencySettingsTenurePane teamId={teamId} active={activePane === "tenure"} />
-          </TabsContent>
-        </div>
-      </Tabs>
+  return (
+    <div className="bg-background flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[13rem_minmax(0,1fr)]">
+      <nav
+        className={cn(
+          "border-border bg-card flex shrink-0 gap-1 overflow-x-auto border-b px-2 py-2",
+          "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "md:flex-col md:gap-0.5 md:overflow-y-auto md:overflow-x-hidden md:border-r md:border-b-0 md:px-3 md:py-4",
+        )}
+        aria-label="Management sections"
+      >
+        {AGENCY_MANAGEMENT_HUBS.map((hub, hubIndex) => (
+          <div
+            key={hub.id}
+            className={cn(
+              "flex shrink-0 items-center gap-1",
+              "md:flex-col md:items-stretch md:gap-0.5",
+              hubIndex > 0 && "md:mt-3",
+            )}
+          >
+            <div
+              className={cn(
+                agencyLabelClass,
+                "hidden px-2.5 pb-1.5 md:block",
+                hubIndex === 0 && "pt-0.5",
+              )}
+            >
+              {hub.label}
+            </div>
+            {hub.panes.map((pane) => {
+              const isActive = pane.id === activePane;
+              return (
+                <button
+                  key={pane.id}
+                  type="button"
+                  aria-current={isActive ? "page" : undefined}
+                  onClick={() => setActivePane(pane.id)}
+                  className={cn(
+                    "rounded-lg px-2.5 text-start text-sm font-medium whitespace-nowrap",
+                    "min-h-9 transition-colors duration-150 ease-out",
+                    "md:w-full md:whitespace-normal",
+                    shellFocusRingClass,
+                    isActive
+                      ? "bg-sidebar-primary/10 text-sidebar-primary"
+                      : "text-muted hover:bg-elevated hover:text-highlighted",
+                  )}
+                >
+                  {pane.label}
+                </button>
+              );
+            })}
+            {hubIndex < AGENCY_MANAGEMENT_HUBS.length - 1 ? (
+              <div
+                className="bg-border mx-1 hidden h-5 w-px shrink-0 sm:block md:hidden"
+                aria-hidden="true"
+              />
+            ) : null}
+          </div>
+        ))}
+      </nav>
+
+      <main
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-5 py-6 sm:px-8 sm:py-7"
+        aria-label={activeLabel}
+      >
+        {activePane === "resourcing" ? (
+          <AgencyResourcingSurface teamId={teamId} />
+        ) : (
+          <h1 className={cn(agencySectionTitleClass, "text-balance")}>{activeLabel}</h1>
+        )}
+      </main>
     </div>
   );
 }

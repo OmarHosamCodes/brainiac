@@ -1,23 +1,48 @@
-/** Agency management panes — operations grouped under Management. */
+/** Agency management panes — Operations + Commercial hubs under Management. */
 
-export type AgencyManagementPaneId = "resourcing" | "invoices" | "rates" | "tags" | "tenure";
+export type AgencyManagementPaneId = "resourcing" | "tenure" | "tags" | "invoices" | "rates";
+
+export type AgencyManagementHubId = "operations" | "commercial";
 
 export type AgencyManagementPane = {
   id: AgencyManagementPaneId;
   label: string;
-  icon: string;
+  hub: AgencyManagementHubId;
+};
+
+export type AgencyManagementHub = {
+  id: AgencyManagementHubId;
+  label: string;
+  panes: readonly AgencyManagementPane[];
 };
 
 export const AGENCY_MANAGEMENT_PANES: readonly AgencyManagementPane[] = [
-  { id: "resourcing", label: "Resourcing", icon: "i-lucide-calendar-range" },
-  { id: "invoices", label: "Invoices", icon: "i-lucide-receipt" },
-  { id: "rates", label: "Rates", icon: "i-lucide-dollar-sign" },
-  { id: "tags", label: "Tags", icon: "i-lucide-tag" },
-  { id: "tenure", label: "Tenure", icon: "i-lucide-users" },
+  { id: "resourcing", label: "Resourcing", hub: "operations" },
+  { id: "tenure", label: "Tenure", hub: "operations" },
+  { id: "tags", label: "Tags", hub: "operations" },
+  { id: "invoices", label: "Invoices", hub: "commercial" },
+  { id: "rates", label: "Rates", hub: "commercial" },
+] as const;
+
+export const AGENCY_MANAGEMENT_HUBS: readonly AgencyManagementHub[] = [
+  {
+    id: "operations",
+    label: "Operations",
+    panes: AGENCY_MANAGEMENT_PANES.filter((pane) => pane.hub === "operations"),
+  },
+  {
+    id: "commercial",
+    label: "Commercial",
+    panes: AGENCY_MANAGEMENT_PANES.filter((pane) => pane.hub === "commercial"),
+  },
 ] as const;
 
 export function isAgencyManagementPaneId(value: unknown): value is AgencyManagementPaneId {
   return AGENCY_MANAGEMENT_PANES.some((pane) => pane.id === value);
+}
+
+export function agencyManagementPaneLabel(paneId: AgencyManagementPaneId): string {
+  return AGENCY_MANAGEMENT_PANES.find((pane) => pane.id === paneId)?.label ?? paneId;
 }
 
 export function managementPaneForLegacySection(
