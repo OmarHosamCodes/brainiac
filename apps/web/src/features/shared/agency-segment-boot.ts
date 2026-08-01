@@ -7,6 +7,11 @@ import {
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
 import { ensureAgencyWorkBootQueries } from "@/features/shared/agency-queries";
 import {
+  focusMonthKeyFromAnchor,
+  monthWindowDateKeys,
+} from "@/features/resourcing/resourcing-team-presence";
+import { periodAnchorUtc } from "@/features/resourcing/resourcing-workload-heat";
+import {
   getCurrentTenurePeriodRange,
   resolveDefaultDashboardRangePreset,
   resolveDefaultTenureMonthIndexes,
@@ -17,21 +22,12 @@ import {
   type AgencySyncTier,
 } from "@/features/shared/agency-query-options";
 
-const MANAGEMENT_WEEKS_AHEAD = 4;
-
 type EnsureAgencySegmentBootInput = {
   segment: AgencySegmentId;
   teamId: string;
   userId: string;
   searchParams: URLSearchParams;
 };
-
-function startOfWeekUtc(date = new Date()): Date {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  const diff = (d.getUTCDay() + 6) % 7;
-  d.setUTCDate(d.getUTCDate() - diff);
-  return d;
-}
 
 function ensureSyncedQuery(
   queryClient: QueryClient,
@@ -85,60 +81,28 @@ async function ensureManagementBootQueries(
   searchParams: URLSearchParams,
 ) {
   const pane = managementPaneFromSearchParams(searchParams);
-
   switch (pane) {
     case "resourcing": {
-      const weekStart = startOfWeekUtc().toISOString();
+      const monthKey = focusMonthKeyFromAnchor(periodAnchorUtc(new Date(), "month"));
+      const window = monthWindowDateKeys(monthKey);
       await ensureSyncedQuery(
         queryClient,
-        orpc.agencyOps.capacity.list.queryOptions({
-          input: { teamId, weekStart, weeks: MANAGEMENT_WEEKS_AHEAD },
+        orpc.agencyOps.activityHeat.list.queryOptions({
+          input: {
+            teamId,
+            fromDate: window.fromDate,
+            toDate: window.toDate,
+            utcOffsetMinutes: new Date().getTimezoneOffset(),
+          },
         }),
         "cold",
       );
       break;
     }
-    case "invoices":
-      await Promise.all([
-        ensureSyncedQuery(
-          queryClient,
-          orpc.agencyOps.invoices.summary.queryOptions({ input: { teamId } }),
-          "cold",
-        ),
-        ensureSyncedQuery(
-          queryClient,
-          orpc.agencyOps.invoices.list.queryOptions({ input: { teamId } }),
-          "cold",
-        ),
-      ]);
-      break;
-    case "rates":
-      await ensureSyncedQuery(
-        queryClient,
-        orpc.agencyOps.rates.list.queryOptions({ input: { teamId } }),
-        "cold",
-      );
-      break;
-    case "tags":
-      await ensureSyncedQuery(
-        queryClient,
-        orpc.agencyOps.tags.list.queryOptions({ input: { teamId } }),
-        "cold",
-      );
-      break;
     case "tenure":
-      await Promise.all([
-        ensureSyncedQuery(
-          queryClient,
-          orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
-          "cold",
-        ),
-        ensureSyncedQuery(
-          queryClient,
-          orpc.agencyOps.tenure.summary.list.queryOptions({ input: { teamId } }),
-          "cold",
-        ),
-      ]);
+    case "tags":
+    case "invoices":
+    case "rates":
       break;
     default: {
       const _exhaustive: never = pane;

@@ -181,18 +181,18 @@ export function AgencyPage() {
     setSearchParams(next);
   }
 
-  const isWorkSegment = segment === "work";
+  const isFullHeightSegment = segment === "work" || segment === "management";
 
   return (
     <AppShellPage>
       <div
         className={cn(
           "flex h-full min-h-0 flex-col bg-background text-foreground",
-          isWorkSegment ? "overflow-hidden" : "overflow-y-auto",
+          isFullHeightSegment ? "overflow-hidden" : "overflow-y-auto",
         )}
         {...{ [AGENCY_PAGE_SCROLL_ATTR]: "" }}
       >
-        <main className={isWorkSegment ? shellPageNestClass : shellPageClass}>
+        <main className={isFullHeightSegment ? shellPageNestClass : shellPageClass}>
           {isBooting ? (
             <LogoLoader label="Loading agency" />
           ) : showAgencyUpsell ? (
@@ -209,12 +209,12 @@ export function AgencyPage() {
               />
             </div>
           ) : (
-            <div className={cn(shellPageBodyClass, isWorkSegment && "min-h-0 flex-1 pt-0")}>
+            <div className={cn(shellPageBodyClass, isFullHeightSegment && "min-h-0 flex-1 pt-0")}>
               <div
                 role="tabpanel"
                 id={panelIdFor(segment)}
                 aria-label={agencySegmentLabel(segment)}
-                className={cn(isWorkSegment && "flex min-h-0 flex-1 flex-col")}
+                className={cn(isFullHeightSegment && "flex min-h-0 flex-1 flex-col")}
               >
                 <AgencySegmentFiltersRoot
                   segment={segment}
