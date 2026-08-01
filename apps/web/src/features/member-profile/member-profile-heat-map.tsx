@@ -6,7 +6,7 @@ import {
 } from "@/features/member-profile/member-profile-heat-strip-fill";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 
 export type MemberProfileHeatDay = {
   date: string;
@@ -176,10 +176,13 @@ export function MemberProfileHeatMap({
   heatMap,
   layout,
   onFocusDay,
+  fillToWidth = true,
 }: {
   heatMap: MemberProfileHeatMapData;
   layout: "compact" | "strip";
   onFocusDay: (date: string) => void;
+  /** When false, skip empty week padding (avoids width feedback loops in nested layouts). */
+  fillToWidth?: boolean;
 }) {
   const weeks = buildHeatWeeks(heatMap.days, heatMap.startDate);
   const monthLabels = monthLabelsForWeeks(weeks);
@@ -187,60 +190,67 @@ export function MemberProfileHeatMap({
   const [stripFillWeeks, setStripFillWeeks] = useState(0);
 
   useLayoutEffect(() => {
-    if (layout !== "strip") return;
+    if (layout !== "strip" || !fillToWidth) {
+      setStripFillWeeks(0);
+      return;
+    }
     const node = stripRef.current;
     if (!node) return;
+    // Measure the width-constrained shell, not the week row (fill weeks must not widen the observer).
     const target = node;
 
     function measure() {
-      setStripFillWeeks(stripFillWeekCount(target.clientWidth, weeks.length));
+      const next = stripFillWeekCount(target.clientWidth, weeks.length);
+      setStripFillWeeks((prev) => (prev === next ? prev : next));
     }
 
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(target);
     return () => observer.disconnect();
-  }, [layout, weeks.length]);
+  }, [fillToWidth, layout, weeks.length]);
 
   if (layout === "compact") {
     return (
-      <div
-        className="inline-grid min-w-max grid-cols-[auto_repeat(7,minmax(0,1fr))] gap-1"
-        role="img"
-        aria-label={`Contribution ${heatMap.startDate} to ${heatMap.endDate}`}
-      >
-        <span className="size-8" aria-hidden />
-        {WEEKDAY_LABELS.map((label) => (
-          <span
-            key={label}
-            className="flex size-8 items-center justify-center text-[10px] font-medium text-foreground/70"
-          >
-            {label.slice(0, 1)}
-          </span>
-        ))}
-        {weeks.map((week, weekIndex) => (
-          <div key={weekIndex} className="contents">
-            <span className="flex size-8 items-center text-[10px] font-medium text-foreground/70">
-              {weekIndex === 0
-                ? monthLabels[0]?.label
-                : monthLabels.find((entry) => entry.weekIndex === weekIndex)?.label || ""}
+      <TooltipProvider delayDuration={120}>
+        <div
+          className="inline-grid min-w-max grid-cols-[auto_repeat(7,minmax(0,1fr))] gap-1"
+          role="img"
+          aria-label={`Contribution ${heatMap.startDate} to ${heatMap.endDate}`}
+        >
+          <span className="size-8" aria-hidden />
+          {WEEKDAY_LABELS.map((label) => (
+            <span
+              key={label}
+              className="flex size-8 items-center justify-center text-[10px] font-medium text-foreground/70"
+            >
+              {label.slice(0, 1)}
             </span>
-            {week.map((day, dayIndex) =>
-              day.date.startsWith("pad-") ? (
-                <HeatPadCell key={`pad-${weekIndex}-${dayIndex}`} sizeClass="size-8" />
-              ) : (
-                <HeatCell
-                  key={day.date}
-                  day={day}
-                  sizeClass="size-8"
-                  showDayNumber
-                  onFocus={() => onFocusDay(day.date)}
-                />
-              ),
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+          {weeks.map((week, weekIndex) => (
+            <div key={weekIndex} className="contents">
+              <span className="flex size-8 items-center text-[10px] font-medium text-foreground/70">
+                {weekIndex === 0
+                  ? monthLabels[0]?.label
+                  : monthLabels.find((entry) => entry.weekIndex === weekIndex)?.label || ""}
+              </span>
+              {week.map((day, dayIndex) =>
+                day.date.startsWith("pad-") ? (
+                  <HeatPadCell key={`pad-${weekIndex}-${dayIndex}`} sizeClass="size-8" />
+                ) : (
+                  <HeatCell
+                    key={day.date}
+                    day={day}
+                    sizeClass="size-8"
+                    showDayNumber
+                    onFocus={() => onFocusDay(day.date)}
+                  />
+                ),
+              )}
+            </div>
+          ))}
+        </div>
+      </TooltipProvider>
     );
   }
 
@@ -252,58 +262,60 @@ export function MemberProfileHeatMap({
   const displayWeeks = [...weeks, ...fillWeeks];
 
   return (
-    <div ref={stripRef} className="w-full">
-      <div className="flex w-full gap-1">
-        <div className="flex w-7 shrink-0 flex-col gap-1 pt-5">
-          {WEEKDAY_LABELS.map((label, index) => (
-            <span
-              key={label}
-              className={cn(
-                "flex h-3 items-center text-[10px] font-medium leading-none text-foreground/70",
-                index % 2 === 1 ? "opacity-0" : "",
-              )}
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <div className="relative mb-1 h-4">
-            {monthLabels.map((entry) => (
+    <TooltipProvider delayDuration={120}>
+      <div ref={stripRef} className="w-full min-w-0 overflow-hidden">
+        <div className="flex w-full min-w-0 gap-1">
+          <div className="flex w-7 shrink-0 flex-col gap-1 pt-5">
+            {WEEKDAY_LABELS.map((label, index) => (
               <span
-                key={`${entry.label}-${entry.weekIndex}`}
-                className="absolute top-0 text-[10px] font-medium text-foreground/70"
-                style={{ left: `${entry.weekIndex * STRIP_WEEK_COL_PX}px` }}
+                key={label}
+                className={cn(
+                  "flex h-3 items-center text-[10px] font-medium leading-none text-foreground/70",
+                  index % 2 === 1 ? "opacity-0" : "",
+                )}
               >
-                {entry.label}
+                {label}
               </span>
             ))}
           </div>
-          <div
-            className="flex gap-1"
-            role="img"
-            aria-label={`Contribution ${heatMap.startDate} to ${heatMap.endDate}`}
-          >
-            {displayWeeks.map((week, weekIndex) => (
-              <div key={weekIndex} className="flex shrink-0 flex-col gap-1">
-                {week.map((day) =>
-                  day.date.startsWith("pad-") || day.date.startsWith("fill-") ? (
-                    <HeatPadCell key={day.date} sizeClass="size-3" />
-                  ) : (
-                    <HeatCell
-                      key={day.date}
-                      day={day}
-                      sizeClass="size-3"
-                      showDayNumber={false}
-                      onFocus={() => onFocusDay(day.date)}
-                    />
-                  ),
-                )}
-              </div>
-            ))}
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="relative mb-1 h-4">
+              {monthLabels.map((entry) => (
+                <span
+                  key={`${entry.label}-${entry.weekIndex}`}
+                  className="absolute top-0 text-[10px] font-medium text-foreground/70"
+                  style={{ left: `${entry.weekIndex * STRIP_WEEK_COL_PX}px` }}
+                >
+                  {entry.label}
+                </span>
+              ))}
+            </div>
+            <div
+              className="flex gap-1"
+              role="img"
+              aria-label={`Contribution ${heatMap.startDate} to ${heatMap.endDate}`}
+            >
+              {displayWeeks.map((week, weekIndex) => (
+                <div key={weekIndex} className="flex shrink-0 flex-col gap-1">
+                  {week.map((day) =>
+                    day.date.startsWith("pad-") || day.date.startsWith("fill-") ? (
+                      <HeatPadCell key={day.date} sizeClass="size-3" />
+                    ) : (
+                      <HeatCell
+                        key={day.date}
+                        day={day}
+                        sizeClass="size-3"
+                        showDayNumber={false}
+                        onFocus={() => onFocusDay(day.date)}
+                      />
+                    ),
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
