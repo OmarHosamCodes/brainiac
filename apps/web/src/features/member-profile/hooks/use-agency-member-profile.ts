@@ -1,8 +1,25 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
 import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/agency-member-profile";
+import {
+  resolveMemberProfileHeatLayout,
+  type MemberProfileHeatLayout,
+} from "@/features/member-profile/member-profile-heat-layout";
+import {
+  resolveAgencyRangeFromPreset,
+  startOfWeekUtc,
+  toDateInputValue,
+} from "@/features/shared/use-agency-time-range-filters";
+import {
+  getCurrentTenurePeriodRange,
+  getCurrentTenureQuarterMonths,
+  resolveDefaultDashboardRangePreset,
+  resolveDefaultTenureMonthIndexes,
+  type TenureQuarterMonth,
+} from "@/features/resourcing/tenure-utils";
 import { useCurrentAgencyTeam } from "@/features/time-tracking/stores/agency-timer";
 import { useTeamStore } from "@/features/team/team-store";
 import { authClient } from "@/lib/auth-client";
@@ -18,6 +35,21 @@ export type AgencyMemberProfileViewModel = {
   subjectUserId: string;
   loading: boolean;
   error: string | null;
+  period: {
+    rangePreset: RangePreset;
+    onRangePresetChange: (preset: RangePreset) => void;
+    customFromDate: string;
+    onCustomFromChange: (value: string) => void;
+    customToDate: string;
+    onCustomToChange: (value: string) => void;
+    tenureAvailable: boolean;
+    tenurePeriodLabel: string | null;
+    tenureQuarterLabel: string | null;
+    tenureQuarterMonths: TenureQuarterMonth[];
+    tenureMonthIndexes: number[];
+    onTenureMonthIndexesChange: (monthIndexes: number[]) => void;
+    label: string;
+  };
   profile: {
     userName: string;
     userAvatarUrl: string | null;
@@ -26,8 +58,8 @@ export type AgencyMemberProfileViewModel = {
     isSelf: boolean;
     canAddReview: boolean;
     canManageLeave: boolean;
-    monthHoursLabel: string;
-    yearHoursLabel: string;
+    periodHoursLabel: string;
+    heatLayout: MemberProfileHeatLayout;
     heatMap: {
       startDate: string;
       endDate: string;
@@ -42,7 +74,9 @@ export type AgencyMemberProfileViewModel = {
           rangeStart: string;
           rangeEnd: string;
         } | null;
+        offBand: "single" | "start" | "middle" | "end" | null;
         hoursLabel: string;
+        dayOfMonthLabel: string;
       }>;
     };
     leaveSummary: string;
@@ -89,6 +123,7 @@ export type AgencyMemberProfileViewModel = {
   setReviewDraft: (patch: Partial<AgencyMemberProfileViewModel["reviewDraft"]>) => void;
   toggleDay: (date: string) => void;
   focusDay: (date: string) => void;
+  retry: () => void;
   submitLeave: () => Promise<void>;
   submitReview: () => Promise<void>;
 };
@@ -118,6 +153,32 @@ function shortHours(totalSeconds: number) {
   return `${hours}h ${minutes}m`;
 }
 
+function rangePresetDisplayLabel(
+  preset: RangePreset,
+  tenurePeriodLabel: string | null,
+  customFrom: string,
+  customTo: string,
+): string {
+  switch (preset) {
+    case "tenure":
+      return tenurePeriodLabel?.trim() || "Tenure";
+    case "today":
+      return "Today";
+    case "week":
+      return "This week";
+    case "month":
+      return "This month";
+    case "last30":
+      return "Last 30 days";
+    case "custom":
+      return customFrom && customTo ? `${customFrom} → ${customTo}` : "Custom";
+    default: {
+      const _exhaustive: never = preset;
+      return _exhaustive;
+    }
+  }
+}
+
 export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfileViewModel {
   const session = authClient.useSession();
   const { currentAgencyTeamId } = useCurrentAgencyTeam();
@@ -127,6 +188,63 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const today = todayKey(utcOffsetMinutes);
   const queryClient = useQueryClient();
   const store = useAgencyMemberProfileStore();
+  const now = useMemo(() => new Date(), []);
+
+  const tenurePolicyQuery = useQuery({
+    ...orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
+    enabled: Boolean(teamId),
+  });
+  const tenurePolicy = tenurePolicyQuery.data?.policy ?? null;
+  const defaultRangePreset = useMemo(
+    () => resolveDefaultDashboardRangePreset(tenurePolicy),
+    [tenurePolicy],
+  );
+  const defaultTenureMonthIndexes = useMemo(
+    () => resolveDefaultTenureMonthIndexes(tenurePolicy, now),
+    [now, tenurePolicy],
+  );
+  const tenureQuarterMonths = useMemo(
+    () => getCurrentTenureQuarterMonths(tenurePolicy, now) ?? [],
+    [now, tenurePolicy],
+  );
+
+  const [rangePreset, setRangePreset] = useState<RangePreset | null>(null);
+  const effectiveRangePreset = rangePreset ?? defaultRangePreset;
+  const [customFromDate, setCustomFromDate] = useState(toDateInputValue(startOfWeekUtc()));
+  const [customToDate, setCustomToDate] = useState(toDateInputValue(now));
+  const [tenureMonthIndexes, setTenureMonthIndexes] = useState<number[] | null>(null);
+  const effectiveTenureMonthIndexes = tenureMonthIndexes ?? defaultTenureMonthIndexes;
+
+  const tenurePeriodLabel = useMemo(
+    () =>
+      getCurrentTenurePeriodRange(tenurePolicy, now, effectiveTenureMonthIndexes)?.simpleLabel ??
+      null,
+    [effectiveTenureMonthIndexes, now, tenurePolicy],
+  );
+  const tenureQuarterLabel = useMemo(
+    () => getCurrentTenurePeriodRange(tenurePolicy, now)?.simpleLabel ?? null,
+    [now, tenurePolicy],
+  );
+
+  const range = useMemo(
+    () =>
+      resolveAgencyRangeFromPreset(
+        effectiveRangePreset,
+        customFromDate,
+        customToDate,
+        tenurePolicy,
+        now,
+        effectiveTenureMonthIndexes,
+      ),
+    [
+      customFromDate,
+      customToDate,
+      effectiveRangePreset,
+      effectiveTenureMonthIndexes,
+      now,
+      tenurePolicy,
+    ],
+  );
 
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({ [today]: true });
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -143,25 +261,41 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     body: "",
   });
 
+  const profileQueryInput = useMemo(
+    () => ({
+      teamId,
+      userId: subjectUserId,
+      utcOffsetMinutes,
+      from: range.from,
+      to: range.to,
+    }),
+    [range.from, range.to, subjectUserId, teamId, utcOffsetMinutes],
+  );
+
   const profileQuery = useQuery({
     ...orpc.agencyOps.memberProfile.get.queryOptions({
-      input: { teamId, userId: subjectUserId, utcOffsetMinutes },
+      input: profileQueryInput,
     }),
     enabled: Boolean(teamId && subjectUserId && session.data?.user),
+    placeholderData: keepPreviousData,
   });
 
   const invalidate = useMutation({
     mutationFn: async () => undefined,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: orpc.agencyOps.memberProfile.get.key({
-          input: { teamId, userId: subjectUserId, utcOffsetMinutes },
-        }),
+        queryKey: orpc.agencyOps.memberProfile.get.key(),
       });
     },
   });
 
   const serverUrl = getServerUrl();
+  const periodLabel = rangePresetDisplayLabel(
+    effectiveRangePreset,
+    tenurePeriodLabel,
+    customFromDate,
+    customToDate,
+  );
 
   const profile = useMemo(() => {
     const data = profileQuery.data;
@@ -183,8 +317,15 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
 
     const leaveSummary =
       data.leave.length === 0
-        ? "No leave ranges in this year"
+        ? "No leave in this period"
         : `${data.leave.length} leave range${data.leave.length === 1 ? "" : "s"}`;
+
+    const heatLayout = resolveMemberProfileHeatLayout(
+      effectiveRangePreset,
+      effectiveTenureMonthIndexes,
+      data.heatMap.startDate,
+      data.heatMap.endDate,
+    );
 
     return {
       userName: data.userName,
@@ -194,69 +335,117 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       isSelf: data.isSelf,
       canAddReview: data.canAddReview,
       canManageLeave: data.canManageLeave,
-      monthHoursLabel: shortHours(data.monthTotalSeconds),
-      yearHoursLabel: shortHours(data.yearTotalSeconds),
+      periodHoursLabel: shortHours(data.periodTotalSeconds),
+      heatLayout,
       heatMap: {
         startDate: data.heatMap.startDate,
         endDate: data.heatMap.endDate,
-        days: data.heatMap.days.map((day) => ({
-          ...day,
-          hoursLabel: shortHours(day.totalSeconds),
-        })),
+        days: data.heatMap.days.map((day, index, all) => {
+          let offBand: "single" | "start" | "middle" | "end" | null = null;
+          if (day.off) {
+            const hasPrev = Boolean(all[index - 1]?.off);
+            const hasNext = Boolean(all[index + 1]?.off);
+            if (!hasPrev && !hasNext) offBand = "single";
+            else if (!hasPrev && hasNext) offBand = "start";
+            else if (hasPrev && hasNext) offBand = "middle";
+            else offBand = "end";
+          }
+          return {
+            ...day,
+            hoursLabel: shortHours(day.totalSeconds),
+            dayOfMonthLabel: String(Number(day.date.slice(8, 10))),
+            offBand,
+          };
+        }),
       },
       leaveSummary,
-      timeline: data.timeline.map((day) => ({
-        date: day.date,
-        label: formatDayLabel(day.date, today),
-        open: expandedDays[day.date] ?? day.date === today,
-        items: day.items.map((item) => {
-          if (item.kind === "review") {
-            const authorAvatarUrl =
-              item.authorAvatar && serverUrl
-                ? getUserAvatarPublicUrl({
-                    baseUrl: serverUrl,
-                    userId: item.authorUserId,
-                    storageKey: item.authorAvatar,
-                  })
-                : null;
+      timeline: data.timeline.map((day, index) => {
+        const defaultOpen =
+          day.date === today ||
+          (expandedDays[day.date] === undefined &&
+            !data.timeline.some((entry) => entry.date === today) &&
+            index === 0);
+        return {
+          date: day.date,
+          label: formatDayLabel(day.date, today),
+          open: expandedDays[day.date] ?? defaultOpen,
+          items: day.items.map((item) => {
+            if (item.kind === "review") {
+              const authorAvatarUrl =
+                item.authorAvatar && serverUrl
+                  ? getUserAvatarPublicUrl({
+                      baseUrl: serverUrl,
+                      userId: item.authorUserId,
+                      storageKey: item.authorAvatar,
+                    })
+                  : null;
+              return {
+                kind: "review" as const,
+                id: item.id,
+                body: item.body,
+                authorName: item.authorName,
+                authorAvatarUrl,
+                timeLabel: new Date(item.createdAt).toLocaleTimeString(undefined, {
+                  hour: "numeric",
+                  minute: "2-digit",
+                }),
+              };
+            }
             return {
-              kind: "review" as const,
+              kind: "activity" as const,
               id: item.id,
-              body: item.body,
-              authorName: item.authorName,
-              authorAvatarUrl,
+              summary: item.summary,
+              projectName: item.projectName,
+              isWaste: item.isWaste,
               timeLabel: new Date(item.createdAt).toLocaleTimeString(undefined, {
                 hour: "numeric",
                 minute: "2-digit",
               }),
+              durationLabel: formatDuration(item.durationSeconds, "short"),
             };
-          }
-          return {
-            kind: "activity" as const,
-            id: item.id,
-            summary: item.summary,
-            projectName: item.projectName,
-            isWaste: item.isWaste,
-            timeLabel: new Date(item.createdAt).toLocaleTimeString(undefined, {
-              hour: "numeric",
-              minute: "2-digit",
-            }),
-            durationLabel: formatDuration(item.durationSeconds, "short"),
-          };
-        }),
-      })),
+          }),
+        };
+      }),
     };
-  }, [profileQuery.data, serverUrl, today, expandedDays]);
+  }, [
+    effectiveRangePreset,
+    effectiveTenureMonthIndexes,
+    expandedDays,
+    profileQuery.data,
+    serverUrl,
+    today,
+  ]);
+
+  // Keep leave/review drafts inside the selected period when the range changes.
+  const rangeStartKey = range.from.slice(0, 10);
+  const rangeEndKey = range.to.slice(0, 10);
+  const clampedDefaultDate =
+    today < rangeStartKey ? rangeStartKey : today > rangeEndKey ? rangeEndKey : today;
 
   return {
     teamId,
     subjectUserId,
-    loading: profileQuery.isPending,
+    loading: profileQuery.isPending || tenurePolicyQuery.isPending,
     error: profileQuery.error
       ? profileQuery.error instanceof Error
         ? profileQuery.error.message
         : "Couldn't load profile"
       : store.error,
+    period: {
+      rangePreset: effectiveRangePreset,
+      onRangePresetChange: setRangePreset,
+      customFromDate,
+      onCustomFromChange: setCustomFromDate,
+      customToDate,
+      onCustomToChange: setCustomToDate,
+      tenureAvailable: Boolean(tenurePolicy?.enabled),
+      tenurePeriodLabel,
+      tenureQuarterLabel,
+      tenureQuarterMonths,
+      tenureMonthIndexes: effectiveTenureMonthIndexes,
+      onTenureMonthIndexesChange: setTenureMonthIndexes,
+      label: periodLabel,
+    },
     profile,
     leaveDialogOpen,
     reviewDialogOpen,
@@ -264,8 +453,22 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     reviewPending: store.reviewPending,
     leaveDraft,
     reviewDraft,
-    setLeaveDialogOpen,
-    setReviewDialogOpen,
+    setLeaveDialogOpen(open) {
+      if (open) {
+        setLeaveDraftState((prev) => ({
+          ...prev,
+          startDate: clampedDefaultDate,
+          endDate: clampedDefaultDate,
+        }));
+      }
+      setLeaveDialogOpen(open);
+    },
+    setReviewDialogOpen(open) {
+      if (open) {
+        setReviewDraftState((prev) => ({ ...prev, reviewDate: clampedDefaultDate }));
+      }
+      setReviewDialogOpen(open);
+    },
     setLeaveDraft(patch) {
       setLeaveDraftState((prev) => ({ ...prev, ...patch }));
     },
@@ -279,6 +482,9 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       setExpandedDays((prev) => ({ ...prev, [date]: true }));
       const el = document.getElementById(`member-profile-day-${date}`);
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    },
+    retry() {
+      void profileQuery.refetch();
     },
     async submitLeave() {
       if (!teamId || !profile) return;
@@ -310,7 +516,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         });
         toast.success("Review saved");
         setReviewDialogOpen(false);
-        setReviewDraftState({ reviewDate: today, body: "" });
+        setReviewDraftState({ reviewDate: clampedDefaultDate, body: "" });
         await invalidate.mutateAsync();
         await profileQuery.refetch();
       } catch {

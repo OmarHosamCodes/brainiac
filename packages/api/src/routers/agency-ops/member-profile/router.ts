@@ -27,6 +27,8 @@ export const memberProfileRouter = {
             .int()
             .min(-14 * 60)
             .max(14 * 60),
+          from: z.string().datetime(),
+          to: z.string().datetime(),
         }),
       )
       .handler(async ({ context, input }) => {

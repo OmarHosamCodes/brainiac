@@ -81,8 +81,11 @@ export const memberProfileSchema = z.object({
   isSelf: z.boolean(),
   canAddReview: z.boolean(),
   canManageLeave: z.boolean(),
-  monthTotalSeconds: z.number().int().nonnegative(),
-  yearTotalSeconds: z.number().int().nonnegative(),
+  periodTotalSeconds: z.number().int().nonnegative(),
+  range: z.object({
+    from: z.string().datetime(),
+    to: z.string().datetime(),
+  }),
   heatMap: z.object({
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

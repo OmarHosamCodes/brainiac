@@ -12,11 +12,7 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 
 import { requireTeamMembership } from "../shared/membership";
-import {
-  addDaysToDateKey,
-  localDateKeyFromInstant,
-  localInstantFromDateKey,
-} from "../time-tracking/local-week-bounds";
+import { localDateKeyFromInstant } from "../time-tracking/local-week-bounds";
 import { buildHeatDays, expandLeaveDays } from "./member-profile-heat";
 import type { memberLeaveSchema, memberProfileSchema, memberReviewSchema } from "./schemas";
 import type { z } from "zod";
@@ -69,18 +65,28 @@ async function requireSubjectMembership(teamId: string, userId: string) {
 
 export async function getMemberProfile(
   actorUserId: string,
-  input: { teamId: string; userId: string; utcOffsetMinutes: number },
+  input: {
+    teamId: string;
+    userId: string;
+    utcOffsetMinutes: number;
+    from: string;
+    to: string;
+  },
 ): Promise<MemberProfile> {
   const actorRole = await requireTeamMembership(actorUserId, input.teamId, "viewer");
   const subject = await requireSubjectMembership(input.teamId, input.userId);
 
-  const now = new Date();
-  const endDate = localDateKeyFromInstant(now, input.utcOffsetMinutes);
-  const startDate = addDaysToDateKey(endDate, -364);
-  const rangeStart = localInstantFromDateKey(startDate, input.utcOffsetMinutes);
-  const rangeEnd = localInstantFromDateKey(endDate, input.utcOffsetMinutes, true);
+  const rangeStart = new Date(input.from);
+  const rangeEnd = new Date(input.to);
+  if (Number.isNaN(rangeStart.getTime()) || Number.isNaN(rangeEnd.getTime())) {
+    throw new ORPCError("BAD_REQUEST", { message: "Invalid range" });
+  }
+  if (rangeEnd.getTime() < rangeStart.getTime()) {
+    throw new ORPCError("BAD_REQUEST", { message: "to must be on or after from" });
+  }
 
-  const monthStart = `${endDate.slice(0, 7)}-01`;
+  const startDate = localDateKeyFromInstant(rangeStart, input.utcOffsetMinutes);
+  const endDate = localDateKeyFromInstant(rangeEnd, input.utcOffsetMinutes);
 
   const [entries, leaveRows, reviewRows] = await Promise.all([
     db
@@ -147,14 +153,12 @@ export async function getMemberProfile(
   ]);
 
   const secondsByDate = new Map<string, number>();
-  let yearTotalSeconds = 0;
-  let monthTotalSeconds = 0;
+  let periodTotalSeconds = 0;
   for (const entry of entries) {
     const date = localDateKeyFromInstant(entry.startedAt, input.utcOffsetMinutes);
     const next = (secondsByDate.get(date) ?? 0) + entry.durationSeconds;
     secondsByDate.set(date, next);
-    yearTotalSeconds += entry.durationSeconds;
-    if (date >= monthStart) monthTotalSeconds += entry.durationSeconds;
+    periodTotalSeconds += entry.durationSeconds;
   }
 
   const leave = leaveRows.map(mapLeave);
@@ -262,8 +266,11 @@ export async function getMemberProfile(
     isSelf,
     canAddReview,
     canManageLeave,
-    monthTotalSeconds,
-    yearTotalSeconds,
+    periodTotalSeconds,
+    range: {
+      from: rangeStart.toISOString(),
+      to: rangeEnd.toISOString(),
+    },
     heatMap: {
       startDate,
       endDate,

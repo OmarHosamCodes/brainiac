@@ -121,7 +121,7 @@ function buildProjectFilterGroups(
   return groups;
 }
 
-function resolveRangeFromPreset(
+export function resolveAgencyRangeFromPreset(
   preset: RangePreset,
   customFromDate: string,
   customToDate: string,
@@ -292,7 +292,7 @@ export function useAgencyTimeRangeFilters({
 
   const range = useMemo(
     () =>
-      resolveRangeFromPreset(
+      resolveAgencyRangeFromPreset(
         effectiveAppliedRangePreset,
         appliedCustomFromDate,
         appliedCustomToDate,
@@ -427,7 +427,7 @@ export function useAgencyTimeRangeFilters({
       showWaste,
       mergeSameTaskNames,
       tenureMonthIndexes,
-      range: resolveRangeFromPreset(
+      range: resolveAgencyRangeFromPreset(
         preset,
         customFromDate,
         customToDate,

@@ -31,7 +31,9 @@ export function AppShellContextBar() {
   const toggleRailPinned = useAppShellStore((s) => s.toggleRailPinned);
   const activeNav = findActiveNavItem(location.pathname);
   const onAgency = location.pathname.startsWith("/agency");
-  const segment = onAgency ? agencySegmentFromSearch(location.search) : null;
+  const onMemberProfile =
+    location.pathname === "/agency/me" || location.pathname.startsWith("/agency/members/");
+  const segment = onAgency && !onMemberProfile ? agencySegmentFromSearch(location.search) : null;
   const sectionLabel = activeNav?.label ?? "Orch";
   const sectionHref = activeNav?.to ?? "/canvas";
   const agencyTeamId = useTeamStore((s) => s.selectedTeamId);
@@ -58,7 +60,23 @@ export function AppShellContextBar() {
         </button>
         <Breadcrumb>
           <BreadcrumbList className="min-w-0 flex-nowrap">
-            {onAgency && segment ? (
+            {onAgency && onMemberProfile ? (
+              <>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to={sectionHref} className="truncate text-muted">
+                      {sectionLabel}
+                    </Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="truncate font-semibold text-highlighted">
+                    Profile
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
+            ) : onAgency && segment ? (
               <>
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>

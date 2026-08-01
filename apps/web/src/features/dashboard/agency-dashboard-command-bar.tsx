@@ -125,7 +125,7 @@ function normalizeTenureMonthIndexes(next: number[]): number[] {
   return unique.length === 3 ? [] : unique;
 }
 
-function RangePresetChooser({
+export function RangePresetChooser({
   value,
   onChange,
   tenureAvailable,
