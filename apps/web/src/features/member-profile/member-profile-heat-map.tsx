@@ -1,0 +1,309 @@
+import { useLayoutEffect, useRef, useState } from "react";
+
+import {
+  STRIP_WEEK_COL_PX,
+  stripFillWeekCount,
+} from "@/features/member-profile/member-profile-heat-strip-fill";
+import { agencyFocusRingClass } from "@/features/shared/agency-ui";
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
+
+export type MemberProfileHeatDay = {
+  date: string;
+  totalSeconds: number;
+  intensity: number;
+  off: { type: string; reason: string | null } | null;
+  offBand: "start" | "middle" | "end" | "single" | null;
+  hoursLabel: string;
+  dayOfMonthLabel: string;
+};
+
+export type MemberProfileHeatMapData = {
+  startDate: string;
+  endDate: string;
+  days: MemberProfileHeatDay[];
+};
+
+/** Cool Orch intensity ramp — chromatic `chart-2` so dark mode doesn't collapse to grey/white. */
+export const HEAT_INTENSITY: Record<number, string> = {
+  0: "bg-muted",
+  1: "bg-chart-2/25",
+  2: "bg-chart-2/45",
+  3: "bg-chart-2/70",
+  4: "bg-chart-2",
+};
+
+const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+function leaveTypeLabel(type: string) {
+  if (type === "pto") return "PTO";
+  if (type === "sick") return "Sick";
+  if (type === "team_holiday") return "Team holiday";
+  if (type === "other") return "Other";
+  return type;
+}
+
+function offBandRadius(band: MemberProfileHeatDay["offBand"]) {
+  switch (band) {
+    case "start":
+      return "rounded-t-[3px] rounded-b-none";
+    case "middle":
+      return "rounded-none";
+    case "end":
+      return "rounded-b-[3px] rounded-t-none";
+    case "single":
+      return "rounded-[3px]";
+    case null:
+      return "rounded-[3px]";
+    default: {
+      const _exhaustive: never = band;
+      return _exhaustive;
+    }
+  }
+}
+
+function monthLabelsForWeeks(weeks: MemberProfileHeatDay[][]) {
+  const labels: Array<{ weekIndex: number; label: string }> = [];
+  let lastMonth = "";
+  weeks.forEach((week, weekIndex) => {
+    const firstReal = week.find((day) => !day.date.startsWith("pad-"));
+    if (!firstReal) return;
+    const month = firstReal.date.slice(0, 7);
+    if (month === lastMonth) return;
+    lastMonth = month;
+    const date = new Date(`${firstReal.date}T00:00:00Z`);
+    labels.push({
+      weekIndex,
+      label: date.toLocaleString(undefined, { month: "short", timeZone: "UTC" }),
+    });
+  });
+  return labels;
+}
+
+function heatDayNumberClass(intensity: number, isOff: boolean) {
+  if (isOff && intensity === 0) return "text-foreground";
+  if (intensity >= 3) return "text-white";
+  return "text-foreground";
+}
+
+function HeatPadCell({ sizeClass }: { sizeClass: string }) {
+  return <span className={cn(sizeClass, "rounded-[3px]", HEAT_INTENSITY[0])} aria-hidden />;
+}
+
+function emptyHeatDay(key: string): MemberProfileHeatDay {
+  return {
+    date: key,
+    totalSeconds: 0,
+    intensity: 0,
+    off: null,
+    offBand: null,
+    hoursLabel: "",
+    dayOfMonthLabel: "",
+  };
+}
+
+function buildHeatWeeks(days: MemberProfileHeatDay[], startDate: string): MemberProfileHeatDay[][] {
+  const padded: MemberProfileHeatDay[] = [...days];
+  const first = new Date(`${padded[0]?.date ?? startDate}T00:00:00Z`);
+  const pad = (first.getUTCDay() + 6) % 7;
+  for (let i = 0; i < pad; i++) {
+    padded.unshift(emptyHeatDay(`pad-start-${i}`));
+  }
+  while (padded.length % 7 !== 0) {
+    padded.push(emptyHeatDay(`pad-end-${padded.length}`));
+  }
+  const weeks: MemberProfileHeatDay[][] = [];
+  for (let i = 0; i < padded.length; i += 7) {
+    weeks.push(padded.slice(i, i + 7));
+  }
+  return weeks;
+}
+
+function HeatCell({
+  day,
+  sizeClass,
+  showDayNumber,
+  onFocus,
+}: {
+  day: MemberProfileHeatDay;
+  sizeClass: string;
+  showDayNumber: boolean;
+  onFocus: () => void;
+}) {
+  const title = day.off
+    ? `${day.date}: ${day.hoursLabel || "0m"} · off (${leaveTypeLabel(day.off.type)}${
+        day.off.reason ? ` · ${day.off.reason}` : ""
+      })`
+    : `${day.date}: ${day.hoursLabel}`;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            sizeClass,
+            "inline-flex items-center justify-center transition-transform duration-150 ease-out",
+            "hover:z-10 hover:scale-125 active:scale-95",
+            "motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100",
+            agencyFocusRingClass,
+            HEAT_INTENSITY[day.intensity] ?? HEAT_INTENSITY[0],
+            showDayNumber &&
+              cn(
+                "text-[10px] font-semibold leading-none",
+                heatDayNumberClass(day.intensity, Boolean(day.off)),
+              ),
+            day.off
+              ? cn(
+                  "ring-1 ring-warning",
+                  day.intensity === 0 && "bg-warning/45",
+                  offBandRadius(day.offBand),
+                )
+              : "rounded-[3px]",
+          )}
+          aria-label={title}
+          onClick={onFocus}
+        >
+          {showDayNumber ? day.dayOfMonthLabel : null}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{title}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+export function MemberProfileHeatMap({
+  heatMap,
+  layout,
+  onFocusDay,
+}: {
+  heatMap: MemberProfileHeatMapData;
+  layout: "compact" | "strip";
+  onFocusDay: (date: string) => void;
+}) {
+  const weeks = buildHeatWeeks(heatMap.days, heatMap.startDate);
+  const monthLabels = monthLabelsForWeeks(weeks);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [stripFillWeeks, setStripFillWeeks] = useState(0);
+
+  useLayoutEffect(() => {
+    if (layout !== "strip") return;
+    const node = stripRef.current;
+    if (!node) return;
+    const target = node;
+
+    function measure() {
+      setStripFillWeeks(stripFillWeekCount(target.clientWidth, weeks.length));
+    }
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [layout, weeks.length]);
+
+  if (layout === "compact") {
+    return (
+      <div
+        className="inline-grid min-w-max grid-cols-[auto_repeat(7,minmax(0,1fr))] gap-1"
+        role="img"
+        aria-label={`Contribution ${heatMap.startDate} to ${heatMap.endDate}`}
+      >
+        <span className="size-8" aria-hidden />
+        {WEEKDAY_LABELS.map((label) => (
+          <span
+            key={label}
+            className="flex size-8 items-center justify-center text-[10px] font-medium text-foreground/70"
+          >
+            {label.slice(0, 1)}
+          </span>
+        ))}
+        {weeks.map((week, weekIndex) => (
+          <div key={weekIndex} className="contents">
+            <span className="flex size-8 items-center text-[10px] font-medium text-foreground/70">
+              {weekIndex === 0
+                ? monthLabels[0]?.label
+                : monthLabels.find((entry) => entry.weekIndex === weekIndex)?.label || ""}
+            </span>
+            {week.map((day, dayIndex) =>
+              day.date.startsWith("pad-") ? (
+                <HeatPadCell key={`pad-${weekIndex}-${dayIndex}`} sizeClass="size-8" />
+              ) : (
+                <HeatCell
+                  key={day.date}
+                  day={day}
+                  sizeClass="size-8"
+                  showDayNumber
+                  onFocus={() => onFocusDay(day.date)}
+                />
+              ),
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const fillWeeks: MemberProfileHeatDay[][] = Array.from(
+    { length: stripFillWeeks },
+    (_, weekIndex) =>
+      Array.from({ length: 7 }, (_, dayIndex) => emptyHeatDay(`fill-${weekIndex}-${dayIndex}`)),
+  );
+  const displayWeeks = [...weeks, ...fillWeeks];
+
+  return (
+    <div ref={stripRef} className="w-full">
+      <div className="flex w-full gap-1">
+        <div className="flex w-7 shrink-0 flex-col gap-1 pt-5">
+          {WEEKDAY_LABELS.map((label, index) => (
+            <span
+              key={label}
+              className={cn(
+                "flex h-3 items-center text-[10px] font-medium leading-none text-foreground/70",
+                index % 2 === 1 ? "opacity-0" : "",
+              )}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <div className="relative mb-1 h-4">
+            {monthLabels.map((entry) => (
+              <span
+                key={`${entry.label}-${entry.weekIndex}`}
+                className="absolute top-0 text-[10px] font-medium text-foreground/70"
+                style={{ left: `${entry.weekIndex * STRIP_WEEK_COL_PX}px` }}
+              >
+                {entry.label}
+              </span>
+            ))}
+          </div>
+          <div
+            className="flex gap-1"
+            role="img"
+            aria-label={`Contribution ${heatMap.startDate} to ${heatMap.endDate}`}
+          >
+            {displayWeeks.map((week, weekIndex) => (
+              <div key={weekIndex} className="flex shrink-0 flex-col gap-1">
+                {week.map((day) =>
+                  day.date.startsWith("pad-") || day.date.startsWith("fill-") ? (
+                    <HeatPadCell key={day.date} sizeClass="size-3" />
+                  ) : (
+                    <HeatCell
+                      key={day.date}
+                      day={day}
+                      sizeClass="size-3"
+                      showDayNumber={false}
+                      onFocus={() => onFocusDay(day.date)}
+                    />
+                  ),
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

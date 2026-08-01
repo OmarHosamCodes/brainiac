@@ -4,6 +4,10 @@ import type { CSSProperties } from "react";
 import { shellConfirmInClass, shellStaggerItemClass } from "@/features/app-shell/app-shell-ui";
 import { RangePresetChooser } from "@/features/dashboard/agency-dashboard-command-bar";
 import { MemberProfileDatePicker } from "@/features/member-profile/member-profile-date-picker";
+import {
+  HEAT_INTENSITY,
+  MemberProfileHeatMap,
+} from "@/features/member-profile/member-profile-heat-map";
 import { MemberProfileLeaveRangePicker } from "@/features/member-profile/member-profile-leave-range-picker";
 import type { AgencyMemberProfileViewModel } from "@/features/member-profile/hooks/use-agency-member-profile";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
@@ -35,76 +39,11 @@ import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Skeleton } from "@/ui/skeleton";
 import { Textarea } from "@/ui/textarea";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
+import { TooltipProvider } from "@/ui/tooltip";
 
 type Props = {
   viewModel: AgencyMemberProfileViewModel;
 };
-
-type HeatDay = NonNullable<AgencyMemberProfileViewModel["profile"]>["heatMap"]["days"][number];
-
-/** Cool Orch intensity ramp — chromatic `chart-2` so dark mode doesn't collapse to grey/white. */
-const HEAT_INTENSITY: Record<number, string> = {
-  0: "bg-muted",
-  1: "bg-chart-2/25",
-  2: "bg-chart-2/45",
-  3: "bg-chart-2/70",
-  4: "bg-chart-2",
-};
-
-const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
-
-function leaveTypeLabel(type: string) {
-  if (type === "pto") return "PTO";
-  if (type === "sick") return "Sick";
-  if (type === "team_holiday") return "Team holiday";
-  if (type === "other") return "Other";
-  return type;
-}
-
-function offBandRadius(band: HeatDay["offBand"]) {
-  switch (band) {
-    case "start":
-      return "rounded-t-[3px] rounded-b-none";
-    case "middle":
-      return "rounded-none";
-    case "end":
-      return "rounded-b-[3px] rounded-t-none";
-    case "single":
-      return "rounded-[3px]";
-    case null:
-      return "rounded-[3px]";
-    default: {
-      const _exhaustive: never = band;
-      return _exhaustive;
-    }
-  }
-}
-
-function monthLabelsForWeeks(weeks: HeatDay[][]) {
-  const labels: Array<{ weekIndex: number; label: string }> = [];
-  let lastMonth = "";
-  weeks.forEach((week, weekIndex) => {
-    const firstReal = week.find((day) => !day.date.startsWith("pad-"));
-    if (!firstReal) return;
-    const month = firstReal.date.slice(0, 7);
-    if (month === lastMonth) return;
-    lastMonth = month;
-    const date = new Date(`${firstReal.date}T00:00:00Z`);
-    labels.push({
-      weekIndex,
-      label: date.toLocaleString(undefined, { month: "short", timeZone: "UTC" }),
-    });
-  });
-  return labels;
-}
-
-function heatDayNumberClass(intensity: number, isOff: boolean) {
-  if (isOff && intensity === 0) return "text-foreground";
-  // Solid cool fills need light ink; empty/light fills use foreground.
-  if (intensity >= 3) return "text-white";
-  return "text-foreground";
-}
 
 /** Semantic accents for timeline events — Restrained product colorize. */
 function activityEventChrome(eventType: "time_logged" | "waste_marked" | "leave") {
@@ -197,221 +136,6 @@ function TimelineActivityRow({
   );
 }
 
-function HeatPadCell({ sizeClass }: { sizeClass: string }) {
-  return <span className={cn(sizeClass, "rounded-[3px]", HEAT_INTENSITY[0])} aria-hidden />;
-}
-
-function emptyHeatDay(key: string): HeatDay {
-  return {
-    date: key,
-    totalSeconds: 0,
-    intensity: 0,
-    off: null,
-    offBand: null,
-    hoursLabel: "",
-    dayOfMonthLabel: "",
-  };
-}
-
-function buildHeatWeeks(days: HeatDay[], startDate: string): HeatDay[][] {
-  const padded: HeatDay[] = [...days];
-  const first = new Date(`${padded[0]?.date ?? startDate}T00:00:00Z`);
-  const pad = (first.getUTCDay() + 6) % 7;
-  for (let i = 0; i < pad; i++) {
-    padded.unshift(emptyHeatDay(`pad-start-${i}`));
-  }
-  while (padded.length % 7 !== 0) {
-    padded.push(emptyHeatDay(`pad-end-${padded.length}`));
-  }
-  const weeks: HeatDay[][] = [];
-  for (let i = 0; i < padded.length; i += 7) {
-    weeks.push(padded.slice(i, i + 7));
-  }
-  return weeks;
-}
-
-/** Strip cell is size-3 (12px) + gap-1 (4px) per week column. */
-const STRIP_WEEK_COL_PX = 16;
-/** Enough empty week columns to cover any panel width behind the real strip. */
-const STRIP_FILL_WEEK_COUNT = 80;
-
-function MemberProfileHeatMap({
-  heatMap,
-  layout,
-  onFocusDay,
-}: {
-  heatMap: NonNullable<AgencyMemberProfileViewModel["profile"]>["heatMap"];
-  layout: "compact" | "strip";
-  onFocusDay: (date: string) => void;
-}) {
-  const weeks = buildHeatWeeks(heatMap.days, heatMap.startDate);
-  const monthLabels = monthLabelsForWeeks(weeks);
-
-  if (layout === "compact") {
-    return (
-      <div
-        className="inline-grid min-w-max grid-cols-[auto_repeat(7,minmax(0,1fr))] gap-1"
-        role="img"
-        aria-label={`Contribution ${heatMap.startDate} to ${heatMap.endDate}`}
-      >
-        <span className="size-8" aria-hidden />
-        {WEEKDAY_LABELS.map((label) => (
-          <span
-            key={label}
-            className="flex size-8 items-center justify-center text-[10px] font-medium text-foreground/70"
-          >
-            {label.slice(0, 1)}
-          </span>
-        ))}
-        {weeks.map((week, weekIndex) => (
-          <div key={weekIndex} className="contents">
-            <span className="flex size-8 items-center text-[10px] font-medium text-foreground/70">
-              {weekIndex === 0
-                ? monthLabels[0]?.label
-                : monthLabels.find((entry) => entry.weekIndex === weekIndex)?.label || ""}
-            </span>
-            {week.map((day, dayIndex) =>
-              day.date.startsWith("pad-") ? (
-                <HeatPadCell key={`pad-${weekIndex}-${dayIndex}`} sizeClass="size-8" />
-              ) : (
-                <HeatCell
-                  key={day.date}
-                  day={day}
-                  sizeClass="size-8"
-                  showDayNumber
-                  onFocus={() => onFocusDay(day.date)}
-                />
-              ),
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative w-full overflow-hidden">
-      {/* Fixed-size empty cells fill leftover panel width; real weeks paint over the left. */}
-      <div
-        className="pointer-events-none absolute inset-y-0 start-7 top-5 flex gap-1 overflow-hidden"
-        aria-hidden
-      >
-        {Array.from({ length: STRIP_FILL_WEEK_COUNT }, (_, weekIndex) => (
-          <div key={weekIndex} className="flex shrink-0 flex-col gap-1">
-            {Array.from({ length: 7 }, (_, dayIndex) => (
-              <span key={dayIndex} className={cn("size-3 rounded-[3px]", HEAT_INTENSITY[0])} />
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="relative inline-flex gap-1">
-        <div className="flex w-7 shrink-0 flex-col gap-1 pt-5">
-          {WEEKDAY_LABELS.map((label, index) => (
-            <span
-              key={label}
-              className={cn(
-                "flex h-3 items-center text-[10px] font-medium leading-none text-foreground/70",
-                index % 2 === 1 ? "opacity-0" : "",
-              )}
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-        <div>
-          <div className="relative mb-1 h-4">
-            {monthLabels.map((entry) => (
-              <span
-                key={`${entry.label}-${entry.weekIndex}`}
-                className="absolute top-0 text-[10px] font-medium text-foreground/70"
-                style={{ left: `${entry.weekIndex * STRIP_WEEK_COL_PX}px` }}
-              >
-                {entry.label}
-              </span>
-            ))}
-          </div>
-          <div
-            className="flex gap-1"
-            role="img"
-            aria-label={`Contribution ${heatMap.startDate} to ${heatMap.endDate}`}
-          >
-            {weeks.map((week, weekIndex) => (
-              <div key={weekIndex} className="flex flex-col gap-1">
-                {week.map((day) =>
-                  day.date.startsWith("pad-") ? (
-                    <HeatPadCell key={day.date} sizeClass="size-3" />
-                  ) : (
-                    <HeatCell
-                      key={day.date}
-                      day={day}
-                      sizeClass="size-3"
-                      showDayNumber={false}
-                      onFocus={() => onFocusDay(day.date)}
-                    />
-                  ),
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function HeatCell({
-  day,
-  sizeClass,
-  showDayNumber,
-  onFocus,
-}: {
-  day: HeatDay;
-  sizeClass: string;
-  showDayNumber: boolean;
-  onFocus: () => void;
-}) {
-  const title = day.off
-    ? `${day.date}: ${day.hoursLabel || "0m"} · off (${leaveTypeLabel(day.off.type)}${
-        day.off.reason ? ` · ${day.off.reason}` : ""
-      })`
-    : `${day.date}: ${day.hoursLabel}`;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            sizeClass,
-            "inline-flex items-center justify-center transition-transform duration-150 ease-out",
-            "hover:z-10 hover:scale-125 active:scale-95",
-            "motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100",
-            agencyFocusRingClass,
-            HEAT_INTENSITY[day.intensity] ?? HEAT_INTENSITY[0],
-            showDayNumber &&
-              cn(
-                "text-[10px] font-semibold leading-none",
-                heatDayNumberClass(day.intensity, Boolean(day.off)),
-              ),
-            day.off
-              ? cn(
-                  "ring-1 ring-warning",
-                  day.intensity === 0 && "bg-warning/45",
-                  offBandRadius(day.offBand),
-                )
-              : "rounded-[3px]",
-          )}
-          aria-label={title}
-          onClick={onFocus}
-        >
-          {showDayNumber ? day.dayOfMonthLabel : null}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top">{title}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 export function AgencyMemberProfileView({ viewModel }: Props) {
   const { profile, period } = viewModel;
 
@@ -476,21 +200,23 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
           />
           {period.rangePreset === "custom" ? (
             <div className="flex flex-wrap items-center gap-2">
-              <Input
-                type="date"
-                aria-label="From date"
-                className="h-9 w-auto"
-                value={period.customFromDate}
-                onChange={(e) => period.onCustomFromChange(e.target.value)}
-              />
+              <div className="w-[11.5rem]">
+                <MemberProfileDatePicker
+                  id="profile-period-from"
+                  aria-label="From date"
+                  value={period.customFromDate}
+                  onChange={period.onCustomFromChange}
+                />
+              </div>
               <span className="text-xs text-foreground/70">to</span>
-              <Input
-                type="date"
-                aria-label="To date"
-                className="h-9 w-auto"
-                value={period.customToDate}
-                onChange={(e) => period.onCustomToChange(e.target.value)}
-              />
+              <div className="w-[11.5rem]">
+                <MemberProfileDatePicker
+                  id="profile-period-to"
+                  aria-label="To date"
+                  value={period.customToDate}
+                  onChange={period.onCustomToChange}
+                />
+              </div>
             </div>
           ) : null}
         </div>
@@ -588,7 +314,12 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                 </div>
               </div>
 
-              <div className="mt-4 overflow-x-auto pb-1">
+              <div
+                className={cn(
+                  "mt-4 pb-1",
+                  profile.heatLayout === "compact" ? "overflow-x-auto" : "overflow-hidden",
+                )}
+              >
                 <MemberProfileHeatMap
                   heatMap={profile.heatMap}
                   layout={profile.heatLayout}
@@ -599,13 +330,10 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
 
             <section className={cn(agencyPanelClass, "p-4 sm:p-5")}>
               <h2 className={agencyWorkTitleClass}>Activity & reviews</h2>
-              <p className="mt-1 text-sm text-foreground/70">
-                Reviews, logged work, waste, and leave for this period.
-              </p>
 
               {profile.timeline.length === 0 ? (
                 <div className={cn(agencyEmptyPanelClass, "mt-4")}>
-                  No activity yet for this period. Track time in Tracker to fill the heat map.
+                  No activity in this period yet. Log time in Tracker to populate the heat map.
                 </div>
               ) : (
                 <div className="mt-4 flex flex-col gap-2">
@@ -614,7 +342,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                       key={day.date}
                       id={`member-profile-day-${day.date}`}
                       className={cn(
-                        "overflow-hidden rounded-xl border border-border bg-background transition-[border-color,box-shadow] duration-200 ease-out",
+                        "overflow-hidden rounded-xl border border-border bg-background transition-[border-color,box-shadow] duration-200 ease-out [content-visibility:auto] [contain-intrinsic-size:auto_3.5rem]",
                         day.open && "border-border shadow-sm",
                         shellStaggerItemClass,
                       )}
