@@ -1,9 +1,9 @@
 import { useState } from "react";
 
-export type UserSettingsPane = "profile" | "preferences" | "billing";
+export type UserSettingsPane = "preferences" | "billing";
 
 export function useUserSettingsModalState() {
-  const [pane, setPane] = useState<UserSettingsPane>("profile");
+  const [pane, setPane] = useState<UserSettingsPane>("preferences");
   const [nameDraft, setNameDraft] = useState("");
   const [nameDirty, setNameDirty] = useState(false);
   const [savingName, setSavingName] = useState(false);

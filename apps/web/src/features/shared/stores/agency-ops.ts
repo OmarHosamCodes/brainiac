@@ -1389,6 +1389,7 @@ function createAgencyOpsActions(
       toast.success("Rate saved");
     } catch (error) {
       toast.error("Couldn't save rate", { description: getErrorMessage(error, "Try again.") });
+      throw error;
     } finally {
       set((state) => ({ ...state, rateMutationCount: Math.max(0, state.rateMutationCount - 1) }));
     }

@@ -4,9 +4,25 @@ import { orpcClient } from "@/lib/orpc";
 
 type LeaveType = "pto" | "sick" | "team_holiday" | "other";
 
+type HrProfilePatch = {
+  status?: "active" | "inactive";
+  employmentType?: "full_time" | "part_time" | "contractor" | "intern" | null;
+  workModel?: "onsite" | "hybrid" | "remote" | null;
+  gender?: string | null;
+  dateOfBirth?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  linkedinUrl?: string | null;
+  xUrl?: string | null;
+  instagramUrl?: string | null;
+  offAllowanceDays?: number;
+  leaveAllowancePeriod?: "year" | "quarter" | "month";
+};
+
 type AgencyMemberProfileStore = {
   leavePending: boolean;
   reviewPending: boolean;
+  hrPending: boolean;
   error: string | null;
   createLeave: (input: {
     teamId: string;
@@ -22,11 +38,18 @@ type AgencyMemberProfileStore = {
     reviewDate: string;
     body: string;
   }) => Promise<void>;
+  upsertHrProfile: (
+    input: {
+      teamId: string;
+      userId: string;
+    } & HrProfilePatch,
+  ) => Promise<void>;
 };
 
 export const useAgencyMemberProfileStore = create<AgencyMemberProfileStore>((set) => ({
   leavePending: false,
   reviewPending: false,
+  hrPending: false,
   error: null,
   async createLeave(input) {
     set({ leavePending: true, error: null });
@@ -34,7 +57,7 @@ export const useAgencyMemberProfileStore = create<AgencyMemberProfileStore>((set
       await orpcClient.agencyOps.memberProfile.leave.create(input);
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : "Couldn't save leave",
+        error: error instanceof Error ? error.message : "Couldn't save off day",
       });
       throw error;
     } finally {
@@ -52,6 +75,19 @@ export const useAgencyMemberProfileStore = create<AgencyMemberProfileStore>((set
       throw error;
     } finally {
       set({ reviewPending: false });
+    }
+  },
+  async upsertHrProfile(input) {
+    set({ hrPending: true, error: null });
+    try {
+      await orpcClient.agencyOps.memberProfile.hrProfile.upsert(input);
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Couldn't save profile",
+      });
+      throw error;
+    } finally {
+      set({ hrPending: false });
     }
   },
 }));

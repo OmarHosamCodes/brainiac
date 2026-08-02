@@ -2,6 +2,62 @@ export type MemberProfileActivityEventType = "time_logged" | "waste_marked" | "l
 
 export type MemberProfileLeaveType = "pto" | "sick" | "team_holiday" | "other";
 
+export type MemberProfileTimeEntryActivity = {
+  kind: "activity";
+  id: string;
+  date: string;
+  createdAt: string;
+  eventType: "time_logged" | "waste_marked";
+  title: string;
+  body: string | null;
+  meta: string | null;
+  durationSeconds: number;
+  projectId: string;
+  projectName: string;
+  taskId: string | null;
+  taskTitle: string | null;
+  clientId: string;
+  clientName: string;
+  description: string;
+  isWaste: boolean;
+  taskIsWaste: boolean | null;
+  startedAt: string;
+  endedAt: string;
+  teamId: string;
+  userId: string;
+  userName: string;
+  source: "timer" | "manual";
+  isBillable: boolean;
+};
+
+export type MemberProfileLeaveActivity = {
+  kind: "activity";
+  id: string;
+  date: string;
+  createdAt: string;
+  eventType: "leave";
+  title: string;
+  body: string | null;
+  meta: string;
+  durationSeconds: null;
+  projectId: null;
+  projectName: null;
+  taskId: null;
+  taskTitle: null;
+  clientId: null;
+  clientName: null;
+  description: null;
+  isWaste: false;
+  taskIsWaste: null;
+  startedAt: null;
+  endedAt: null;
+  teamId: null;
+  userId: null;
+  userName: null;
+  source: null;
+  isBillable: null;
+};
+
 export function leaveTypeTitle(type: MemberProfileLeaveType): string {
   switch (type) {
     case "pto":
@@ -24,50 +80,70 @@ export function buildTimeEntryActivity(input: {
   date: string;
   createdAt: string;
   description: string;
-  projectName: string | null;
+  projectId: string;
+  projectName: string;
+  taskId: string | null;
+  taskTitle: string | null;
+  clientId: string;
+  clientName: string;
   durationSeconds: number;
   isWaste: boolean;
-}): {
-  kind: "activity";
-  id: string;
-  date: string;
-  createdAt: string;
-  eventType: "time_logged" | "waste_marked";
-  title: string;
-  body: string | null;
-  meta: string | null;
-  durationSeconds: number;
-} {
+  taskIsWaste: boolean | null;
+  startedAt: string;
+  endedAt: string;
+  teamId: string;
+  userId: string;
+  userName: string;
+  source: "timer" | "manual";
+  isBillable: boolean;
+}): MemberProfileTimeEntryActivity {
   const hours = Math.floor(input.durationSeconds / 3600);
   const minutes = Math.floor((input.durationSeconds % 3600) / 60);
   const durationLabel = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
   const description = input.description.trim();
-  const projectMeta = input.projectName ? `Project · ${input.projectName}` : null;
+  const taskLabel = input.taskTitle?.trim() || null;
+  const projectMeta = `Project · ${input.projectName}`;
+
+  const shared = {
+    kind: "activity" as const,
+    id: input.id,
+    date: input.date,
+    createdAt: input.createdAt,
+    durationSeconds: input.durationSeconds,
+    projectId: input.projectId,
+    projectName: input.projectName,
+    taskId: input.taskId,
+    taskTitle: input.taskTitle,
+    clientId: input.clientId,
+    clientName: input.clientName,
+    description: input.description,
+    isWaste: input.isWaste,
+    taskIsWaste: input.taskIsWaste,
+    startedAt: input.startedAt,
+    endedAt: input.endedAt,
+    teamId: input.teamId,
+    userId: input.userId,
+    userName: input.userName,
+    source: input.source,
+    isBillable: input.isBillable,
+  };
 
   if (input.isWaste) {
     return {
-      kind: "activity",
-      id: input.id,
-      date: input.date,
-      createdAt: input.createdAt,
+      ...shared,
       eventType: "waste_marked",
-      title: "Waste marked",
+      title: taskLabel || description || "Waste marked",
       body: description ? `${durationLabel} · ${description}` : `${durationLabel} marked as waste`,
       meta: projectMeta,
-      durationSeconds: input.durationSeconds,
     };
   }
 
   return {
-    kind: "activity",
-    id: input.id,
-    date: input.date,
-    createdAt: input.createdAt,
+    ...shared,
     eventType: "time_logged",
-    title: description || "Time logged",
-    body: description ? `Logged ${durationLabel}` : null,
+    title: taskLabel || description || "Time logged",
+    body: description && taskLabel ? description : description ? `Logged ${durationLabel}` : null,
     meta: projectMeta,
-    durationSeconds: input.durationSeconds,
   };
 }
 
@@ -81,17 +157,7 @@ export function buildLeaveActivity(input: {
   createdAt: string;
   windowStart: string;
   windowEnd: string;
-}): {
-  kind: "activity";
-  id: string;
-  date: string;
-  createdAt: string;
-  eventType: "leave";
-  title: string;
-  body: string | null;
-  meta: string;
-  durationSeconds: null;
-} | null {
+}): MemberProfileLeaveActivity | null {
   if (input.endDate < input.windowStart || input.startDate > input.windowEnd) return null;
   const date = input.startDate < input.windowStart ? input.windowStart : input.startDate;
   const rangeLabel =
@@ -106,5 +172,21 @@ export function buildLeaveActivity(input: {
     body: input.reason?.trim() || null,
     meta: rangeLabel,
     durationSeconds: null,
+    projectId: null,
+    projectName: null,
+    taskId: null,
+    taskTitle: null,
+    clientId: null,
+    clientName: null,
+    description: null,
+    isWaste: false,
+    taskIsWaste: null,
+    startedAt: null,
+    endedAt: null,
+    teamId: null,
+    userId: null,
+    userName: null,
+    source: null,
+    isBillable: null,
   };
 }

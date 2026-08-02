@@ -167,7 +167,7 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
-      state.setPane("profile");
+      state.setPane("preferences");
       state.setNameDraft("");
       state.setNameDirty(false);
     }

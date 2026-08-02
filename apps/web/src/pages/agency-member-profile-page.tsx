@@ -43,7 +43,7 @@ export function AgencyMemberProfilePage() {
   if (!subjectUserId) {
     return (
       <div className="h-full min-h-0 overflow-y-auto">
-        <div className={cn(agencyErrorPanelClass, "m-6")}>Sign in to view your Agency profile.</div>
+        <div className={cn(agencyErrorPanelClass, "m-6")}>Sign in to view your profile.</div>
       </div>
     );
   }

@@ -39,15 +39,111 @@ function formatDisplayDay(value: string): string {
 }
 
 function rangeLabel(startDate: string, endDate: string): string {
-  if (!startDate || !endDate) return "Select leave dates";
+  if (!startDate || !endDate) return "Select off day dates";
   if (startDate === endDate) return formatDisplayDay(startDate);
   return `${formatDisplayDay(startDate)} → ${formatDisplayDay(endDate)}`;
+}
+
+type RangeValue = { startDate: string; endDate: string };
+
+type MemberProfileOffDayRangePanelProps = {
+  startDate: string;
+  endDate: string;
+  onConfirm: (next: RangeValue) => void;
+  onCancel: () => void;
+  /** Keep the start day fixed (calendar Select flow). */
+  lockStart?: boolean;
+};
+
+/** Shared range calendar used by the off-day dialog picker and calendar Select flow. */
+export function MemberProfileOffDayRangePanel({
+  startDate,
+  endDate,
+  onConfirm,
+  onCancel,
+  lockStart = false,
+}: MemberProfileOffDayRangePanelProps) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [draftStart, setDraftStart] = useState(startDate);
+  const [draftEnd, setDraftEnd] = useState(endDate);
+
+  const from = parseLocalDateKey(draftStart);
+  const to = parseLocalDateKey(draftEnd);
+  const selected: DateRange | undefined = from ? { from, to: to ?? from } : undefined;
+  const canConfirm = Boolean(draftStart && draftEnd && draftEnd >= draftStart);
+  const draftLabel = rangeLabel(draftStart, draftEnd);
+
+  return (
+    <div>
+      <Calendar
+        mode="range"
+        numberOfMonths={2}
+        captionLayout="dropdown"
+        selected={selected}
+        defaultMonth={from ?? new Date()}
+        disabled={lockStart && from ? { before: from } : undefined}
+        onSelect={(range: DateRange | undefined) => {
+          if (!range?.from) return;
+          if (lockStart && from) {
+            const picked = range.to ?? range.from;
+            const end = picked < from ? from : picked;
+            setDraftEnd(formatLocalDateKey(end));
+            return;
+          }
+          setDraftStart(formatLocalDateKey(range.from));
+          setDraftEnd(formatLocalDateKey(range.to ?? range.from));
+        }}
+        autoFocus
+      />
+      <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
+        <div className="relative min-h-4 min-w-0 flex-1 overflow-hidden">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.p
+              key={draftLabel}
+              initial={prefersReducedMotion ? false : { opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, x: -8 }}
+              transition={{ duration: 0.16, ease: EASE }}
+              className="truncate text-xs text-muted-foreground"
+            >
+              {draftLabel}
+            </motion.p>
+          </AnimatePresence>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+          <motion.div
+            animate={
+              prefersReducedMotion
+                ? undefined
+                : { scale: canConfirm ? 1 : 0.98, opacity: canConfirm ? 1 : 0.55 }
+            }
+            transition={{ duration: 0.16, ease: EASE }}
+          >
+            <Button
+              type="button"
+              size="sm"
+              disabled={!canConfirm}
+              onClick={() => {
+                if (!canConfirm) return;
+                onConfirm({ startDate: draftStart, endDate: draftEnd });
+              }}
+            >
+              Confirm
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 type MemberProfileLeaveRangePickerProps = {
   startDate: string;
   endDate: string;
-  onRangeChange: (next: { startDate: string; endDate: string }) => void;
+  onRangeChange: (next: RangeValue) => void;
 };
 
 export function MemberProfileLeaveRangePicker({
@@ -57,36 +153,17 @@ export function MemberProfileLeaveRangePicker({
 }: MemberProfileLeaveRangePickerProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [open, setOpen] = useState(false);
-  const [draftStart, setDraftStart] = useState(startDate);
-  const [draftEnd, setDraftEnd] = useState(endDate);
   const [justConfirmed, setJustConfirmed] = useState(false);
 
-  const from = parseLocalDateKey(draftStart);
-  const to = parseLocalDateKey(draftEnd);
-  const selected: DateRange | undefined = from ? { from, to: to ?? from } : undefined;
-  const canConfirm = Boolean(draftStart && draftEnd && draftEnd >= draftStart);
   const committedLabel = rangeLabel(startDate, endDate);
-  const draftLabel = rangeLabel(draftStart, draftEnd);
 
   function openPicker(nextOpen: boolean) {
     if (nextOpen) {
-      setDraftStart(startDate);
-      setDraftEnd(endDate);
       setJustConfirmed(false);
       setOpen(true);
       return;
     }
-    setDraftStart(startDate);
-    setDraftEnd(endDate);
     setOpen(false);
-  }
-
-  function confirmRange() {
-    if (!canConfirm) return;
-    onRangeChange({ startDate: draftStart, endDate: draftEnd });
-    setJustConfirmed(true);
-    setOpen(false);
-    window.setTimeout(() => setJustConfirmed(false), prefersReducedMotion ? 0 : 420);
   }
 
   return (
@@ -106,7 +183,7 @@ export function MemberProfileLeaveRangePicker({
             "motion-reduce:transition-none motion-reduce:active:scale-100",
             agencyFocusRingClass,
           )}
-          aria-label="Leave date range"
+          aria-label="Off day date range"
           aria-expanded={open}
         >
           <motion.span
@@ -143,52 +220,20 @@ export function MemberProfileLeaveRangePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto overflow-hidden p-0" sideOffset={8}>
-        <Calendar
-          mode="range"
-          numberOfMonths={2}
-          captionLayout="dropdown"
-          selected={selected}
-          defaultMonth={from ?? new Date()}
-          onSelect={(range: DateRange | undefined) => {
-            if (!range?.from) return;
-            setDraftStart(formatLocalDateKey(range.from));
-            setDraftEnd(formatLocalDateKey(range.to ?? range.from));
-          }}
-          autoFocus
-        />
-        <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2.5">
-          <div className="relative min-h-4 min-w-0 flex-1 overflow-hidden">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.p
-                key={draftLabel}
-                initial={prefersReducedMotion ? false : { opacity: 0, x: 8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={prefersReducedMotion ? undefined : { opacity: 0, x: -8 }}
-                transition={{ duration: 0.16, ease: EASE }}
-                className="truncate text-xs text-foreground/70"
-              >
-                {draftLabel}
-              </motion.p>
-            </AnimatePresence>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={() => openPicker(false)}>
-              Cancel
-            </Button>
-            <motion.div
-              animate={
-                prefersReducedMotion
-                  ? undefined
-                  : { scale: canConfirm ? 1 : 0.98, opacity: canConfirm ? 1 : 0.55 }
-              }
-              transition={{ duration: 0.16, ease: EASE }}
-            >
-              <Button type="button" size="sm" disabled={!canConfirm} onClick={confirmRange}>
-                Confirm
-              </Button>
-            </motion.div>
-          </div>
-        </div>
+        {open ? (
+          <MemberProfileOffDayRangePanel
+            key={`${startDate}:${endDate}`}
+            startDate={startDate}
+            endDate={endDate}
+            onCancel={() => openPicker(false)}
+            onConfirm={(next) => {
+              onRangeChange(next);
+              setJustConfirmed(true);
+              setOpen(false);
+              window.setTimeout(() => setJustConfirmed(false), prefersReducedMotion ? 0 : 420);
+            }}
+          />
+        ) : null}
       </PopoverContent>
     </Popover>
   );

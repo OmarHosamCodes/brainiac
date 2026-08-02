@@ -1,4 +1,11 @@
-import { Card } from "@/ui/card";
+import { agencySectionTitleClass } from "@/features/shared/agency-ui";
+import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/ui/dialog";
+import { Skeleton } from "@/ui/skeleton";
+
+import { AgencyPeopleDirectory } from "./agency-people-directory";
+import { AgencyPeopleGuidedMember } from "./agency-people-guided-member";
+import { AgencySettingsTenurePolicy } from "./agency-settings-tenure-policy";
 import { type AgencySettingsTenurePaneViewModel } from "./hooks/use-agency-settings-tenure-pane";
 
 export function AgencySettingsTenurePaneView({
@@ -6,5 +13,99 @@ export function AgencySettingsTenurePaneView({
 }: {
   viewModel: AgencySettingsTenurePaneViewModel;
 }) {
-  return <Card className="p-4">{viewModel.isLoading ? "Loading..." : "Tenure"}</Card>;
+  if (viewModel.isLoading) {
+    return (
+      <div className="space-y-6" aria-busy="true" aria-label="Loading people">
+        <div className="space-y-2">
+          <h1 className={cn(agencySectionTitleClass)}>People</h1>
+          <Skeleton className="h-4 w-72 max-w-full rounded-md" />
+        </div>
+        <Skeleton className="h-36 w-full rounded-[2rem]" />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <Skeleton className="h-44 w-full rounded-[2rem]" />
+          <Skeleton className="h-44 w-full rounded-[2rem]" />
+          <Skeleton className="h-44 w-full rounded-[2rem]" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {viewModel.selectedUserId ? (
+        <AgencyPeopleGuidedMember
+          userId={viewModel.selectedUserId}
+          userName={viewModel.selectedMemberName}
+          userEmail={viewModel.selectedMemberEmail}
+          userAvatar={viewModel.selectedMemberAvatar}
+          role={viewModel.roleDraft}
+          joinedLabel={viewModel.selectedJoinedLabel}
+          completionPercent={viewModel.guidedCompletionPercent}
+          steps={viewModel.guidedSteps}
+          activeStepId={viewModel.activeStepId}
+          onActiveStepChange={viewModel.setActiveStepId}
+          onBack={viewModel.clearSelectedMember}
+          canEditHr={viewModel.canEditHr}
+          canEditRates={viewModel.isOwner}
+          canEditTenure={viewModel.isOwner}
+          canEditRole={viewModel.isOwner}
+          hrDraft={viewModel.hrDraft}
+          onHrDraftChange={viewModel.setHrDraft}
+          rateDraft={viewModel.rateDraft}
+          onRateDraftChange={viewModel.setRateDraft}
+          tenureDraft={viewModel.tenureDraft}
+          onTenureDraftChange={viewModel.setTenureDraft}
+          onRoleChange={viewModel.setRoleDraft}
+          exemptions={viewModel.memberExemptions}
+          exemptionDraft={viewModel.exemptionDraft}
+          onExemptionDraftChange={viewModel.setExemptionDraft}
+          savingExemption={viewModel.savingExemption}
+          onAddExemption={() => void viewModel.addExemption()}
+          onRemoveExemption={(exemptionId) => void viewModel.removeExemption(exemptionId)}
+          saving={viewModel.savingStep}
+          onSaveStep={() => void viewModel.saveActiveStep()}
+          onPrevious={viewModel.goPreviousStep}
+          onNext={viewModel.goNextStep}
+          stepIndex={viewModel.stepIndex}
+          stepCount={viewModel.stepCount}
+          isLoading={viewModel.loadingSelected}
+        />
+      ) : (
+        <AgencyPeopleDirectory
+          policyEnabled={viewModel.policyEnabled}
+          policyEffectiveLabel={viewModel.policyEffectiveLabel}
+          quarterlyMinHours={viewModel.quarterlyMinHours}
+          internDurationMonths={viewModel.internDurationMonths}
+          memberCount={viewModel.memberCount}
+          attentionCount={viewModel.attentionCount}
+          cards={viewModel.directoryCards}
+          canEditPolicy={viewModel.isOwner}
+          onReviewDefaults={() => viewModel.setDefaultsOpen(true)}
+          onSelectMember={viewModel.selectMember}
+        />
+      )}
+
+      <Dialog open={viewModel.defaultsOpen} onOpenChange={viewModel.setDefaultsOpen}>
+        <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <DialogHeader className="border-border border-b px-6 py-4">
+            <DialogTitle>Team defaults</DialogTitle>
+            <DialogDescription>
+              Tenure policy applied to new members and used as the review baseline.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[min(70vh,36rem)] overflow-y-auto px-6 py-5">
+            <AgencySettingsTenurePolicy
+              policyDraft={viewModel.policyDraft}
+              onPolicyDraftChange={viewModel.setPolicyDraft}
+              isOwner={viewModel.isOwner}
+              fiscalYearPreview={viewModel.fiscalYearPreview}
+              saving={viewModel.savingPolicy}
+              onSave={() => void viewModel.savePolicy()}
+              embedded
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

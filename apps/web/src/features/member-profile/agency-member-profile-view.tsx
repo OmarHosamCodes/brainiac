@@ -1,17 +1,25 @@
-import { CalendarOff, ChevronRight, Clock3, MessageSquareText } from "lucide-react";
-import type { CSSProperties } from "react";
+import {
+  CalendarOff,
+  ChevronLeft,
+  ChevronRight,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  UserRound,
+} from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { shellConfirmInClass, shellStaggerItemClass } from "@/features/app-shell/app-shell-ui";
 import { RangePresetChooser } from "@/features/dashboard/agency-dashboard-command-bar";
+import { MemberProfileActivityRails } from "@/features/member-profile/member-profile-activity-rails";
 import { MemberProfileDatePicker } from "@/features/member-profile/member-profile-date-picker";
 import {
-  HEAT_INTENSITY,
-  MemberProfileHeatMap,
-} from "@/features/member-profile/member-profile-heat-map";
-import { MemberProfileLeaveRangePicker } from "@/features/member-profile/member-profile-leave-range-picker";
+  MemberProfileLeaveRangePicker,
+  MemberProfileOffDayRangePanel,
+} from "@/features/member-profile/member-profile-leave-range-picker";
 import type { AgencyMemberProfileViewModel } from "@/features/member-profile/hooks/use-agency-member-profile";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
-import { AgencyCollapse } from "@/features/shared/agency-collapse";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -19,11 +27,11 @@ import {
   agencyFormFieldClass,
   agencyFormLabelClass,
   agencyMetricClass,
-  agencyPanelClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import { agencyCommandBarShellClass } from "@/features/shared/command-bar/agency-command-bar-ui";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import {
@@ -34,105 +42,100 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Skeleton } from "@/ui/skeleton";
 import { Textarea } from "@/ui/textarea";
-import { TooltipProvider } from "@/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
+
+/** Profile panels: shadcn surface tokens + theme radius (not hardcoded 2rem / Nuxt aliases). */
+const profilePanelClass = "rounded-xl border border-border bg-card";
+
+function safeHttpUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 
 type Props = {
   viewModel: AgencyMemberProfileViewModel;
 };
 
-/** Semantic accents for timeline events — Restrained product colorize. */
-function activityEventChrome(eventType: "time_logged" | "waste_marked" | "leave") {
-  switch (eventType) {
-    case "time_logged":
-      return {
-        row: "rounded-lg hover:bg-info/5",
-        mark: "border-info/35 bg-info/15 text-info",
-        kind: "text-info",
-        duration: "text-info",
-      };
-    case "waste_marked":
-      return {
-        row: "rounded-lg bg-warning/5 hover:bg-warning/10",
-        mark: "border-warning/40 bg-warning/15 text-warning",
-        kind: "text-warning",
-        duration: "text-warning",
-      };
-    case "leave":
-      return {
-        row: "rounded-lg bg-warning/5 hover:bg-warning/10",
-        mark: "border-warning/40 bg-warning/20 text-warning",
-        kind: "text-warning",
-        duration: "text-warning",
-      };
-    default: {
-      const _exhaustive: never = eventType;
-      return _exhaustive;
-    }
-  }
+function ProfileStatCard({
+  label,
+  valueLabel,
+  secondary,
+  ratio,
+  tone,
+}: {
+  label: string;
+  valueLabel: string;
+  secondary: string;
+  ratio: number;
+  tone: "success" | "warning" | "foreground";
+}) {
+  const angle = Math.round(Math.min(1, Math.max(0, ratio)) * 360);
+  const ringColor =
+    tone === "success"
+      ? "var(--success)"
+      : tone === "warning"
+        ? "var(--warning)"
+        : "var(--foreground)";
+  return (
+    <div className={cn(profilePanelClass, "flex items-center gap-3 p-3.5")}>
+      <div
+        className="relative grid size-16 shrink-0 place-items-center rounded-full"
+        style={{
+          background: `conic-gradient(${ringColor} 0 ${angle}deg, var(--muted) ${angle}deg 360deg)`,
+        }}
+        role="img"
+        aria-label={`${label}: ${valueLabel}`}
+      >
+        <div className="absolute inset-2 rounded-full bg-card" />
+        <span className="relative max-w-12 truncate px-0.5 text-center font-mono text-[11px] font-semibold tabular-nums text-foreground">
+          {valueLabel}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="truncate text-xs text-muted-foreground">{secondary}</p>
+      </div>
+    </div>
+  );
 }
 
-function TimelineActivityRow({
-  item,
-  itemIndex,
+function PersonalRow({
+  icon,
+  label,
+  value,
 }: {
-  item: Extract<
-    NonNullable<AgencyMemberProfileViewModel["profile"]>["timeline"][number]["items"][number],
-    { kind: "activity" }
-  >;
-  itemIndex: number;
+  icon: ReactNode;
+  label: string;
+  value: string | null;
 }) {
-  const chrome = activityEventChrome(item.eventType);
   return (
-    <li
-      className={cn(
-        "grid grid-cols-[28px_minmax(0,1fr)] gap-2.5 px-3 py-2.5 transition-colors duration-150 ease-out",
-        chrome.row,
-        shellStaggerItemClass,
-      )}
-      style={{ "--stagger-i": Math.min(itemIndex, 6) } as CSSProperties}
-    >
-      <span
-        className={cn(
-          "flex size-7 items-center justify-center rounded-full border transition-transform duration-150 ease-out",
-          chrome.mark,
-        )}
-        aria-hidden
-      >
-        {item.eventType === "leave" ? (
-          <CalendarOff className="size-3.5" />
-        ) : (
-          <Clock3 className="size-3.5" />
-        )}
+    <div className="flex items-start gap-3 py-2.5">
+      <span className="mt-0.5 text-muted-foreground" aria-hidden>
+        {icon}
       </span>
       <div className="min-w-0">
-        <div className="mb-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-          <span className={cn("text-[11px] font-semibold tracking-wide uppercase", chrome.kind)}>
-            {item.kindLabel}
-          </span>
-          <span className="font-mono text-[11px] text-foreground/70">{item.timeLabel}</span>
-          {item.durationLabel ? (
-            <span
-              className={cn(
-                "ms-auto font-mono text-[11px] font-semibold tabular-nums",
-                chrome.duration,
-              )}
-            >
-              {item.durationLabel}
-            </span>
-          ) : null}
-        </div>
-        <h4 className="text-sm font-medium text-foreground">{item.title}</h4>
-        {item.body ? (
-          <p className="mt-1 max-w-[65ch] text-sm text-foreground/70">{item.body}</p>
-        ) : null}
-        {item.meta ? <p className="mt-1 text-[11px] text-foreground/70">{item.meta}</p> : null}
+        <p className="text-[11px] text-muted-foreground">{label}</p>
+        <p className="text-sm text-foreground">{value?.trim() || "—"}</p>
       </div>
-    </li>
+    </div>
   );
 }
 
@@ -149,17 +152,10 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
 
   if (viewModel.loading && !profile) {
     return (
-      <div className="mx-auto grid max-w-5xl gap-6 p-6 md:grid-cols-[240px_minmax(0,1fr)]">
-        <div className="space-y-3">
-          <Skeleton className="size-24 rounded-full" />
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-64 w-full" />
-        </div>
+      <div className="mx-auto grid max-w-7xl gap-4 p-6 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+        <Skeleton className="h-80 w-full" />
+        <Skeleton className="h-[28rem] w-full" />
+        <Skeleton className="h-80 w-full" />
       </div>
     );
   }
@@ -183,7 +179,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
 
   return (
     <TooltipProvider delayDuration={120}>
-      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+      <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <div
           className={cn(agencyCommandBarShellClass, shellStaggerItemClass, "w-full")}
           style={{ "--stagger-i": 0 } as CSSProperties}
@@ -208,7 +204,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                   onChange={period.onCustomFromChange}
                 />
               </div>
-              <span className="text-xs text-foreground/70">to</span>
+              <span className="text-xs text-muted-foreground">to</span>
               <div className="w-[11.5rem]">
                 <MemberProfileDatePicker
                   id="profile-period-to"
@@ -221,227 +217,387 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
           ) : null}
         </div>
 
-        <div className="grid gap-8 md:grid-cols-[240px_minmax(0,1fr)] md:items-start">
+        <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)_280px] lg:items-start">
           <aside
-            className={cn("md:sticky md:top-4", shellStaggerItemClass)}
+            className={cn("space-y-4", shellStaggerItemClass)}
             style={{ "--stagger-i": 1 } as CSSProperties}
           >
-            <AgencyMemberAvatar
-              name={profile.userName}
-              userId={viewModel.subjectUserId}
-              avatarUrl={profile.userAvatarUrl}
-              size="md"
-              className="size-24 rounded-full transition-transform duration-200 ease-out hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100"
-              alt={profile.userName}
-            />
-            <h1 className="mt-4 text-wrap text-xl font-semibold text-balance text-highlighted">
-              {profile.userName}
-            </h1>
-
-            <dl className="mt-5 space-y-3 border-t border-border pt-4">
-              <div className="flex justify-between gap-3 text-sm">
-                <dt className="text-foreground/70">Joined</dt>
-                <dd className={agencyMetricClass}>{profile.joinedAtLabel}</dd>
-              </div>
-              <div className="flex justify-between gap-3 text-sm">
-                <dt className="text-foreground/70">Period hours</dt>
-                <dd
-                  key={profile.periodHoursLabel}
-                  className={cn(agencyMetricClass, shellConfirmInClass)}
-                >
-                  {profile.periodHoursLabel}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-3 text-sm">
-                <dt className="text-foreground/70">Leave</dt>
-                <dd className="text-right text-sm text-foreground">{profile.leaveSummary}</dd>
-              </div>
-            </dl>
-
-            <div className="mt-5 flex flex-col gap-2">
-              {profile.canManageLeave ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "min-h-10 justify-start gap-2 transition-transform duration-150 ease-out active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
-                    agencyFocusRingClass,
-                  )}
-                  onClick={() => viewModel.setLeaveDialogOpen(true)}
-                >
-                  <CalendarOff className="size-4 shrink-0" aria-hidden />
-                  Add leave
-                </Button>
-              ) : null}
-              {profile.canAddReview ? (
-                <Button
-                  type="button"
-                  className={cn(
-                    "min-h-10 justify-start gap-2 transition-transform duration-150 ease-out active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
-                    agencyFocusRingClass,
-                  )}
-                  onClick={() => viewModel.setReviewDialogOpen(true)}
-                >
-                  <MessageSquareText className="size-4 shrink-0" aria-hidden />
-                  Add review
-                </Button>
-              ) : null}
-            </div>
-          </aside>
-
-          <main
-            className={cn("min-w-0 space-y-8", shellStaggerItemClass)}
-            style={{ "--stagger-i": 2 } as CSSProperties}
-          >
-            <section className={cn(agencyPanelClass, "p-4 sm:p-5")}>
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <h2 className={agencyWorkTitleClass}>Contribution</h2>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-foreground/70">
-                  <span className="inline-flex items-center gap-1.5">
-                    Less
-                    {[0, 1, 2, 3, 4].map((level) => (
-                      <span
-                        key={level}
-                        className={cn("size-2.5 rounded-[3px]", HEAT_INTENSITY[level])}
-                      />
-                    ))}
-                    More
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="size-2.5 rounded-[3px] bg-warning/45 ring-1 ring-warning" />
-                    Off days
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className={cn(
-                  "mt-4 pb-1",
-                  profile.heatLayout === "compact" ? "overflow-x-auto" : "overflow-hidden",
-                )}
-              >
-                <MemberProfileHeatMap
-                  heatMap={profile.heatMap}
-                  layout={profile.heatLayout}
-                  onFocusDay={viewModel.focusDay}
+            <section className={cn(profilePanelClass, "p-4")}>
+              <div className="flex items-start justify-between gap-2">
+                <AgencyMemberAvatar
+                  name={profile.userName}
+                  userId={viewModel.subjectUserId}
+                  avatarUrl={profile.userAvatarUrl}
+                  size="md"
+                  className="size-16 shrink-0 rounded-xl transition-transform duration-200 ease-out hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100"
+                  alt={profile.userName}
                 />
+                {(profile.canEditHr || profile.canManageLeave) && (
+                  <div className="-mr-1.5 -mt-1.5 flex shrink-0 items-center">
+                    {profile.canEditHr ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className={agencyFocusRingClass}
+                            onClick={() => viewModel.setHrDialogOpen(true)}
+                            aria-label="Edit profile"
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">Edit profile</TooltipContent>
+                      </Tooltip>
+                    ) : null}
+                    {profile.canManageLeave ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className={agencyFocusRingClass}
+                            onClick={() => viewModel.openAddOffDayDialog()}
+                            aria-label="Add off day"
+                          >
+                            <CalendarOff className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">Add off day</TooltipContent>
+                      </Tooltip>
+                    ) : null}
+                  </div>
+                )}
               </div>
-            </section>
-
-            <section className={cn(agencyPanelClass, "p-4 sm:p-5")}>
-              <h2 className={agencyWorkTitleClass}>Activity & reviews</h2>
-
-              {profile.timeline.length === 0 ? (
-                <div className={cn(agencyEmptyPanelClass, "mt-4")}>
-                  No activity in this period yet. Log time in Tracker to populate the heat map.
+              <h1 className="mt-3 text-wrap text-base font-semibold leading-snug text-balance text-foreground">
+                {profile.userName}
+              </h1>
+              <dl className="mt-4 space-y-2.5 border-t border-border pt-3">
+                <div className="flex justify-between gap-3 text-sm">
+                  <dt className="text-muted-foreground">Employment</dt>
+                  <dd className="text-right text-foreground">
+                    {profile.hr.employmentTypeLabel ?? "—"}
+                  </dd>
                 </div>
-              ) : (
-                <div className="mt-4 flex flex-col gap-2">
-                  {profile.timeline.map((day, dayIndex) => (
-                    <section
-                      key={day.date}
-                      id={`member-profile-day-${day.date}`}
-                      className={cn(
-                        "overflow-hidden rounded-xl border border-border bg-background transition-[border-color,box-shadow] duration-200 ease-out [content-visibility:auto] [contain-intrinsic-size:auto_3.5rem]",
-                        day.open && "border-border shadow-sm",
-                        shellStaggerItemClass,
-                      )}
-                      style={
-                        {
-                          "--stagger-i": Math.min(dayIndex, 8),
-                        } as CSSProperties
-                      }
+                <div className="flex justify-between gap-3 text-sm">
+                  <dt className="text-muted-foreground">Work model</dt>
+                  <dd className="text-right text-foreground">{profile.hr.workModelLabel ?? "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-3 text-sm">
+                  <dt className="text-muted-foreground">Joined</dt>
+                  <dd className={agencyMetricClass}>{profile.joinedAtLabel}</dd>
+                </div>
+              </dl>
+              {(safeHttpUrl(profile.hr.linkedinUrl) ||
+                safeHttpUrl(profile.hr.xUrl) ||
+                safeHttpUrl(profile.hr.instagramUrl)) && (
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3 text-xs">
+                  {safeHttpUrl(profile.hr.linkedinUrl) ? (
+                    <a
+                      href={safeHttpUrl(profile.hr.linkedinUrl)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground underline-offset-2 hover:underline"
                     >
-                      <button
-                        type="button"
-                        className={cn(
-                          "grid w-full grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2.5 text-left transition-colors duration-150 ease-out hover:bg-muted/60",
-                          agencyFocusRingClass,
-                          "motion-reduce:transition-none",
-                        )}
-                        onClick={() => viewModel.toggleDay(day.date)}
-                        aria-expanded={day.open}
-                      >
-                        <ChevronRight
-                          className={cn(
-                            "size-4 text-foreground/70 transition-transform duration-200 ease-out motion-reduce:transition-none",
-                            day.open ? "rotate-90" : "",
-                          )}
-                          aria-hidden
-                        />
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold tracking-tight text-highlighted">
-                            {day.title}
-                          </span>
-                          <span className="mt-0.5 block text-[11px] text-foreground/70">
-                            {day.subtitle}
-                          </span>
-                        </span>
-                        <span className="font-mono text-[11px] text-foreground/70">
-                          {day.countLabel}
-                        </span>
-                      </button>
-
-                      <AgencyCollapse open={day.open}>
-                        <ul className="space-y-0 border-t border-border py-1">
-                          {day.items.map((item, itemIndex) =>
-                            item.kind === "review" ? (
-                              <li
-                                key={item.id}
-                                className={cn(
-                                  "grid grid-cols-[28px_minmax(0,1fr)] gap-2.5 rounded-lg px-3 py-2.5 hover:bg-primary/5",
-                                  shellStaggerItemClass,
-                                )}
-                                style={{ "--stagger-i": Math.min(itemIndex, 6) } as CSSProperties}
-                              >
-                                <span
-                                  className="flex size-7 items-center justify-center rounded-full border border-primary/30 bg-primary/15 text-primary transition-transform duration-150 ease-out"
-                                  aria-hidden
-                                >
-                                  <MessageSquareText className="size-3.5" />
-                                </span>
-                                <div className="min-w-0">
-                                  <div className="mb-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                                    <span className="text-[11px] font-semibold tracking-wide text-primary uppercase">
-                                      Review note
-                                    </span>
-                                    <span className="font-mono text-[11px] text-foreground/70">
-                                      {item.timeLabel}
-                                    </span>
-                                  </div>
-                                  <p className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2.5 text-pretty text-sm whitespace-pre-wrap text-foreground">
-                                    {item.body}
-                                  </p>
-                                  <p className="mt-1 text-[11px] text-foreground/70">
-                                    {item.authorName}
-                                  </p>
-                                </div>
-                              </li>
-                            ) : (
-                              <TimelineActivityRow
-                                key={item.id}
-                                item={item}
-                                itemIndex={itemIndex}
-                              />
-                            ),
-                          )}
-                        </ul>
-                      </AgencyCollapse>
-                    </section>
-                  ))}
+                      LinkedIn
+                    </a>
+                  ) : null}
+                  {safeHttpUrl(profile.hr.xUrl) ? (
+                    <a
+                      href={safeHttpUrl(profile.hr.xUrl)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground underline-offset-2 hover:underline"
+                    >
+                      X
+                    </a>
+                  ) : null}
+                  {safeHttpUrl(profile.hr.instagramUrl) ? (
+                    <a
+                      href={safeHttpUrl(profile.hr.instagramUrl)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground underline-offset-2 hover:underline"
+                    >
+                      Instagram
+                    </a>
+                  ) : null}
                 </div>
               )}
             </section>
+
+            <section className={cn(profilePanelClass, "p-4")}>
+              <h2 className={agencyWorkTitleClass}>Personal info</h2>
+              <div className="mt-1 divide-y divide-border">
+                <PersonalRow
+                  icon={<UserRound className="size-4" />}
+                  label="Gender"
+                  value={profile.hr.gender}
+                />
+                <PersonalRow
+                  icon={<UserRound className="size-4" />}
+                  label="Date of birth"
+                  value={profile.hr.dateOfBirthLabel}
+                />
+                <PersonalRow
+                  icon={<Mail className="size-4" />}
+                  label="Email"
+                  value={profile.email}
+                />
+                <PersonalRow
+                  icon={<Phone className="size-4" />}
+                  label="Phone"
+                  value={profile.hr.phone}
+                />
+                <PersonalRow
+                  icon={<MapPin className="size-4" />}
+                  label="Address"
+                  value={profile.hr.address}
+                />
+              </div>
+            </section>
+          </aside>
+
+          <main
+            className={cn("min-w-0 space-y-5", shellStaggerItemClass)}
+            style={{ "--stagger-i": 2 } as CSSProperties}
+          >
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {profile.leaveGauges.map((gauge) => (
+                <ProfileStatCard
+                  key={gauge.key}
+                  label={gauge.label}
+                  valueLabel={gauge.valueLabel}
+                  secondary={gauge.secondary}
+                  ratio={gauge.ratio}
+                  tone={gauge.tone}
+                />
+              ))}
+            </div>
+
+            <section className={cn(profilePanelClass, "p-4 sm:p-5")}>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className={agencyWorkTitleClass}>Hours logged</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">Week containing period end</p>
+                </div>
+                <p
+                  key={profile.weekHoursTotalLabel}
+                  className={cn(agencyMetricClass, "text-lg", shellConfirmInClass)}
+                >
+                  {profile.weekHoursTotalLabel}
+                </p>
+              </div>
+              <div className="mt-4 flex items-end justify-between gap-2">
+                {profile.weekHours.map((day) => (
+                  <button
+                    key={day.date}
+                    type="button"
+                    className={cn(
+                      "flex min-w-0 flex-1 flex-col items-center rounded-lg px-0.5 py-1 transition-colors hover:bg-muted/50",
+                      agencyFocusRingClass,
+                    )}
+                    onClick={() => viewModel.focusDay(day.date)}
+                  >
+                    <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                      {day.hoursLabel}
+                    </span>
+                    <span
+                      className="mt-1.5 flex h-16 w-6 items-end overflow-hidden rounded-t-md rounded-b-sm bg-muted"
+                      aria-hidden
+                    >
+                      <span
+                        className="w-full rounded-t-[5px] rounded-b-sm bg-foreground transition-[height] duration-200 ease-out motion-reduce:transition-none"
+                        style={{ height: `${day.heightPct}%` }}
+                      />
+                    </span>
+                    <span className="mt-1.5 text-[11px] text-muted-foreground">
+                      {day.weekdayLabel}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Period total · {profile.periodHoursLabel}
+              </p>
+            </section>
+
+            {profile.timeline.length === 0 ? (
+              <section className={cn(profilePanelClass, "p-4 sm:p-5")}>
+                <h2 className={agencyWorkTitleClass}>Activity & reviews</h2>
+                <div className={cn(agencyEmptyPanelClass, "mt-4")}>
+                  No activity in this period yet. Log time in Tracker to populate this timeline.
+                </div>
+              </section>
+            ) : (
+              <MemberProfileActivityRails
+                teamId={viewModel.teamId}
+                days={profile.timeline}
+                totalEventsLabel={`${profile.timeline.reduce((sum, day) => sum + day.items.length, 0)} events`}
+              />
+            )}
           </main>
+
+          <aside
+            className={cn("space-y-4", shellStaggerItemClass)}
+            style={{ "--stagger-i": 3 } as CSSProperties}
+          >
+            <section className={cn(profilePanelClass, "p-4")}>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className={cn("shrink-0", agencyFocusRingClass)}
+                  onClick={profile.calendar.onPrevMonth}
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <h2 className={cn(agencyWorkTitleClass, "min-w-0 flex-1 text-center")}>
+                  {profile.calendar.label}
+                </h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className={cn("shrink-0", agencyFocusRingClass)}
+                  onClick={profile.calendar.onNextMonth}
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
+                {["M", "T", "W", "T", "F", "S", "S"].map((label, index) => (
+                  <span key={`${label}-${index}`}>{label}</span>
+                ))}
+              </div>
+              <div className="mt-1 grid grid-cols-7 gap-1">
+                {profile.calendar.days.map((day) => {
+                  const statusClass = !day.inMonth
+                    ? "text-foreground/30"
+                    : day.status === "present"
+                      ? "bg-success text-success-foreground"
+                      : day.status === "leave"
+                        ? "bg-warning text-warning-foreground"
+                        : "hover:bg-muted";
+                  const statusSuffix =
+                    day.status === "leave"
+                      ? ", off day"
+                      : day.status === "present"
+                        ? ", present"
+                        : "";
+                  const dayButton = (
+                    <button
+                      type="button"
+                      disabled={!day.inMonth}
+                      className={cn(
+                        "aspect-square w-full rounded-md text-xs tabular-nums transition-colors",
+                        agencyFocusRingClass,
+                        statusClass,
+                      )}
+                      onClick={
+                        day.inMonth && !profile.canManageLeave
+                          ? () => viewModel.focusDay(day.date)
+                          : undefined
+                      }
+                      aria-label={`${day.date}${statusSuffix}`}
+                    >
+                      {day.dayOfMonth}
+                    </button>
+                  );
+
+                  if (!day.inMonth || !profile.canManageLeave) {
+                    return <div key={day.date}>{dayButton}</div>;
+                  }
+
+                  return (
+                    <DropdownMenu key={day.date}>
+                      <DropdownMenuTrigger asChild>{dayButton}</DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-40">
+                        <DropdownMenuItem
+                          onSelect={() => viewModel.openOffDayRangeSelect(day.date)}
+                        >
+                          Select
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => viewModel.openAddOffDay(day.date)}>
+                          Add off day
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-3 border-t border-border pt-3 text-[11px] text-muted-foreground">
+                {profile.calendar.legend.map((item) => (
+                  <span key={item.status} className="inline-flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "size-2.5 rounded-[3px]",
+                        item.status === "present" && "bg-success",
+                        item.status === "leave" && "bg-warning",
+                        item.status === "empty" && "bg-muted ring-1 ring-border",
+                      )}
+                    />
+                    {item.label} {item.count}
+                  </span>
+                ))}
+              </div>
+            </section>
+
+            <section
+              className={cn(profilePanelClass, "p-4")}
+              aria-labelledby="member-profile-ai-overview"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h2 id="member-profile-ai-overview" className={agencyWorkTitleClass}>
+                  AI overview
+                </h2>
+                <Badge variant="secondary">Coming soon</Badge>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Period insights on hours, attendance, and waste.
+              </p>
+            </section>
+          </aside>
         </div>
       </div>
+
+      <Dialog
+        open={viewModel.offDayRangeSelect !== null}
+        onOpenChange={(open) => {
+          if (!open) viewModel.closeOffDayRangeSelect();
+        }}
+      >
+        <DialogContent className="w-auto gap-0 overflow-hidden p-0 sm:max-w-fit">
+          <DialogHeader className="border-b border-border px-4 py-3">
+            <DialogTitle>Select off days</DialogTitle>
+            <DialogDescription>
+              Range starts on the day you clicked. Choose the end day, then confirm.
+            </DialogDescription>
+          </DialogHeader>
+          {viewModel.offDayRangeSelect ? (
+            <MemberProfileOffDayRangePanel
+              key={`${viewModel.offDayRangeSelect.startDate}:${viewModel.offDayRangeSelect.endDate}`}
+              startDate={viewModel.offDayRangeSelect.startDate}
+              endDate={viewModel.offDayRangeSelect.endDate}
+              lockStart
+              onCancel={() => viewModel.closeOffDayRangeSelect()}
+              onConfirm={(next) => viewModel.confirmOffDayRangeSelect(next)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={viewModel.leaveDialogOpen} onOpenChange={viewModel.setLeaveDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add leave</DialogTitle>
+            <DialogTitle>Add off day</DialogTitle>
             <DialogDescription>
-              Connected off-day bands appear on the heat map for this range.
+              Connected off-day bands appear on the calendar for this range.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
@@ -469,7 +625,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                 }
               >
                 <SelectTrigger id="leave-type" className="w-full">
-                  <SelectValue placeholder="Leave type" />
+                  <SelectValue placeholder="Off day type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pto">PTO</SelectItem>
@@ -520,63 +676,148 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
             <Button
               type="button"
               disabled={viewModel.leavePending}
-              className="transition-transform duration-150 ease-out active:scale-[0.98] motion-reduce:active:scale-100"
               onClick={() => void viewModel.submitLeave()}
             >
-              {viewModel.leavePending ? "Saving…" : "Save leave"}
+              {viewModel.leavePending ? "Saving…" : "Save off day"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={viewModel.reviewDialogOpen} onOpenChange={viewModel.setReviewDialogOpen}>
-        <DialogContent>
+      <Dialog open={viewModel.hrDialogOpen} onOpenChange={viewModel.setHrDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add review</DialogTitle>
-            <DialogDescription>
-              Manager note for a day on this member&apos;s timeline.
-            </DialogDescription>
+            <DialogTitle>Edit profile</DialogTitle>
+            <DialogDescription>Employment details and contact info.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
             <div className={agencyFormFieldClass}>
-              <Label htmlFor="review-date" className={agencyFormLabelClass}>
-                Date
-              </Label>
-              <MemberProfileDatePicker
-                id="review-date"
-                value={viewModel.reviewDraft.reviewDate}
-                onChange={(value) => viewModel.setReviewDraft({ reviewDate: value })}
-                aria-label="Review date"
+              <Label className={agencyFormLabelClass}>Status</Label>
+              <Select
+                value={viewModel.hrDraft.status}
+                onValueChange={(value) =>
+                  viewModel.setHrDraft({ status: value as "active" | "inactive" })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className={agencyFormFieldClass}>
+                <Label className={agencyFormLabelClass}>Employment type</Label>
+                <Select
+                  value={viewModel.hrDraft.employmentType || "none"}
+                  onValueChange={(value) =>
+                    viewModel.setHrDraft({
+                      employmentType:
+                        value === "none"
+                          ? ""
+                          : (value as NonNullable<typeof viewModel.hrDraft.employmentType>),
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    <SelectItem value="full_time">Full-time</SelectItem>
+                    <SelectItem value="part_time">Part-time</SelectItem>
+                    <SelectItem value="contractor">Contractor</SelectItem>
+                    <SelectItem value="intern">Intern</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className={agencyFormFieldClass}>
+                <Label className={agencyFormLabelClass}>Work model</Label>
+                <Select
+                  value={viewModel.hrDraft.workModel || "none"}
+                  onValueChange={(value) =>
+                    viewModel.setHrDraft({
+                      workModel:
+                        value === "none"
+                          ? ""
+                          : (value as NonNullable<typeof viewModel.hrDraft.workModel>),
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    <SelectItem value="onsite">Onsite</SelectItem>
+                    <SelectItem value="hybrid">Hybrid</SelectItem>
+                    <SelectItem value="remote">Remote</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className={agencyFormFieldClass}>
+                <Label className={agencyFormLabelClass}>Gender</Label>
+                <Select
+                  value={viewModel.hrDraft.gender || "none"}
+                  onValueChange={(value) =>
+                    viewModel.setHrDraft({ gender: value === "none" ? "" : value })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className={agencyFormFieldClass}>
+                <Label className={agencyFormLabelClass}>Date of birth</Label>
+                <MemberProfileDatePicker
+                  id="hr-dob"
+                  value={viewModel.hrDraft.dateOfBirth}
+                  onChange={(value) => viewModel.setHrDraft({ dateOfBirth: value })}
+                  aria-label="Date of birth"
+                />
+              </div>
+            </div>
+            <div className={agencyFormFieldClass}>
+              <Label className={agencyFormLabelClass}>Phone</Label>
+              <Input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="+1 555 000 0000"
+                value={viewModel.hrDraft.phone}
+                onChange={(e) => viewModel.setHrDraft({ phone: e.target.value })}
               />
             </div>
             <div className={agencyFormFieldClass}>
-              <Label htmlFor="review-body" className={agencyFormLabelClass}>
-                Note
-              </Label>
+              <Label className={agencyFormLabelClass}>Address</Label>
               <Textarea
-                id="review-body"
-                rows={5}
-                value={viewModel.reviewDraft.body}
-                onChange={(e) => viewModel.setReviewDraft({ body: e.target.value })}
-                placeholder="What stood out today?"
+                rows={2}
+                value={viewModel.hrDraft.address}
+                onChange={(e) => viewModel.setHrDraft({ address: e.target.value })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => viewModel.setReviewDialogOpen(false)}
-            >
+            <Button type="button" variant="ghost" onClick={() => viewModel.setHrDialogOpen(false)}>
               Cancel
             </Button>
             <Button
               type="button"
-              disabled={viewModel.reviewPending || !viewModel.reviewDraft.body.trim()}
-              className="transition-transform duration-150 ease-out active:scale-[0.98] motion-reduce:active:scale-100"
-              onClick={() => void viewModel.submitReview()}
+              disabled={viewModel.hrPending}
+              onClick={() => void viewModel.submitHr()}
             >
-              {viewModel.reviewPending ? "Saving…" : "Save review"}
+              {viewModel.hrPending ? "Saving…" : "Save profile"}
             </Button>
           </DialogFooter>
         </DialogContent>

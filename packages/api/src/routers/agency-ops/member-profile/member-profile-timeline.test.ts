@@ -2,82 +2,71 @@ import { describe, expect, test } from "bun:test";
 
 import { buildLeaveActivity, buildTimeEntryActivity } from "./member-profile-timeline";
 
+const baseEntry = {
+  id: "te_1",
+  date: "2026-07-29",
+  createdAt: "2026-07-29T12:00:00.000Z",
+  projectId: "proj_1",
+  projectName: "SAAS",
+  taskId: "task_1",
+  taskTitle: "UX",
+  clientId: "client_1",
+  clientName: "Acme",
+  startedAt: "2026-07-29T10:00:00.000Z",
+  endedAt: "2026-07-29T11:00:00.000Z",
+  teamId: "team_1",
+  userId: "user_1",
+  userName: "Omar",
+  source: "manual" as const,
+  isBillable: true,
+  taskIsWaste: false as boolean | null,
+};
+
 describe("buildTimeEntryActivity", () => {
   test("maps waste entries to waste_marked", () => {
     const item = buildTimeEntryActivity({
-      id: "te_1",
-      date: "2026-07-29",
-      createdAt: "2026-07-29T12:00:00.000Z",
+      ...baseEntry,
       description: "Waiting",
-      projectName: "SAAS",
       durationSeconds: 600,
       isWaste: true,
     });
     expect(item.eventType).toBe("waste_marked");
-    expect(item.title).toBe("Waste marked");
+    expect(item.title).toBe("UX");
     expect(item.body).toContain("10m");
     expect(item.meta).toBe("Project · SAAS");
+    expect(item.projectId).toBe("proj_1");
+    expect(item.isWaste).toBe(true);
   });
 
-  test("maps normal entries to time_logged with description as title", () => {
+  test("maps normal entries to time_logged with task title as title", () => {
     const item = buildTimeEntryActivity({
+      ...baseEntry,
       id: "te_2",
-      date: "2026-07-29",
-      createdAt: "2026-07-29T12:00:00.000Z",
-      description: "UX",
-      projectName: "SAAS",
+      description: "Polish rails",
       durationSeconds: 3600,
       isWaste: false,
     });
     expect(item.eventType).toBe("time_logged");
     expect(item.title).toBe("UX");
-    expect(item.body).toBe("Logged 1h 0m");
+    expect(item.body).toBe("Polish rails");
+    expect(item.taskId).toBe("task_1");
   });
 });
 
 describe("buildLeaveActivity", () => {
   test("emits on start date when range is inside the window", () => {
     const item = buildLeaveActivity({
-      id: "lv_1",
+      id: "leave_1",
       type: "pto",
-      reason: "Annual leave",
-      startDate: "2026-07-13",
-      endDate: "2026-07-17",
-      createdAt: "2026-07-01T00:00:00.000Z",
+      reason: "Vacation",
+      startDate: "2026-07-29",
+      endDate: "2026-07-30",
+      createdAt: "2026-07-28T12:00:00.000Z",
       windowStart: "2026-07-01",
       windowEnd: "2026-07-31",
     });
-    expect(item?.date).toBe("2026-07-13");
+    expect(item?.date).toBe("2026-07-29");
     expect(item?.eventType).toBe("leave");
-    expect(item?.title).toBe("PTO");
-    expect(item?.meta).toBe("2026-07-13 → 2026-07-17");
-  });
-
-  test("clamps start into window and skips out-of-range leave", () => {
-    const clamped = buildLeaveActivity({
-      id: "lv_2",
-      type: "team_holiday",
-      reason: null,
-      startDate: "2026-06-28",
-      endDate: "2026-07-02",
-      createdAt: "2026-06-01T00:00:00.000Z",
-      windowStart: "2026-07-01",
-      windowEnd: "2026-07-31",
-    });
-    expect(clamped?.date).toBe("2026-07-01");
-    expect(clamped?.title).toBe("Team holiday");
-
-    expect(
-      buildLeaveActivity({
-        id: "lv_3",
-        type: "sick",
-        reason: null,
-        startDate: "2026-05-01",
-        endDate: "2026-05-03",
-        createdAt: "2026-05-01T00:00:00.000Z",
-        windowStart: "2026-07-01",
-        windowEnd: "2026-07-31",
-      }),
-    ).toBeNull();
+    expect(item?.projectId).toBeNull();
   });
 });

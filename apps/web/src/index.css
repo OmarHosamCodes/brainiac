@@ -121,8 +121,11 @@
   /* State colors darkened for light mode: they render as small text (chips,
    * billable markers) and must hold ~4.5:1 on white. Dark mode keeps brighter values. */
   --success: oklch(0.55 0.15 150);
+  --success-foreground: oklch(0.99 0 0);
   --warning: oklch(0.56 0.15 55);
+  --warning-foreground: oklch(0.99 0 0);
   --info: oklch(0.55 0.21 255);
+  --info-foreground: oklch(0.99 0 0);
   --border: oklch(0.92 0 0);
   --input: oklch(0.94 0 0);
   --ring: oklch(0 0 0);
@@ -198,8 +201,11 @@
   --destructive: oklch(0.69 0.2 23.91);
   --destructive-foreground: oklch(0 0 0);
   --success: oklch(0.72 0.17 145);
+  --success-foreground: oklch(0.14 0 0);
   --warning: oklch(0.79 0.15 70);
+  --warning-foreground: oklch(0.14 0 0);
   --info: oklch(0.68 0.16 252);
+  --info-foreground: oklch(0.14 0 0);
   --border: oklch(0.26 0 0);
   --input: oklch(0.32 0 0);
   --ring: oklch(0.72 0 0);
@@ -262,8 +268,11 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

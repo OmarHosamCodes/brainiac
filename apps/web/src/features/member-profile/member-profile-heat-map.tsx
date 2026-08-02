@@ -222,14 +222,14 @@ export function MemberProfileHeatMap({
           {WEEKDAY_LABELS.map((label) => (
             <span
               key={label}
-              className="flex size-8 items-center justify-center text-[10px] font-medium text-foreground/70"
+              className="flex size-8 items-center justify-center text-[10px] font-medium text-muted-foreground"
             >
               {label.slice(0, 1)}
             </span>
           ))}
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className="contents">
-              <span className="flex size-8 items-center text-[10px] font-medium text-foreground/70">
+              <span className="flex size-8 items-center text-[10px] font-medium text-muted-foreground">
                 {weekIndex === 0
                   ? monthLabels[0]?.label
                   : monthLabels.find((entry) => entry.weekIndex === weekIndex)?.label || ""}
@@ -270,7 +270,7 @@ export function MemberProfileHeatMap({
               <span
                 key={label}
                 className={cn(
-                  "flex h-3 items-center text-[10px] font-medium leading-none text-foreground/70",
+                  "flex h-3 items-center text-[10px] font-medium leading-none text-muted-foreground",
                   index % 2 === 1 ? "opacity-0" : "",
                 )}
               >
@@ -283,7 +283,7 @@ export function MemberProfileHeatMap({
               {monthLabels.map((entry) => (
                 <span
                   key={`${entry.label}-${entry.weekIndex}`}
-                  className="absolute top-0 text-[10px] font-medium text-foreground/70"
+                  className="absolute top-0 text-[10px] font-medium text-muted-foreground"
                   style={{ left: `${entry.weekIndex * STRIP_WEEK_COL_PX}px` }}
                 >
                   {entry.label}

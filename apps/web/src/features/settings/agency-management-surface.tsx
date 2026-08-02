@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { AgencyResourcingSurface } from "@/features/resourcing/agency-resourcing-surface";
+import { AgencySettingsTenurePane } from "@/features/resourcing/tenure/agency-settings-tenure-pane";
 import {
   AGENCY_MANAGEMENT_HUBS,
   agencyManagementPaneLabel,
@@ -115,6 +116,8 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
       >
         {activePane === "resourcing" ? (
           <AgencyResourcingSurface teamId={teamId} />
+        ) : activePane === "tenure" ? (
+          <AgencySettingsTenurePane teamId={teamId} active />
         ) : (
           <h1 className={cn(agencySectionTitleClass, "text-balance")}>{activeLabel}</h1>
         )}

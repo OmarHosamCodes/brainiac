@@ -1,8 +1,11 @@
 import { db } from "@orch/db";
 import {
+  agencyOpsClient,
+  agencyOpsMemberHrProfile,
   agencyOpsMemberLeave,
   agencyOpsMemberReview,
   agencyOpsProject,
+  agencyOpsProjectTask,
   agencyOpsTimeEntry,
   user,
   workspaceTeamMember,
@@ -10,17 +13,35 @@ import {
 import { createWorkspaceId } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
+import type { z } from "zod";
 
 import { requireTeamMembership } from "../shared/membership";
-import { localDateKeyFromInstant } from "../time-tracking/local-week-bounds";
+import {
+  addDaysToDateKey,
+  getLocalWeekBounds,
+  localDateKeyFromInstant,
+  localInstantFromDateKey,
+} from "../time-tracking/local-week-bounds";
 import { buildHeatDays, expandLeaveDays } from "./member-profile-heat";
+import {
+  buildCalendarMonth,
+  buildLeaveBalances,
+  buildWeekHours,
+  DEFAULT_OFF_ALLOWANCE_DAYS,
+} from "./member-profile-hr";
 import { buildLeaveActivity, buildTimeEntryActivity } from "./member-profile-timeline";
-import type { memberLeaveSchema, memberProfileSchema, memberReviewSchema } from "./schemas";
-import type { z } from "zod";
+import {
+  normalizeHttpUrl,
+  type memberHrProfileSchema,
+  type memberLeaveSchema,
+  type memberProfileSchema,
+  type memberReviewSchema,
+} from "./schemas";
 
 type MemberLeave = z.infer<typeof memberLeaveSchema>;
 type MemberReview = z.infer<typeof memberReviewSchema>;
 type MemberProfile = z.infer<typeof memberProfileSchema>;
+type MemberHrProfile = z.infer<typeof memberHrProfileSchema>;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -45,6 +66,40 @@ function mapLeave(row: typeof agencyOpsMemberLeave.$inferSelect): MemberLeave {
   };
 }
 
+function defaultHrProfile(): MemberHrProfile {
+  return {
+    status: "active",
+    employmentType: null,
+    workModel: null,
+    gender: null,
+    dateOfBirth: null,
+    phone: null,
+    address: null,
+    linkedinUrl: null,
+    xUrl: null,
+    instagramUrl: null,
+    offAllowanceDays: DEFAULT_OFF_ALLOWANCE_DAYS,
+    leaveAllowancePeriod: "year",
+  };
+}
+
+function mapHrProfile(row: typeof agencyOpsMemberHrProfile.$inferSelect): MemberHrProfile {
+  return {
+    status: row.status,
+    employmentType: row.employmentType,
+    workModel: row.workModel,
+    gender: row.gender,
+    dateOfBirth: row.dateOfBirth,
+    phone: row.phone,
+    address: row.address,
+    linkedinUrl: row.linkedinUrl,
+    xUrl: row.xUrl,
+    instagramUrl: row.instagramUrl,
+    offAllowanceDays: row.offAllowanceDays,
+    leaveAllowancePeriod: row.leaveAllowancePeriod ?? "year",
+  };
+}
+
 async function requireSubjectMembership(teamId: string, userId: string) {
   const [membership] = await db
     .select({
@@ -52,6 +107,7 @@ async function requireSubjectMembership(teamId: string, userId: string) {
       joinedAt: workspaceTeamMember.createdAt,
       userName: user.name,
       userAvatar: user.image,
+      email: user.email,
     })
     .from(workspaceTeamMember)
     .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
@@ -64,6 +120,10 @@ async function requireSubjectMembership(teamId: string, userId: string) {
   return membership;
 }
 
+function isManagerRole(role: "owner" | "editor" | "viewer") {
+  return role === "owner" || role === "editor";
+}
+
 export async function getMemberProfile(
   actorUserId: string,
   input: {
@@ -72,6 +132,7 @@ export async function getMemberProfile(
     utcOffsetMinutes: number;
     from: string;
     to: string;
+    calendarMonth?: string;
   },
 ): Promise<MemberProfile> {
   const actorRole = await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -88,33 +149,71 @@ export async function getMemberProfile(
 
   const startDate = localDateKeyFromInstant(rangeStart, input.utcOffsetMinutes);
   const endDate = localDateKeyFromInstant(rangeEnd, input.utcOffsetMinutes);
+  const periodYear = Number(endDate.slice(0, 4));
+  const calendarMonthKey = input.calendarMonth ?? endDate.slice(0, 7);
+  if (!/^\d{4}-\d{2}$/.test(calendarMonthKey)) {
+    throw new ORPCError("BAD_REQUEST", { message: "Invalid calendarMonth" });
+  }
+  const calYear = Number(calendarMonthKey.slice(0, 4));
+  const calMonth = Number(calendarMonthKey.slice(5, 7));
+  if (calMonth < 1 || calMonth > 12) {
+    throw new ORPCError("BAD_REQUEST", { message: "Invalid calendarMonth" });
+  }
+  const yearStart = `${Math.min(periodYear, calYear)}-01-01`;
+  const yearEnd = `${Math.max(periodYear, calYear)}-12-31`;
+  const weekBounds = getLocalWeekBounds(rangeEnd, input.utcOffsetMinutes);
+  const monthStart = `${calendarMonthKey}-01`;
+  const nextMonthStart =
+    calMonth === 12
+      ? `${calYear + 1}-01-01`
+      : `${calendarMonthKey.slice(0, 5)}${String(calMonth + 1).padStart(2, "0")}-01`;
+  const monthEnd = addDaysToDateKey(nextMonthStart, -1);
 
-  const [entries, leaveRows, reviewRows] = await Promise.all([
+  const entryFromKey = [startDate, weekBounds.weekStartKey, monthStart].sort()[0]!;
+  const entryToKey = [endDate, addDaysToDateKey(weekBounds.weekStartKey, 6), monthEnd]
+    .sort()
+    .at(-1)!;
+  const entryFrom = localInstantFromDateKey(entryFromKey, input.utcOffsetMinutes);
+  const entryTo = localInstantFromDateKey(entryToKey, input.utcOffsetMinutes, true);
+
+  const [entries, leaveRows, reviewRows, hrRow] = await Promise.all([
     db
       .select({
         id: agencyOpsTimeEntry.id,
+        teamId: agencyOpsTimeEntry.teamId,
+        userId: agencyOpsTimeEntry.userId,
+        projectId: agencyOpsTimeEntry.projectId,
+        taskId: agencyOpsTimeEntry.taskId,
+        source: agencyOpsTimeEntry.source,
+        description: agencyOpsTimeEntry.description,
+        isBillable: agencyOpsTimeEntry.isBillable,
+        isWaste: agencyOpsTimeEntry.isWaste,
         startedAt: agencyOpsTimeEntry.startedAt,
         endedAt: agencyOpsTimeEntry.endedAt,
         durationSeconds: agencyOpsTimeEntry.durationSeconds,
-        description: agencyOpsTimeEntry.description,
-        isWaste: agencyOpsTimeEntry.isWaste,
-        projectName: agencyOpsProject.name,
         createdAt: agencyOpsTimeEntry.createdAt,
         updatedAt: agencyOpsTimeEntry.updatedAt,
+        projectName: agencyOpsProject.name,
+        clientId: agencyOpsClient.id,
+        clientName: agencyOpsClient.name,
+        taskTitle: agencyOpsProjectTask.title,
+        taskIsWaste: agencyOpsProjectTask.isWaste,
       })
       .from(agencyOpsTimeEntry)
       .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+      .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+      .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
       .where(
         and(
           eq(agencyOpsTimeEntry.teamId, input.teamId),
           eq(agencyOpsTimeEntry.userId, input.userId),
           isNull(agencyOpsTimeEntry.deletedAt),
-          gte(agencyOpsTimeEntry.startedAt, rangeStart),
-          lte(agencyOpsTimeEntry.startedAt, rangeEnd),
+          gte(agencyOpsTimeEntry.startedAt, entryFrom),
+          lte(agencyOpsTimeEntry.startedAt, entryTo),
         ),
       )
       .orderBy(desc(agencyOpsTimeEntry.startedAt))
-      .limit(2_000),
+      .limit(4_000),
     db
       .select()
       .from(agencyOpsMemberLeave)
@@ -122,8 +221,8 @@ export async function getMemberProfile(
         and(
           eq(agencyOpsMemberLeave.teamId, input.teamId),
           or(isNull(agencyOpsMemberLeave.userId), eq(agencyOpsMemberLeave.userId, input.userId)),
-          lte(agencyOpsMemberLeave.startDate, endDate),
-          gte(agencyOpsMemberLeave.endDate, startDate),
+          lte(agencyOpsMemberLeave.startDate, yearEnd),
+          gte(agencyOpsMemberLeave.endDate, yearStart),
         ),
       )
       .orderBy(asc(agencyOpsMemberLeave.startDate)),
@@ -151,18 +250,34 @@ export async function getMemberProfile(
         ),
       )
       .orderBy(desc(agencyOpsMemberReview.reviewDate), desc(agencyOpsMemberReview.createdAt)),
+    db
+      .select()
+      .from(agencyOpsMemberHrProfile)
+      .where(
+        and(
+          eq(agencyOpsMemberHrProfile.teamId, input.teamId),
+          eq(agencyOpsMemberHrProfile.userId, input.userId),
+        ),
+      )
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
   ]);
 
   const secondsByDate = new Map<string, number>();
   let periodTotalSeconds = 0;
+  let periodWasteSeconds = 0;
   for (const entry of entries) {
     const date = localDateKeyFromInstant(entry.startedAt, input.utcOffsetMinutes);
     const next = (secondsByDate.get(date) ?? 0) + entry.durationSeconds;
     secondsByDate.set(date, next);
-    periodTotalSeconds += entry.durationSeconds;
+    if (date >= startDate && date <= endDate) {
+      periodTotalSeconds += entry.durationSeconds;
+      if (entry.isWaste) periodWasteSeconds += entry.durationSeconds;
+    }
   }
 
-  const leave = leaveRows.map(mapLeave);
+  const allLeave = leaveRows.map(mapLeave);
+  const leave = allLeave.filter((row) => row.endDate >= startDate && row.startDate <= endDate);
   const leaveByDate = expandLeaveDays(
     leave.map((row) => ({
       id: row.id,
@@ -193,17 +308,8 @@ export async function getMemberProfile(
         authorAvatar: string | null;
         body: string;
       }
-    | {
-        kind: "activity";
-        id: string;
-        date: string;
-        createdAt: string;
-        eventType: "time_logged" | "waste_marked" | "leave";
-        title: string;
-        body: string | null;
-        meta: string | null;
-        durationSeconds: number | null;
-      };
+    | ReturnType<typeof buildTimeEntryActivity>
+    | NonNullable<ReturnType<typeof buildLeaveActivity>>;
 
   const itemsByDate = new Map<string, TimelineItem[]>();
 
@@ -223,16 +329,33 @@ export async function getMemberProfile(
     itemsByDate.set(review.reviewDate, list);
   }
 
-  for (const entry of entries.slice(0, 400)) {
+  const periodEntries = entries.filter((entry) => {
+    const date = localDateKeyFromInstant(entry.startedAt, input.utcOffsetMinutes);
+    return date >= startDate && date <= endDate;
+  });
+  for (const entry of periodEntries.slice(0, 400)) {
     const date = localDateKeyFromInstant(entry.startedAt, input.utcOffsetMinutes);
     const item = buildTimeEntryActivity({
       id: entry.id,
       date,
       createdAt: entry.updatedAt.toISOString(),
       description: entry.description,
+      projectId: entry.projectId,
       projectName: entry.projectName,
+      taskId: entry.taskId,
+      taskTitle: entry.taskTitle,
+      clientId: entry.clientId,
+      clientName: entry.clientName,
       durationSeconds: entry.durationSeconds,
       isWaste: entry.isWaste,
+      taskIsWaste: entry.taskIsWaste ?? null,
+      startedAt: entry.startedAt.toISOString(),
+      endedAt: entry.endedAt.toISOString(),
+      teamId: entry.teamId,
+      userId: entry.userId,
+      userName: subject.userName,
+      source: entry.source,
+      isBillable: entry.isBillable,
     });
     const list = itemsByDate.get(date) ?? [];
     list.push(item);
@@ -268,20 +391,45 @@ export async function getMemberProfile(
     }));
 
   const isSelf = actorUserId === input.userId;
-  const canAddReview = actorRole === "owner" || actorRole === "editor";
+  const canAddReview = isManagerRole(actorRole);
   const canManageLeave = isSelf || canAddReview;
+  const canEditHr = canAddReview;
+  const hrProfile = hrRow ? mapHrProfile(hrRow) : defaultHrProfile();
+
+  const leaveBalances = buildLeaveBalances({
+    period: hrProfile.leaveAllowancePeriod,
+    anchorDate: endDate,
+    leave: allLeave,
+    offAllowanceDays: hrProfile.offAllowanceDays,
+  });
+
+  const weekHours = buildWeekHours(endDate, secondsByDate);
+  const calendarMonth = buildCalendarMonth({
+    monthDate: monthStart,
+    secondsByDate,
+    leave: allLeave.map((row) => ({
+      id: row.id,
+      startDate: row.startDate,
+      endDate: row.endDate,
+      type: row.type,
+      reason: row.reason,
+    })),
+  });
 
   return {
     teamId: input.teamId,
     userId: input.userId,
     userName: subject.userName,
     userAvatar: subject.userAvatar,
+    email: subject.email,
     role: subject.role,
     joinedAt: subject.joinedAt.toISOString(),
     isSelf,
     canAddReview,
     canManageLeave,
+    canEditHr,
     periodTotalSeconds,
+    periodWasteSeconds,
     range: {
       from: rangeStart.toISOString(),
       to: rangeEnd.toISOString(),
@@ -293,7 +441,101 @@ export async function getMemberProfile(
     },
     leave,
     timeline,
+    hrProfile,
+    leaveBalances,
+    weekHours,
+    calendarMonth,
   };
+}
+
+export async function upsertMemberHrProfile(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    userId: string;
+    patch: Partial<MemberHrProfile>;
+  },
+): Promise<MemberHrProfile> {
+  await requireTeamMembership(actorUserId, input.teamId, "editor");
+  await requireSubjectMembership(input.teamId, input.userId);
+
+  if (input.patch.dateOfBirth) assertDateKey(input.patch.dateOfBirth, "dateOfBirth");
+
+  const [existing] = await db
+    .select()
+    .from(agencyOpsMemberHrProfile)
+    .where(
+      and(
+        eq(agencyOpsMemberHrProfile.teamId, input.teamId),
+        eq(agencyOpsMemberHrProfile.userId, input.userId),
+      ),
+    )
+    .limit(1);
+
+  const base = existing ? mapHrProfile(existing) : defaultHrProfile();
+  const next: MemberHrProfile = {
+    ...base,
+    ...input.patch,
+    gender: input.patch.gender === undefined ? base.gender : input.patch.gender?.trim() || null,
+    phone: input.patch.phone === undefined ? base.phone : input.patch.phone?.trim() || null,
+    address: input.patch.address === undefined ? base.address : input.patch.address?.trim() || null,
+    linkedinUrl:
+      input.patch.linkedinUrl === undefined
+        ? base.linkedinUrl
+        : normalizeHttpUrl(input.patch.linkedinUrl),
+    xUrl: input.patch.xUrl === undefined ? base.xUrl : normalizeHttpUrl(input.patch.xUrl),
+    instagramUrl:
+      input.patch.instagramUrl === undefined
+        ? base.instagramUrl
+        : normalizeHttpUrl(input.patch.instagramUrl),
+  };
+
+  if (existing) {
+    const [row] = await db
+      .update(agencyOpsMemberHrProfile)
+      .set({
+        status: next.status,
+        employmentType: next.employmentType,
+        workModel: next.workModel,
+        gender: next.gender,
+        dateOfBirth: next.dateOfBirth,
+        phone: next.phone,
+        address: next.address,
+        linkedinUrl: next.linkedinUrl,
+        xUrl: next.xUrl,
+        instagramUrl: next.instagramUrl,
+        offAllowanceDays: next.offAllowanceDays,
+        leaveAllowancePeriod: next.leaveAllowancePeriod,
+      })
+      .where(eq(agencyOpsMemberHrProfile.id, existing.id))
+      .returning();
+    if (!row) throw new ORPCError("INTERNAL_SERVER_ERROR");
+    return mapHrProfile(row);
+  }
+
+  const [row] = await db
+    .insert(agencyOpsMemberHrProfile)
+    .values({
+      id: createWorkspaceId("agency-hr"),
+      teamId: input.teamId,
+      userId: input.userId,
+      status: next.status,
+      employmentType: next.employmentType,
+      workModel: next.workModel,
+      gender: next.gender,
+      dateOfBirth: next.dateOfBirth,
+      phone: next.phone,
+      address: next.address,
+      linkedinUrl: next.linkedinUrl,
+      xUrl: next.xUrl,
+      instagramUrl: next.instagramUrl,
+      offAllowanceDays: next.offAllowanceDays,
+      leaveAllowancePeriod: next.leaveAllowancePeriod,
+    })
+    .returning();
+
+  if (!row) throw new ORPCError("INTERNAL_SERVER_ERROR");
+  return mapHrProfile(row);
 }
 
 export async function createMemberLeave(
@@ -314,7 +556,7 @@ export async function createMemberLeave(
   }
 
   const role = await requireTeamMembership(actorUserId, input.teamId, "viewer");
-  const isManager = role === "owner" || role === "editor";
+  const isManager = isManagerRole(role);
   if (input.userId === null || input.type === "team_holiday") {
     if (!isManager) {
       throw new ORPCError("UNAUTHORIZED", { message: "Managers can add team holidays" });
@@ -363,7 +605,7 @@ export async function deleteMemberLeave(
 
   if (!existing) throw new ORPCError("NOT_FOUND");
 
-  const isManager = role === "owner" || role === "editor";
+  const isManager = isManagerRole(role);
   const canDelete =
     isManager ||
     existing.createdByUserId === actorUserId ||
@@ -437,8 +679,7 @@ export async function deleteMemberReview(
 
   if (!existing) throw new ORPCError("NOT_FOUND");
 
-  const isManager = role === "owner" || role === "editor";
-  if (!isManager && existing.authorUserId !== actorUserId) {
+  if (!isManagerRole(role) && existing.authorUserId !== actorUserId) {
     throw new ORPCError("UNAUTHORIZED");
   }
 

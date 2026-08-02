@@ -36,6 +36,7 @@ type MemberProfileDatePickerProps = {
   id: string;
   value: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
   "aria-label": string;
 };
 
@@ -43,18 +44,20 @@ export function MemberProfileDatePicker({
   id,
   value,
   onChange,
+  disabled = false,
   "aria-label": ariaLabel,
 }: MemberProfileDatePickerProps) {
   const [open, setOpen] = useState(false);
   const selected = parseLocalDateKey(value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(next) => !disabled && setOpen(next)}>
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
           id={id}
+          disabled={disabled}
           className={cn(
             "h-10 w-full justify-start gap-2 px-3 font-normal transition-[transform,background-color] duration-150 ease-out active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
             agencyFocusRingClass,
