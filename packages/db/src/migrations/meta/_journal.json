@@ -225,6 +225,27 @@
       "when": 1787900000008,
       "tag": "0031_drop_member_notes_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787900000009,
+      "tag": "0032_drop_member_hr_employee_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1787900000010,
+      "tag": "0033_member_hr_leave_allowance_period",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1787900000011,
+      "tag": "0034_member_hr_off_allowance_days",
+      "breakpoints": true
     }
   ]
 }

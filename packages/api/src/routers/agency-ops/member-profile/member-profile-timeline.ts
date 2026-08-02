@@ -20,6 +20,7 @@ export type MemberProfileTimeEntryActivity = {
   clientName: string;
   description: string;
   isWaste: boolean;
+  taskIsWaste: boolean | null;
   startedAt: string;
   endedAt: string;
   teamId: string;
@@ -47,6 +48,7 @@ export type MemberProfileLeaveActivity = {
   clientName: null;
   description: null;
   isWaste: false;
+  taskIsWaste: null;
   startedAt: null;
   endedAt: null;
   teamId: null;
@@ -86,6 +88,7 @@ export function buildTimeEntryActivity(input: {
   clientName: string;
   durationSeconds: number;
   isWaste: boolean;
+  taskIsWaste: boolean | null;
   startedAt: string;
   endedAt: string;
   teamId: string;
@@ -115,6 +118,7 @@ export function buildTimeEntryActivity(input: {
     clientName: input.clientName,
     description: input.description,
     isWaste: input.isWaste,
+    taskIsWaste: input.taskIsWaste,
     startedAt: input.startedAt,
     endedAt: input.endedAt,
     teamId: input.teamId,
@@ -176,6 +180,7 @@ export function buildLeaveActivity(input: {
     clientName: null,
     description: null,
     isWaste: false,
+    taskIsWaste: null,
     startedAt: null,
     endedAt: null,
     teamId: null,

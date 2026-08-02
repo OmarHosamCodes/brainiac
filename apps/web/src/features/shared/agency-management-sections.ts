@@ -18,7 +18,7 @@ export type AgencyManagementHub = {
 
 export const AGENCY_MANAGEMENT_PANES: readonly AgencyManagementPane[] = [
   { id: "resourcing", label: "Resourcing", hub: "operations" },
-  { id: "tenure", label: "Tenure", hub: "operations" },
+  { id: "tenure", label: "People", hub: "operations" },
   { id: "tags", label: "Tags", hub: "operations" },
   { id: "invoices", label: "Invoices", hub: "commercial" },
   { id: "rates", label: "Rates", hub: "commercial" },

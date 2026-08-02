@@ -4,9 +4,9 @@ import {
 } from "../time-tracking/local-week-bounds";
 import { expandLeaveDays, type LeaveRangeInput } from "./member-profile-heat";
 
-export const DEFAULT_PTO_ALLOWANCE_DAYS = 15;
-export const DEFAULT_SICK_ALLOWANCE_DAYS = 10;
-export const DEFAULT_OTHER_ALLOWANCE_DAYS = 5;
+export const DEFAULT_OFF_ALLOWANCE_DAYS = 15;
+
+export type LeaveAllowancePeriod = "year" | "quarter" | "month";
 
 export type LeaveBalanceBucket = {
   usedDays: number;
@@ -15,10 +15,13 @@ export type LeaveBalanceBucket = {
 
 export type LeaveBalances = {
   year: number;
+  period: {
+    kind: LeaveAllowancePeriod;
+    start: string;
+    end: string;
+    label: string;
+  };
   all: LeaveBalanceBucket;
-  pto: LeaveBalanceBucket;
-  sick: LeaveBalanceBucket;
-  other: LeaveBalanceBucket;
 };
 
 export type WeekHourDay = {
@@ -49,56 +52,99 @@ function countInclusiveDays(startDate: string, endDate: string): number {
   return count;
 }
 
-/** Count leave days in [yearStart, yearEnd] by personal leave type. */
+function parseDateKeyParts(dateKey: string): { year: number; month: number; day: number } {
+  const [yearStr, monthStr, dayStr] = dateKey.split("-");
+  return {
+    year: Number(yearStr),
+    month: Number(monthStr),
+    day: Number(dayStr),
+  };
+}
+
+/** Inclusive allowance window for the period containing `anchorDate`. */
+export function leaveAllowancePeriodWindow(
+  period: LeaveAllowancePeriod,
+  anchorDate: string,
+): LeaveBalances["period"] {
+  const { year, month } = parseDateKeyParts(anchorDate);
+
+  switch (period) {
+    case "year": {
+      const start = `${year}-01-01`;
+      const end = `${year}-12-31`;
+      return {
+        kind: "year",
+        start,
+        end,
+        label: String(year),
+      };
+    }
+    case "quarter": {
+      const quarter = Math.floor((month - 1) / 3) + 1;
+      const startMonth = (quarter - 1) * 3 + 1;
+      const endMonth = startMonth + 2;
+      const start = `${year}-${String(startMonth).padStart(2, "0")}-01`;
+      const nextMonth =
+        endMonth === 12
+          ? `${year + 1}-01-01`
+          : `${year}-${String(endMonth + 1).padStart(2, "0")}-01`;
+      const end = addDaysToDateKey(nextMonth, -1);
+      return {
+        kind: "quarter",
+        start,
+        end,
+        label: `Q${quarter} ${year}`,
+      };
+    }
+    case "month": {
+      const start = `${year}-${String(month).padStart(2, "0")}-01`;
+      const nextMonth =
+        month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+      const end = addDaysToDateKey(nextMonth, -1);
+      const label = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(undefined, {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+      return {
+        kind: "month",
+        start,
+        end,
+        label,
+      };
+    }
+    default: {
+      const _exhaustive: never = period;
+      return _exhaustive;
+    }
+  }
+}
+
+/** Count all leave days in the allowance period window against the Off days pool. */
 export function buildLeaveBalances(input: {
-  year: number;
+  period: LeaveAllowancePeriod;
+  anchorDate: string;
   leave: Array<{
     startDate: string;
     endDate: string;
     type: LeaveRangeInput["type"];
   }>;
-  ptoAllowanceDays: number;
-  sickAllowanceDays: number;
-  otherAllowanceDays: number;
+  offAllowanceDays: number;
 }): LeaveBalances {
-  const yearStart = `${input.year}-01-01`;
-  const yearEnd = `${input.year}-12-31`;
-  let pto = 0;
-  let sick = 0;
-  let other = 0;
+  const window = leaveAllowancePeriodWindow(input.period, input.anchorDate);
+  let usedDays = 0;
 
   for (const row of input.leave) {
-    if (row.endDate < yearStart || row.startDate > yearEnd) continue;
-    const start = row.startDate < yearStart ? yearStart : row.startDate;
-    const end = row.endDate > yearEnd ? yearEnd : row.endDate;
-    const days = countInclusiveDays(start, end);
-    switch (row.type) {
-      case "pto":
-        pto += days;
-        break;
-      case "sick":
-        sick += days;
-        break;
-      case "other":
-      case "team_holiday":
-        other += days;
-        break;
-      default: {
-        const _exhaustive: never = row.type;
-        void _exhaustive;
-      }
-    }
+    if (row.endDate < window.start || row.startDate > window.end) continue;
+    const start = row.startDate < window.start ? window.start : row.startDate;
+    const end = row.endDate > window.end ? window.end : row.endDate;
+    usedDays += countInclusiveDays(start, end);
   }
 
-  const allUsed = pto + sick + other;
-  const allAllowance = input.ptoAllowanceDays + input.sickAllowanceDays + input.otherAllowanceDays;
-
   return {
-    year: input.year,
-    all: { usedDays: allUsed, allowanceDays: allAllowance },
-    pto: { usedDays: pto, allowanceDays: input.ptoAllowanceDays },
-    sick: { usedDays: sick, allowanceDays: input.sickAllowanceDays },
-    other: { usedDays: other, allowanceDays: input.otherAllowanceDays },
+    year: Number(window.start.slice(0, 4)),
+    period: window,
+    all: { usedDays, allowanceDays: input.offAllowanceDays },
   };
 }
 

@@ -32,6 +32,8 @@ type AgencySettingsTenurePolicyProps = {
   fiscalYearPreview: string;
   saving: boolean;
   onSave: () => void;
+  /** Omit outer panel chrome when nested in a sheet or parent card. */
+  embedded?: boolean;
 };
 
 export function AgencySettingsTenurePolicy({
@@ -41,6 +43,7 @@ export function AgencySettingsTenurePolicy({
   fiscalYearPreview,
   saving,
   onSave,
+  embedded = false,
 }: AgencySettingsTenurePolicyProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -49,14 +52,23 @@ export function AgencySettingsTenurePolicy({
   }
 
   return (
-    <section className={cn(agencyPanelClass, "p-5 sm:p-6")}>
-      <h3 className="text-sm font-bold text-highlighted">Team policy</h3>
-      <p className="mt-1 text-sm text-muted">
-        Each fiscal month runs from the start day through the day before the next period (UTC).
-      </p>
+    <section className={cn(!embedded && agencyPanelClass, !embedded && "p-5 sm:p-6")}>
+      {embedded ? null : (
+        <>
+          <h3 className="text-sm font-bold text-highlighted">Team policy</h3>
+          <p className="mt-1 text-sm text-muted">
+            Each fiscal month runs from the start day through the day before the next period (UTC).
+          </p>
+        </>
+      )}
+      {embedded ? (
+        <p className="text-muted text-sm">
+          Each fiscal month runs from the start day through the day before the next period (UTC).
+        </p>
+      ) : null}
 
       <form
-        className="mt-5 space-y-5"
+        className={cn("space-y-5", embedded ? "mt-4" : "mt-5")}
         onSubmit={(event) => {
           event.preventDefault();
           onSave();

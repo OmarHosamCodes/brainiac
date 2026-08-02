@@ -99,7 +99,26 @@ async function ensureManagementBootQueries(
       );
       break;
     }
-    case "tenure":
+    case "tenure": {
+      await Promise.all([
+        ensureSyncedQuery(
+          queryClient,
+          orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
+          "cold",
+        ),
+        ensureSyncedQuery(
+          queryClient,
+          orpc.agencyOps.tenure.summary.list.queryOptions({ input: { teamId } }),
+          "cold",
+        ),
+        ensureSyncedQuery(
+          queryClient,
+          orpc.agencyOps.rates.list.queryOptions({ input: { teamId } }),
+          "cold",
+        ),
+      ]);
+      break;
+    }
     case "tags":
     case "invoices":
     case "rates":

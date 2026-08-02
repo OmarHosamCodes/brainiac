@@ -20,6 +20,7 @@ export type MemberProfileTimelineActivity = {
   clientName: string | null;
   description: string | null;
   isWaste: boolean;
+  taskIsWaste: boolean | null;
   startedAt: string | null;
   endedAt: string | null;
   teamId: string | null;
@@ -99,7 +100,7 @@ export function activityToReportEntry(
     projectId: item.projectId,
     taskId: item.taskId,
     taskTitle: item.taskTitle,
-    taskIsWaste: null,
+    taskIsWaste: item.taskIsWaste,
     projectName: item.projectName,
     clientId: item.clientId,
     clientName: item.clientName,

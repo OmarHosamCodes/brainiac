@@ -72,6 +72,7 @@ export const memberProfileTimelineItemSchema = z.discriminatedUnion("kind", [
     clientName: z.string().nullable(),
     description: z.string().nullable(),
     isWaste: z.boolean(),
+    taskIsWaste: z.boolean().nullable(),
     startedAt: z.string().datetime().nullable(),
     endedAt: z.string().datetime().nullable(),
     teamId: z.string().nullable(),
@@ -95,9 +96,37 @@ export const memberEmploymentTypeSchema = z.enum([
 ]);
 export const memberWorkModelSchema = z.enum(["onsite", "hybrid", "remote"]);
 export const memberEmploymentStatusSchema = z.enum(["active", "inactive"]);
+export const leaveAllowancePeriodSchema = z.enum(["year", "quarter", "month"]);
+
+/** Persist only http(s) social links — blocks javascript: and other schemes. */
+export function normalizeHttpUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() || null;
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+export const optionalHttpUrlSchema = z
+  .string()
+  .max(500)
+  .nullable()
+  .optional()
+  .superRefine((value, ctx) => {
+    if (value == null || value.trim() === "") return;
+    if (normalizeHttpUrl(value) == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "URL must use http or https",
+      });
+    }
+  });
 
 export const memberHrProfileSchema = z.object({
-  employeeCode: z.string().nullable(),
   status: memberEmploymentStatusSchema,
   employmentType: memberEmploymentTypeSchema.nullable(),
   workModel: memberWorkModelSchema.nullable(),
@@ -111,9 +140,8 @@ export const memberHrProfileSchema = z.object({
   linkedinUrl: z.string().nullable(),
   xUrl: z.string().nullable(),
   instagramUrl: z.string().nullable(),
-  ptoAllowanceDays: z.number().int().nonnegative(),
-  sickAllowanceDays: z.number().int().nonnegative(),
-  otherAllowanceDays: z.number().int().nonnegative(),
+  offAllowanceDays: z.number().int().nonnegative(),
+  leaveAllowancePeriod: leaveAllowancePeriodSchema,
 });
 
 export const leaveBalanceBucketSchema = z.object({
@@ -123,10 +151,13 @@ export const leaveBalanceBucketSchema = z.object({
 
 export const leaveBalancesSchema = z.object({
   year: z.number().int(),
+  period: z.object({
+    kind: leaveAllowancePeriodSchema,
+    start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    label: z.string().min(1),
+  }),
   all: leaveBalanceBucketSchema,
-  pto: leaveBalanceBucketSchema,
-  sick: leaveBalanceBucketSchema,
-  other: leaveBalanceBucketSchema,
 });
 
 export const weekHourDaySchema = z.object({

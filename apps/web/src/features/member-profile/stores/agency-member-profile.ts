@@ -5,7 +5,6 @@ import { orpcClient } from "@/lib/orpc";
 type LeaveType = "pto" | "sick" | "team_holiday" | "other";
 
 type HrProfilePatch = {
-  employeeCode?: string | null;
   status?: "active" | "inactive";
   employmentType?: "full_time" | "part_time" | "contractor" | "intern" | null;
   workModel?: "onsite" | "hybrid" | "remote" | null;
@@ -16,9 +15,8 @@ type HrProfilePatch = {
   linkedinUrl?: string | null;
   xUrl?: string | null;
   instagramUrl?: string | null;
-  ptoAllowanceDays?: number;
-  sickAllowanceDays?: number;
-  otherAllowanceDays?: number;
+  offAllowanceDays?: number;
+  leaveAllowancePeriod?: "year" | "quarter" | "month";
 };
 
 type AgencyMemberProfileStore = {

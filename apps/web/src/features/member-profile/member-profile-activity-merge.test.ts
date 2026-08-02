@@ -27,6 +27,7 @@ function activity(
     clientName: "Acme",
     description: "Polish",
     isWaste: false,
+    taskIsWaste: false,
     startedAt: "2026-07-29T10:00:00.000Z",
     endedAt: "2026-07-29T11:00:00.000Z",
     teamId: "team_1",

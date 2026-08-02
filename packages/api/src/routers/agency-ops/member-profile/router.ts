@@ -11,6 +11,7 @@ import {
   upsertMemberHrProfile,
 } from "./service";
 import {
+  leaveAllowancePeriodSchema,
   memberEmploymentStatusSchema,
   memberEmploymentTypeSchema,
   memberHrProfileSchema,
@@ -19,6 +20,7 @@ import {
   memberProfileSchema,
   memberReviewSchema,
   memberWorkModelSchema,
+  optionalHttpUrlSchema,
 } from "./schemas";
 
 const optionalDateKey = z
@@ -54,7 +56,6 @@ export const memberProfileRouter = {
         .input(
           teamScopedInputSchema.extend({
             userId: z.string().min(1),
-            employeeCode: z.string().max(64).nullable().optional(),
             status: memberEmploymentStatusSchema.optional(),
             employmentType: memberEmploymentTypeSchema.nullable().optional(),
             workModel: memberWorkModelSchema.nullable().optional(),
@@ -62,12 +63,11 @@ export const memberProfileRouter = {
             dateOfBirth: optionalDateKey,
             phone: z.string().max(64).nullable().optional(),
             address: z.string().max(500).nullable().optional(),
-            linkedinUrl: z.string().max(500).nullable().optional(),
-            xUrl: z.string().max(500).nullable().optional(),
-            instagramUrl: z.string().max(500).nullable().optional(),
-            ptoAllowanceDays: z.number().int().min(0).max(366).optional(),
-            sickAllowanceDays: z.number().int().min(0).max(366).optional(),
-            otherAllowanceDays: z.number().int().min(0).max(366).optional(),
+            linkedinUrl: optionalHttpUrlSchema,
+            xUrl: optionalHttpUrlSchema,
+            instagramUrl: optionalHttpUrlSchema,
+            offAllowanceDays: z.number().int().min(0).max(366).optional(),
+            leaveAllowancePeriod: leaveAllowancePeriodSchema.optional(),
           }),
         )
         .handler(async ({ context, input }) => {

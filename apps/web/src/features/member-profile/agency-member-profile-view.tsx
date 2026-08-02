@@ -58,6 +58,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/t
 /** Profile panels: shadcn surface tokens + theme radius (not hardcoded 2rem / Nuxt aliases). */
 const profilePanelClass = "rounded-xl border border-border bg-card";
 
+function safeHttpUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 type Props = {
   viewModel: AgencyMemberProfileViewModel;
 };
@@ -262,11 +274,6 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
               <h1 className="mt-3 text-wrap text-base font-semibold leading-snug text-balance text-foreground">
                 {profile.userName}
               </h1>
-              {profile.hr.employeeCode ? (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <Badge variant="secondary">{profile.hr.employeeCode}</Badge>
-                </div>
-              ) : null}
               <dl className="mt-4 space-y-2.5 border-t border-border pt-3">
                 <div className="flex justify-between gap-3 text-sm">
                   <dt className="text-muted-foreground">Employment</dt>
@@ -283,11 +290,13 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                   <dd className={agencyMetricClass}>{profile.joinedAtLabel}</dd>
                 </div>
               </dl>
-              {(profile.hr.linkedinUrl || profile.hr.xUrl || profile.hr.instagramUrl) && (
+              {(safeHttpUrl(profile.hr.linkedinUrl) ||
+                safeHttpUrl(profile.hr.xUrl) ||
+                safeHttpUrl(profile.hr.instagramUrl)) && (
                 <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3 text-xs">
-                  {profile.hr.linkedinUrl ? (
+                  {safeHttpUrl(profile.hr.linkedinUrl) ? (
                     <a
-                      href={profile.hr.linkedinUrl}
+                      href={safeHttpUrl(profile.hr.linkedinUrl)!}
                       target="_blank"
                       rel="noreferrer"
                       className="text-muted-foreground underline-offset-2 hover:underline"
@@ -295,9 +304,9 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                       LinkedIn
                     </a>
                   ) : null}
-                  {profile.hr.xUrl ? (
+                  {safeHttpUrl(profile.hr.xUrl) ? (
                     <a
-                      href={profile.hr.xUrl}
+                      href={safeHttpUrl(profile.hr.xUrl)!}
                       target="_blank"
                       rel="noreferrer"
                       className="text-muted-foreground underline-offset-2 hover:underline"
@@ -305,9 +314,9 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                       X
                     </a>
                   ) : null}
-                  {profile.hr.instagramUrl ? (
+                  {safeHttpUrl(profile.hr.instagramUrl) ? (
                     <a
-                      href={profile.hr.instagramUrl}
+                      href={safeHttpUrl(profile.hr.instagramUrl)!}
                       target="_blank"
                       rel="noreferrer"
                       className="text-muted-foreground underline-offset-2 hover:underline"

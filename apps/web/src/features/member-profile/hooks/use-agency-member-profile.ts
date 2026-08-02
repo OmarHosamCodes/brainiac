@@ -87,7 +87,6 @@ export type AgencyMemberProfileViewModel = {
     };
     leaveSummary: string;
     hr: {
-      employeeCode: string | null;
       status: "active" | "inactive";
       statusLabel: string;
       employmentType: EmploymentType | null;
@@ -101,9 +100,8 @@ export type AgencyMemberProfileViewModel = {
       linkedinUrl: string | null;
       xUrl: string | null;
       instagramUrl: string | null;
-      ptoAllowanceDays: number;
-      sickAllowanceDays: number;
-      otherAllowanceDays: number;
+      offAllowanceDays: number;
+      leaveAllowancePeriod: "year" | "quarter" | "month";
     };
     leaveGauges: Array<{
       key: "leaves" | "period" | "present" | "waste";
@@ -166,6 +164,7 @@ export type AgencyMemberProfileViewModel = {
             clientName: string | null;
             description: string | null;
             isWaste: boolean;
+            taskIsWaste: boolean | null;
             startedAt: string | null;
             endedAt: string | null;
             teamId: string | null;
@@ -562,7 +561,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         key: "leaves" as const,
         label: "Off days",
         valueLabel: `${leaveAll.usedDays}/${leaveAll.allowanceDays}`,
-        secondary: "days used",
+        secondary: data.leaveBalances.period.label,
         ratio:
           leaveAll.allowanceDays <= 0
             ? 0
@@ -639,7 +638,6 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       },
       leaveSummary,
       hr: {
-        employeeCode: data.hrProfile.employeeCode,
         status: data.hrProfile.status,
         statusLabel: data.hrProfile.status === "active" ? "Active" : "Inactive",
         employmentType: data.hrProfile.employmentType,
@@ -661,9 +659,8 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         linkedinUrl: data.hrProfile.linkedinUrl,
         xUrl: data.hrProfile.xUrl,
         instagramUrl: data.hrProfile.instagramUrl,
-        ptoAllowanceDays: data.hrProfile.ptoAllowanceDays,
-        sickAllowanceDays: data.hrProfile.sickAllowanceDays,
-        otherAllowanceDays: data.hrProfile.otherAllowanceDays,
+        offAllowanceDays: data.hrProfile.offAllowanceDays,
+        leaveAllowancePeriod: data.hrProfile.leaveAllowancePeriod,
       },
       leaveGauges,
       weekHours: data.weekHours.map((day) => ({
@@ -744,6 +741,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
               clientName: item.clientName,
               description: item.description,
               isWaste: item.isWaste,
+              taskIsWaste: item.taskIsWaste,
               startedAt: item.startedAt,
               endedAt: item.endedAt,
               teamId: item.teamId,

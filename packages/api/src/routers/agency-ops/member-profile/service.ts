@@ -27,16 +27,15 @@ import {
   buildCalendarMonth,
   buildLeaveBalances,
   buildWeekHours,
-  DEFAULT_OTHER_ALLOWANCE_DAYS,
-  DEFAULT_PTO_ALLOWANCE_DAYS,
-  DEFAULT_SICK_ALLOWANCE_DAYS,
+  DEFAULT_OFF_ALLOWANCE_DAYS,
 } from "./member-profile-hr";
 import { buildLeaveActivity, buildTimeEntryActivity } from "./member-profile-timeline";
-import type {
-  memberHrProfileSchema,
-  memberLeaveSchema,
-  memberProfileSchema,
-  memberReviewSchema,
+import {
+  normalizeHttpUrl,
+  type memberHrProfileSchema,
+  type memberLeaveSchema,
+  type memberProfileSchema,
+  type memberReviewSchema,
 } from "./schemas";
 
 type MemberLeave = z.infer<typeof memberLeaveSchema>;
@@ -69,7 +68,6 @@ function mapLeave(row: typeof agencyOpsMemberLeave.$inferSelect): MemberLeave {
 
 function defaultHrProfile(): MemberHrProfile {
   return {
-    employeeCode: null,
     status: "active",
     employmentType: null,
     workModel: null,
@@ -80,15 +78,13 @@ function defaultHrProfile(): MemberHrProfile {
     linkedinUrl: null,
     xUrl: null,
     instagramUrl: null,
-    ptoAllowanceDays: DEFAULT_PTO_ALLOWANCE_DAYS,
-    sickAllowanceDays: DEFAULT_SICK_ALLOWANCE_DAYS,
-    otherAllowanceDays: DEFAULT_OTHER_ALLOWANCE_DAYS,
+    offAllowanceDays: DEFAULT_OFF_ALLOWANCE_DAYS,
+    leaveAllowancePeriod: "year",
   };
 }
 
 function mapHrProfile(row: typeof agencyOpsMemberHrProfile.$inferSelect): MemberHrProfile {
   return {
-    employeeCode: row.employeeCode,
     status: row.status,
     employmentType: row.employmentType,
     workModel: row.workModel,
@@ -99,9 +95,8 @@ function mapHrProfile(row: typeof agencyOpsMemberHrProfile.$inferSelect): Member
     linkedinUrl: row.linkedinUrl,
     xUrl: row.xUrl,
     instagramUrl: row.instagramUrl,
-    ptoAllowanceDays: row.ptoAllowanceDays,
-    sickAllowanceDays: row.sickAllowanceDays,
-    otherAllowanceDays: row.otherAllowanceDays,
+    offAllowanceDays: row.offAllowanceDays,
+    leaveAllowancePeriod: row.leaveAllowancePeriod ?? "year",
   };
 }
 
@@ -353,6 +348,7 @@ export async function getMemberProfile(
       clientName: entry.clientName,
       durationSeconds: entry.durationSeconds,
       isWaste: entry.isWaste,
+      taskIsWaste: entry.taskIsWaste ?? null,
       startedAt: entry.startedAt.toISOString(),
       endedAt: entry.endedAt.toISOString(),
       teamId: entry.teamId,
@@ -401,11 +397,10 @@ export async function getMemberProfile(
   const hrProfile = hrRow ? mapHrProfile(hrRow) : defaultHrProfile();
 
   const leaveBalances = buildLeaveBalances({
-    year: periodYear,
+    period: hrProfile.leaveAllowancePeriod,
+    anchorDate: endDate,
     leave: allLeave,
-    ptoAllowanceDays: hrProfile.ptoAllowanceDays,
-    sickAllowanceDays: hrProfile.sickAllowanceDays,
-    otherAllowanceDays: hrProfile.otherAllowanceDays,
+    offAllowanceDays: hrProfile.offAllowanceDays,
   });
 
   const weekHours = buildWeekHours(endDate, secondsByDate);
@@ -481,29 +476,24 @@ export async function upsertMemberHrProfile(
   const next: MemberHrProfile = {
     ...base,
     ...input.patch,
-    employeeCode:
-      input.patch.employeeCode === undefined
-        ? base.employeeCode
-        : input.patch.employeeCode?.trim() || null,
     gender: input.patch.gender === undefined ? base.gender : input.patch.gender?.trim() || null,
     phone: input.patch.phone === undefined ? base.phone : input.patch.phone?.trim() || null,
     address: input.patch.address === undefined ? base.address : input.patch.address?.trim() || null,
     linkedinUrl:
       input.patch.linkedinUrl === undefined
         ? base.linkedinUrl
-        : input.patch.linkedinUrl?.trim() || null,
-    xUrl: input.patch.xUrl === undefined ? base.xUrl : input.patch.xUrl?.trim() || null,
+        : normalizeHttpUrl(input.patch.linkedinUrl),
+    xUrl: input.patch.xUrl === undefined ? base.xUrl : normalizeHttpUrl(input.patch.xUrl),
     instagramUrl:
       input.patch.instagramUrl === undefined
         ? base.instagramUrl
-        : input.patch.instagramUrl?.trim() || null,
+        : normalizeHttpUrl(input.patch.instagramUrl),
   };
 
   if (existing) {
     const [row] = await db
       .update(agencyOpsMemberHrProfile)
       .set({
-        employeeCode: next.employeeCode,
         status: next.status,
         employmentType: next.employmentType,
         workModel: next.workModel,
@@ -514,9 +504,8 @@ export async function upsertMemberHrProfile(
         linkedinUrl: next.linkedinUrl,
         xUrl: next.xUrl,
         instagramUrl: next.instagramUrl,
-        ptoAllowanceDays: next.ptoAllowanceDays,
-        sickAllowanceDays: next.sickAllowanceDays,
-        otherAllowanceDays: next.otherAllowanceDays,
+        offAllowanceDays: next.offAllowanceDays,
+        leaveAllowancePeriod: next.leaveAllowancePeriod,
       })
       .where(eq(agencyOpsMemberHrProfile.id, existing.id))
       .returning();
@@ -530,7 +519,6 @@ export async function upsertMemberHrProfile(
       id: createWorkspaceId("agency-hr"),
       teamId: input.teamId,
       userId: input.userId,
-      employeeCode: next.employeeCode,
       status: next.status,
       employmentType: next.employmentType,
       workModel: next.workModel,
@@ -541,9 +529,8 @@ export async function upsertMemberHrProfile(
       linkedinUrl: next.linkedinUrl,
       xUrl: next.xUrl,
       instagramUrl: next.instagramUrl,
-      ptoAllowanceDays: next.ptoAllowanceDays,
-      sickAllowanceDays: next.sickAllowanceDays,
-      otherAllowanceDays: next.otherAllowanceDays,
+      offAllowanceDays: next.offAllowanceDays,
+      leaveAllowancePeriod: next.leaveAllowancePeriod,
     })
     .returning();
 

@@ -19,6 +19,7 @@ const baseEntry = {
   userName: "Omar",
   source: "manual" as const,
   isBillable: true,
+  taskIsWaste: false as boolean | null,
 };
 
 describe("buildTimeEntryActivity", () => {
