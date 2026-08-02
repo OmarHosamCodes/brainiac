@@ -8,13 +8,24 @@ import {
   deleteMemberLeave,
   deleteMemberReview,
   getMemberProfile,
+  upsertMemberHrProfile,
 } from "./service";
 import {
+  memberEmploymentStatusSchema,
+  memberEmploymentTypeSchema,
+  memberHrProfileSchema,
   memberLeaveSchema,
   memberLeaveTypeSchema,
   memberProfileSchema,
   memberReviewSchema,
+  memberWorkModelSchema,
 } from "./schemas";
+
+const optionalDateKey = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .nullable()
+  .optional();
 
 export const memberProfileRouter = {
   memberProfile: {
@@ -29,11 +40,47 @@ export const memberProfileRouter = {
             .max(14 * 60),
           from: z.string().datetime(),
           to: z.string().datetime(),
+          calendarMonth: z
+            .string()
+            .regex(/^\d{4}-\d{2}$/)
+            .optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return memberProfileSchema.parse(await getMemberProfile(context.session.user.id, input));
       }),
+    hrProfile: {
+      upsert: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            userId: z.string().min(1),
+            employeeCode: z.string().max(64).nullable().optional(),
+            status: memberEmploymentStatusSchema.optional(),
+            employmentType: memberEmploymentTypeSchema.nullable().optional(),
+            workModel: memberWorkModelSchema.nullable().optional(),
+            gender: z.string().max(64).nullable().optional(),
+            dateOfBirth: optionalDateKey,
+            phone: z.string().max(64).nullable().optional(),
+            address: z.string().max(500).nullable().optional(),
+            linkedinUrl: z.string().max(500).nullable().optional(),
+            xUrl: z.string().max(500).nullable().optional(),
+            instagramUrl: z.string().max(500).nullable().optional(),
+            ptoAllowanceDays: z.number().int().min(0).max(366).optional(),
+            sickAllowanceDays: z.number().int().min(0).max(366).optional(),
+            otherAllowanceDays: z.number().int().min(0).max(366).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          const { teamId, userId, ...patch } = input;
+          return z.object({ hrProfile: memberHrProfileSchema }).parse({
+            hrProfile: await upsertMemberHrProfile(context.session.user.id, {
+              teamId,
+              userId,
+              patch,
+            }),
+          });
+        }),
+    },
     leave: {
       create: protectedProProcedure
         .input(

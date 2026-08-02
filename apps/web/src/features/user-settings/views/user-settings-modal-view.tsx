@@ -1,17 +1,7 @@
 import { type ReactNode } from "react";
-import {
-  CreditCard,
-  Loader2,
-  LogOut,
-  Moon,
-  RefreshCw,
-  Settings2,
-  Sun,
-  UserRound,
-} from "lucide-react";
+import { CreditCard, Loader2, LogOut, Moon, RefreshCw, Settings2, Sun } from "lucide-react";
 
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
-import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import type {
   NotificationPreferenceItem,
   NotificationPreferenceType,
@@ -22,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/ui/dialog";
-import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Skeleton } from "@/ui/skeleton";
 
@@ -33,7 +22,7 @@ type UserSettingsModalViewProps = {
 type NavItem = {
   id: UserSettingsPane;
   label: string;
-  icon: typeof UserRound;
+  icon: typeof Settings2;
 };
 
 const NOTIFICATION_TYPE_LABELS: Record<NotificationPreferenceType, string> = {
@@ -69,7 +58,6 @@ function SettingsRow({
 }
 
 const navItems: NavItem[] = [
-  { id: "profile", label: "Profile", icon: UserRound },
   { id: "preferences", label: "Preferences", icon: Settings2 },
   { id: "billing", label: "Billing", icon: CreditCard },
 ];
@@ -82,14 +70,7 @@ export function UserSettingsModalView({ viewModel }: UserSettingsModalViewProps)
   const {
     open,
     userId,
-    userName,
-    userEmail,
-    avatarUrl,
     pane,
-    nameDraft,
-    nameDirty,
-    savingName,
-    uploadingImage,
     signingOut,
     isDark,
     tier,
@@ -102,9 +83,6 @@ export function UserSettingsModalView({ viewModel }: UserSettingsModalViewProps)
     notificationPreferencesSaving,
     onOpenChange,
     onPaneChange,
-    onNameDraftChange,
-    onSaveName,
-    onPickImage,
     onToggleTheme,
     onBillingAction,
     onSignOut,
@@ -114,23 +92,22 @@ export function UserSettingsModalView({ viewModel }: UserSettingsModalViewProps)
 
   if (!userId) return null;
 
-  const activePane = navItems.some((item) => item.id === pane) ? pane : "profile";
+  const activePane = navItems.some((item) => item.id === pane) ? pane : "preferences";
 
-  const paneTitle =
-    activePane === "profile" ? "Profile" : activePane === "preferences" ? "Preferences" : "Billing";
+  const paneTitle = activePane === "preferences" ? "Preferences" : "Billing";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-3xl">
-        <DialogTitle className="sr-only">User settings</DialogTitle>
+        <DialogTitle className="sr-only">Settings</DialogTitle>
         <DialogDescription className="sr-only">
-          Manage your profile, preferences, and billing.
+          Manage your preferences and billing.
         </DialogDescription>
 
         <div className="flex h-[min(32rem,85vh)] overflow-hidden">
           <nav
             className="flex w-48 shrink-0 flex-col border-r border-border bg-muted/30"
-            aria-label="User settings sections"
+            aria-label="Settings sections"
           >
             <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
               {navItems.map((item) => {
@@ -180,67 +157,6 @@ export function UserSettingsModalView({ viewModel }: UserSettingsModalViewProps)
             <h2 className="text-xl font-semibold tracking-tight text-balance text-foreground">
               {paneTitle}
             </h2>
-
-            {activePane === "profile" ? (
-              <div className="mt-6 flex flex-col">
-                <div className="flex items-center justify-between gap-4 border-b border-border pb-5">
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm font-medium text-foreground">Profile photo</p>
-                    <p className="text-xs text-muted-foreground">
-                      Shown in the sidebar and across Orch.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <AgencyMemberAvatar
-                      name={userName}
-                      userId={userId}
-                      avatarUrl={avatarUrl}
-                      size="md"
-                      alt={userName}
-                      className="size-14 rounded-xl"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={uploadingImage}
-                      onClick={onPickImage}
-                    >
-                      {uploadingImage ? <Loader2 className="size-4 animate-spin" /> : null}
-                      Change
-                    </Button>
-                  </div>
-                </div>
-
-                <SettingsRow label="Display name" htmlFor="user-display-name">
-                  <Input
-                    id="user-display-name"
-                    value={nameDraft || userName}
-                    placeholder="Your name"
-                    className={cn("max-w-56", shellFocusRingClass)}
-                    onChange={(e) => onNameDraftChange(e.target.value)}
-                    onFocus={() => {
-                      if (!nameDraft) onNameDraftChange(userName);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && nameDirty) onSaveName();
-                    }}
-                  />
-                  {nameDirty ? (
-                    <Button size="sm" disabled={savingName} onClick={onSaveName}>
-                      {savingName ? <Loader2 className="size-4 animate-spin" /> : null}
-                      Save
-                    </Button>
-                  ) : null}
-                </SettingsRow>
-
-                <SettingsRow label="Email">
-                  <span className="truncate text-sm text-muted-foreground">
-                    {userEmail || "No email"}
-                  </span>
-                </SettingsRow>
-              </div>
-            ) : null}
 
             {activePane === "preferences" ? (
               <div className="mt-6 flex flex-col gap-8">

@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
@@ -29,6 +29,8 @@ import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
 import { formatDuration } from "@/lib/utils/format-duration";
 
 type LeaveType = "pto" | "sick" | "team_holiday" | "other";
+type EmploymentType = "full_time" | "part_time" | "contractor" | "intern";
+type WorkModel = "onsite" | "hybrid" | "remote";
 
 export type AgencyMemberProfileViewModel = {
   teamId: string;
@@ -53,12 +55,16 @@ export type AgencyMemberProfileViewModel = {
   profile: {
     userName: string;
     userAvatarUrl: string | null;
+    email: string;
     role: string;
+    roleLabel: string;
     joinedAtLabel: string;
     isSelf: boolean;
     canAddReview: boolean;
     canManageLeave: boolean;
+    canEditHr: boolean;
     periodHoursLabel: string;
+    weekHoursTotalLabel: string;
     heatLayout: MemberProfileHeatLayout;
     heatMap: {
       startDate: string;
@@ -80,6 +86,52 @@ export type AgencyMemberProfileViewModel = {
       }>;
     };
     leaveSummary: string;
+    hr: {
+      employeeCode: string | null;
+      status: "active" | "inactive";
+      statusLabel: string;
+      employmentType: EmploymentType | null;
+      employmentTypeLabel: string | null;
+      workModel: WorkModel | null;
+      workModelLabel: string | null;
+      gender: string | null;
+      dateOfBirthLabel: string | null;
+      phone: string | null;
+      address: string | null;
+      linkedinUrl: string | null;
+      xUrl: string | null;
+      instagramUrl: string | null;
+      ptoAllowanceDays: number;
+      sickAllowanceDays: number;
+      otherAllowanceDays: number;
+    };
+    leaveGauges: Array<{
+      key: "leaves" | "period" | "present" | "waste";
+      label: string;
+      valueLabel: string;
+      secondary: string;
+      ratio: number;
+      tone: "success" | "warning" | "foreground";
+    }>;
+    weekHours: Array<{
+      date: string;
+      weekdayLabel: string;
+      totalSeconds: number;
+      hoursLabel: string;
+      heightPct: number;
+    }>;
+    calendar: {
+      label: string;
+      days: Array<{
+        date: string;
+        dayOfMonth: number;
+        inMonth: boolean;
+        status: "present" | "leave" | "empty";
+      }>;
+      legend: Array<{ status: "present" | "leave" | "empty"; label: string; count: number }>;
+      onPrevMonth: () => void;
+      onNextMonth: () => void;
+    };
     timeline: Array<{
       date: string;
       title: string;
@@ -105,14 +157,33 @@ export type AgencyMemberProfileViewModel = {
             meta: string | null;
             timeLabel: string;
             durationLabel: string | null;
+            durationSeconds: number | null;
+            projectId: string | null;
+            projectName: string | null;
+            taskId: string | null;
+            taskTitle: string | null;
+            clientId: string | null;
+            clientName: string | null;
+            description: string | null;
+            isWaste: boolean;
+            startedAt: string | null;
+            endedAt: string | null;
+            teamId: string | null;
+            userId: string | null;
+            userName: string | null;
+            source: "timer" | "manual" | null;
+            isBillable: boolean | null;
           }
       >;
     }>;
   } | null;
   leaveDialogOpen: boolean;
   reviewDialogOpen: boolean;
+  hrDialogOpen: boolean;
+  offDayRangeSelect: { startDate: string; endDate: string } | null;
   leavePending: boolean;
   reviewPending: boolean;
+  hrPending: boolean;
   leaveDraft: {
     startDate: string;
     endDate: string;
@@ -121,15 +192,32 @@ export type AgencyMemberProfileViewModel = {
     teamWide: boolean;
   };
   reviewDraft: { reviewDate: string; body: string };
+  hrDraft: {
+    status: "active" | "inactive";
+    employmentType: EmploymentType | "";
+    workModel: WorkModel | "";
+    gender: string;
+    dateOfBirth: string;
+    phone: string;
+    address: string;
+  };
   setLeaveDialogOpen: (open: boolean) => void;
   setReviewDialogOpen: (open: boolean) => void;
+  setHrDialogOpen: (open: boolean) => void;
+  openOffDayRangeSelect: (startDate: string) => void;
+  closeOffDayRangeSelect: () => void;
+  confirmOffDayRangeSelect: (next: { startDate: string; endDate: string }) => void;
+  openAddOffDay: (date: string) => void;
+  openAddOffDayDialog: () => void;
   setLeaveDraft: (patch: Partial<AgencyMemberProfileViewModel["leaveDraft"]>) => void;
   setReviewDraft: (patch: Partial<AgencyMemberProfileViewModel["reviewDraft"]>) => void;
+  setHrDraft: (patch: Partial<AgencyMemberProfileViewModel["hrDraft"]>) => void;
   toggleDay: (date: string) => void;
   focusDay: (date: string) => void;
   retry: () => void;
   submitLeave: () => Promise<void>;
   submitReview: () => Promise<void>;
+  submitHr: () => Promise<void>;
 };
 
 function todayKey(utcOffsetMinutes: number) {
@@ -139,6 +227,14 @@ function todayKey(utcOffsetMinutes: number) {
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
   const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function shiftMonthKey(monthKey: string, delta: -1 | 1): string {
+  const [yearStr, monthStr] = monthKey.split("-");
+  const date = new Date(Date.UTC(Number(yearStr), Number(monthStr) - 1 + delta, 1));
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
 }
 
 function formatDayParts(dateKey: string, today: string): { title: string; subtitle: string } {
@@ -167,7 +263,7 @@ function activityKindLabel(eventType: "time_logged" | "waste_marked" | "leave") 
     case "waste_marked":
       return "Waste";
     case "leave":
-      return "Leave";
+      return "Off day";
     default: {
       const _exhaustive: never = eventType;
       return _exhaustive;
@@ -180,6 +276,84 @@ function shortHours(totalSeconds: number) {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   if (hours <= 0) return `${minutes}m`;
   return `${hours}h ${minutes}m`;
+}
+
+function roleLabel(role: string) {
+  switch (role) {
+    case "owner":
+      return "Owner";
+    case "editor":
+      return "Editor";
+    case "viewer":
+      return "Viewer";
+    default:
+      return role;
+  }
+}
+
+function employmentTypeLabel(value: EmploymentType | null) {
+  switch (value) {
+    case "full_time":
+      return "Full-time";
+    case "part_time":
+      return "Part-time";
+    case "contractor":
+      return "Contractor";
+    case "intern":
+      return "Intern";
+    case null:
+      return null;
+    default: {
+      const _exhaustive: never = value;
+      return _exhaustive;
+    }
+  }
+}
+
+function workModelLabel(value: WorkModel | null) {
+  switch (value) {
+    case "onsite":
+      return "Onsite";
+    case "hybrid":
+      return "Hybrid";
+    case "remote":
+      return "Remote";
+    case null:
+      return null;
+    default: {
+      const _exhaustive: never = value;
+      return _exhaustive;
+    }
+  }
+}
+
+function normalizeGenderDraft(value: string | null | undefined): string {
+  const key = value?.trim().toLowerCase() ?? "";
+  if (key === "male" || key === "female") return key;
+  return "";
+}
+
+function genderDisplayLabel(value: string | null): string | null {
+  switch (normalizeGenderDraft(value)) {
+    case "male":
+      return "Male";
+    case "female":
+      return "Female";
+    default:
+      return value?.trim() || null;
+  }
+}
+
+function emptyHrDraft(): AgencyMemberProfileViewModel["hrDraft"] {
+  return {
+    status: "active",
+    employmentType: "",
+    workModel: "",
+    gender: "",
+    dateOfBirth: "",
+    phone: "",
+    address: "",
+  };
 }
 
 function rangePresetDisplayLabel(
@@ -278,6 +452,11 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({ [today]: true });
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [hrDialogOpen, setHrDialogOpen] = useState(false);
+  const [offDayRangeSelect, setOffDayRangeSelect] = useState<{
+    startDate: string;
+    endDate: string;
+  } | null>(null);
   const [leaveDraft, setLeaveDraftState] = useState({
     startDate: today,
     endDate: today,
@@ -289,6 +468,15 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     reviewDate: today,
     body: "",
   });
+  const [hrDraft, setHrDraftState] = useState(emptyHrDraft);
+  const [calendarMonthOverride, setCalendarMonthOverride] = useState<string | null>(null);
+
+  const defaultCalendarMonth = range.to.slice(0, 7);
+  const calendarMonth = calendarMonthOverride ?? defaultCalendarMonth;
+
+  useEffect(() => {
+    setCalendarMonthOverride(null);
+  }, [range.from, range.to]);
 
   const profileQueryInput = useMemo(
     () => ({
@@ -297,8 +485,9 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       utcOffsetMinutes,
       from: range.from,
       to: range.to,
+      calendarMonth,
     }),
-    [range.from, range.to, subjectUserId, teamId, utcOffsetMinutes],
+    [calendarMonth, range.from, range.to, subjectUserId, teamId, utcOffsetMinutes],
   );
 
   const profileQuery = useQuery({
@@ -346,8 +535,8 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
 
     const leaveSummary =
       data.leave.length === 0
-        ? "No leave in this period"
-        : `${data.leave.length} leave range${data.leave.length === 1 ? "" : "s"}`;
+        ? "No off days in this period"
+        : `${data.leave.length} off-day range${data.leave.length === 1 ? "" : "s"}`;
 
     const heatLayout = resolveMemberProfileHeatLayout(
       effectiveRangePreset,
@@ -356,15 +545,76 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       data.heatMap.endDate,
     );
 
+    const maxWeekSeconds = Math.max(1, ...data.weekHours.map((day) => day.totalSeconds));
+    const weekHoursTotalSeconds = data.weekHours.reduce((sum, day) => sum + day.totalSeconds, 0);
+
+    const calendarLegendCounts = { present: 0, leave: 0, empty: 0 };
+    let daysInMonth = 0;
+    for (const day of data.calendarMonth.days) {
+      if (!day.inMonth) continue;
+      daysInMonth += 1;
+      calendarLegendCounts[day.status] += 1;
+    }
+
+    const leaveAll = data.leaveBalances.all;
+    const leaveGauges = [
+      {
+        key: "leaves" as const,
+        label: "Off days",
+        valueLabel: `${leaveAll.usedDays}/${leaveAll.allowanceDays}`,
+        secondary: "days used",
+        ratio:
+          leaveAll.allowanceDays <= 0
+            ? 0
+            : Math.min(1, leaveAll.usedDays / Math.max(leaveAll.allowanceDays, 1)),
+        tone: "success" as const,
+      },
+      {
+        key: "period" as const,
+        label: "Period hours",
+        valueLabel: shortHours(data.periodTotalSeconds),
+        secondary: periodLabel,
+        ratio: 0,
+        tone: "foreground" as const,
+      },
+      {
+        key: "present" as const,
+        label: "Present",
+        valueLabel: `${calendarLegendCounts.present}/${daysInMonth}`,
+        secondary: data.calendarMonth.label,
+        ratio: daysInMonth <= 0 ? 0 : calendarLegendCounts.present / daysInMonth,
+        tone: "success" as const,
+      },
+      {
+        key: "waste" as const,
+        label: "Waste",
+        valueLabel: shortHours(data.periodWasteSeconds),
+        secondary: "this period",
+        ratio:
+          data.periodTotalSeconds <= 0
+            ? 0
+            : Math.min(1, data.periodWasteSeconds / data.periodTotalSeconds),
+        tone: "warning" as const,
+      },
+    ];
+
+    const dob = data.hrProfile.dateOfBirth
+      ? new Date(`${data.hrProfile.dateOfBirth}T12:00:00.000Z`)
+      : null;
+
     return {
       userName: data.userName,
       userAvatarUrl: avatarUrl,
+      email: data.email,
       role: data.role,
+      roleLabel: roleLabel(data.role),
       joinedAtLabel,
       isSelf: data.isSelf,
       canAddReview: data.canAddReview,
       canManageLeave: data.canManageLeave,
+      canEditHr: data.canEditHr,
       periodHoursLabel: shortHours(data.periodTotalSeconds),
+      weekHoursTotalLabel: shortHours(weekHoursTotalSeconds),
       heatLayout,
       heatMap: {
         startDate: data.heatMap.startDate,
@@ -388,6 +638,52 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         }),
       },
       leaveSummary,
+      hr: {
+        employeeCode: data.hrProfile.employeeCode,
+        status: data.hrProfile.status,
+        statusLabel: data.hrProfile.status === "active" ? "Active" : "Inactive",
+        employmentType: data.hrProfile.employmentType,
+        employmentTypeLabel: employmentTypeLabel(data.hrProfile.employmentType),
+        workModel: data.hrProfile.workModel,
+        workModelLabel: workModelLabel(data.hrProfile.workModel),
+        gender: genderDisplayLabel(data.hrProfile.gender),
+        dateOfBirthLabel:
+          dob && !Number.isNaN(dob.getTime())
+            ? dob.toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                timeZone: "UTC",
+              })
+            : null,
+        phone: data.hrProfile.phone,
+        address: data.hrProfile.address,
+        linkedinUrl: data.hrProfile.linkedinUrl,
+        xUrl: data.hrProfile.xUrl,
+        instagramUrl: data.hrProfile.instagramUrl,
+        ptoAllowanceDays: data.hrProfile.ptoAllowanceDays,
+        sickAllowanceDays: data.hrProfile.sickAllowanceDays,
+        otherAllowanceDays: data.hrProfile.otherAllowanceDays,
+      },
+      leaveGauges,
+      weekHours: data.weekHours.map((day) => ({
+        date: day.date,
+        weekdayLabel: day.weekdayLabel,
+        totalSeconds: day.totalSeconds,
+        hoursLabel: shortHours(day.totalSeconds),
+        heightPct: Math.round((day.totalSeconds / maxWeekSeconds) * 100),
+      })),
+      calendar: {
+        label: data.calendarMonth.label,
+        days: data.calendarMonth.days,
+        legend: [
+          { status: "present" as const, label: "Present", count: calendarLegendCounts.present },
+          { status: "leave" as const, label: "Off days", count: calendarLegendCounts.leave },
+          { status: "empty" as const, label: "No time", count: calendarLegendCounts.empty },
+        ],
+        onPrevMonth: () => setCalendarMonthOverride(shiftMonthKey(calendarMonth, -1)),
+        onNextMonth: () => setCalendarMonthOverride(shiftMonthKey(calendarMonth, 1)),
+      },
       timeline: data.timeline.map((day, index) => {
         const defaultOpen =
           day.date === today ||
@@ -395,14 +691,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
             !data.timeline.some((entry) => entry.date === today) &&
             index === 0);
         const parts = formatDayParts(day.date, today);
-        const reviewCount = day.items.filter((item) => item.kind === "review").length;
-        const activityCount = day.items.length - reviewCount;
-        const countLabel = [
-          reviewCount > 0 ? `${reviewCount} review` : null,
-          `${activityCount} activity`,
-        ]
-          .filter(Boolean)
-          .join(" · ");
+        const countLabel = `${day.items.length} event${day.items.length === 1 ? "" : "s"}`;
 
         return {
           date: day.date,
@@ -440,21 +729,39 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
               title: item.title,
               body: item.body,
               meta: item.meta,
-              timeLabel: new Date(item.createdAt).toLocaleTimeString(undefined, {
+              timeLabel: new Date(item.startedAt ?? item.createdAt).toLocaleTimeString(undefined, {
                 hour: "numeric",
                 minute: "2-digit",
               }),
               durationLabel:
-                item.durationSeconds == null ? null : formatDuration(item.durationSeconds, "short"),
+                item.durationSeconds == null ? null : formatDuration(item.durationSeconds, "clock"),
+              durationSeconds: item.durationSeconds,
+              projectId: item.projectId,
+              projectName: item.projectName,
+              taskId: item.taskId,
+              taskTitle: item.taskTitle,
+              clientId: item.clientId,
+              clientName: item.clientName,
+              description: item.description,
+              isWaste: item.isWaste,
+              startedAt: item.startedAt,
+              endedAt: item.endedAt,
+              teamId: item.teamId,
+              userId: item.userId,
+              userName: item.userName,
+              source: item.source,
+              isBillable: item.isBillable,
             };
           }),
         };
       }),
     };
   }, [
+    calendarMonth,
     effectiveRangePreset,
     effectiveTenureMonthIndexes,
     expandedDays,
+    periodLabel,
     profileQuery.data,
     serverUrl,
     today,
@@ -493,18 +800,15 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     profile,
     leaveDialogOpen,
     reviewDialogOpen,
+    hrDialogOpen,
+    offDayRangeSelect,
     leavePending: store.leavePending,
     reviewPending: store.reviewPending,
+    hrPending: store.hrPending,
     leaveDraft,
     reviewDraft,
+    hrDraft,
     setLeaveDialogOpen(open) {
-      if (open) {
-        setLeaveDraftState((prev) => ({
-          ...prev,
-          startDate: clampedDefaultDate,
-          endDate: clampedDefaultDate,
-        }));
-      }
       setLeaveDialogOpen(open);
     },
     setReviewDialogOpen(open) {
@@ -513,11 +817,59 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       }
       setReviewDialogOpen(open);
     },
+    setHrDialogOpen(open) {
+      if (open && profile) {
+        setHrDraftState({
+          status: profile.hr.status,
+          employmentType: profile.hr.employmentType ?? "",
+          workModel: profile.hr.workModel ?? "",
+          gender: normalizeGenderDraft(profile.hr.gender),
+          dateOfBirth: profileQuery.data?.hrProfile.dateOfBirth ?? "",
+          phone: profile.hr.phone ?? "",
+          address: profile.hr.address ?? "",
+        });
+      }
+      setHrDialogOpen(open);
+    },
+    openOffDayRangeSelect(startDate) {
+      setOffDayRangeSelect({ startDate, endDate: startDate });
+    },
+    closeOffDayRangeSelect() {
+      setOffDayRangeSelect(null);
+    },
+    confirmOffDayRangeSelect(next) {
+      setOffDayRangeSelect(null);
+      setLeaveDraftState((prev) => ({
+        ...prev,
+        startDate: next.startDate,
+        endDate: next.endDate,
+      }));
+      setLeaveDialogOpen(true);
+    },
+    openAddOffDay(date) {
+      setLeaveDraftState((prev) => ({
+        ...prev,
+        startDate: date,
+        endDate: date,
+      }));
+      setLeaveDialogOpen(true);
+    },
+    openAddOffDayDialog() {
+      setLeaveDraftState((prev) => ({
+        ...prev,
+        startDate: clampedDefaultDate,
+        endDate: clampedDefaultDate,
+      }));
+      setLeaveDialogOpen(true);
+    },
     setLeaveDraft(patch) {
       setLeaveDraftState((prev) => ({ ...prev, ...patch }));
     },
     setReviewDraft(patch) {
       setReviewDraftState((prev) => ({ ...prev, ...patch }));
+    },
+    setHrDraft(patch) {
+      setHrDraftState((prev) => ({ ...prev, ...patch }));
     },
     toggleDay(date) {
       setExpandedDays((prev) => ({ ...prev, [date]: !(prev[date] ?? date === today) }));
@@ -541,12 +893,12 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
           type: leaveDraft.teamWide ? "team_holiday" : leaveDraft.type,
           reason: leaveDraft.reason.trim() || null,
         });
-        toast.success("Leave saved");
+        toast.success("Off day saved");
         setLeaveDialogOpen(false);
         await invalidate.mutateAsync();
         await profileQuery.refetch();
       } catch {
-        toast.error("Couldn't save leave");
+        toast.error("Couldn't save off day");
       }
     },
     async submitReview() {
@@ -565,6 +917,29 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         await profileQuery.refetch();
       } catch {
         toast.error("Couldn't save review");
+      }
+    },
+    async submitHr() {
+      if (!teamId || !profile) return;
+      try {
+        // Omit code/social/allowances so existing DB values stay intact.
+        await store.upsertHrProfile({
+          teamId,
+          userId: subjectUserId,
+          status: hrDraft.status,
+          employmentType: hrDraft.employmentType || null,
+          workModel: hrDraft.workModel || null,
+          gender: normalizeGenderDraft(hrDraft.gender) || null,
+          dateOfBirth: hrDraft.dateOfBirth || null,
+          phone: hrDraft.phone.trim() || null,
+          address: hrDraft.address.trim() || null,
+        });
+        toast.success("Profile saved");
+        setHrDialogOpen(false);
+        await invalidate.mutateAsync();
+        await profileQuery.refetch();
+      } catch {
+        toast.error("Couldn't save profile");
       }
     },
   };

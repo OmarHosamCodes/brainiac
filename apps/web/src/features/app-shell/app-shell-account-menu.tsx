@@ -150,13 +150,13 @@ export function AppShellAccountMenu({ variant = "icon" }: AppShellAccountMenuPro
           <DropdownMenuItem asChild>
             <Link to="/agency/me">
               <UserRound className="size-4" aria-hidden />
-              Agency profile
+              Profile
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
             <Settings className="size-4" aria-hidden />
-            Account settings
+            Settings
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

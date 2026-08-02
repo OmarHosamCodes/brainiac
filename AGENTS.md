@@ -15,7 +15,7 @@
 
 ## Learned Workspace Facts
 
-- This repo is the Orch/brainiac Bun monorepo; agency time tracking is a core product surface (`apps/web` task-management / agency work features); Agency member profile is a GitHub-layout-inspired surface with a contribution heatmap (off days marked) and activity timeline; Agency Management is Operations + Commercial hubs (Resourcing, Tenure, Tags / Invoices, Rates), with Resourcing using a team-wide presence/workload heatmap in the same contribution-heatmap pattern as member profile; Agency projects soft-delete with confirmation into a trash/archived filter (restore supported; ~30-day retention before purge; soft-deleted projects excluded from all agency listings).
+- This repo is the Orch/brainiac Bun monorepo; agency time tracking is a core product surface (`apps/web` task-management / agency work features); Agency member profile is a GitHub-layout-inspired HR surface (identity/personal info, leave, activity timeline); Agency Management is Operations + Commercial hubs (Resourcing, Tenure, Tags / Invoices, Rates), with Resourcing using a team-wide presence/workload heatmap in the same contribution-heatmap pattern as member profile; Agency projects soft-delete with confirmation into a trash/archived filter (restore supported; ~30-day retention before purge; soft-deleted projects excluded from all agency listings).
 - Production hosting is on Railway (Postgres; Redis is also used for server-side persistence/cache).
 - Clockify data can be imported with `bun run db:import:clockify`.
 - Sentry issue fix automation is set up to open fix PRs against `dev`.

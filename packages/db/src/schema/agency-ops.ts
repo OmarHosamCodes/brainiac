@@ -819,3 +819,43 @@ export const agencyOpsMemberReview = pgTable(
     ),
   ],
 );
+
+export type AgencyOpsMemberEmploymentType = "full_time" | "part_time" | "contractor" | "intern";
+export type AgencyOpsMemberWorkModel = "onsite" | "hybrid" | "remote";
+export type AgencyOpsMemberEmploymentStatus = "active" | "inactive";
+
+export const agencyOpsMemberHrProfile = pgTable(
+  "agency_ops_member_hr_profile",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    employeeCode: text("employee_code"),
+    status: text("status").$type<AgencyOpsMemberEmploymentStatus>().notNull().default("active"),
+    employmentType: text("employment_type").$type<AgencyOpsMemberEmploymentType>(),
+    workModel: text("work_model").$type<AgencyOpsMemberWorkModel>(),
+    gender: text("gender"),
+    dateOfBirth: text("date_of_birth"),
+    phone: text("phone"),
+    address: text("address"),
+    linkedinUrl: text("linkedin_url"),
+    xUrl: text("x_url"),
+    instagramUrl: text("instagram_url"),
+    ptoAllowanceDays: integer("pto_allowance_days").notNull().default(15),
+    sickAllowanceDays: integer("sick_allowance_days").notNull().default(10),
+    otherAllowanceDays: integer("other_allowance_days").notNull().default(5),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agency_ops_member_hr_profile_team_user_uidx").on(table.teamId, table.userId),
+    index("agency_ops_member_hr_profile_team_idx").on(table.teamId),
+  ],
+);
