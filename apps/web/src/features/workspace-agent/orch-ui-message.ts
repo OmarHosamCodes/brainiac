@@ -1,6 +1,7 @@
 import type {
   AgentChatTurnStreamEvent,
   AgentToolCall,
+  AiUiArtifact,
   DashboardConversationMessage,
 } from "@orch/agent/types";
 import type { UIMessage, UIMessageChunk } from "ai";
@@ -28,6 +29,21 @@ export type OrchUIDataParts = {
     filename: string;
     mediaType: string;
     previewUrl?: string;
+  };
+  orchArtifact: AiUiArtifact;
+  orchPlan: {
+    planId: string;
+    title: string;
+    summary: string;
+    steps: Array<{ label: string; action: unknown }>;
+  };
+  orchProposal: {
+    proposalId: string;
+    status: "pending";
+    label: string;
+    action: unknown;
+    before: unknown;
+    after: unknown;
   };
 };
 
@@ -90,6 +106,13 @@ export function dashboardMessagesToUIMessages(
           continue;
         }
         parts.push(toolCallToDynamicPart(entry));
+      }
+      for (const artifact of message.artifacts ?? []) {
+        parts.push({
+          type: "data-orchArtifact",
+          id: artifact.id,
+          data: artifact,
+        });
       }
     }
 
@@ -201,6 +224,30 @@ export function createOrchEventToChunkMapper() {
         }
         return chunks;
       }
+      case "artifact":
+        return [
+          {
+            type: "data-orchArtifact",
+            id: event.artifact.id,
+            data: event.artifact,
+          },
+        ];
+      case "plan":
+        return [
+          {
+            type: "data-orchPlan",
+            id: event.plan.planId,
+            data: event.plan,
+          },
+        ];
+      case "proposal":
+        return [
+          {
+            type: "data-orchProposal",
+            id: event.proposal.proposalId,
+            data: event.proposal,
+          },
+        ];
       case "error":
         return [{ type: "error", errorText: event.message }];
       case "completed": {
@@ -250,4 +297,15 @@ export function getMessageAttachments(message: OrchUIMessage): Array<{
     if (part.type !== "data-orchAttachment") return [];
     return [part.data];
   });
+}
+
+export function getMessageArtifacts(message: OrchUIMessage): AiUiArtifact[] {
+  return message.parts.flatMap((part) => {
+    if (part.type !== "data-orchArtifact") return [];
+    return [part.data];
+  });
+}
+
+export function collectArtifactsFromMessages(messages: OrchUIMessage[]): AiUiArtifact[] {
+  return messages.flatMap(getMessageArtifacts);
 }

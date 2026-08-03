@@ -6,9 +6,12 @@ import type {
 } from "@orch/agent/types";
 import type { WorkspaceNode } from "@orch/workspace";
 import { useChat } from "@ai-sdk/react";
+import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
+import { useAgentCanvasOverlay } from "@/features/workspace-agent/hooks/use-agent-canvas-overlay";
 import { useAgentScopeModeListener } from "@/features/workspace-agent/hooks/use-agent-scope-mode-listener";
 import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agency-timer";
 import { useWorkspaceStore } from "@/features/workspace/workspace-local-state";
@@ -22,12 +25,14 @@ import { useWorkspaceAgentModelPreferences } from "@/features/workspace-agent/ho
 import { useWorkspaceAgentModelPreset } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preset";
 import { OrchTurnStreamTransport } from "@/features/workspace-agent/orch-turn-stream-transport";
 import {
+  collectArtifactsFromMessages,
   dashboardMessagesToUIMessages,
+  type OrchUIDataParts,
   type OrchUIMessage,
 } from "@/features/workspace-agent/orch-ui-message";
 import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 import { applyBoundWorkspaceSnapshot } from "@/features/workspace/workspace-snapshot-handler";
-import { orpc } from "@/lib/orpc";
+import { orpc, orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 function resolveAgentSurface(pathname: string): AgentSurface {
@@ -68,14 +73,15 @@ export function useWorkspaceAgent() {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
-
-  const effectiveToolPreset: DashboardAgentToolPreset =
-    surface === "agency" ? "ask" : selectedToolPreset;
+  /** How many artifacts the operator has already dismissed from the dock. */
+  const [dismissedArtifactCount, setDismissedArtifactCount] = useState(0);
+  const [canvasOpen, setCanvasOpen] = useState(false);
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
 
   const data = useWorkspaceAgentData({
     activeConversationId,
     surface,
-    toolPreset: effectiveToolPreset,
+    toolPreset: selectedToolPreset,
     toolsMenuOpen,
   });
 
@@ -187,14 +193,20 @@ export function useWorkspaceAgent() {
   );
 
   useEffect(() => {
-    if (surface === "agency" && selectedToolPreset !== "ask") {
+    // Canvas does not ship Plan mode yet — coerce to Ask.
+    if (surface === "canvas" && selectedToolPreset === "plan") {
       setSelectedToolPreset("ask");
     }
   }, [selectedToolPreset, surface]);
 
   useEffect(() => {
-    if (activeConversation?.toolPreset && surface !== "agency") {
-      setSelectedToolPreset(activeConversation.toolPreset);
+    if (activeConversation?.toolPreset) {
+      const preset = activeConversation.toolPreset;
+      if (surface === "canvas" && preset === "plan") {
+        setSelectedToolPreset("ask");
+      } else {
+        setSelectedToolPreset(preset);
+      }
     }
     if (activeConversation?.model) {
       modelPresetState.rememberResolvedModel(activeConversation.model);
@@ -233,6 +245,10 @@ export function useWorkspaceAgent() {
         return;
       }
       if (event.key === "Escape") {
+        if (canvasOpen) {
+          setCanvasOpen(false);
+          return;
+        }
         if (scopeModeActive) {
           setScopeModeActive(false);
           return;
@@ -250,8 +266,10 @@ export function useWorkspaceAgent() {
       if (target.closest("[data-workspace-agent-root]")) return;
       if (target.closest("[data-workspace-agent-overlay]")) return;
       if (target.closest('[data-slot="popover-content"]')) return;
+      if (target.closest('[data-slot="dropdown-menu-content"]')) return;
       if (target.closest('[data-slot="dialog-content"]')) return;
       if (target.closest('[data-slot="dialog-overlay"]')) return;
+      if (target.closest('[data-slot="agent-canvas-overlay"]')) return;
       setExpanded(false);
     }
 
@@ -261,7 +279,7 @@ export function useWorkspaceAgent() {
       window.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("pointerdown", onPointerDown, true);
     };
-  }, [expanded, scopeModeActive, setExpanded, setScopeModeActive, toggleExpanded]);
+  }, [canvasOpen, expanded, scopeModeActive, setExpanded, setScopeModeActive, toggleExpanded]);
 
   const switchConversation = useCallback(
     (conversationId: string | null) => {
@@ -269,6 +287,8 @@ export function useWorkspaceAgent() {
       setError(null);
       setStreamStopped(false);
       setDraft("");
+      setDismissedArtifactCount(0);
+      setCanvasOpen(false);
       if (!conversationId) {
         setMessages([]);
       }
@@ -323,7 +343,7 @@ export function useWorkspaceAgent() {
               attachments,
               conversationId: activeConversationId ?? undefined,
               surface,
-              toolPreset: effectiveToolPreset,
+              toolPreset: selectedToolPreset,
               modelPreset: modelPresetState.modelPreset,
               scopeRefs: scopeChips,
               contextNodeTitles: scopeChips.map((chip) => chip.label),
@@ -347,7 +367,7 @@ export function useWorkspaceAgent() {
       activeConversationId,
       chatSendMessage,
       draft,
-      effectiveToolPreset,
+      selectedToolPreset,
       isStreaming,
       modelPresetState.modelPreset,
       modelPresetState.outboundModelId,
@@ -385,23 +405,152 @@ export function useWorkspaceAgent() {
     renameDraft,
   ]);
 
+  const deleteConversationById = useCallback(
+    async (conversationId: string) => {
+      setDeletingConversationId(conversationId);
+      try {
+        await deleteConversationMutation.mutateAsync({ conversationId });
+        if (conversationId === activeConversationId) {
+          setIsDeleteDialogOpen(false);
+          startNewConversation();
+        }
+        void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
+      } catch (mutationError) {
+        setError(getErrorMessage(mutationError, "Failed to delete conversation."));
+      } finally {
+        setDeletingConversationId(null);
+      }
+    },
+    [
+      activeConversationId,
+      conversationsListQueryOptions.queryKey,
+      deleteConversationMutation,
+      queryClient,
+      startNewConversation,
+    ],
+  );
+
   const confirmDeleteConversation = useCallback(async () => {
     if (!activeConversationId) return;
-    try {
-      await deleteConversationMutation.mutateAsync({ conversationId: activeConversationId });
-      setIsDeleteDialogOpen(false);
-      startNewConversation();
-      void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
-    } catch (mutationError) {
-      setError(getErrorMessage(mutationError, "Failed to delete conversation."));
-    }
-  }, [
-    activeConversationId,
-    conversationsListQueryOptions.queryKey,
-    deleteConversationMutation,
-    queryClient,
-    startNewConversation,
-  ]);
+    await deleteConversationById(activeConversationId);
+  }, [activeConversationId, deleteConversationById]);
+
+  const artifacts = useMemo(() => collectArtifactsFromMessages(messages), [messages]);
+  const activeArtifact =
+    artifacts.length > dismissedArtifactCount ? (artifacts.at(-1) ?? null) : null;
+
+  const [proposalBusyId, setProposalBusyId] = useState<string | null>(null);
+  const [planConfirmingId, setPlanConfirmingId] = useState<string | null>(null);
+
+  const invalidateAgencyCaches = useCallback(async () => {
+    if (!teamId) return;
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.timeEntries.listMine.queryOptions({
+          input: { teamId },
+        }).queryKey,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }).queryKey,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.timer.getActive.queryOptions({
+          input: { teamId },
+        }).queryKey,
+      }),
+    ]);
+  }, [queryClient, teamId]);
+
+  const confirmPlanMutation = useMutation({
+    mutationFn: async (plan: OrchUIDataParts["orchPlan"]) => {
+      if (!teamId) throw new Error("No active Agency team.");
+      return orpcClient.agent.proposals.confirmPlan({
+        teamId,
+        conversationId: activeConversationId ?? undefined,
+        // Stream cards keep action as unknown; API Zod re-validates the plan.
+        plan: plan as Parameters<typeof orpcClient.agent.proposals.confirmPlan>[0]["plan"],
+      });
+    },
+  });
+
+  const approveProposalMutation = useMutation({
+    mutationFn: async (proposalId: string) => {
+      if (!teamId) throw new Error("No active Agency team.");
+      return orpcClient.agent.proposals.approve({ teamId, proposalId });
+    },
+  });
+
+  const rejectProposalMutation = useMutation({
+    mutationFn: async (proposalId: string) => {
+      if (!teamId) throw new Error("No active Agency team.");
+      return orpcClient.agent.proposals.reject({ teamId, proposalId });
+    },
+  });
+
+  const onConfirmPlan = useCallback(
+    async (plan: OrchUIDataParts["orchPlan"]) => {
+      setPlanConfirmingId(plan.planId);
+      try {
+        const result = await confirmPlanMutation.mutateAsync(plan);
+        toast.success(
+          `Plan confirmed — ${result.proposals.length} proposal${result.proposals.length === 1 ? "" : "s"} ready to Approve.`,
+        );
+      } catch (confirmError) {
+        setError(getErrorMessage(confirmError, "Failed to confirm plan."));
+      } finally {
+        setPlanConfirmingId(null);
+      }
+    },
+    [confirmPlanMutation],
+  );
+
+  const onApproveProposal = useCallback(
+    async (proposalId: string) => {
+      setProposalBusyId(proposalId);
+      try {
+        await approveProposalMutation.mutateAsync(proposalId);
+        await invalidateAgencyCaches();
+        toast.success("Change approved and applied.");
+      } catch (approveError) {
+        setError(getErrorMessage(approveError, "Failed to approve proposal."));
+      } finally {
+        setProposalBusyId(null);
+      }
+    },
+    [approveProposalMutation, invalidateAgencyCaches],
+  );
+
+  const onRejectProposal = useCallback(
+    async (proposalId: string) => {
+      setProposalBusyId(proposalId);
+      try {
+        await rejectProposalMutation.mutateAsync(proposalId);
+        toast.message("Proposal rejected.");
+      } catch (rejectError) {
+        setError(getErrorMessage(rejectError, "Failed to reject proposal."));
+      } finally {
+        setProposalBusyId(null);
+      }
+    },
+    [rejectProposalMutation],
+  );
+
+  const dismissArtifact = useCallback(() => {
+    setCanvasOpen(false);
+    setDismissedArtifactCount(artifacts.length);
+  }, [artifacts.length]);
+
+  const openCanvas = useCallback(() => {
+    if (!activeArtifact) return;
+    setCanvasOpen(true);
+  }, [activeArtifact]);
+
+  const closeCanvas = useCallback(() => {
+    setCanvasOpen(false);
+  }, []);
+
+  const canvasOverlayActive = canvasOpen && activeArtifact !== null;
+  const { closeRef: canvasCloseRef } = useAgentCanvasOverlay(canvasOverlayActive, closeCanvas);
 
   const placeholder = surface === "agency" ? "Ask about your time" : "Ask about this canvas";
   const bottomOffsetClass = surface === "agency" ? "bottom-8" : "bottom-4";
@@ -437,9 +586,9 @@ export function useWorkspaceAgent() {
     chatStatus: status,
     sendMessage,
     stopGeneration,
-    selectedToolPreset: effectiveToolPreset,
+    selectedToolPreset,
     setSelectedToolPreset,
-    agentModeDisabled: surface === "agency",
+    planModeEnabled: surface === "agency",
     selectedModelId,
     selectedModelLabel: modelPresetState.selectedModelLabel,
     selectedModelButtonLabel: modelPresetState.selectedModelButtonLabel,
@@ -476,10 +625,13 @@ export function useWorkspaceAgent() {
     conversationOptions: conversationList.map((conversation) => ({
       id: conversation.id,
       label: conversation.title,
-      preview: conversation.lastMessagePreview ?? "No messages yet",
+      stamp: conversation.lastMessageAt || conversation.updatedAt,
     })),
+    conversationsLoading: conversationsQuery.isLoading,
     startNewConversation,
     switchConversation,
+    deleteConversationById,
+    deletingConversationId,
     isRenameDialogOpen,
     isDeleteDialogOpen,
     renameDraft,
@@ -496,6 +648,17 @@ export function useWorkspaceAgent() {
     isRenamingConversation: renameConversationMutation.isPending,
     isDeletingConversation: deleteConversationMutation.isPending,
     canManageConversation: Boolean(activeConversationId),
+    activeArtifact,
+    canvasOpen: canvasOverlayActive,
+    canvasCloseRef,
+    openCanvas,
+    closeCanvas,
+    dismissArtifact,
+    proposalBusyId,
+    planConfirmingId,
+    onConfirmPlan: (plan: OrchUIDataParts["orchPlan"]) => void onConfirmPlan(plan),
+    onApproveProposal: (proposalId: string) => void onApproveProposal(proposalId),
+    onRejectProposal: (proposalId: string) => void onRejectProposal(proposalId),
   };
 }
 

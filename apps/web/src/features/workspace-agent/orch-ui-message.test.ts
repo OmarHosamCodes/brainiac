@@ -51,6 +51,18 @@ describe("orch-ui-message", () => {
         },
       }),
       ...mapEvent({
+        type: "artifact",
+        artifact: {
+          id: "art-1",
+          kind: "schema",
+          title: "Hours",
+          schema: {
+            version: 1,
+            root: { type: "text", text: "Hello canvas" },
+          },
+        },
+      }),
+      ...mapEvent({
         type: "completed",
         conversation: {
           id: "c1",
@@ -81,6 +93,7 @@ describe("orch-ui-message", () => {
           contextNodeTitles: [],
           model: "test-model",
           toolsCalled: [],
+          artifacts: [],
           createdAt: "2026-07-26T00:00:00.000Z",
         },
         assistantMessage: {
@@ -91,6 +104,7 @@ describe("orch-ui-message", () => {
           contextNodeTitles: [],
           model: "test-model",
           toolsCalled: [],
+          artifacts: [],
           createdAt: "2026-07-26T00:00:00.000Z",
         },
         createdConversation: true,
@@ -108,6 +122,7 @@ describe("orch-ui-message", () => {
       "tool-input-start",
       "tool-input-available",
       "tool-output-available",
+      "data-orchArtifact",
       "text-end",
       "data-orchCompleted",
       "finish",
@@ -124,6 +139,7 @@ describe("orch-ui-message", () => {
         contextNodeTitles: [],
         model: null,
         toolsCalled: [],
+        artifacts: [],
         createdAt: "2026-07-26T00:00:00.000Z",
       },
     ]);
@@ -140,6 +156,7 @@ describe("orch-ui-message", () => {
         contextNodeTitles: [],
         model: null,
         toolsCalled: [],
+        artifacts: [],
         createdAt: "2026-07-26T00:00:00.000Z",
       },
     ]);
@@ -149,5 +166,44 @@ describe("orch-ui-message", () => {
         data: { filename: "notes.md", mediaType: "text/markdown" },
       },
     ]);
+  });
+
+  test("dashboardMessagesToUIMessages hydrates artifact data parts", () => {
+    const messages = dashboardMessagesToUIMessages([
+      {
+        id: "a1",
+        role: "assistant",
+        content: "Rendered",
+        attachments: [],
+        contextNodeTitles: [],
+        model: "test-model",
+        toolsCalled: [],
+        artifacts: [
+          {
+            id: "art-1",
+            kind: "schema",
+            title: "Hours",
+            schema: {
+              version: 1,
+              root: { type: "text", text: "Hello canvas" },
+            },
+          },
+        ],
+        createdAt: "2026-07-26T00:00:00.000Z",
+      },
+    ]);
+    expect(messages[0]?.parts).toContainEqual({
+      type: "data-orchArtifact",
+      id: "art-1",
+      data: {
+        id: "art-1",
+        kind: "schema",
+        title: "Hours",
+        schema: {
+          version: 1,
+          root: { type: "text", text: "Hello canvas" },
+        },
+      },
+    });
   });
 });

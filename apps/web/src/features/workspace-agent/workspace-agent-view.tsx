@@ -1,5 +1,6 @@
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 
+import { AgentCanvasOverlayView } from "@/features/workspace-agent/agent-canvas-overlay-view";
 import { WorkspaceAgentChatPanelView } from "@/features/workspace-agent/chat-panel-view";
 import { WorkspaceAgentComposerView } from "@/features/workspace-agent/composer-view";
 import type { WorkspaceAgentViewModel } from "@/features/workspace-agent/hooks/use-workspace-agent";
@@ -25,6 +26,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
   const showChat = view.messages.length > 0 || Boolean(view.activeConversationId);
   const isWorking = view.isPending;
   const collapsedLabel = isWorking ? "Working..." : "Message Orch";
+  const showArtifactSplit = Boolean(view.activeArtifact);
 
   return (
     <MotionConfig reducedMotion="user" transition={{ layout: layoutTransition }}>
@@ -92,7 +94,8 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     }
                   : {})}
                 className={cn(
-                  "pointer-events-auto flex w-full max-w-[720px] flex-col",
+                  "pointer-events-auto flex w-full flex-col",
+                  showArtifactSplit ? "max-w-[1080px]" : "max-w-[720px]",
                   showChat && "overflow-hidden border border-border bg-card text-card-foreground",
                 )}
                 initial={{ opacity: 0 }}
@@ -114,10 +117,14 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                         title={view.activeConversationTitle}
                         messages={view.messages}
                         conversationOptions={view.conversationOptions}
+                        conversationsLoading={view.conversationsLoading}
+                        activeConversationId={view.activeConversationId}
                         threadMenuOpen={view.threadMenuOpen}
                         onThreadMenuOpenChange={view.setThreadMenuOpen}
                         onSelectConversation={view.switchConversation}
                         onStartNewConversation={view.startNewConversation}
+                        onDeleteConversation={(id) => void view.deleteConversationById(id)}
+                        deletingConversationId={view.deletingConversationId}
                         canManageConversation={view.canManageConversation}
                         isRenameDialogOpen={view.isRenameDialogOpen}
                         isDeleteDialogOpen={view.isDeleteDialogOpen}
@@ -134,6 +141,14 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                         isStreaming={view.isStreaming}
                         streamingMessageId={view.streamingMessageId}
                         streamStopped={view.streamStopped}
+                        activeArtifact={view.activeArtifact}
+                        onExpandArtifact={view.openCanvas}
+                        onDismissArtifact={view.dismissArtifact}
+                        proposalBusyId={view.proposalBusyId}
+                        planConfirmingId={view.planConfirmingId}
+                        onConfirmPlan={view.onConfirmPlan}
+                        onApproveProposal={view.onApproveProposal}
+                        onRejectProposal={view.onRejectProposal}
                       />
                     </motion.div>
                   ) : null}
@@ -177,7 +192,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     onSelectMention={view.addMentionedNode}
                     selectedToolPreset={view.selectedToolPreset}
                     onSelectToolPreset={view.setSelectedToolPreset}
-                    agentModeDisabled={view.agentModeDisabled}
+                    planModeEnabled={view.planModeEnabled}
                     selectedModelLabel={selectedModelLabel}
                     selectedModelButtonLabel={selectedModelButtonLabel}
                     resolvedModelLabel={view.resolvedModelLabel}
@@ -228,6 +243,17 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
             onFavoritesOnlyChange={view.setFavoritesOnly}
           />
         </div>
+
+        <AnimatePresence>
+          {view.canvasOpen && view.activeArtifact ? (
+            <AgentCanvasOverlayView
+              key="workspace-agent-canvas"
+              artifact={view.activeArtifact}
+              onClose={view.closeCanvas}
+              closeRef={view.canvasCloseRef}
+            />
+          ) : null}
+        </AnimatePresence>
       </LayoutGroup>
     </MotionConfig>
   );

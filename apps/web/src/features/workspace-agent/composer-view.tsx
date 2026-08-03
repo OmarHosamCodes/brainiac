@@ -10,6 +10,7 @@ import {
   Check,
   ChevronDown,
   Crosshair,
+  ListTodo,
   MessageCircleQuestion,
   Plus,
   Wrench,
@@ -59,7 +60,8 @@ type WorkspaceAgentComposerViewProps = {
   onSelectMention: (node: WorkspaceNode) => void;
   selectedToolPreset: DashboardAgentToolPreset;
   onSelectToolPreset: (preset: DashboardAgentToolPreset) => void;
-  agentModeDisabled: boolean;
+  /** When false, Plan mode is hidden (Canvas). Agency enables Plan. */
+  planModeEnabled: boolean;
   selectedModelLabel: string;
   selectedModelButtonLabel: string;
   resolvedModelLabel: string | null;
@@ -94,8 +96,39 @@ const MODE_OPTIONS: Array<{
   label: string;
 }> = [
   { preset: "ask", label: "Ask" },
+  { preset: "plan", label: "Plan" },
   { preset: "agent", label: "Agent" },
 ];
+
+function modeIcon(preset: DashboardAgentToolPreset) {
+  switch (preset) {
+    case "ask":
+      return MessageCircleQuestion;
+    case "plan":
+      return ListTodo;
+    case "agent":
+      return Wrench;
+    default: {
+      const _exhaustive: never = preset;
+      return _exhaustive;
+    }
+  }
+}
+
+function modeLabel(preset: DashboardAgentToolPreset) {
+  switch (preset) {
+    case "ask":
+      return "Ask";
+    case "plan":
+      return "Plan";
+    case "agent":
+      return "Agent";
+    default: {
+      const _exhaustive: never = preset;
+      return _exhaustive;
+    }
+  }
+}
 
 const LAYOUT_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
@@ -109,7 +142,7 @@ export function WorkspaceAgentComposerView({
   onSelectMention,
   selectedToolPreset,
   onSelectToolPreset,
-  agentModeDisabled,
+  planModeEnabled,
   selectedModelLabel,
   selectedModelButtonLabel,
   resolvedModelLabel,
@@ -141,7 +174,11 @@ export function WorkspaceAgentComposerView({
   const showMentions = mentionSuggestions.length > 0;
   const hasChips = scopeChips.length > 0;
   const multiline = draft.includes("\n") || draft.length > 80;
-  const selectedModeLabel = selectedToolPreset === "ask" ? "Ask" : "Agent";
+  const selectedModeLabel = modeLabel(selectedToolPreset);
+  const SelectedModeIcon = modeIcon(selectedToolPreset);
+  const visibleModeOptions = MODE_OPTIONS.filter(
+    (mode) => mode.preset !== "plan" || planModeEnabled,
+  );
   const compact = !hasChips && !multiline;
   // Nested: flush square. Floating: card radius (never full-pill — that warps the tall footer).
   const borderRadius = nestedInShell ? 0 : 16;
@@ -318,24 +355,19 @@ export function WorkspaceAgentComposerView({
                     <Separator />
 
                     <div className="flex flex-col gap-0.5 p-1">
-                      {MODE_OPTIONS.map((mode) => {
-                        const disabled = mode.preset === "agent" && agentModeDisabled;
+                      {visibleModeOptions.map((mode) => {
                         const selected = selectedToolPreset === mode.preset;
-                        const ModeIcon = mode.preset === "ask" ? MessageCircleQuestion : Wrench;
+                        const ModeIcon = modeIcon(mode.preset);
 
-                        const item = (
+                        return (
                           <button
                             key={mode.preset}
                             type="button"
-                            disabled={disabled}
                             className={cn(
                               workspaceAgentPlusMenuItemClass,
                               selected && "bg-accent text-accent-foreground",
-                              disabled &&
-                                "cursor-not-allowed text-muted-foreground opacity-50 hover:bg-transparent hover:text-muted-foreground",
                             )}
                             onClick={() => {
-                              if (disabled) return;
                               onSelectToolPreset(mode.preset);
                               onToolsMenuOpenChange(false);
                             }}
@@ -346,15 +378,6 @@ export function WorkspaceAgentComposerView({
                               <Check className="size-4 text-foreground" aria-hidden />
                             ) : null}
                           </button>
-                        );
-
-                        if (!disabled) return item;
-
-                        return (
-                          <Tooltip key={mode.preset}>
-                            <TooltipTrigger asChild>{item}</TooltipTrigger>
-                            <TooltipContent>Agent edits are canvas-only for now</TooltipContent>
-                          </Tooltip>
                         );
                       })}
                     </div>
@@ -376,11 +399,7 @@ export function WorkspaceAgentComposerView({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
                       transition={{ duration: 0.16, ease: [0.25, 1, 0.5, 1] }}
-                      className={cn(
-                        "inline-flex h-6 items-center gap-0.5 rounded-full border border-border bg-secondary",
-                        "pl-1.5 text-xs font-medium text-secondary-foreground",
-                        agentModeDisabled ? "pr-2" : "pr-1",
-                      )}
+                      className="inline-flex h-6 items-center gap-0.5 rounded-full border border-border bg-secondary pr-1 pl-1.5 text-xs font-medium text-secondary-foreground"
                     >
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -390,7 +409,7 @@ export function WorkspaceAgentComposerView({
                             aria-label={`Mode: ${selectedModeLabel}. Change mode`}
                             onClick={() => onToolsMenuOpenChange(true)}
                           >
-                            <MessageCircleQuestion
+                            <SelectedModeIcon
                               className="size-3.5 text-muted-foreground"
                               aria-hidden
                             />
@@ -401,21 +420,19 @@ export function WorkspaceAgentComposerView({
                           {selectedModeLabel} mode — click to change
                         </TooltipContent>
                       </Tooltip>
-                      {!agentModeDisabled ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className="rounded-full p-0.5 text-muted-foreground motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent hover:text-accent-foreground"
-                              aria-label={`Remove ${selectedModeLabel} mode and return to Agent`}
-                              onClick={() => onSelectToolPreset("agent")}
-                            >
-                              <X className="size-3" aria-hidden />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">Return to Agent</TooltipContent>
-                        </Tooltip>
-                      ) : null}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="rounded-full p-0.5 text-muted-foreground motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent hover:text-accent-foreground"
+                            aria-label={`Remove ${selectedModeLabel} mode and return to Agent`}
+                            onClick={() => onSelectToolPreset("agent")}
+                          >
+                            <X className="size-3" aria-hidden />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Return to Agent</TooltipContent>
+                      </Tooltip>
                     </motion.div>
                   ) : null}
                   {scopeModeActive ? (

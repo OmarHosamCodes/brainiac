@@ -35,7 +35,7 @@ export function useWorkspaceAgentData(args: {
     ...orpc.agent.tools.catalog.queryOptions({
       input: {
         surface: args.surface,
-        mode: args.surface === "agency" ? "ask" : args.toolPreset,
+        mode: args.toolPreset,
       },
     }),
     enabled: Boolean(authEnabled && args.toolsMenuOpen),
