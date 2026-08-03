@@ -2,6 +2,7 @@ import { pgTable, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import type { WorkspaceMarketplacePayload, WorkspaceNode } from "@orch/workspace";
 
 import { user } from "./auth";
+import { workspaceTeam } from "./team";
 
 export type WorkspaceNodeRecord = WorkspaceNode;
 export type WorkspaceMarketplacePayloadRecord = WorkspaceMarketplacePayload;
@@ -30,6 +31,17 @@ export type DashboardConversationMessageAttachmentRecord = {
     | "image/gif";
   text: string;
 };
+/** Persisted generative UI artifacts (validated as AiUiArtifact[] at the API boundary). */
+export type DashboardConversationMessageArtifactRecord = {
+  id: string;
+  kind: "schema" | "react";
+  title: string;
+  schema?: unknown;
+  code?: string;
+  props?: Record<string, unknown>;
+};
+export type DashboardConversationMessageArtifactsRecord =
+  DashboardConversationMessageArtifactRecord[];
 export type DashboardConversationUsageLatestRecord = {
   modelId: string;
   contextLength: number | null;
@@ -154,6 +166,10 @@ export const dashboardConversationMessage = pgTable(
       .$type<DashboardConversationMessageToolsCalledRecord>()
       .notNull()
       .default([]),
+    artifacts: jsonb("artifacts")
+      .$type<DashboardConversationMessageArtifactsRecord>()
+      .notNull()
+      .default([]),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
@@ -162,5 +178,49 @@ export const dashboardConversationMessage = pgTable(
       table.createdAt,
     ),
     index("dashboard_conversation_message_user_created_idx").on(table.userId, table.createdAt),
+  ],
+);
+
+export type AgentAgencyProposalStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "executed"
+  | "failed"
+  | "expired";
+
+/** Pending Agency agent writes awaiting human Approve/Reject. */
+export const agentAgencyProposal = pgTable(
+  "agent_agency_proposal",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    actorUserId: text("actor_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    conversationId: text("conversation_id").references(() => dashboardConversation.id, {
+      onDelete: "set null",
+    }),
+    messageId: text("message_id"),
+    action: jsonb("action").$type<Record<string, unknown>>().notNull(),
+    beforeState: jsonb("before_state").$type<unknown>().notNull(),
+    afterState: jsonb("after_state").$type<unknown>().notNull(),
+    label: text("label").notNull(),
+    status: text("status").$type<AgentAgencyProposalStatus>().notNull().default("pending"),
+    illustrationArtifactId: text("illustration_artifact_id"),
+    error: text("error"),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agent_agency_proposal_team_status_idx").on(table.teamId, table.status),
+    index("agent_agency_proposal_actor_created_idx").on(table.actorUserId, table.createdAt),
+    index("agent_agency_proposal_conversation_idx").on(table.conversationId),
   ],
 );
