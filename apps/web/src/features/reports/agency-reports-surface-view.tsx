@@ -72,6 +72,10 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
       <p className="px-1 text-xs text-muted">
         Total in filtered range{" "}
         <span className={agencyMetricClass}>{formatDuration(vm.totalSeconds, "clock")}</span>
+        {" − "}
+        <span className={agencyMetricClass}>{formatDuration(vm.wasteSeconds, "clock")}</span> waste
+        {" = "}
+        <span className={agencyMetricClass}>{formatDuration(vm.paidSeconds, "clock")}</span> paid
       </p>
       <AgencyReportsTable
         teamId={vm.teamId}

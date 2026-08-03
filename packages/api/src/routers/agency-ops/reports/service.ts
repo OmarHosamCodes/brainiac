@@ -18,7 +18,7 @@ import {
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { requireTeamMembership } from "../shared/membership";
-import { computeProjectShareMetrics } from "./project-share-metrics";
+import { computeProjectShareMetrics, isReportEntryWaste } from "./project-share-metrics";
 
 type AgencyReportSummary = {
   totalHours: number;
@@ -231,17 +231,32 @@ export async function getAgencyReportsSummary(
       clientId: string;
       clientName: string;
       seconds: number;
+      wasteSeconds: number;
     }
   >();
   const teamActivity = new Map<
     string,
-    { userId: string; userName: string; userEmail: string; seconds: number }
+    {
+      userId: string;
+      userName: string;
+      userEmail: string;
+      seconds: number;
+      wasteSeconds: number;
+    }
   >();
 
   let totalSeconds = 0;
+  let wasteSeconds = 0;
 
   for (const row of rows) {
     totalSeconds += row.durationSeconds;
+    const rowIsWaste = isReportEntryWaste(
+      row.taskIsWaste,
+      row.taskTitle,
+      row.projectName,
+      row.isWaste,
+    );
+    if (rowIsWaste) wasteSeconds += row.durationSeconds;
 
     const clientEntry = distributionByClient.get(row.clientId) ?? {
       clientId: row.clientId,
@@ -257,8 +272,10 @@ export async function getAgencyReportsSummary(
       clientId: row.clientId,
       clientName: row.clientName,
       seconds: 0,
+      wasteSeconds: 0,
     };
     projectEntry.seconds += row.durationSeconds;
+    if (rowIsWaste) projectEntry.wasteSeconds += row.durationSeconds;
     distributionByProject.set(row.projectId, projectEntry);
 
     const memberEntry = teamActivity.get(row.memberEmail) ?? {
@@ -266,10 +283,24 @@ export async function getAgencyReportsSummary(
       userName: row.memberName,
       userEmail: row.memberEmail,
       seconds: 0,
+      wasteSeconds: 0,
     };
     memberEntry.seconds += row.durationSeconds;
+    if (rowIsWaste) memberEntry.wasteSeconds += row.durationSeconds;
     teamActivity.set(row.memberEmail, memberEntry);
   }
+
+  const share = computeProjectShareMetrics(
+    rows.map((row) => ({
+      durationSeconds: row.durationSeconds,
+      clientCategory: row.clientCategory,
+      taskIsWaste: row.taskIsWaste,
+      taskTitle: row.taskTitle,
+      projectName: row.projectName,
+      isBillable: row.isBillable,
+      isWaste: row.isWaste,
+    })),
+  );
 
   const summary: AgencyReportSummary = {
     totalHours: Number((totalSeconds / 3_600).toFixed(2)),
@@ -302,6 +333,31 @@ export async function getAgencyReportsSummary(
 
   return {
     summary,
+    composition: {
+      paidSeconds: share.paidSeconds,
+      wasteSeconds,
+      internalSeconds: share.internalSeconds,
+      totalSeconds,
+    },
+    byProjectDetail: [...distributionByProject.values()]
+      .map((entry) => ({
+        projectId: entry.projectId,
+        projectName: entry.projectName,
+        clientName: entry.clientName,
+        seconds: entry.seconds,
+        wasteSeconds: entry.wasteSeconds,
+        nonWasteSeconds: Math.max(0, entry.seconds - entry.wasteSeconds),
+      }))
+      .sort((left, right) => right.seconds - left.seconds),
+    byMemberDetail: [...teamActivity.values()]
+      .map((entry) => ({
+        userId: entry.userId,
+        userName: entry.userName,
+        seconds: entry.seconds,
+        wasteSeconds: entry.wasteSeconds,
+        nonWasteSeconds: Math.max(0, entry.seconds - entry.wasteSeconds),
+      }))
+      .sort((left, right) => right.seconds - left.seconds),
   };
 }
 
