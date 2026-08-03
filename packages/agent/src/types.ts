@@ -6,6 +6,26 @@ import {
 } from "@orch/workspace";
 import { z } from "zod";
 
+import { aiUiArtifactSchema, aiUiArtifactsSchema } from "./ui-artifact";
+
+export {
+  AI_UI_REACT_CODE_MAX,
+  UI_PRESENT_SYSTEM_GUIDANCE,
+  UI_PRESENT_TOOL_DESCRIPTION,
+  UI_PRESENT_TOOL_NAME,
+  aiUiArtifactSchema,
+  aiUiArtifactsSchema,
+  aiUiReactArtifactSchema,
+  aiUiSchemaArtifactSchema,
+  artifactFromToolCall,
+  cappedArtifacts,
+  parseUiPresentInput,
+  uiSchemaDocSchema,
+  type AiUiArtifact,
+  type UiSchemaDoc,
+  type UiSchemaNode,
+} from "./ui-artifact";
+
 export const DEFAULT_AGENT_MODEL = "openai/gpt-5-nano";
 export const DASHBOARD_CONVERSATION_TITLE_LIMIT = 80;
 export const DASHBOARD_CONVERSATION_HISTORY_LIMIT = 50;
@@ -60,7 +80,7 @@ export const agentToolCallEntrySchema = z.union([
 
 export const agentMessageRoleSchema = z.enum(["user", "assistant", "system"]);
 export const dashboardConversationMessageRoleSchema = z.enum(["user", "assistant"]);
-export const dashboardAgentCanonicalToolPresetSchema = z.enum(["ask", "agent"]);
+export const dashboardAgentCanonicalToolPresetSchema = z.enum(["ask", "plan", "agent"]);
 export const dashboardAgentLegacyToolPresetSchema = z.enum([
   "auto",
   "direct",
@@ -88,6 +108,8 @@ export function normalizeDashboardAgentToolPreset(
     case "agent":
     case "deep-inspect":
       return "agent";
+    case "plan":
+      return "plan";
     case "ask":
     case "auto":
     case "direct":
@@ -174,6 +196,7 @@ export const dashboardConversationMessageSchema = z.object({
   contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).default([]),
   model: z.string().trim().min(1).nullable(),
   toolsCalled: z.array(agentToolCallEntrySchema).max(48).default([]),
+  artifacts: aiUiArtifactsSchema.default([]),
   createdAt: z.string().datetime(),
 });
 
@@ -290,6 +313,41 @@ export const agentChatTurnStreamToolEventSchema = z.object({
   tool: agentToolCallSchema,
 });
 
+export const agentChatTurnStreamArtifactEventSchema = z.object({
+  type: z.literal("artifact"),
+  artifact: aiUiArtifactSchema,
+});
+
+export const agentChatTurnStreamPlanEventSchema = z.object({
+  type: z.literal("plan"),
+  plan: z.object({
+    planId: z.string().trim().min(1).max(160),
+    title: z.string().trim().min(1).max(160),
+    summary: z.string().trim().min(1).max(1_000),
+    steps: z
+      .array(
+        z.object({
+          label: z.string().trim().min(1).max(200),
+          action: z.unknown(),
+        }),
+      )
+      .min(1)
+      .max(20),
+  }),
+});
+
+export const agentChatTurnStreamProposalEventSchema = z.object({
+  type: z.literal("proposal"),
+  proposal: z.object({
+    proposalId: z.string().trim().min(1).max(160),
+    status: z.literal("pending"),
+    label: z.string().trim().min(1).max(200),
+    action: z.unknown(),
+    before: z.unknown(),
+    after: z.unknown(),
+  }),
+});
+
 export const agentChatTurnStreamErrorEventSchema = z.object({
   type: z.literal("error"),
   message: z.string().trim().min(1).max(2_000),
@@ -309,6 +367,9 @@ export const agentChatTurnStreamEventSchema = z.discriminatedUnion("type", [
   agentChatTurnStreamStartedEventSchema,
   agentChatTurnStreamTokenEventSchema,
   agentChatTurnStreamToolEventSchema,
+  agentChatTurnStreamArtifactEventSchema,
+  agentChatTurnStreamPlanEventSchema,
+  agentChatTurnStreamProposalEventSchema,
   agentChatTurnStreamErrorEventSchema,
   agentChatTurnStreamCompletedEventSchema,
 ]);
@@ -400,9 +461,51 @@ export type AgencyAgentRuntime = {
     members: Array<{
       userId: string;
       name: string;
-      email: string;
       role: string;
     }>;
+  }>;
+  listClients: (input?: { limit?: number }) => Promise<{
+    clients: Array<{ id: string; name: string; category: string }>;
+    truncated: boolean;
+    total: number;
+  }>;
+  listTags: () => Promise<{
+    tags: Array<{ id: string; name: string }>;
+  }>;
+  listProjectTasks: (input: { projectId: string; page?: number; pageSize?: number }) => Promise<{
+    tasks: Array<{
+      id: string;
+      title: string;
+      status: string;
+      projectId: string;
+    }>;
+    truncated: boolean;
+    total: number;
+  }>;
+  getActiveTimer: () => Promise<{
+    timer: {
+      id: string;
+      projectId: string | null;
+      taskId: string | null;
+      description: string;
+      startedAt: string;
+      isBillable: boolean;
+    } | null;
+  }>;
+  getTimeEntry: (input: { entryId: string }) => Promise<{
+    entry: {
+      id: string;
+      description: string;
+      projectId: string;
+      projectName: string;
+      clientName: string;
+      taskId: string | null;
+      durationSeconds: number;
+      startedAt: string;
+      endedAt: string;
+      isBillable: boolean;
+      isWaste: boolean;
+    } | null;
   }>;
   getTimeSummary: (input: {
     from: string;
@@ -427,13 +530,40 @@ export type AgencyAgentRuntime = {
     clientId?: string;
   }) => Promise<{
     totalSeconds: number;
+    composition: {
+      paidSeconds: number;
+      wasteSeconds: number;
+      internalSeconds: number;
+      totalSeconds: number;
+    };
     byClient: Array<{ clientId: string; clientName: string; seconds: number }>;
     byProject: Array<{
       projectId: string;
       projectName: string;
       clientName: string;
       seconds: number;
+      wasteSeconds: number;
+      nonWasteSeconds: number;
     }>;
-    byMember: Array<{ userId: string; userName: string; seconds: number }>;
+    byMember: Array<{
+      userId: string;
+      userName: string;
+      seconds: number;
+      wasteSeconds: number;
+      nonWasteSeconds: number;
+    }>;
+  }>;
+  /** Persist a pending proposal; never executes the write. */
+  createProposal: (input: {
+    action: unknown;
+    label?: string;
+    conversationId?: string | null;
+  }) => Promise<{
+    proposalId: string;
+    status: "pending";
+    action: unknown;
+    before: unknown;
+    after: unknown;
+    label: string;
   }>;
 };

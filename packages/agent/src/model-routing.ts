@@ -1,5 +1,10 @@
 import { DEFAULT_AGENT_MODEL } from "./types";
-import type { AgentModelPreset, AgentModelTier, DashboardAgentToolPreset } from "./types";
+import type {
+  AgentModelPreset,
+  AgentModelTier,
+  AgentSurface,
+  DashboardAgentToolPreset,
+} from "./types";
 
 /** Minimal catalog shape used by the router (matches OpenRouterCatalogModel). */
 export type RoutableCatalogModel = {
@@ -19,6 +24,8 @@ export type ModelPromptSignals = {
   scopeCount: number;
   mentionCount: number;
   toolPreset: DashboardAgentToolPreset;
+  /** Agency Ask still needs tools — time/report answers cannot be invented from canvas context. */
+  surface?: AgentSurface;
 };
 
 export type ResolveModelForTurnInput = {
@@ -137,7 +144,8 @@ export function scorePromptComplexity(signals: ModelPromptSignals, content = "")
   const lengthScore = clamp01(signals.contentLength / 2_400);
   const scopeScore = clamp01(signals.scopeCount / 6);
   const mentionScore = clamp01(signals.mentionCount / 4);
-  const modeScore = signals.toolPreset === "agent" ? 0.35 : 0.1;
+  const modeScore =
+    signals.toolPreset === "agent" ? 0.35 : signals.toolPreset === "plan" ? 0.2 : 0.1;
   // ponytail: keyword heuristic ceiling — upgrade to embedding classifier if misroutes pile up
   const keywordBoost = COMPLEXITY_HINTS.test(content) ? 0.2 : 0;
 
@@ -237,7 +245,11 @@ function findById(models: RoutableCatalogModel[], modelId?: string | null) {
 export function resolveModelForTurn(
   input: ResolveModelForTurnInput & { content?: string },
 ): ResolveModelForTurnResult {
-  const requireTools = input.signals.toolPreset === "agent";
+  // Agency and Agent/Plan modes need tools; Canvas Ask prefers tools when available.
+  const requireTools =
+    input.signals.toolPreset === "agent" ||
+    input.signals.toolPreset === "plan" ||
+    input.signals.surface === "agency";
   const free = input.preset.free;
   const gates = { free, requireTools };
   const complexity = scorePromptComplexity(input.signals, input.content ?? "");

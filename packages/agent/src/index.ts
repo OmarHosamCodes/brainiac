@@ -1,6 +1,12 @@
 import { stepCountIs } from "@openrouter/sdk/lib/stop-conditions";
 
+import {
+  agencyDraftPlanSchema,
+  agencyProposalSnapshotSchema,
+  type AgencyDraftPlan,
+} from "./agency-actions";
 import { buildAgencyAgentTools } from "./agency-tools";
+import { bootstrapAgencyMonthReportsCanvas } from "./agency-reports-canvas";
 import { createOpenRouterClient } from "./client";
 import { resolveOpenRouterModel } from "./models";
 import {
@@ -25,6 +31,12 @@ import {
   type DashboardAgentWorkspaceContext,
   type DashboardConversationUsageLatest,
 } from "./types";
+import {
+  artifactFromToolCall,
+  cappedArtifacts,
+  UI_PRESENT_SYSTEM_GUIDANCE,
+  type AiUiArtifact,
+} from "./ui-artifact";
 
 type OpenRouterUsage = {
   inputTokens: number;
@@ -182,6 +194,7 @@ function buildAgencyInstructions(workspace: DashboardAgentWorkspaceContext) {
   const userLabel = workspace.userName?.trim()
     ? `The current user is ${workspace.userName.trim()}.`
     : "The current user name is unavailable.";
+  const todayUtc = new Date().toISOString().slice(0, 10);
   const scopeLines =
     workspace.scopeRefs && workspace.scopeRefs.length > 0
       ? [
@@ -193,17 +206,49 @@ function buildAgencyInstructions(workspace: DashboardAgentWorkspaceContext) {
   return [
     "You are Orch's Agency assistant.",
     "Help the user understand tracked time, projects, members, and report totals.",
-    "Agency mode is ask-only. Do not create, edit, or delete time entries, projects, tasks, or members.",
-    "Ground every answer in tool results. If you need data, call a tool instead of guessing.",
+    "Ground every answer in real Agency tool results. Never invent hours, members, or billable/waste splits.",
+    "Never narrate tool calls in prose. Use actual function calls.",
     "Be concise, concrete, and factual.",
+    `Today's date (UTC) is ${todayUtc}. Use YYYY-MM-DD for from/to. For "this month", use month start through today.`,
+    "Prefer get_agency_reports_summary for project/client breakdowns; get_agency_time_summary for per-member totals.",
+    UI_PRESENT_SYSTEM_GUIDANCE,
     userLabel,
     workspace.teamId ? `Active team id: ${workspace.teamId}.` : "Active team id is unavailable.",
     ...scopeLines,
   ].join("\n");
 }
 
+function buildAgencyAskInstructions(workspace: DashboardAgentWorkspaceContext) {
+  return [
+    buildAgencyInstructions(workspace),
+    "Ask mode is read-only. Do not create, edit, or delete Agency data.",
+    "Agency Ask requires tools: before answering any time/report/member/project question, call at least one Agency data tool.",
+    "For visual comparisons, tables, rankings, or multi-item breakdowns: after the data tool, call ui_present with kind 'schema' (use stack/grid/stat/table/pillRow). Then reply with one short line only — do not repeat the numbers as a bullet list.",
+    "If a requested breakdown is missing from tool output, say what the tool returned instead of inventing fields.",
+  ].join("\n");
+}
+
+function buildAgencyPlanInstructions(workspace: DashboardAgentWorkspaceContext) {
+  return [
+    buildAgencyInstructions(workspace),
+    "Plan mode: research with read tools, then call draft_agency_plan with concrete steps. Do not claim changes were applied.",
+    "After drafting, tell the user to Confirm the plan in the UI. Never invent ids — use tool results.",
+    "You may ui_present a visual overview of the plan; do not call propose_agency_action in Plan mode.",
+  ].join("\n");
+}
+
+function buildAgencyAgentModeInstructions(workspace: DashboardAgentWorkspaceContext) {
+  return [
+    buildAgencyInstructions(workspace),
+    "Agent mode: never write Agency data directly. Call propose_agency_action for each intended write.",
+    "After each propose_agency_action, call ui_present with a clear before/after illustration, then tell the user to Approve or Reject.",
+    "Never claim a write succeeded until the user Approves. Prefer one proposal at a time unless the user asks for a batch.",
+  ].join("\n");
+}
+
 function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   if (workspace.surface === "agency") {
+    // Mode-specific Agency instructions are applied in resolveAgentExecutionConfig.
     return buildAgencyInstructions(workspace);
   }
 
@@ -231,6 +276,7 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
     "Help the user reason about the dashboard, prioritize work, and spot gaps.",
     "Ground every answer in the actual workspace data. If you need more detail, call a tool instead of guessing.",
     "Be concise, concrete, and action-oriented.",
+    UI_PRESENT_SYSTEM_GUIDANCE,
     userLabel,
     updatedLabel,
     `The dashboard currently has ${workspace.nodes.length} nodes.`,
@@ -266,6 +312,15 @@ function buildAskInstructions(
   workspace: DashboardAgentWorkspaceContext,
   toolingUnavailable = false,
 ) {
+  if (workspace.surface === "agency") {
+    return toolingUnavailable
+      ? [
+          buildAgencyInstructions(workspace),
+          "The selected model cannot call tools in this pass, so say that Agency data inspection requires a tools-capable model instead of inventing numbers.",
+        ].join("\n")
+      : buildAgencyAskInstructions(workspace);
+  }
+
   const scopedWorkspace = hasScopedWorkspace(workspace);
 
   return [
@@ -274,9 +329,8 @@ function buildAskInstructions(
       ? "The selected model cannot call tools in this pass, so answer directly from the provided context and say when deeper inspection would require a tools-capable model."
       : "Start from the provided workspace context. If you need inspection, prefer one compact list, search, or summary detail tool before answering.",
     "Ask mode is read-only. Do not create, rename, update, or delete nodes, tabs, or blocks.",
-    "Avoid full raw node, tab, block, or marketplace payloads unless the answer is blocked or you are preparing a replace mutation.",
-    "If you inspect a block, use get_block_details and rely on its summary and editGuide instead of guessing field names.",
-    "For block edits, prefer patch_block for targeted field updates and bulk nested changes.",
+    "Avoid full raw node, tab, block, or marketplace payloads unless the answer is blocked.",
+    "If you inspect a block, use get_block_details and rely on its summary instead of guessing field names.",
     ...(scopedWorkspace
       ? [
           "SCOPE WORKFLOW: The user is inside a specific node. Inspect the scoped node's data first before looking elsewhere. Use the provided nodeId and tabId to target your inspection tools.",
@@ -330,6 +384,53 @@ function resolveAgentExecutionConfig(
   toolPreset: DashboardAgentToolPreset,
   supportsTools: boolean,
 ) {
+  const agencyFallback = buildDirectAnswerInstructions(
+    workspace,
+    "Tooling is unavailable for the selected model, so say you cannot load Agency time data instead of inventing hours.",
+  );
+  const canvasToolingFallback = buildDirectAnswerInstructions(
+    workspace,
+    "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
+  );
+
+  if (workspace.surface === "agency") {
+    switch (toolPreset) {
+      case "agent":
+        return {
+          shouldUseTools: supportsTools,
+          instructions: supportsTools
+            ? buildAgencyAgentModeInstructions(workspace)
+            : agencyFallback,
+          fallbackInstructions: agencyFallback,
+          maxSteps: 10,
+          maxOutputTokens: 1_200,
+          shouldRetryForInspection: supportsTools,
+        };
+      case "plan":
+        return {
+          shouldUseTools: supportsTools,
+          instructions: supportsTools ? buildAgencyPlanInstructions(workspace) : agencyFallback,
+          fallbackInstructions: agencyFallback,
+          maxSteps: 8,
+          maxOutputTokens: undefined,
+          shouldRetryForInspection: supportsTools,
+        };
+      case "ask":
+        return {
+          shouldUseTools: supportsTools,
+          instructions: supportsTools ? buildAgencyAskInstructions(workspace) : agencyFallback,
+          fallbackInstructions: agencyFallback,
+          maxSteps: 8,
+          maxOutputTokens: undefined,
+          shouldRetryForInspection: supportsTools,
+        };
+      default: {
+        const _exhaustive: never = toolPreset;
+        return _exhaustive;
+      }
+    }
+  }
+
   switch (toolPreset) {
     case "agent":
       return {
@@ -348,24 +449,29 @@ function resolveAgentExecutionConfig(
         maxOutputTokens: 1_200,
         shouldRetryForInspection: supportsTools && workspace.nodes.length > 0,
       };
-    case "ask":
-    default:
+    case "plan":
+      // Canvas Plan mode is out of scope — treat as Ask.
       return {
         shouldUseTools: supportsTools,
-        instructions: supportsTools
-          ? buildAskInstructions(workspace)
-          : buildDirectAnswerInstructions(
-              workspace,
-              "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
-            ),
-        fallbackInstructions: buildDirectAnswerInstructions(
-          workspace,
-          "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
-        ),
+        instructions: supportsTools ? buildAskInstructions(workspace) : canvasToolingFallback,
+        fallbackInstructions: canvasToolingFallback,
         maxSteps: 6,
         maxOutputTokens: undefined,
-        shouldRetryForInspection: false,
+        shouldRetryForInspection: supportsTools && workspace.nodes.length > 0,
       };
+    case "ask":
+      return {
+        shouldUseTools: supportsTools,
+        instructions: supportsTools ? buildAskInstructions(workspace) : canvasToolingFallback,
+        fallbackInstructions: canvasToolingFallback,
+        maxSteps: 6,
+        maxOutputTokens: undefined,
+        shouldRetryForInspection: supportsTools && workspace.nodes.length > 0,
+      };
+    default: {
+      const _exhaustive: never = toolPreset;
+      return _exhaustive;
+    }
   }
 }
 
@@ -384,11 +490,27 @@ type ToolPassArgs = {
   signal?: AbortSignal;
 };
 
-type ToolPassLiveEvent = { type: "token"; delta: string } | { type: "tool"; tool: AgentToolCall };
+type ToolPassLiveEvent =
+  | { type: "token"; delta: string }
+  | { type: "tool"; tool: AgentToolCall }
+  | { type: "artifact"; artifact: AiUiArtifact }
+  | { type: "plan"; plan: AgencyDraftPlan }
+  | {
+      type: "proposal";
+      proposal: {
+        proposalId: string;
+        status: "pending";
+        label: string;
+        action: unknown;
+        before: unknown;
+        after: unknown;
+      };
+    };
 
 type ToolPassResult = {
   responseText: string;
   toolCalls: AgentToolCall[];
+  artifacts: AiUiArtifact[];
   usage: DashboardConversationUsageLatest | null;
   stopped: boolean;
 };
@@ -398,11 +520,11 @@ async function* streamToolEnabledPass(
 ): AsyncGenerator<ToolPassLiveEvent, ToolPassResult> {
   const tools =
     args.workspace.surface === "agency" && args.agencyRuntime
-      ? buildAgencyAgentTools(args.agencyRuntime)
+      ? buildAgencyAgentTools(args.agencyRuntime, args.toolPreset)
       : buildDashboardAgentTools(
           args.workspaceRuntime,
           args.workspace.marketplaceItems ?? [],
-          args.toolPreset,
+          args.toolPreset === "agent" ? "agent" : "ask",
         );
   const calls = new Map<string, AgentToolCall>();
   const callOrder: string[] = [];
@@ -454,6 +576,8 @@ async function* streamToolEnabledPass(
     }
   })();
 
+  const artifacts: AiUiArtifact[] = [];
+
   const toolPump = (async () => {
     try {
       for await (const message of result.getNewMessagesStream()) {
@@ -464,6 +588,38 @@ async function* streamToolEnabledPass(
         const tool = mergeToolCallFromStreamMessage(message, calls, callOrder);
         if (tool) {
           enqueue({ type: "tool", tool: { ...tool } });
+          if (tool.status === "completed") {
+            const artifact = artifactFromToolCall(tool);
+            if (artifact) {
+              artifacts.push(artifact);
+              enqueue({ type: "artifact", artifact });
+            }
+            if (tool.name === "draft_agency_plan") {
+              const plan = agencyDraftPlanSchema.safeParse(tool.output);
+              if (plan.success) {
+                enqueue({ type: "plan", plan: plan.data });
+              }
+            }
+            if (tool.name === "propose_agency_action") {
+              const proposal = agencyProposalSnapshotSchema.safeParse({
+                ...(typeof tool.output === "object" && tool.output ? tool.output : {}),
+                status: "pending",
+              });
+              if (proposal.success) {
+                enqueue({
+                  type: "proposal",
+                  proposal: {
+                    proposalId: proposal.data.proposalId,
+                    status: "pending",
+                    label: proposal.data.label ?? "Proposed change",
+                    action: proposal.data.action,
+                    before: proposal.data.before,
+                    after: proposal.data.after,
+                  },
+                });
+              }
+            }
+          }
         }
       }
     } catch {
@@ -503,6 +659,7 @@ async function* streamToolEnabledPass(
   return {
     responseText: accumulated.trim(),
     toolCalls: orderedToolCalls(callOrder, calls),
+    artifacts: cappedArtifacts(artifacts),
     usage,
     stopped: stopped || Boolean(args.signal?.aborted),
   };
@@ -561,6 +718,7 @@ async function* streamTextOnlyPass(args: {
   return {
     responseText: accumulated.trim(),
     toolCalls: [],
+    artifacts: [],
     usage,
     stopped: stopped || Boolean(args.signal?.aborted),
   };
@@ -634,7 +792,7 @@ export async function* streamDashboardAgent(
   const selectedModel = await resolveOpenRouterModel(config.model);
   const model = selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
   const surface = workspace.surface ?? "canvas";
-  const toolPreset = surface === "agency" ? "ask" : (config.toolPreset ?? "ask");
+  const toolPreset = config.toolPreset ?? "ask";
   const supportsTools = selectedModel?.supportsTools ?? true;
   const executionConfig = resolveAgentExecutionConfig(
     { ...workspace, surface },
@@ -644,6 +802,7 @@ export async function* streamDashboardAgent(
   let usage: DashboardConversationUsageLatest | null = null;
   let responseText = "";
   let stopped = Boolean(config.signal?.aborted);
+  const artifacts: AiUiArtifact[] = [];
 
   if (executionConfig.shouldUseTools && !stopped) {
     try {
@@ -670,45 +829,70 @@ export async function* streamDashboardAgent(
       usage = initialNext.value.usage;
       stopped = stopped || initialNext.value.stopped;
       toolCalls.push(...initialNext.value.toolCalls);
+      artifacts.push(...initialNext.value.artifacts);
 
+      if (!stopped && executionConfig.shouldRetryForInspection && toolCalls.length === 0) {
+        const retryNote =
+          surface === "agency"
+            ? "You answered without calling Agency tools. Call get_agency_reports_summary or get_agency_time_summary with {from,to} for this month, then ui_present a schema canvas. Do not invent hours or narrate tool calls."
+            : workspace.nodes.length > 0
+              ? "You have not inspected the workspace yet. Call a relevant tool before answering."
+              : null;
+        if (retryNote) {
+          const retryIterator = streamToolEnabledPass({
+            model,
+            workspace: { ...workspace, surface },
+            workspaceRuntime,
+            toolPreset,
+            agencyRuntime: config.agencyRuntime,
+            normalizedMessages,
+            instructions: `${executionConfig.instructions}\n${retryNote}`,
+            maxSteps: executionConfig.maxSteps,
+            temperature: config.temperature,
+            maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
+            contextLength: selectedModel?.contextLength ?? null,
+            signal: config.signal,
+          });
+          let retryNext = await retryIterator.next();
+          while (!retryNext.done) {
+            yield retryNext.value;
+            retryNext = await retryIterator.next();
+          }
+          if (retryNext.value.responseText) {
+            responseText = retryNext.value.responseText;
+          }
+          if (retryNext.value.usage) {
+            usage = retryNext.value.usage;
+          }
+          stopped = stopped || retryNext.value.stopped;
+          toolCalls.push(...retryNext.value.toolCalls);
+          artifacts.push(...retryNext.value.artifacts);
+        }
+      }
+
+      // Mixtral and similar models often advertise tools but never call them on Agency.
+      // Fall back to a deterministic reports → canvas bootstrap so the operator still gets UI.
       if (
         !stopped &&
-        executionConfig.shouldRetryForInspection &&
-        toolCalls.length === 0 &&
-        workspace.nodes.length > 0 &&
-        surface !== "agency"
+        surface === "agency" &&
+        config.agencyRuntime &&
+        artifacts.length === 0 &&
+        !toolCalls.some((tool) => tool.name.startsWith("get_agency_"))
       ) {
-        const retryIterator = streamToolEnabledPass({
-          model,
-          workspace: { ...workspace, surface },
-          workspaceRuntime,
-          toolPreset,
-          agencyRuntime: config.agencyRuntime,
-          normalizedMessages,
-          instructions: `${executionConfig.instructions}\nYou have not inspected the workspace yet. Call a relevant tool before answering.`,
-          maxSteps: executionConfig.maxSteps,
-          temperature: config.temperature,
-          maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
-          contextLength: selectedModel?.contextLength ?? null,
-          signal: config.signal,
-        });
-        let retryNext = await retryIterator.next();
-        while (!retryNext.done) {
-          yield retryNext.value;
-          retryNext = await retryIterator.next();
+        const boot = await bootstrapAgencyMonthReportsCanvas(config.agencyRuntime);
+        toolCalls.push(boot.tool);
+        yield { type: "tool", tool: { ...boot.tool, status: "in_progress" } };
+        yield { type: "tool", tool: boot.tool };
+        artifacts.push(boot.artifact);
+        yield { type: "artifact", artifact: boot.artifact };
+        if (!responseText.trim()) {
+          responseText = boot.responseText;
         }
-        if (retryNext.value.responseText) {
-          responseText = retryNext.value.responseText;
-        }
-        if (retryNext.value.usage) {
-          usage = retryNext.value.usage;
-        }
-        stopped = stopped || retryNext.value.stopped;
-        toolCalls.push(...retryNext.value.toolCalls);
       }
     } catch {
       responseText = "";
       toolCalls.length = 0;
+      artifacts.length = 0;
     }
   }
 
@@ -751,6 +935,7 @@ export async function* streamDashboardAgent(
     type: "done",
     responseText: finalResponse || (stopped ? "" : "I couldn't generate a response."),
     toolCalls,
+    artifacts: cappedArtifacts(artifacts),
     usage,
     model,
     workspaceNodeCount: workspaceRuntime.getNodes().length,
@@ -815,6 +1000,7 @@ export async function runTaskAgent(
   };
 }
 
+export * from "./agency-actions";
 export * from "./attachment-content";
 export * from "./models";
 export * from "./model-routing";

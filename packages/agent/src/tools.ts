@@ -60,6 +60,8 @@ import {
 import { tool } from "@openrouter/sdk/lib/tool";
 import { z } from "zod";
 
+import { createUiPresentTool } from "./ui-present-tool";
+
 type DashboardSearchMatch = {
   matchType: "node" | "tab" | "block";
   nodeId: string;
@@ -146,7 +148,19 @@ const getBlockDetailsInputSchema = z.object({
   nodeId: z.string().trim().min(1).optional(),
   tabId: z.string().trim().min(1).optional(),
   detailLevel: detailLevelSchema.default("summary"),
+  includeEditGuide: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe(
+      "Set true when preparing patch_block/replace_block. Agent mode includes editGuide by default.",
+    ),
 });
+
+/** Opaque JSON for replace_* tool params — full workspace Zod schemas are validated at execute time. */
+const opaqueWorkspacePayloadSchema = z
+  .unknown()
+  .describe("Full raw JSON from get_*_details with detailLevel full.");
 
 const nodeReferenceSchema = z.object({
   id: z.string(),
@@ -398,7 +412,7 @@ const replaceBlockInputSchema = z.object({
   nodeId: z.string().trim().min(1),
   tabId: z.string().trim().min(1),
   blockId: z.string().trim().min(1),
-  block: workspaceBlockSchema,
+  block: opaqueWorkspacePayloadSchema,
 });
 
 const patchBlockOutputSchema = blockMutationOutputSchema.extend({
@@ -2542,6 +2556,7 @@ export function buildDashboardAgentTools(
       : "Prefer the summary response and avoid full raw payloads unless the answer is blocked or you are preparing a replace mutation.";
 
   const tools = [
+    createUiPresentTool(),
     tool({
       name: "list_dashboard_nodes",
       description: "List the current dashboard nodes with structural summaries.",
@@ -2640,10 +2655,10 @@ export function buildDashboardAgentTools(
     }),
     tool<typeof getBlockDetailsInputSchema, typeof getBlockDetailsOutputSchema>({
       name: "get_block_details",
-      description: `Inspect a single dashboard block. The response includes an editGuide with the exact field paths, references, and preservation rules for that block type. For most edits, use those paths with patch_block. Request detailLevel: "full" only when you need ids, selectors, or a full replace_block payload. ${profileGuidance}`,
+      description: `Inspect a dashboard block (summary by default). Request includeEditGuide or use Agent mode for field paths before patch_block. Use detailLevel: "full" only for replace_block prep. ${profileGuidance}`,
       inputSchema: getBlockDetailsInputSchema,
       outputSchema: getBlockDetailsOutputSchema,
-      execute: async ({ blockId, nodeId, tabId, detailLevel }) => {
+      execute: async ({ blockId, nodeId, tabId, detailLevel, includeEditGuide }) => {
         const { node, tab, block } = findBlock(workspace.getNodes(), {
           blockId,
           nodeId,
@@ -2651,13 +2666,18 @@ export function buildDashboardAgentTools(
         });
         const customBlockTemplate =
           node && block ? getCustomBlockTemplateForBlock(node, block) : null;
+        const shouldIncludeEditGuide =
+          Boolean(block) && (profile === "agent" || includeEditGuide || detailLevel === "full");
 
         return getBlockDetailsOutputSchema.parse({
           node: node ? describeNodeReference(node) : null,
           tab: tab ? describeTabReference(tab) : null,
           summary: node && block ? describeBlockReference(block, node.customBlockTemplates) : null,
           block: detailLevel === "full" ? block : null,
-          editGuide: block ? describeBlockEditGuide(block, customBlockTemplate) : null,
+          editGuide:
+            shouldIncludeEditGuide && block
+              ? describeBlockEditGuide(block, customBlockTemplate)
+              : null,
           customBlockTemplate: customBlockTemplate
             ? describeCustomBlockTemplateReference(customBlockTemplate)
             : null,
@@ -2727,16 +2747,17 @@ export function buildDashboardAgentTools(
               'Replace a node with a full raw node payload. Call get_node_details with detailLevel: "full" first, edit the raw node, then call this tool.',
             inputSchema: z.object({
               nodeId: z.string().trim().min(1),
-              node: workspaceNodeSchema,
+              node: opaqueWorkspacePayloadSchema,
             }),
             outputSchema: nodeMutationOutputSchema,
             execute: async ({ nodeId, node }) => {
+              const parsedNode = workspaceNodeSchema.parse(node);
               const { result, updatedAt, nodeCount } = await workspace.applyMutation(
                 (draft, timestamp) => {
                   const currentNode = requireNode(draft, nodeId);
                   const currentIndex = draft.findIndex((entry) => entry.id === nodeId);
                   const nextNode = createWorkspaceNode({
-                    ...node,
+                    ...parsedNode,
                     id: currentNode.id,
                     createdAt: currentNode.createdAt,
                     updatedAt: timestamp,
@@ -2838,16 +2859,17 @@ export function buildDashboardAgentTools(
             inputSchema: z.object({
               nodeId: z.string().trim().min(1),
               tabId: z.string().trim().min(1),
-              tab: workspaceNodeTabSchema,
+              tab: opaqueWorkspacePayloadSchema,
             }),
             outputSchema: tabMutationOutputSchema,
             execute: async ({ nodeId, tabId, tab }) => {
+              const parsedTab = workspaceNodeTabSchema.parse(tab);
               const { result, updatedAt, nodeCount } = await workspace.applyMutation(
                 (draft, timestamp) => {
                   const { node, tab: currentTab } = requireTab(draft, nodeId, tabId);
                   const currentIndex = node.tabs.findIndex((entry) => entry.id === currentTab.id);
                   const nextTab = workspaceNodeTabSchema.parse({
-                    ...tab,
+                    ...parsedTab,
                     id: currentTab.id,
                     createdAt: currentTab.createdAt,
                     updatedAt: timestamp,
@@ -3061,6 +3083,7 @@ export function buildDashboardAgentTools(
             inputSchema: replaceBlockInputSchema,
             outputSchema: blockMutationOutputSchema,
             execute: async ({ nodeId, tabId, blockId, block }) => {
+              const parsedBlock = workspaceBlockSchema.parse(block);
               const { result, updatedAt, nodeCount } = await workspace.applyMutation(
                 (draft, timestamp) => {
                   const {
@@ -3072,7 +3095,7 @@ export function buildDashboardAgentTools(
                     (entry) => entry.id === currentBlock.id,
                   );
                   const nextBlock = workspaceBlockSchema.parse({
-                    ...block,
+                    ...parsedBlock,
                     id: currentBlock.id,
                     createdAt: currentBlock.createdAt,
                     updatedAt: timestamp,

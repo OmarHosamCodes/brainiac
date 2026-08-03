@@ -1,12 +1,28 @@
+import type { AgencyDraftPlan } from "./agency-actions";
 import type { AgentChatResponse, AgentToolCall, DashboardConversationUsageLatest } from "./types";
+import type { AiUiArtifact } from "./ui-artifact";
 
 export type DashboardAgentStreamEvent =
   | { type: "token"; delta: string }
   | { type: "tool"; tool: AgentToolCall }
+  | { type: "artifact"; artifact: AiUiArtifact }
+  | { type: "plan"; plan: AgencyDraftPlan }
+  | {
+      type: "proposal";
+      proposal: {
+        proposalId: string;
+        status: "pending";
+        label: string;
+        action: unknown;
+        before: unknown;
+        after: unknown;
+      };
+    }
   | {
       type: "done";
       responseText: string;
       toolCalls: AgentToolCall[];
+      artifacts: AiUiArtifact[];
       usage: DashboardConversationUsageLatest | null;
       model: string;
       workspaceNodeCount: number;

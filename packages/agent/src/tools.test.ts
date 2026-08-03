@@ -235,6 +235,22 @@ function createFixture() {
 }
 
 describe("buildDashboardAgentTools", () => {
+  test("ui_present validates and returns a short canvas ack", async () => {
+    const fixture = createFixture();
+    const result = await callTool(fixture.tools, "ui_present", {
+      artifact: {
+        id: "summary",
+        kind: "schema",
+        title: "Summary",
+        schema: {
+          version: 1,
+          root: { type: "stat", label: "Nodes", value: 1 },
+        },
+      },
+    });
+    expect(result.message).toContain('Rendered "Summary" in the canvas (schema)');
+  });
+
   test("search_dashboard finds nested content across representative block types", async () => {
     const fixture = createFixture();
     const cases = [
@@ -510,5 +526,42 @@ describe("buildDashboardAgentTools", () => {
     expect(customBlockDetails.editGuide?.referenceFieldPaths).toContain("definitionId");
     expect(customBlockDetails.editGuide?.editableFieldPaths).toContain("values.angle");
     expect(customBlockDetails.customBlockTemplate?.name).toBe("Campaign brief");
+  });
+
+  test("ask mode omits editGuide unless requested", async () => {
+    const fixture = createFixture();
+    const askTools = buildDashboardAgentTools(
+      createDashboardAgentWorkspaceRuntime({
+        nodes: [fixture.node],
+        updatedAt: fixture.node.updatedAt,
+      }),
+      [],
+      "ask",
+    );
+    const summary = await callTool(askTools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.courseRoadmapBlock.id,
+      detailLevel: "summary",
+    });
+    expect(summary.editGuide).toBeNull();
+
+    const withGuide = await callTool(askTools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.courseRoadmapBlock.id,
+      detailLevel: "summary",
+      includeEditGuide: true,
+    });
+    expect(withGuide.editGuide?.editableFieldPaths?.length).toBeGreaterThan(0);
+  });
+
+  test("replace_* tool input schemas stay compact", () => {
+    const fixture = createFixture();
+    for (const name of ["replace_node", "replace_tab", "replace_block"] as const) {
+      const schema = getTool(fixture.tools, name).inputSchema;
+      const json = z.toJSONSchema(schema);
+      expect(JSON.stringify(json).length).toBeLessThan(2_500);
+    }
   });
 });

@@ -97,6 +97,25 @@ describe("model routing", () => {
     expect(result.modelId).not.toBe("vendor/no-tools-flash");
   });
 
+  test("agency ask still requires a tools-capable model", () => {
+    const result = resolveModelForTurn({
+      models: catalog,
+      defaultModel: "openai/gpt-5-nano",
+      preset: { tier: "fast", auto: true, free: false },
+      signals: {
+        contentLength: 20,
+        scopeCount: 0,
+        mentionCount: 0,
+        toolPreset: "ask",
+        surface: "agency",
+      },
+      content: "compare hours by project",
+    });
+
+    expect(result.model?.supportsTools).toBe(true);
+    expect(result.modelId).not.toBe("vendor/no-tools-flash");
+  });
+
   test("pin is honored when Auto is off", () => {
     const result = resolveModelForTurn({
       models: catalog,
