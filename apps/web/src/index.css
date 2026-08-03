@@ -631,6 +631,25 @@ body {
   cursor: pointer;
 }
 
+/* Compact rail: Back reads as chrome, not another mute nav icon. */
+.app-shell__rail-back {
+  background: color-mix(in oklab, var(--color-sidebar-accent) 55%, transparent);
+  box-shadow: inset 0 0 0 1px var(--color-sidebar-border);
+}
+
+.app-shell__rail-back:hover,
+.app-shell__rail-back:focus-visible {
+  background: var(--color-sidebar-accent);
+  color: var(--color-sidebar-accent-foreground);
+  box-shadow: inset 0 0 0 1px var(--color-sidebar-border);
+}
+
+.app-shell--rail-pinned .app-shell__rail-back {
+  justify-content: flex-start;
+  gap: 0.625rem;
+  padding-inline: 0.625rem;
+}
+
 .rail-label {
   min-width: 0;
   max-width: 0;
