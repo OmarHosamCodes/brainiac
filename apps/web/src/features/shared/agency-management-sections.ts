@@ -1,12 +1,13 @@
 /** Agency management panes — Operations + Commercial hubs under Management. */
 
-export type AgencyManagementPaneId = "resourcing" | "tenure" | "tags" | "invoices" | "rates";
+export type AgencyManagementPaneId = "resourcing" | "tenure" | "invoices" | "rates";
 
 export type AgencyManagementHubId = "operations" | "commercial";
 
 export type AgencyManagementPane = {
   id: AgencyManagementPaneId;
   label: string;
+  icon: string;
   hub: AgencyManagementHubId;
 };
 
@@ -17,11 +18,10 @@ export type AgencyManagementHub = {
 };
 
 export const AGENCY_MANAGEMENT_PANES: readonly AgencyManagementPane[] = [
-  { id: "resourcing", label: "Resourcing", hub: "operations" },
-  { id: "tenure", label: "People", hub: "operations" },
-  { id: "tags", label: "Tags", hub: "operations" },
-  { id: "invoices", label: "Invoices", hub: "commercial" },
-  { id: "rates", label: "Rates", hub: "commercial" },
+  { id: "resourcing", label: "Resourcing", icon: "i-lucide-users", hub: "operations" },
+  { id: "tenure", label: "People", icon: "i-lucide-contact", hub: "operations" },
+  { id: "invoices", label: "Invoices", icon: "i-lucide-receipt", hub: "commercial" },
+  { id: "rates", label: "Rates", icon: "i-lucide-dollar-sign", hub: "commercial" },
 ] as const;
 
 export const AGENCY_MANAGEMENT_HUBS: readonly AgencyManagementHub[] = [
@@ -43,6 +43,20 @@ export function isAgencyManagementPaneId(value: unknown): value is AgencyManagem
 
 export function agencyManagementPaneLabel(paneId: AgencyManagementPaneId): string {
   return AGENCY_MANAGEMENT_PANES.find((pane) => pane.id === paneId)?.label ?? paneId;
+}
+
+/** Canonical href for a Management pane under Agency. */
+export function agencyManagementHref(paneId: AgencyManagementPaneId): string {
+  return `/agency?section=management&manage=${paneId}`;
+}
+
+export function agencyManagementPaneFromSearch(search: string): AgencyManagementPaneId {
+  const manage = new URLSearchParams(search).get("manage");
+  return isAgencyManagementPaneId(manage) ? manage : "resourcing";
+}
+
+export function agencyManagementPaneTabId(paneId: AgencyManagementPaneId): string {
+  return `agency-management-pane-${paneId}`;
 }
 
 export function managementPaneForLegacySection(

@@ -37,6 +37,7 @@ type MemberProfileDatePickerProps = {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  className?: string;
   "aria-label": string;
 };
 
@@ -45,6 +46,7 @@ export function MemberProfileDatePicker({
   value,
   onChange,
   disabled = false,
+  className,
   "aria-label": ariaLabel,
 }: MemberProfileDatePickerProps) {
   const [open, setOpen] = useState(false);
@@ -61,6 +63,7 @@ export function MemberProfileDatePicker({
           className={cn(
             "h-10 w-full justify-start gap-2 px-3 font-normal transition-[transform,background-color] duration-150 ease-out active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
             agencyFocusRingClass,
+            className,
           )}
           aria-label={ariaLabel}
           aria-expanded={open}

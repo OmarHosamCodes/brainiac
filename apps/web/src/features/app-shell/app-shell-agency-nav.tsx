@@ -11,6 +11,10 @@ import {
   shellRailLinkClass,
 } from "@/features/app-shell/app-shell-ui";
 import {
+  agencyManagementHref,
+  agencyManagementPaneFromSearch,
+} from "@/features/shared/agency-management-sections";
+import {
   AGENCY_SEGMENTS,
   agencySegmentFromSearch,
   agencySegmentHref,
@@ -22,6 +26,12 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/ui/popover";
 
 const OPEN_DELAY_MS = 80;
 const CLOSE_DELAY_MS = 140;
+
+const menuItemClass =
+  "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-muted outline-hidden transition-colors hover:bg-elevated hover:text-highlighted focus-visible:bg-elevated focus-visible:text-highlighted";
+
+const railSublinkClass =
+  "app-shell__rail-sublink text-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground";
 
 type AppShellAgencyNavProps = {
   /** Hover-popover topbar link, or stacked rows for the rail and mobile drawer. */
@@ -42,9 +52,11 @@ export function AppShellAgencyNav({
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [open, setOpen] = useState(false);
   const railPinned = useAppShellStore((s) => s.railPinned);
+  const setManagementNavOpen = useAppShellStore((s) => s.setManagementNavOpen);
 
   const active = location.pathname.startsWith("/agency");
   const currentSegment = active ? agencySegmentFromSearch(location.search) : null;
+  const currentManagePane = agencyManagementPaneFromSearch(location.search);
   const showInlineSubnav = variant === "rail" && (expanded || railPinned);
   const showFlyout = variant === "desktop" || (variant === "rail" && !showInlineSubnav);
 
@@ -80,9 +92,18 @@ export function AppShellAgencyNav({
     if (!showFlyout && open) setOpen(false);
   }, [showFlyout, open]);
 
+  function segmentHref(segmentId: (typeof AGENCY_SEGMENTS)[number]["id"]): string {
+    if (segmentId === "management") {
+      return agencyManagementHref(
+        currentSegment === "management" ? currentManagePane : "resourcing",
+      );
+    }
+    return agencySegmentHref(segmentId);
+  }
+
   function segmentLinks(opts: { asMenu: boolean; onPick?: () => void }) {
     return AGENCY_SEGMENTS.map((entry, index) => {
-      const href = agencySegmentHref(entry.id);
+      const href = segmentHref(entry.id);
       const selected = currentSegment === entry.id;
       return (
         <Link
@@ -92,9 +113,7 @@ export function AppShellAgencyNav({
           to={href}
           title={`${entry.label} (g ${entry.shortcutKey})`}
           className={cn(
-            opts.asMenu
-              ? "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-muted outline-hidden transition-colors hover:bg-elevated hover:text-highlighted focus-visible:bg-elevated focus-visible:text-highlighted"
-              : "app-shell__rail-sublink text-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            opts.asMenu ? menuItemClass : railSublinkClass,
             shellFocusRingClass,
             selected &&
               (opts.asMenu
@@ -103,6 +122,7 @@ export function AppShellAgencyNav({
           )}
           aria-current={selected ? "page" : undefined}
           onClick={() => {
+            if (entry.id === "management") setManagementNavOpen(true);
             setOpen(false);
             opts.onPick?.();
             onNavigate?.();

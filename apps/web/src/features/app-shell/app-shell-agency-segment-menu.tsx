@@ -3,6 +3,7 @@ import { useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
+import { agencyManagementHref } from "@/features/shared/agency-management-sections";
 import {
   AGENCY_SEGMENTS,
   agencySegmentHref,
@@ -15,6 +16,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 
 export function agencyCrumbItemId(segment: AgencySegmentId): string {
   return `agency-crumb-item-${segment}`;
+}
+
+function crumbSegmentHref(segmentId: AgencySegmentId): string {
+  return segmentId === "management"
+    ? agencyManagementHref("resourcing")
+    : agencySegmentHref(segmentId);
 }
 
 /** Wrap-around arrow / Home / End index math for the crumb segment menu. */
@@ -111,7 +118,7 @@ export function AppShellAgencySegmentMenu({ segment }: AppShellAgencySegmentMenu
               key={entry.id}
               id={agencyCrumbItemId(entry.id)}
               role="menuitem"
-              to={agencySegmentHref(entry.id)}
+              to={crumbSegmentHref(entry.id)}
               title={`${entry.label} (g ${entry.shortcutKey})`}
               className={cn(
                 "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-muted outline-hidden transition-colors hover:bg-elevated hover:text-highlighted focus-visible:bg-elevated focus-visible:text-highlighted",

@@ -119,7 +119,6 @@ async function ensureManagementBootQueries(
       ]);
       break;
     }
-    case "tags":
     case "invoices":
     case "rates":
       break;

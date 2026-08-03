@@ -1,18 +1,20 @@
 import { ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useId } from "react";
 
-import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
-import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
-import { Button } from "@/ui/button";
-import { Input } from "@/ui/input";
+import { MemberProfileDatePicker } from "@/features/member-profile/member-profile-date-picker";
+import { FISCAL_MONTHS, type FiscalMonth } from "@/features/resourcing/tenure-utils";
 import {
-  agencyFocusRingClass,
   agencyFormFieldClass,
   agencyFormLabelClass,
   agencyPanelClass,
 } from "@/features/shared/agency-ui";
-import { FISCAL_MONTHS, type FiscalMonth } from "@/features/resourcing/tenure-utils";
+import { cn } from "@/lib/utils";
+import { Button } from "@/ui/button";
+import { Checkbox } from "@/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/collapsible";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 
 export type TenurePolicyDraft = {
   fiscalYearStartMonth: FiscalMonth;
@@ -45,7 +47,15 @@ export function AgencySettingsTenurePolicy({
   onSave,
   embedded = false,
 }: AgencySettingsTenurePolicyProps) {
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const idPrefix = useId();
+  const monthId = `${idPrefix}-fiscal-month`;
+  const startDayId = `${idPrefix}-start-day`;
+  const minHoursId = `${idPrefix}-min-hours`;
+  const effectiveFromId = `${idPrefix}-effective-from`;
+  const enabledId = `${idPrefix}-enabled`;
+  const internMonthsId = `${idPrefix}-intern-months`;
+  const internWeeksId = `${idPrefix}-intern-weeks`;
+  const penaltyId = `${idPrefix}-penalty-months`;
 
   if (!isOwner) {
     return null;
@@ -53,19 +63,10 @@ export function AgencySettingsTenurePolicy({
 
   return (
     <section className={cn(!embedded && agencyPanelClass, !embedded && "p-5 sm:p-6")}>
-      {embedded ? null : (
-        <>
-          <h3 className="text-sm font-bold text-highlighted">Team policy</h3>
-          <p className="mt-1 text-sm text-muted">
-            Each fiscal month runs from the start day through the day before the next period (UTC).
-          </p>
-        </>
-      )}
-      {embedded ? (
-        <p className="text-muted text-sm">
-          Each fiscal month runs from the start day through the day before the next period (UTC).
-        </p>
-      ) : null}
+      {embedded ? null : <h3 className="text-sm font-bold text-highlighted">Team policy</h3>}
+      <p className={cn("text-muted text-sm", !embedded && "mt-1")}>
+        Each fiscal month runs from the start day through the day before the next period (UTC).
+      </p>
 
       <form
         className={cn("space-y-5", embedded ? "mt-4" : "mt-5")}
@@ -76,25 +77,37 @@ export function AgencySettingsTenurePolicy({
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={agencyFormFieldClass}>
-            <label className={agencyFormLabelClass}>Fiscal year starts</label>
-            <BlockSelect
+            <Label htmlFor={monthId} className={agencyFormLabelClass}>
+              Fiscal year starts
+            </Label>
+            <Select
               value={String(policyDraft.fiscalYearStartMonth)}
-              options={FISCAL_MONTHS.map((month) => ({
-                label: month.label,
-                value: String(month.value),
-              }))}
               onValueChange={(value) =>
                 onPolicyDraftChange({
                   ...policyDraft,
                   fiscalYearStartMonth: Number(value) as FiscalMonth,
                 })
               }
-            />
+            >
+              <SelectTrigger id={monthId} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FISCAL_MONTHS.map((month) => (
+                  <SelectItem key={month.value} value={String(month.value)}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className={agencyFormFieldClass}>
-            <label className={agencyFormLabelClass}>Start day</label>
+            <Label htmlFor={startDayId} className={agencyFormLabelClass}>
+              Start day
+            </Label>
             <Input
+              id={startDayId}
               type="number"
               min={1}
               max={31}
@@ -107,8 +120,11 @@ export function AgencySettingsTenurePolicy({
           </div>
 
           <div className={agencyFormFieldClass}>
-            <label className={agencyFormLabelClass}>Min hours per quarter</label>
+            <Label htmlFor={minHoursId} className={agencyFormLabelClass}>
+              Min hours per quarter
+            </Label>
             <Input
+              id={minHoursId}
               type="number"
               min={1}
               value={policyDraft.quarterlyMinHours}
@@ -120,57 +136,62 @@ export function AgencySettingsTenurePolicy({
           </div>
 
           <div className={agencyFormFieldClass}>
-            <label className={agencyFormLabelClass}>Effective from</label>
-            <Input
-              type="date"
+            <Label htmlFor={effectiveFromId} className={agencyFormLabelClass}>
+              Effective from
+            </Label>
+            <MemberProfileDatePicker
+              id={effectiveFromId}
               value={policyDraft.policyEffectiveFrom}
-              className="w-full max-w-[14rem]"
-              onChange={(event) =>
-                onPolicyDraftChange({ ...policyDraft, policyEffectiveFrom: event.target.value })
+              className="h-8 max-w-[14rem]"
+              aria-label="Effective from"
+              onChange={(value) =>
+                onPolicyDraftChange({ ...policyDraft, policyEffectiveFrom: value })
               }
             />
           </div>
         </div>
 
-        <p className="text-sm text-muted">{fiscalYearPreview}</p>
+        <p className="text-muted text-sm">{fiscalYearPreview}</p>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          <label className="flex items-center gap-2 text-sm font-semibold text-muted">
-            <BlockCheckbox
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={enabledId}
               checked={policyDraft.enabled}
               onCheckedChange={(checked) =>
-                onPolicyDraftChange({ ...policyDraft, enabled: checked })
+                onPolicyDraftChange({ ...policyDraft, enabled: checked === true })
               }
-              aria-label="Enable tenure tracking"
             />
-            <span>Enable tenure tracking</span>
-          </label>
+            <Label htmlFor={enabledId} className="cursor-pointer text-sm font-semibold text-muted">
+              Enable tenure tracking
+            </Label>
+          </div>
           <Button type="submit" size="sm" disabled={saving}>
             {saving ? "Saving…" : "Save policy"}
           </Button>
         </div>
 
-        <div className="border-t border-default pt-4">
-          <button
-            type="button"
-            className={cn(
-              "flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-highlighted",
-              agencyFocusRingClass,
-            )}
-            aria-expanded={advancedOpen}
-            onClick={() => setAdvancedOpen((open) => !open)}
-          >
-            <ChevronRight
-              className={cn("size-4 transition-transform", advancedOpen ? "rotate-90" : "")}
-            />
-            Advanced
-          </button>
+        <Collapsible className="border-t border-default pt-4">
+          <CollapsibleTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="group -ml-2 gap-1.5 text-muted hover:text-highlighted"
+            >
+              <ChevronRight className="size-4 transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none" />
+              Advanced
+            </Button>
+          </CollapsibleTrigger>
 
-          {advancedOpen ? (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <CollapsibleContent className="pt-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className={agencyFormFieldClass}>
-                <label className={agencyFormLabelClass}>Intern duration (months)</label>
+                <Label htmlFor={internMonthsId} className={agencyFormLabelClass}>
+                  Intern duration (months)
+                </Label>
                 <Input
+                  id={internMonthsId}
                   type="number"
                   min={0}
                   value={policyDraft.internDurationMonths}
@@ -185,21 +206,30 @@ export function AgencySettingsTenurePolicy({
               </div>
 
               <div className={agencyFormFieldClass}>
-                <label className={agencyFormLabelClass}>Extra intern weeks</label>
+                <Label htmlFor={internWeeksId} className={agencyFormLabelClass}>
+                  Extra intern weeks
+                </Label>
                 <Input
+                  id={internWeeksId}
                   type="number"
                   min={0}
                   value={policyDraft.internDurationWeeks}
                   className="w-full max-w-[10rem]"
                   onChange={(event) =>
-                    onPolicyDraftChange({ ...policyDraft, internDurationWeeks: event.target.value })
+                    onPolicyDraftChange({
+                      ...policyDraft,
+                      internDurationWeeks: event.target.value,
+                    })
                   }
                 />
               </div>
 
               <div className={cn(agencyFormFieldClass, "sm:col-span-2")}>
-                <label className={agencyFormLabelClass}>Penalty per missed quarter (months)</label>
+                <Label htmlFor={penaltyId} className={agencyFormLabelClass}>
+                  Penalty per missed quarter (months)
+                </Label>
                 <Input
+                  id={penaltyId}
                   type="number"
                   min={1}
                   value={policyDraft.penaltyMonths}
@@ -210,8 +240,8 @@ export function AgencySettingsTenurePolicy({
                 />
               </div>
             </div>
-          ) : null}
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
       </form>
     </section>
   );
