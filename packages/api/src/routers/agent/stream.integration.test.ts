@@ -10,6 +10,7 @@ const streamDashboardAgent = mock(async function* () {
     type: "done" as const,
     responseText: "Hi",
     toolCalls: [],
+    artifacts: [],
     usage: {
       modelId: "test-model",
       contextLength: null,

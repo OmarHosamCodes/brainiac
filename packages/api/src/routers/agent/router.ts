@@ -1,3 +1,9 @@
+import { agencyDraftPlanSchema } from "@orch/agent";
+import { z } from "zod";
+
+import { protectedProcedure } from "../../procedures";
+import { toInternalServerError } from "../../dev-errors";
+import { approveAgencyProposal, confirmAgencyPlan, rejectAgencyProposal } from "./agency-proposals";
 import {
   agentChatTurnInputSchema,
   agentChatTurnResponseSchema,
@@ -12,16 +18,10 @@ import {
   openRouterAccountStatusSchema,
   openRouterModelCatalogResponseSchema,
   openRouterFreeModelsResponseSchema,
-} from "./schemas";
-import {
   getOpenRouterAccountStatus,
   listOpenRouterModels,
   listOpenRouterFreeModels,
 } from "./schemas";
-import { z } from "zod";
-
-import { protectedProcedure } from "../../procedures";
-import { toInternalServerError } from "../../dev-errors";
 import {
   appendDashboardConversationTurn,
   assertCanCreateDashboardConversation,
@@ -67,6 +67,83 @@ export const agentRouter = {
           throw toInternalServerError("agent.tools.catalog", error, {
             surface: input.surface,
             mode: input.mode,
+          });
+        }
+      }),
+  },
+  proposals: {
+    confirmPlan: protectedProcedure
+      .input(
+        z.object({
+          teamId: z.string().min(1),
+          conversationId: z.string().min(1).optional(),
+          plan: agencyDraftPlanSchema,
+        }),
+      )
+      .handler(async ({ input, context }) => {
+        try {
+          return z
+            .object({
+              planId: z.string(),
+              proposals: z.array(
+                z.object({
+                  proposalId: z.string(),
+                  status: z.literal("pending"),
+                  action: z.unknown(),
+                  before: z.unknown(),
+                  after: z.unknown(),
+                  label: z.string(),
+                }),
+              ),
+            })
+            .parse(await confirmAgencyPlan(context.session.user.id, input));
+        } catch (error) {
+          throw toInternalServerError("agent.proposals.confirmPlan", error, {
+            teamId: input.teamId,
+          });
+        }
+      }),
+    approve: protectedProcedure
+      .input(
+        z.object({
+          teamId: z.string().min(1),
+          proposalId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ input, context }) => {
+        try {
+          return z
+            .object({
+              proposalId: z.string(),
+              status: z.literal("executed"),
+              result: z.unknown(),
+              label: z.string(),
+            })
+            .parse(await approveAgencyProposal(context.session.user.id, input));
+        } catch (error) {
+          throw toInternalServerError("agent.proposals.approve", error, {
+            proposalId: input.proposalId,
+          });
+        }
+      }),
+    reject: protectedProcedure
+      .input(
+        z.object({
+          teamId: z.string().min(1),
+          proposalId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ input, context }) => {
+        try {
+          return z
+            .object({
+              proposalId: z.string(),
+              status: z.literal("rejected"),
+            })
+            .parse(await rejectAgencyProposal(context.session.user.id, input));
+        } catch (error) {
+          throw toInternalServerError("agent.proposals.reject", error, {
+            proposalId: input.proposalId,
           });
         }
       }),
