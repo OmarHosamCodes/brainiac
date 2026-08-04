@@ -3,11 +3,15 @@ import { db } from "@orch/db";
 import {
   agencyOpsClient,
   agencyOpsClientContact,
+  agencyOpsExpense,
   agencyOpsInvoice,
   agencyOpsInvoiceLineItem,
   agencyOpsMemberCapacity,
   agencyOpsMemberRate,
   agencyOpsMemberTenureProfile,
+  agencyOpsPayoutLine,
+  agencyOpsPayoutRun,
+  agencyOpsPayoutSection,
   agencyOpsProject,
   agencyOpsProjectTask,
   agencyOpsProjectTaskAssignee,
@@ -821,6 +825,97 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
       });
     }
   }
+
+  s.message("Seeding Money expenses + sample adjustment payout...");
+  await db.insert(agencyOpsExpense).values([
+    {
+      id: createWorkspaceId("agency-expense"),
+      teamId,
+      name: "Notion",
+      kind: "subscription",
+      period: "monthly",
+      note: "Team workspace",
+      amountCents: 2_000,
+      currency: "USD",
+      status: "due",
+      paidCents: 0,
+      nextDueAt: shiftDate(now, { days: 12 }),
+      occurredAt: null,
+      createdByUserId: ownerId,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: createWorkspaceId("agency-expense"),
+      teamId,
+      name: "Office supplies",
+      kind: "one_time",
+      period: null,
+      note: "Printer paper + toner",
+      amountCents: 8_500,
+      currency: "USD",
+      status: "paid",
+      paidCents: 8_500,
+      nextDueAt: null,
+      occurredAt: shiftDate(now, { days: -3 }),
+      createdByUserId: ownerId,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]);
+
+  const payoutPeriodStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0),
+  );
+  const payoutPeriodEnd = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999),
+  );
+  const payoutRunId = createWorkspaceId("agency-payout-run");
+  const salariesSectionId = createWorkspaceId("agency-payout-sec");
+  const charitySectionId = createWorkspaceId("agency-payout-sec");
+  await db.insert(agencyOpsPayoutRun).values({
+    id: payoutRunId,
+    teamId,
+    periodStart: payoutPeriodStart,
+    periodEnd: payoutPeriodEnd,
+    status: "draft",
+    currency: "USD",
+    createdByUserId: ownerId,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await db.insert(agencyOpsPayoutSection).values([
+    {
+      id: salariesSectionId,
+      runId: payoutRunId,
+      key: "salaries",
+      title: "Salaries",
+      sortOrder: 0,
+      createdAt: now,
+    },
+    {
+      id: charitySectionId,
+      runId: payoutRunId,
+      key: "charity",
+      title: "Charity",
+      sortOrder: 5,
+      createdAt: now,
+    },
+  ]);
+  await db.insert(agencyOpsPayoutLine).values({
+    id: createWorkspaceId("agency-payout-line"),
+    sectionId: charitySectionId,
+    payeeUserId: null,
+    label: "Local food bank",
+    cohortKey: null,
+    amountCents: 15_000,
+    paidCents: 0,
+    status: "draft",
+    durationSeconds: 0,
+    rateCents: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   s.message("Seeding tenure policy...");
   await db
