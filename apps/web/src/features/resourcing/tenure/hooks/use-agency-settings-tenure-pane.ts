@@ -22,6 +22,7 @@ import {
   createAgencyDepartment,
   deleteAgencyDepartment,
   updateAgencyDepartment,
+  type AgencyDepartmentOption,
 } from "../agency-departments";
 import {
   PEOPLE_CONFIG_STEP_IDS,
@@ -181,12 +182,30 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
   const policyEnabled = summaryQuery.data?.policyEnabled ?? false;
   const exemptions = exemptionsQuery.data?.items ?? [];
   const rates = ratesQuery.data?.items ?? [];
-  const departments = (departmentsQuery.data?.items ?? []).map((item) => ({
-    id: item.id,
-    name: item.name,
-  }));
   const teamMembers = teamQuery.data?.members ?? [];
-  const [departmentBusy, setDepartmentBusy] = useState(false);
+  const serverDepartments = useMemo<AgencyDepartmentOption[]>(
+    () =>
+      (departmentsQuery.data?.items ?? []).map((item) => ({
+        id: item.id,
+        name: item.name,
+      })),
+    [departmentsQuery.data?.items],
+  );
+  const [localDepartments, setLocalDepartments] = useState<AgencyDepartmentOption[] | null>(null);
+  const departments = localDepartments ?? serverDepartments;
+
+  useEffect(() => {
+    setLocalDepartments(null);
+  }, [teamId]);
+
+  useEffect(() => {
+    if (!localDepartments) return;
+    if (localDepartments.some((item) => item.id.startsWith("optimistic-department-"))) return;
+    if (localDepartments.length !== serverDepartments.length) return;
+    const serverById = new Map(serverDepartments.map((item) => [item.id, item.name]));
+    const matches = localDepartments.every((item) => serverById.get(item.id) === item.name);
+    if (matches) setLocalDepartments(null);
+  }, [localDepartments, serverDepartments]);
 
   const [policyDraft, setPolicyDraft] = useState<TenurePolicyDraft>({
     fiscalYearStartMonth: 1,
@@ -515,54 +534,78 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     toast.success("HR profile saved");
   }
 
-  async function addDepartment(name: string) {
-    if (!teamId || !isOwner) return;
-    setDepartmentBusy(true);
-    try {
-      await createAgencyDepartment(teamId, name);
-      toast.success("Department added");
-    } catch (error) {
-      toast.error("Couldn't add department", {
-        description: getErrorMessage(error, "Try again."),
+  function addDepartment(name: string) {
+    if (!teamId || !isOwner) return Promise.resolve();
+    const trimmed = name.trim();
+    if (!trimmed) return Promise.resolve();
+    const tempId = `optimistic-department-${Date.now().toString(36)}`;
+    const previous = departments;
+    setLocalDepartments(
+      [...previous, { id: tempId, name: trimmed }].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    return createAgencyDepartment(teamId, trimmed)
+      .then((created) => {
+        setLocalDepartments((current) =>
+          (current ?? previous)
+            .map((item) => (item.id === tempId ? { id: created.id, name: created.name } : item))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        );
+        toast.success("Department added");
+      })
+      .catch((error) => {
+        setLocalDepartments(previous);
+        toast.error("Couldn't add department", {
+          description: getErrorMessage(error, "Try again."),
+        });
+        throw error;
       });
-      throw error;
-    } finally {
-      setDepartmentBusy(false);
-    }
   }
 
-  async function renameDepartment(departmentId: string, name: string) {
-    if (!teamId || !isOwner) return;
-    setDepartmentBusy(true);
-    try {
-      await updateAgencyDepartment(teamId, departmentId, name);
-      await invalidatePeopleQueries();
-      toast.success("Department renamed");
-    } catch (error) {
-      toast.error("Couldn't rename department", {
-        description: getErrorMessage(error, "Try again."),
+  function renameDepartment(departmentId: string, name: string) {
+    if (!teamId || !isOwner) return Promise.resolve();
+    const trimmed = name.trim();
+    if (!trimmed) return Promise.resolve();
+    const previous = departments;
+    setLocalDepartments(
+      previous
+        .map((item) => (item.id === departmentId ? { ...item, name: trimmed } : item))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    return updateAgencyDepartment(teamId, departmentId, trimmed)
+      .then((updated) => {
+        setLocalDepartments((current) =>
+          (current ?? previous)
+            .map((item) =>
+              item.id === departmentId ? { id: updated.id, name: updated.name } : item,
+            )
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        );
+        toast.success("Department renamed");
+      })
+      .catch((error) => {
+        setLocalDepartments(previous);
+        toast.error("Couldn't rename department", {
+          description: getErrorMessage(error, "Try again."),
+        });
+        throw error;
       });
-      throw error;
-    } finally {
-      setDepartmentBusy(false);
-    }
   }
 
-  async function removeDepartment(departmentId: string) {
-    if (!teamId || !isOwner) return;
-    setDepartmentBusy(true);
-    try {
-      await deleteAgencyDepartment(teamId, departmentId);
-      await invalidatePeopleQueries();
-      toast.success("Department deleted");
-    } catch (error) {
-      toast.error("Couldn't delete department", {
-        description: getErrorMessage(error, "Try again."),
+  function removeDepartment(departmentId: string) {
+    if (!teamId || !isOwner) return Promise.resolve();
+    const previous = departments;
+    setLocalDepartments(previous.filter((item) => item.id !== departmentId));
+    return deleteAgencyDepartment(teamId, departmentId)
+      .then(() => {
+        toast.success("Department deleted");
+      })
+      .catch((error) => {
+        setLocalDepartments(previous);
+        toast.error("Couldn't delete department", {
+          description: getErrorMessage(error, "Try again."),
+        });
+        throw error;
       });
-      throw error;
-    } finally {
-      setDepartmentBusy(false);
-    }
   }
 
   async function saveRateStep() {
@@ -759,7 +802,6 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     internDurationMonths: policy?.internDurationMonths ?? null,
     departmentCount: departments.length,
     departments,
-    departmentBusy,
     addDepartment,
     renameDepartment,
     removeDepartment,

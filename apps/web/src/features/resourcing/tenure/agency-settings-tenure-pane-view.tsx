@@ -100,7 +100,6 @@ export function AgencySettingsTenurePaneView({
             <AgencyPeopleDepartments
               departments={viewModel.departments}
               canEdit={viewModel.isOwner}
-              busy={viewModel.departmentBusy}
               onCreate={viewModel.addDepartment}
               onRename={viewModel.renameDepartment}
               onDelete={viewModel.removeDepartment}

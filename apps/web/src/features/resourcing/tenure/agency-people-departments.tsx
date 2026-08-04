@@ -16,7 +16,6 @@ import type { AgencyDepartmentOption } from "./agency-departments";
 type AgencyPeopleDepartmentsProps = {
   departments: readonly AgencyDepartmentOption[];
   canEdit: boolean;
-  busy: boolean;
   onCreate: (name: string) => Promise<void>;
   onRename: (departmentId: string, name: string) => Promise<void>;
   onDelete: (departmentId: string) => Promise<void>;
@@ -25,7 +24,6 @@ type AgencyPeopleDepartmentsProps = {
 export function AgencyPeopleDepartments({
   departments,
   canEdit,
-  busy,
   onCreate,
   onRename,
   onDelete,
@@ -36,17 +34,17 @@ export function AgencyPeopleDepartments({
 
   async function handleCreate() {
     const name = newName.trim();
-    if (!name || busy) return;
-    await onCreate(name);
+    if (!name) return;
     setNewName("");
+    await onCreate(name);
   }
 
   async function handleRename(departmentId: string) {
     const name = editName.trim();
-    if (!name || busy) return;
-    await onRename(departmentId, name);
+    if (!name) return;
     setEditingId(null);
     setEditName("");
+    await onRename(departmentId, name);
   }
 
   return (
@@ -77,7 +75,7 @@ export function AgencyPeopleDepartments({
                     onChange={(event) => setEditName(event.target.value)}
                     className="min-w-0 flex-1"
                     maxLength={50}
-                    disabled={busy || !canEdit}
+                    disabled={!canEdit}
                     aria-label={`Rename ${department.name}`}
                     onKeyDown={(event) => {
                       if (event.key === "Enter") {
@@ -98,7 +96,7 @@ export function AgencyPeopleDepartments({
                         type="button"
                         size="sm"
                         variant="secondary"
-                        disabled={busy || !editName.trim()}
+                        disabled={!editName.trim()}
                         onClick={() => void handleRename(department.id)}
                       >
                         Save
@@ -108,7 +106,6 @@ export function AgencyPeopleDepartments({
                         type="button"
                         size="icon-sm"
                         variant="ghost"
-                        disabled={busy}
                         aria-label={`Rename ${department.name}`}
                         onClick={() => {
                           setEditingId(department.id);
@@ -122,7 +119,6 @@ export function AgencyPeopleDepartments({
                       type="button"
                       size="icon-sm"
                       variant="ghost"
-                      disabled={busy}
                       aria-label={`Delete ${department.name}`}
                       onClick={() => void onDelete(department.id)}
                     >
@@ -145,7 +141,6 @@ export function AgencyPeopleDepartments({
               onChange={(event) => setNewName(event.target.value)}
               placeholder="e.g. Engineering"
               maxLength={50}
-              disabled={busy}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
@@ -157,7 +152,7 @@ export function AgencyPeopleDepartments({
               type="button"
               size="sm"
               className="shrink-0 gap-1.5"
-              disabled={busy || !newName.trim()}
+              disabled={!newName.trim()}
               onClick={() => void handleCreate()}
             >
               <Plus className="size-3.5" aria-hidden />
