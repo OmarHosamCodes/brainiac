@@ -118,4 +118,26 @@ describe("agentChatTurnStreamEventSchema", () => {
       }).type,
     ).toBe("proposal");
   });
+
+  test("accepts question stream events", () => {
+    const event = agentChatTurnStreamEventSchema.parse({
+      type: "question",
+      question: {
+        questionId: "aq-1",
+        prompt: "Which cleanup first?",
+        kind: "single",
+        options: [
+          { id: "standup", label: "Standup typos" },
+          { id: "internal", label: "Internal meetings" },
+        ],
+        allowFreeText: false,
+        status: "pending",
+        note: "Waiting for the user to answer in the UI.",
+      },
+    });
+    expect(event.type).toBe("question");
+    if (event.type === "question") {
+      expect(event.question.options).toHaveLength(2);
+    }
+  });
 });

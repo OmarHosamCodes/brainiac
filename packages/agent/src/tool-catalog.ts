@@ -13,6 +13,12 @@ const TOOL_CATALOG: ToolCatalogDefinition[] = [
     modes: ["ask", "plan", "agent"],
   },
   {
+    name: "ask_agency_question",
+    usage: "Asks the user a clarifying question in the chat UI (single, multi, or text).",
+    surface: ["agency"],
+    modes: AGENCY_READ_MODES,
+  },
+  {
     name: "list_dashboard_nodes",
     usage: "Lists canvas nodes with structural summaries.",
     surface: ["canvas"],

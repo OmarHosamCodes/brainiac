@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  agencyQuestionRetryNote,
   agencyToolRetryNote,
   agencyUiPresentRetryNote,
   buildAgencyMonthHoursArtifact,
@@ -70,5 +71,11 @@ describe("agency month-reports bootstrap gates", () => {
     expect(agencyUiPresentRetryNote("ask")).toContain("did not call ui_present");
     expect(agencyUiPresentRetryNote("plan")).toContain("schema overview of the plan");
     expect(agencyUiPresentRetryNote("agent")).toContain("before/after schema canvas");
+  });
+
+  test("question retry note is Plan-only", () => {
+    expect(agencyQuestionRetryNote("ask")).toBeNull();
+    expect(agencyQuestionRetryNote("agent")).toBeNull();
+    expect(agencyQuestionRetryNote("plan")).toContain("ask_agency_question");
   });
 });

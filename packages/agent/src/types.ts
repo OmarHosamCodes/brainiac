@@ -348,6 +348,28 @@ export const agentChatTurnStreamProposalEventSchema = z.object({
   }),
 });
 
+export const agentChatTurnStreamQuestionEventSchema = z.object({
+  type: z.literal("question"),
+  question: z.object({
+    questionId: z.string().trim().min(1).max(160),
+    prompt: z.string().trim().min(1).max(500),
+    kind: z.enum(["single", "multi", "text"]),
+    options: z
+      .array(
+        z.object({
+          id: z.string().trim().min(1).max(80),
+          label: z.string().trim().min(1).max(200),
+          hint: z.string().trim().min(1).max(300).optional(),
+        }),
+      )
+      .max(12),
+    allowFreeText: z.boolean(),
+    context: z.string().trim().min(1).max(1_000).optional(),
+    status: z.literal("pending"),
+    note: z.string().trim().min(1).max(300),
+  }),
+});
+
 export const agentChatTurnStreamErrorEventSchema = z.object({
   type: z.literal("error"),
   message: z.string().trim().min(1).max(2_000),
@@ -370,6 +392,7 @@ export const agentChatTurnStreamEventSchema = z.discriminatedUnion("type", [
   agentChatTurnStreamArtifactEventSchema,
   agentChatTurnStreamPlanEventSchema,
   agentChatTurnStreamProposalEventSchema,
+  agentChatTurnStreamQuestionEventSchema,
   agentChatTurnStreamErrorEventSchema,
   agentChatTurnStreamCompletedEventSchema,
 ]);

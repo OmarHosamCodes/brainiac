@@ -26,6 +26,7 @@ describe("listAgentToolCatalog", () => {
     const names = tools.map((tool) => tool.name);
 
     expect(names).toContain("ui_present");
+    expect(names).toContain("ask_agency_question");
     expect(names).toContain("list_agency_time_entries");
     expect(names).toContain("get_agency_reports_summary");
     expect(names).not.toContain("draft_agency_plan");
@@ -38,6 +39,7 @@ describe("listAgentToolCatalog", () => {
     const names = tools.map((tool) => tool.name);
 
     expect(names).toContain("list_agency_projects");
+    expect(names).toContain("ask_agency_question");
     expect(names).toContain("draft_agency_plan");
     expect(names).not.toContain("propose_agency_action");
   });
@@ -46,6 +48,7 @@ describe("listAgentToolCatalog", () => {
     const tools = listAgentToolCatalog({ surface: "agency", mode: "agent" });
     const names = tools.map((tool) => tool.name);
 
+    expect(names).toContain("ask_agency_question");
     expect(names).toContain("propose_agency_action");
     expect(names).toContain("list_agency_time_entries");
     expect(names).not.toContain("draft_agency_plan");

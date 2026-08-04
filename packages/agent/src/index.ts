@@ -5,8 +5,15 @@ import {
   agencyProposalSnapshotSchema,
   type AgencyDraftPlan,
 } from "./agency-actions";
+import {
+  agencyAgentQuestionSchema,
+  ASK_AGENCY_QUESTION_TOOL_NAME,
+  isAgencyQuestionAnswerMessage,
+  type AgencyAgentQuestion,
+} from "./agency-question";
 import { buildAgencyAgentTools } from "./agency-tools";
 import {
+  agencyQuestionRetryNote,
   agencyToolRetryNote,
   agencyUiPresentRetryNote,
   bootstrapAgencyMonthReportsCanvas,
@@ -229,6 +236,7 @@ function buildAgencyAskInstructions(workspace: DashboardAgentWorkspaceContext) {
     "Ask mode is read-only. Do not create, edit, or delete Agency data.",
     "Agency Ask requires tools: before answering any time/report/member/project question, call at least one Agency data tool.",
     "Default response shape: after the data tool, call ui_present with kind 'schema' (stack/grid/stat/table/pillRow). Then reply with one short line only — do not repeat the numbers as a bullet list.",
+    "If you need the user to choose between options, call ask_agency_question instead of asking only in prose.",
     "If a requested breakdown is missing from tool output, say what the tool returned instead of inventing fields.",
   ].join("\n");
 }
@@ -236,7 +244,8 @@ function buildAgencyAskInstructions(workspace: DashboardAgentWorkspaceContext) {
 function buildAgencyPlanInstructions(workspace: DashboardAgentWorkspaceContext) {
   return [
     buildAgencyInstructions(workspace),
-    "Plan mode: research with read tools, then call draft_agency_plan with concrete steps. Do not claim changes were applied.",
+    "Plan mode workflow: (1) research with read tools, (2) must call ask_agency_question at least once to clarify assumptions (never ask only in prose), (3) after the user answers in a later turn, call draft_agency_plan, (4) prefer ui_present for context and for a schema plan overview.",
+    "Do not call draft_agency_plan until ask_agency_question has been used this turn (or the user already answered a prior question). Do not claim changes were applied.",
     "After draft_agency_plan, call ui_present with a schema overview of the plan (steps, targets, impact). Then tell the user to Confirm in the UI.",
     "Never invent ids — use tool results. Do not call propose_agency_action in Plan mode.",
   ].join("\n");
@@ -246,6 +255,7 @@ function buildAgencyAgentModeInstructions(workspace: DashboardAgentWorkspaceCont
   return [
     buildAgencyInstructions(workspace),
     "Agent mode: never write Agency data directly. Call propose_agency_action for each intended write.",
+    "When you need clarification, call ask_agency_question (do not ask only in prose). Prefer ui_present for before/after.",
     "Required: after each propose_agency_action, call ui_present with a clear before/after illustration, then tell the user to Approve or Reject.",
     "Never claim a write succeeded until the user Approves. Prefer one proposal at a time unless the user asks for a batch.",
   ].join("\n");
@@ -386,6 +396,22 @@ function normalizeMessages(messages: AgentModelInputMessage[]) {
   }));
 }
 
+function latestUserAnsweredAgencyQuestion(messages: ReturnType<typeof normalizeMessages>): boolean {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role !== "user") continue;
+    return isAgencyQuestionAnswerMessage(message.content);
+  }
+  return false;
+}
+
+function toolResultsForRetry(toolCalls: AgentToolCall[]): string {
+  const results = toolCalls
+    .filter((tool) => tool.status === "completed")
+    .map((tool) => ({ name: tool.name, output: tool.output }));
+  return JSON.stringify(results).slice(0, 12_000);
+}
+
 function resolveAgentExecutionConfig(
   workspace: DashboardAgentWorkspaceContext,
   toolPreset: DashboardAgentToolPreset,
@@ -495,6 +521,7 @@ type ToolPassArgs = {
   temperature?: number;
   maxOutputTokens?: number;
   contextLength: number | null;
+  allowedToolNames?: string[];
   signal?: AbortSignal;
 };
 
@@ -503,6 +530,7 @@ type ToolPassLiveEvent =
   | { type: "tool"; tool: AgentToolCall }
   | { type: "artifact"; artifact: AiUiArtifact }
   | { type: "plan"; plan: AgencyDraftPlan }
+  | { type: "question"; question: AgencyAgentQuestion }
   | {
       type: "proposal";
       proposal: {
@@ -546,7 +574,7 @@ function providerErrorUserMessage(errorMessage: string): string {
 async function* streamToolEnabledPass(
   args: ToolPassArgs,
 ): AsyncGenerator<ToolPassLiveEvent, ToolPassResult> {
-  const tools =
+  const availableTools =
     args.workspace.surface === "agency" && args.agencyRuntime
       ? buildAgencyAgentTools(args.agencyRuntime, args.toolPreset)
       : buildDashboardAgentTools(
@@ -554,6 +582,12 @@ async function* streamToolEnabledPass(
           args.workspace.marketplaceItems ?? [],
           args.toolPreset === "agent" ? "agent" : "ask",
         );
+  const tools = args.allowedToolNames
+    ? availableTools.filter(
+        (entry) =>
+          entry.type === "function" && args.allowedToolNames?.includes(entry.function.name),
+      )
+    : availableTools;
   const calls = new Map<string, AgentToolCall>();
   const callOrder: string[] = [];
   const result = createOpenRouterClient().callModel({
@@ -626,6 +660,12 @@ async function* streamToolEnabledPass(
               const plan = agencyDraftPlanSchema.safeParse(tool.output);
               if (plan.success) {
                 enqueue({ type: "plan", plan: plan.data });
+              }
+            }
+            if (tool.name === ASK_AGENCY_QUESTION_TOOL_NAME) {
+              const question = agencyAgentQuestionSchema.safeParse(tool.output);
+              if (question.success) {
+                enqueue({ type: "question", question: question.data });
               }
             }
             if (tool.name === "propose_agency_action") {
@@ -818,6 +858,7 @@ export async function* streamDashboardAgent(
 ): AsyncGenerator<DashboardAgentStreamEvent, void, void> {
   const toolCalls: AgentToolCall[] = [];
   const normalizedMessages = normalizeMessages(messages);
+  const questionAnsweredThisTurn = latestUserAnsweredAgencyQuestion(normalizedMessages);
   const workspaceRuntime = createDashboardAgentWorkspaceRuntime({
     nodes: workspace.nodes,
     updatedAt: workspace.updatedAt,
@@ -914,6 +955,57 @@ export async function* streamDashboardAgent(
         }
       }
 
+      // Plan must ask via the question tool before drafting.
+      const askedQuestion = toolCalls.some(
+        (tool) => tool.name === ASK_AGENCY_QUESTION_TOOL_NAME && tool.status === "completed",
+      );
+      const shouldRetryForQuestion =
+        !stopped &&
+        !providerError &&
+        surface === "agency" &&
+        toolPreset === "plan" &&
+        executionConfig.shouldUseTools &&
+        !questionAnsweredThisTurn &&
+        !askedQuestion;
+      if (shouldRetryForQuestion) {
+        const questionNote = agencyQuestionRetryNote(toolPreset);
+        if (questionNote) {
+          const priorResults = toolResultsForRetry(toolCalls);
+          const questionRetryIterator = streamToolEnabledPass({
+            model,
+            workspace: { ...workspace, surface },
+            workspaceRuntime,
+            toolPreset,
+            agencyRuntime: config.agencyRuntime,
+            normalizedMessages,
+            instructions: `${executionConfig.instructions}\n${questionNote}\nPrior Agency tool results (reuse these; do not repeat reads):\n${priorResults}`,
+            maxSteps: Math.min(4, executionConfig.maxSteps),
+            temperature: config.temperature,
+            maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
+            contextLength: selectedModel?.contextLength ?? null,
+            allowedToolNames: [ASK_AGENCY_QUESTION_TOOL_NAME],
+            signal: config.signal,
+          });
+          let questionRetryNext = await questionRetryIterator.next();
+          while (!questionRetryNext.done) {
+            yield questionRetryNext.value;
+            questionRetryNext = await questionRetryIterator.next();
+          }
+          if (questionRetryNext.value.responseText) {
+            responseText = questionRetryNext.value.responseText;
+          }
+          if (questionRetryNext.value.usage) {
+            usage = questionRetryNext.value.usage;
+          }
+          if (questionRetryNext.value.providerError) {
+            providerError = questionRetryNext.value.providerError;
+          }
+          stopped = stopped || questionRetryNext.value.stopped;
+          toolCalls.push(...questionRetryNext.value.toolCalls);
+          artifacts.push(...questionRetryNext.value.artifacts);
+        }
+      }
+
       // Tools ran but skipped the canvas — text-only soft fallback cannot call ui_present.
       const shouldRetryForUiPresent =
         !stopped &&
@@ -923,6 +1015,7 @@ export async function* streamDashboardAgent(
         toolCalls.length > 0 &&
         artifacts.length === 0;
       if (shouldRetryForUiPresent) {
+        const priorResults = toolResultsForRetry(toolCalls);
         const uiRetryIterator = streamToolEnabledPass({
           model,
           workspace: { ...workspace, surface },
@@ -930,11 +1023,12 @@ export async function* streamDashboardAgent(
           toolPreset,
           agencyRuntime: config.agencyRuntime,
           normalizedMessages,
-          instructions: `${executionConfig.instructions}\n${agencyUiPresentRetryNote(toolPreset)}`,
+          instructions: `${executionConfig.instructions}\n${agencyUiPresentRetryNote(toolPreset)}\nPrior Agency tool results (render these; do not repeat tools):\n${priorResults}`,
           maxSteps: Math.min(4, executionConfig.maxSteps),
           temperature: config.temperature,
           maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
           contextLength: selectedModel?.contextLength ?? null,
+          allowedToolNames: ["ui_present"],
           signal: config.signal,
         });
         let uiRetryNext = await uiRetryIterator.next();
@@ -987,11 +1081,15 @@ export async function* streamDashboardAgent(
 
   let finalResponse = responseText.trim();
 
+  const askedAgencyQuestion = toolCalls.some(
+    (tool) => tool.name === ASK_AGENCY_QUESTION_TOOL_NAME && tool.status === "completed",
+  );
+
   // Empty completion with no provider error: optional text-only pass.
-  // Never soft-fallback after a provider error, and never when a canvas already exists
-  // (text-only cannot call ui_present and previously dumped JSON over a successful tool pass).
+  // Never soft-fallback after a provider error, when a canvas exists, or when a question
+  // card is waiting (text-only cannot call ui_present / ask_agency_question).
   const willSoftFallback =
-    !finalResponse && !stopped && !providerError && artifacts.length === 0;
+    !finalResponse && !stopped && !providerError && artifacts.length === 0 && !askedAgencyQuestion;
   if (willSoftFallback) {
     const toolsWereCalled = toolCalls.length > 0;
     const runtimeHasChanges = workspaceRuntime.hasChanges();
@@ -1041,6 +1139,8 @@ export async function* streamDashboardAgent(
       toolCalls.some((tool) => tool.name === "propose_agency_action" && tool.status === "completed")
     ) {
       finalResponse = "Proposed a change — review before/after, then Approve or Reject.";
+    } else if (askedAgencyQuestion) {
+      finalResponse = "Answer the question above to continue.";
     } else if (artifacts.length > 0) {
       finalResponse = "Opened a canvas with the results.";
     } else if (toolPreset === "plan") {
@@ -1122,6 +1222,7 @@ export async function runTaskAgent(
 }
 
 export * from "./agency-actions";
+export * from "./agency-question";
 export * from "./attachment-content";
 export * from "./models";
 export * from "./model-routing";

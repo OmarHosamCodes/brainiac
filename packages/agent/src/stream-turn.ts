@@ -1,4 +1,5 @@
 import type { AgencyDraftPlan } from "./agency-actions";
+import type { AgencyAgentQuestion } from "./agency-question";
 import type { AgentChatResponse, AgentToolCall, DashboardConversationUsageLatest } from "./types";
 import type { AiUiArtifact } from "./ui-artifact";
 
@@ -7,6 +8,7 @@ export type DashboardAgentStreamEvent =
   | { type: "tool"; tool: AgentToolCall }
   | { type: "artifact"; artifact: AiUiArtifact }
   | { type: "plan"; plan: AgencyDraftPlan }
+  | { type: "question"; question: AgencyAgentQuestion }
   | {
       type: "proposal";
       proposal: {

@@ -38,6 +38,12 @@ export function agencyUiPresentRetryNote(toolPreset: DashboardAgentToolPreset): 
   }
 }
 
+/** Plan-only: force ask_agency_question before drafting. */
+export function agencyQuestionRetryNote(toolPreset: DashboardAgentToolPreset): string | null {
+  if (toolPreset !== "plan") return null;
+  return "Plan mode requires ask_agency_question before draft_agency_plan. Call ask_agency_question now to clarify assumptions (single/multi/text). Prefer ui_present for supporting context. Do not ask only in prose and do not draft yet.";
+}
+
 function hoursLabel(seconds: number): string {
   return (seconds / 3_600).toFixed(1);
 }

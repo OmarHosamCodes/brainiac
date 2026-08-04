@@ -3,6 +3,7 @@ import { createWorkspaceId } from "@orch/workspace";
 import { z } from "zod";
 
 import { agencyActionLabel, agencyActionSchema, agencyDraftPlanSchema } from "./agency-actions";
+import { createAskAgencyQuestionTool } from "./agency-question";
 import type { AgencyAgentRuntime, DashboardAgentToolPreset } from "./types";
 import { createUiPresentTool } from "./ui-present-tool";
 
@@ -72,6 +73,7 @@ export function takeTopNWithTruncated<T>(items: T[], limit: number) {
 function buildAgencyReadTools(runtime: AgencyAgentRuntime) {
   return [
     createUiPresentTool(),
+    createAskAgencyQuestionTool(),
     tool({
       name: "get_current_time",
       description: "Get the current ISO timestamp for time-sensitive planning questions.",
