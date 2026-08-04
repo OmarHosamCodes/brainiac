@@ -81,26 +81,28 @@ Stats cards first (scoreboard + metric jump-offs). Dual Clients | Payroll and de
 
 ## Status snapshot (2026-08-05)
 
-| Part | Slice                                           | Status     | Notes                                  |
-| ---- | ----------------------------------------------- | ---------- | -------------------------------------- |
-| 0    | Export living plan to repo                      | **Done**   | Renamed Invoices → Money               |
-| R    | Rename pane/files to Money; strip shell UI      | **Done**   | `manage=money`                         |
-| S    | Fin-Sheet stats cards (4 panels, jump-offs)     | **Done**   | Fixture + period chooser               |
-| B    | Bills filterable empty section                  | **Done**   | Polished instrument panel              |
-| E    | Expenses card (upcoming + recent)               | **Done**   | Local create only (API later)          |
-| 1    | Money shell + segments + mount                  | Reset      | Superseded by stats-first IA for now   |
-| 2    | Mount client invoice kanban                     | Superseded | Bills list (not kanban) wires invoices |
-| 3    | Period summary strip (Fin-Sheet KPIs)           | **Done**   | Delivered as four stats cards          |
-| 4    | Payroll run shell (month, status, section list) | Pending    | Multi-section UI still open            |
-| 5    | Section detail: cohorts + payee lines           | Partial    | Salaries lines on Team Bills           |
-| 6    | Partial payout parts (due/paid/remaining UI)    | Partial    | Line paidCents (no installment table)  |
-| 7    | Client partial collections UI                   | **Done**   | `received_cents` + `recordPayment`     |
-| 8a   | Client Bills BE + FE                            | **Done**   | Period list, search, create, status    |
-| 8b   | Team Bills BE + FE (salaries)                   | **Done**   | payout_run/section/line + Money wire   |
-| 8    | Wire payroll schema + API + replace fixtures    | Partial    | Team done; expenses / stats next       |
-| 9    | Member monthly sheet when provided              | Blocked    | Amounts = hours × costRate until then  |
+| Part | Slice                                           | Status     | Notes                                                |
+| ---- | ----------------------------------------------- | ---------- | ---------------------------------------------------- |
+| 0    | Export living plan to repo                      | **Done**   | Renamed Invoices → Money                             |
+| R    | Rename pane/files to Money; strip shell UI      | **Done**   | `manage=money`                                       |
+| S    | Fin-Sheet stats cards (4 panels, jump-offs)     | **Done**   | Live `periodScoreboard` + jump-offs                  |
+| B    | Bills filterable empty section                  | **Done**   | Clients / Team / Adjustments                         |
+| E    | Expenses card (upcoming + recent)               | **Done**   | `agency_ops_expense` + API + payments                |
+| 1    | Money shell + segments + mount                  | Reset      | Superseded by stats-first IA for now                 |
+| 2    | Mount client invoice kanban                     | Superseded | Bills list (not kanban) wires invoices               |
+| 3    | Period summary strip (Fin-Sheet KPIs)           | **Done**   | Delivered as four stats cards                        |
+| 4    | Payroll run shell (month, status, section list) | **Done**   | `payouts.getRun` + Period run UI                     |
+| 5    | Section detail: cohorts + payee lines           | **Done**   | Expand section; `cohortKey` grouping                 |
+| 6    | Partial payout parts (due/paid/remaining UI)    | Partial    | Line paidCents (no installment table)                |
+| 7    | Client partial collections UI                   | **Done**   | `received_cents` + `recordPayment`                   |
+| 8a   | Client Bills BE + FE                            | **Done**   | Period list, search, create, status                  |
+| 8b   | Team Bills BE + FE (salaries)                   | **Done**   | payout_run/section/line + Money wire                 |
+| 8c   | Adjustments Bills + multi-section keys          | **Done**   | debt/charity/pbc; nullable payee                     |
+| 8    | Wire payroll schema + API + replace fixtures    | **Done**   | Expenses + stats + settings landed                   |
+| Ms   | Money settings persistence                      | **Done**   | `agency_ops_money_settings` get/upsert               |
+| 9    | Member monthly sheet when provided              | Blocked    | Needs `artifacts/` sheet; stand-in hours × cost rate |
 
-**Ship readiness:** Money Bills Clients + Team show real period rows (invoices / payout lines). Ready-to-invoice clients and ready-to-pay members appear until drafted. Adjustments empty. Stats/expenses/cohort settings remain fixture/local. Team payout amounts are stand-in `hours × costRateCents` until Part 9.
+**Ship readiness:** Money surface is period-live end-to-end: Expenses CRUD, Bills (Clients / Team / Adjustments), Period run shell, Money settings persist, and scoreboard metrics with jump-offs. Expenses stay on the Expenses card only (not Bills rows). **Part 9 blocked** until member monthly payment sheet artifact exists — salaries remain `hours × costRateCents` (“Estimated from hours × cost rate”).
 
 ---
 
