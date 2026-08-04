@@ -542,7 +542,7 @@ export const agencyOpsMemberCapacity = pgTable(
 // Invoices
 // ---------------------------------------------------------------------------
 
-export type AgencyOpsInvoiceStatus = "draft" | "sent" | "paid";
+export type AgencyOpsInvoiceStatus = "draft" | "sent" | "partial" | "paid" | "refunded";
 
 export const agencyOpsInvoice = pgTable(
   "agency_ops_invoice",
@@ -559,6 +559,8 @@ export const agencyOpsInvoice = pgTable(
     status: text("status").$type<AgencyOpsInvoiceStatus>().notNull().default("draft"),
     /** Total in minor currency units. Derived from line items. */
     amountCents: integer("amount_cents").notNull().default(0),
+    /** Cash collected toward this invoice (minor units). Remaining = amount − received. */
+    receivedCents: integer("received_cents").notNull().default(0),
     currency: text("currency").notNull().default("USD"),
     periodStart: timestamp("period_start").notNull(),
     periodEnd: timestamp("period_end").notNull(),
@@ -577,6 +579,11 @@ export const agencyOpsInvoice = pgTable(
     index("agency_ops_invoice_team_idx").on(table.teamId),
     index("agency_ops_invoice_team_status_idx").on(table.teamId, table.status),
     index("agency_ops_invoice_team_client_idx").on(table.teamId, table.clientId),
+    index("agency_ops_invoice_team_period_idx").on(
+      table.teamId,
+      table.periodStart,
+      table.periodEnd,
+    ),
     uniqueIndex("agency_ops_invoice_team_number_unique").on(table.teamId, table.number),
   ],
 );
