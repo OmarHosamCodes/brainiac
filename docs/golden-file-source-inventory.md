@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-08-03 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-08-04 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 529 |
+| golden-feature | 531 |
 | server-operation | 12 |
 | shared-infrastructure | 270 |
 | static-presentation | 15 |
@@ -29,7 +29,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | Domain | Artifacts |
 | --- | ---: |
 | agency-shared | 82 |
-| agent | 73 |
+| agent | 75 |
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 11 |
@@ -467,6 +467,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/workspace-agent/agent-attachments.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/workspace-agent/agent-attachments.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/agent-canvas-overlay-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-agent/agent-message-artifact-card-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/agent-turn-stream.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations, server runtime wiring; structure: test filename |
 | `apps/web/src/features/workspace-agent/agent-turn-stream.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: server runtime wiring, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/agent-ui-react-sandbox-view.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
@@ -475,6 +476,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/workspace-agent/assistant-text-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/chat-panel-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/composer-attachment-controls.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-agent/composer-history-bill-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/composer-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/containers/workspace-agent-container.tsx` | agent | container | golden-feature | agent-domain | Feature-owned agent artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/workspace-agent/hooks/use-agent-canvas-overlay.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
