@@ -291,6 +291,15 @@ type CreateInvoicePayload = {
   currency?: string;
 };
 
+type CreatePayoutFromMemberPayload = {
+  teamId: string;
+  userId: string;
+  userName: string;
+  periodStart: string;
+  periodEnd: string;
+  currency?: string;
+};
+
 type AgencyOpsActions = ReturnType<typeof createAgencyOpsActions>;
 
 type AgencyOpsState = {
@@ -1707,6 +1716,98 @@ function createAgencyOpsActions(
     }
   }
 
+  async function createPayoutFromMember(
+    payload: CreatePayoutFromMemberPayload,
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    if (!payload.teamId || !payload.userId) return;
+
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.payouts.createFromMember({
+        teamId: payload.teamId,
+        userId: payload.userId,
+        periodStart: payload.periodStart,
+        periodEnd: payload.periodEnd,
+        currency: payload.currency,
+      });
+
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.invoices.periodActivity.key(),
+        }),
+      ]);
+
+      callbacks?.onSuccess?.();
+      toast.success("Payout draft created", {
+        description: `${payload.userName} — draft added to Team Bills.`,
+      });
+    } catch (error) {
+      toast.error("Couldn't create payout", { description: getErrorMessage(error, "Try again.") });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function updatePayoutLineStatus(
+    payload: { teamId: string; lineId: string; status: "paid" | "draft" },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.payouts.updateStatus(payload);
+
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.payouts.list.key(),
+      });
+
+      callbacks?.onSuccess?.();
+      toast.success(payload.status === "paid" ? "Payout marked paid" : "Payout reset to draft");
+    } catch (error) {
+      toast.error("Couldn't update payout", { description: getErrorMessage(error, "Try again.") });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function recordPayoutPayment(
+    payload: { teamId: string; lineId: string; amountCents: number },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.payouts.recordPayment(payload);
+
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.payouts.list.key(),
+      });
+
+      callbacks?.onSuccess?.();
+      toast.success("Payout payment recorded");
+    } catch (error) {
+      toast.error("Couldn't record payout payment", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
   return {
     registerClientsQuery,
     unregisterClientsQuery,
@@ -1738,6 +1839,9 @@ function createAgencyOpsActions(
     createInvoice,
     updateInvoiceStatus,
     recordInvoicePayment,
+    createPayoutFromMember,
+    updatePayoutLineStatus,
+    recordPayoutPayment,
   };
 }
 
