@@ -1,16 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
+import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
+import { rangePresetLabel } from "@/features/dashboard/agency-dashboard-command-bar";
 import {
   agencyManagementPaneLabel,
   agencyManagementPaneSubtitle,
 } from "@/features/shared/agency-management-sections";
+import { startOfWeekUtc, toDateInputValue } from "@/features/shared/use-agency-time-range-filters";
 import {
   getCurrentTenurePeriodRange,
+  getCurrentTenureQuarterMonths,
+  resolveDefaultDashboardRangePreset,
   resolveDefaultTenureMonthIndexes,
 } from "@/features/resourcing/tenure-utils";
 import { orpc } from "@/lib/orpc";
 
+import {
+  moneyBillsActiveFilterSummary,
+  moneyBillsEmptyCopy,
+  moneyBillsStatusAllowed,
+  moneyBillsStatusOptionsForParty,
+  MONEY_BILLS_PARTY_OPTIONS,
+  type MoneyBillsPartyFilter,
+  type MoneyBillsStatusFilter,
+} from "../money-bills-filters";
 import {
   MONEY_STATS_CARDS_FIXTURE,
   MONEY_STATS_FIXTURE_CURRENCY,
@@ -31,22 +45,12 @@ export type MoneyStatsCardViewModel = {
   id: MoneyStatsCardId;
   title: string;
   currency: string;
-  /** Wide hero treatment for income (bento span). */
   featured: boolean;
   primary: MoneyStatsMetricFixture;
   secondary: MoneyStatsMetricFixture[];
-  /** Received / total for cash composition bar; null when not income. */
   collectedRatio: number | null;
   collectedLabel: string | null;
 };
-
-function calendarMonthLabel(now = new Date()): string {
-  return now.toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
 
 function buildCardViewModel(card: MoneyStatsCardFixture): MoneyStatsCardViewModel {
   const primary =
@@ -86,27 +90,112 @@ export function useAgencyMoneySurface(teamId: string) {
   });
   const tenurePolicy = tenurePolicyQuery.data?.policy ?? null;
 
-  const periodLabel = useMemo(() => {
-    const monthIndexes = resolveDefaultTenureMonthIndexes(tenurePolicy, now);
-    const tenureRange = getCurrentTenurePeriodRange(tenurePolicy, now, monthIndexes);
-    return tenureRange?.simpleLabel ?? calendarMonthLabel(now);
-  }, [now, tenurePolicy]);
+  const defaultRangePreset = useMemo(
+    () => resolveDefaultDashboardRangePreset(tenurePolicy),
+    [tenurePolicy],
+  );
+  const defaultTenureMonthIndexes = useMemo(
+    () => resolveDefaultTenureMonthIndexes(tenurePolicy, now),
+    [now, tenurePolicy],
+  );
+  const tenureQuarterMonths = useMemo(
+    () => getCurrentTenureQuarterMonths(tenurePolicy, now) ?? [],
+    [now, tenurePolicy],
+  );
+
+  const [rangePreset, setRangePreset] = useState<RangePreset | null>(null);
+  const effectiveRangePreset = rangePreset ?? defaultRangePreset;
+  const [customFromDate, setCustomFromDate] = useState(toDateInputValue(startOfWeekUtc()));
+  const [customToDate, setCustomToDate] = useState(toDateInputValue(now));
+  const [tenureMonthIndexes, setTenureMonthIndexes] = useState<number[] | null>(null);
+  const effectiveTenureMonthIndexes = tenureMonthIndexes ?? defaultTenureMonthIndexes;
+
+  const [partyFilter, setPartyFilter] = useState<MoneyBillsPartyFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<MoneyBillsStatusFilter | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const tenurePeriodLabel = useMemo(
+    () =>
+      getCurrentTenurePeriodRange(tenurePolicy, now, effectiveTenureMonthIndexes)?.simpleLabel ??
+      null,
+    [effectiveTenureMonthIndexes, now, tenurePolicy],
+  );
+  const tenureQuarterLabel = useMemo(
+    () => getCurrentTenurePeriodRange(tenurePolicy, now)?.simpleLabel ?? null,
+    [now, tenurePolicy],
+  );
+
+  const periodLabel = rangePresetLabel(effectiveRangePreset, tenurePeriodLabel);
 
   const statsCards = useMemo(
     () => MONEY_STATS_CARDS_FIXTURE.map((card) => buildCardViewModel(card)),
     [],
   );
 
+  const statusOptions = useMemo(() => moneyBillsStatusOptionsForParty(partyFilter), [partyFilter]);
+
+  const billsEmptyCopy = useMemo(
+    () => moneyBillsEmptyCopy(partyFilter, statusFilter, searchTerm),
+    [partyFilter, searchTerm, statusFilter],
+  );
+  const billsActiveFilterSummary = useMemo(
+    () => moneyBillsActiveFilterSummary(partyFilter, statusFilter),
+    [partyFilter, statusFilter],
+  );
+
   function onSelectMetric(_selection: MoneyStatsMetricSelection) {
     // ponytail: jump-off wired for a11y; detail surface lands in a later part
+  }
+
+  function onPartyFilterChange(next: MoneyBillsPartyFilter) {
+    setPartyFilter(next);
+    setStatusFilter((current) =>
+      current && moneyBillsStatusAllowed(next, current) ? current : null,
+    );
+  }
+
+  function onStatusFilterChange(next: MoneyBillsStatusFilter) {
+    setStatusFilter((current) => (current === next ? null : next));
+  }
+
+  function onClearStatusFilter() {
+    setStatusFilter(null);
   }
 
   return {
     teamId,
     title: agencyManagementPaneLabel("money"),
     subtitle: agencyManagementPaneSubtitle("money"),
-    periodLabel,
+    period: {
+      rangePreset: effectiveRangePreset,
+      onRangePresetChange: setRangePreset,
+      customFromDate,
+      onCustomFromChange: setCustomFromDate,
+      customToDate,
+      onCustomToChange: setCustomToDate,
+      tenureAvailable: Boolean(tenurePolicy?.enabled),
+      tenurePeriodLabel,
+      tenureQuarterLabel,
+      tenureQuarterMonths,
+      tenureMonthIndexes: effectiveTenureMonthIndexes,
+      onTenureMonthIndexesChange: setTenureMonthIndexes,
+      label: periodLabel,
+    },
     statsCards,
     onSelectMetric,
+    bills: {
+      partyFilter,
+      partyOptions: MONEY_BILLS_PARTY_OPTIONS,
+      onPartyFilterChange,
+      statusFilter,
+      statusOptions,
+      onStatusFilterChange,
+      onClearStatusFilter,
+      searchTerm,
+      onSearchTermChange: setSearchTerm,
+      activeFilterSummary: billsActiveFilterSummary,
+      emptyCopy: billsEmptyCopy,
+      billCount: 0,
+    },
   };
 }
