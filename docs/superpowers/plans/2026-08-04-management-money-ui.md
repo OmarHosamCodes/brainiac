@@ -85,36 +85,40 @@ Stats cards first (scoreboard + metric jump-offs). Dual Clients | Payroll and de
 | ---- | ----------------------------------------------- | -------- | -------------------------------------- |
 | 0    | Export living plan to repo                      | **Done** | Renamed Invoices → Money               |
 | R    | Rename pane/files to Money; strip shell UI      | **Done** | `manage=money`                         |
-| S    | Fin-Sheet stats cards (4 panels, jump-offs)     | **Done** | Fixture + tenure active month label    |
+| S    | Fin-Sheet stats cards (4 panels, jump-offs)     | **Done** | Fixture + period chooser               |
+| B    | Bills filterable empty section                  | **Done** | Polished instrument panel; no rows yet |
 | 1    | Money shell + segments + mount                  | Reset    | Superseded by stats-first IA for now   |
 | 2    | Mount client invoice kanban                     | Pending  | `AgencyBillingSurface` still unmounted |
 | 3    | Period summary strip (Fin-Sheet KPIs)           | **Done** | Delivered as four stats cards          |
 | 4    | Payroll run shell (month, status, section list) | Pending  | Fixture                                |
-| 5    | Section detail: cohorts + payee lines           | Pending  | Metric jump-off targets                |
+| 5    | Section detail: cohorts + payee lines           | Pending  | Metric jump-off / bill row targets     |
 | 6    | Partial payout parts (due/paid/remaining UI)    | Pending  | Fixture mutations                      |
 | 7    | Client partial collections UI                   | Pending  | May need API/schema                    |
 | 8    | Wire payroll schema + API + replace fixtures    | Pending  | Backend phase                          |
 | 9    | Member monthly sheet when provided              | Blocked  | Artifact missing                       |
 
-**Ship readiness:** Money shows title, subtitle, tenure active month, four fixture stats cards with selectable metrics.
+**Ship readiness:** Money shows stats cards, period chooser, and polished Bills instrument (segmented party + quiet status + ghost empty).
 
 ---
 
 ## File map (target — grow as parts land)
 
-| File                                                                          | Responsibility                               |
-| ----------------------------------------------------------------------------- | -------------------------------------------- |
-| `docs/superpowers/plans/2026-08-04-management-money-ui.md`                    | This living plan                             |
-| `docs/superpowers/specs/2026-08-04-money-stats-cards-design.md`               | Stats cards design brief                     |
-| `apps/web/src/features/shared/agency-management-sections.ts`                  | Pane id `money`, label + subtitle            |
-| `apps/web/src/features/settings/agency-management-surface.tsx`                | Mounts `AgencyMoneySurface` for money        |
-| `apps/web/src/features/billing/agency-money-surface.tsx`                      | Public export → container                    |
-| `apps/web/src/features/billing/containers/agency-money-surface-container.tsx` | One hook, one view                           |
-| `apps/web/src/features/billing/hooks/use-agency-money-surface.ts`             | Tenure active month + fixtures + select stub |
-| `apps/web/src/features/billing/agency-money-surface-view.tsx`                 | Title, period, 4 stats cards                 |
-| `apps/web/src/features/billing/money-stats-fixtures.ts`                       | Fin-Sheet-shaped fixture amounts             |
-| `apps/web/src/features/billing/agency-billing-surface*.tsx`                   | Existing client kanban (reuse later)         |
-| `packages/db` / `packages/api`                                                | Payroll + partials — **later** (Part 8)      |
+| File                                                                          | Responsibility                                    |
+| ----------------------------------------------------------------------------- | ------------------------------------------------- |
+| `docs/superpowers/plans/2026-08-04-management-money-ui.md`                    | This living plan                                  |
+| `docs/superpowers/specs/2026-08-04-money-stats-cards-design.md`               | Stats cards design brief                          |
+| `apps/web/src/features/shared/agency-management-sections.ts`                  | Pane id `money`, label + subtitle                 |
+| `apps/web/src/features/settings/agency-management-surface.tsx`                | Mounts `AgencyMoneySurface` for money             |
+| `apps/web/src/features/billing/agency-money-surface.tsx`                      | Public export → container                         |
+| `apps/web/src/features/billing/containers/agency-money-surface-container.tsx` | One hook, one view                                |
+| `apps/web/src/features/billing/hooks/use-agency-money-surface.ts`             | Tenure active month + fixtures + select stub      |
+| `apps/web/src/features/billing/agency-money-surface-view.tsx`                 | Title, period, stats cards, Bills filters + empty |
+| `apps/web/src/features/billing/money-stats-fixtures.ts`                       | Fin-Sheet-shaped fixture amounts                  |
+| `apps/web/src/features/billing/money-bills-filters.ts`                        | Party/status filters + empty copy                 |
+| `apps/web/src/features/billing/money-bills-filters.test.ts`                   | Empty-copy composition checks                     |
+| `docs/superpowers/specs/2026-08-05-money-bills-section-design.md`             | Bills section design brief                        |
+| `apps/web/src/features/billing/agency-billing-surface*.tsx`                   | Existing client kanban (reuse later)              |
+| `packages/db` / `packages/api`                                                | Payroll + partials — **later** (Part 8)           |
 
 **Folder choice:** `features/billing/` + `agency-money-surface*` (golden `billing` domain).
 
@@ -230,3 +234,6 @@ Superseded for now by stats-first IA.
 | 2026-08-04 | Money subtitle: "Client invoices, payroll, and cash in one place."                         |
 | 2026-08-04 | Craft: Fin-Sheet stats cards on Money (fixture, tenure active month, metric jump-offs)     |
 | 2026-08-04 | Polish Money stats: hero metrics, cash composition bar, bento income card, period badge    |
+| 2026-08-04 | Money period: Dashboard `RangePresetChooser` + custom date inputs (replaces static badge)  |
+| 2026-08-05 | Craft: Bills empty section — party rail + status chips + composed empty copy               |
+| 2026-08-05 | Polish Bills: instrument panel, segmented party, quiet status + Clear, ghost list preview  |
