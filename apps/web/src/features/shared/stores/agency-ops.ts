@@ -300,6 +300,35 @@ type CreatePayoutFromMemberPayload = {
   currency?: string;
 };
 
+type CreateExpensePayload = {
+  teamId: string;
+  name: string;
+  kind: "one_time" | "subscription";
+  period?: "weekly" | "monthly" | "quarterly" | "yearly" | null;
+  note?: string;
+  amountCents: number;
+  currency?: string;
+};
+
+type CreatePayoutLinePayload = {
+  teamId: string;
+  periodStart: string;
+  periodEnd: string;
+  sectionKey:
+    | "salaries"
+    | "team_loss"
+    | "device_comp"
+    | "paid_vacation"
+    | "debt_discount"
+    | "charity"
+    | "pbc";
+  label: string;
+  amountCents: number;
+  payeeUserId?: string | null;
+  currency?: string;
+  cohortKey?: string | null;
+};
+
 type AgencyOpsActions = ReturnType<typeof createAgencyOpsActions>;
 
 type AgencyOpsState = {
@@ -1630,6 +1659,9 @@ function createAgencyOpsActions(
           queryKey: orpc.agencyOps.invoices.summary.key(),
         }),
         getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+        getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.invoices.periodActivity.key(),
         }),
       ]);
@@ -1738,6 +1770,12 @@ function createAgencyOpsActions(
           queryKey: orpc.agencyOps.payouts.list.key(),
         }),
         getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.summary.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.getRun.key(),
+        }),
+        getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.invoices.periodActivity.key(),
         }),
       ]);
@@ -1756,6 +1794,51 @@ function createAgencyOpsActions(
     }
   }
 
+  async function createPayoutLine(
+    payload: CreatePayoutLinePayload,
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    if (!payload.teamId || !payload.label.trim()) return;
+
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.payouts.createLine({
+        teamId: payload.teamId,
+        periodStart: payload.periodStart,
+        periodEnd: payload.periodEnd,
+        sectionKey: payload.sectionKey,
+        payeeUserId: payload.payeeUserId,
+        label: payload.label,
+        amountCents: payload.amountCents,
+        currency: payload.currency,
+        cohortKey: payload.cohortKey,
+      });
+
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.summary.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.getRun.key(),
+        }),
+      ]);
+
+      callbacks?.onSuccess?.();
+      toast.success("Adjustment added");
+    } catch (error) {
+      toast.error("Couldn't add adjustment", { description: getErrorMessage(error, "Try again.") });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
   async function updatePayoutLineStatus(
     payload: { teamId: string; lineId: string; status: "paid" | "draft" },
     callbacks?: { onSuccess?: () => void },
@@ -1765,9 +1848,14 @@ function createAgencyOpsActions(
     try {
       await orpcClient.agencyOps.payouts.updateStatus(payload);
 
-      await getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.payouts.list.key(),
-      });
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.summary.key(),
+        }),
+      ]);
 
       callbacks?.onSuccess?.();
       toast.success(payload.status === "paid" ? "Payout marked paid" : "Payout reset to draft");
@@ -1790,14 +1878,140 @@ function createAgencyOpsActions(
     try {
       await orpcClient.agencyOps.payouts.recordPayment(payload);
 
-      await getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.payouts.list.key(),
-      });
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.summary.key(),
+        }),
+      ]);
 
       callbacks?.onSuccess?.();
       toast.success("Payout payment recorded");
     } catch (error) {
       toast.error("Couldn't record payout payment", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function createExpense(
+    payload: CreateExpensePayload,
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    if (!payload.teamId || !payload.name.trim()) return;
+
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.expenses.create({
+        teamId: payload.teamId,
+        name: payload.name,
+        kind: payload.kind,
+        period: payload.period,
+        note: payload.note,
+        amountCents: payload.amountCents,
+        currency: payload.currency,
+      });
+
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.expenses.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+      ]);
+
+      callbacks?.onSuccess?.();
+      toast.success("Expense added");
+    } catch (error) {
+      toast.error("Couldn't add expense", { description: getErrorMessage(error, "Try again.") });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function recordExpensePayment(
+    payload: { teamId: string; expenseId: string; amountCents: number },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.expenses.recordPayment(payload);
+
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.expenses.list.key(),
+      });
+
+      callbacks?.onSuccess?.();
+      toast.success("Expense payment recorded");
+    } catch (error) {
+      toast.error("Couldn't record expense payment", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function removeExpense(
+    payload: { teamId: string; expenseId: string },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.expenses.remove(payload);
+
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.expenses.list.key(),
+      });
+
+      callbacks?.onSuccess?.();
+      toast.success("Expense removed");
+    } catch (error) {
+      toast.error("Couldn't remove expense", { description: getErrorMessage(error, "Try again.") });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function upsertMoneySettings(
+    payload: {
+      teamId: string;
+      rules: { enabledRuleIds: string[]; notesByRuleId?: Record<string, string> };
+      calcOptions: { enabledOptionIds: string[]; notesByOptionId?: Record<string, string> };
+    },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.moneySettings.upsert(payload);
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.moneySettings.get.key(),
+      });
+      callbacks?.onSuccess?.();
+      toast.success("Money settings saved");
+    } catch (error) {
+      toast.error("Couldn't save Money settings", {
         description: getErrorMessage(error, "Try again."),
       });
     } finally {
@@ -1840,8 +2054,13 @@ function createAgencyOpsActions(
     updateInvoiceStatus,
     recordInvoicePayment,
     createPayoutFromMember,
+    createPayoutLine,
     updatePayoutLineStatus,
     recordPayoutPayment,
+    createExpense,
+    recordExpensePayment,
+    removeExpense,
+    upsertMoneySettings,
   };
 }
 
