@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/ui/dialog";
 import { Skeleton } from "@/ui/skeleton";
 
+import { AgencyPeopleDepartments } from "./agency-people-departments";
 import { AgencyPeopleDirectory } from "./agency-people-directory";
 import { AgencyPeopleGuidedMember } from "./agency-people-guided-member";
 import { AgencySettingsTenurePolicy } from "./agency-settings-tenure-policy";
@@ -49,6 +50,7 @@ export function AgencySettingsTenurePaneView({
           canEditRates={viewModel.isOwner}
           canEditTenure={viewModel.isOwner}
           canEditRole={viewModel.isOwner}
+          departments={viewModel.departments}
           hrDraft={viewModel.hrDraft}
           onHrDraftChange={viewModel.setHrDraft}
           rateDraft={viewModel.rateDraft}
@@ -76,6 +78,7 @@ export function AgencySettingsTenurePaneView({
           policyEffectiveLabel={viewModel.policyEffectiveLabel}
           quarterlyMinHours={viewModel.quarterlyMinHours}
           internDurationMonths={viewModel.internDurationMonths}
+          departmentCount={viewModel.departmentCount}
           memberCount={viewModel.memberCount}
           attentionCount={viewModel.attentionCount}
           cards={viewModel.directoryCards}
@@ -90,10 +93,18 @@ export function AgencySettingsTenurePaneView({
           <DialogHeader className="border-border border-b px-6 py-4">
             <DialogTitle>Team defaults</DialogTitle>
             <DialogDescription>
-              Tenure policy applied to new members and used as the review baseline.
+              Tenure policy and department catalog for the team.
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[min(70vh,36rem)] overflow-y-auto px-6 py-5">
+          <div className="max-h-[min(70vh,36rem)] space-y-8 overflow-y-auto px-6 py-5">
+            <AgencyPeopleDepartments
+              departments={viewModel.departments}
+              canEdit={viewModel.isOwner}
+              busy={viewModel.departmentBusy}
+              onCreate={viewModel.addDepartment}
+              onRename={viewModel.renameDepartment}
+              onDelete={viewModel.removeDepartment}
+            />
             <AgencySettingsTenurePolicy
               policyDraft={viewModel.policyDraft}
               onPolicyDraftChange={viewModel.setPolicyDraft}

@@ -29,6 +29,7 @@ import {
 
 export type PeopleGuidedHrDraft = {
   status: "active" | "inactive";
+  departmentId: string;
   employmentType: "" | "full_time" | "part_time" | "contractor" | "intern";
   workModel: "" | "onsite" | "hybrid" | "remote";
   gender: "" | "male" | "female";
@@ -38,6 +39,11 @@ export type PeopleGuidedHrDraft = {
   linkedinUrl: string;
   offAllowanceDays: string;
   leaveAllowancePeriod: "year" | "quarter" | "month";
+};
+
+export type PeopleGuidedDepartmentOption = {
+  id: string;
+  name: string;
 };
 
 export type PeopleGuidedRateDraft = {
@@ -77,6 +83,7 @@ type AgencyPeopleGuidedMemberProps = {
   canEditRates: boolean;
   canEditTenure: boolean;
   canEditRole: boolean;
+  departments: readonly PeopleGuidedDepartmentOption[];
   hrDraft: PeopleGuidedHrDraft;
   onHrDraftChange: (draft: PeopleGuidedHrDraft) => void;
   rateDraft: PeopleGuidedRateDraft;
@@ -119,6 +126,7 @@ export function AgencyPeopleGuidedMember({
   canEditRates,
   canEditTenure,
   canEditRole,
+  departments,
   hrDraft,
   onHrDraftChange,
   rateDraft,
@@ -349,7 +357,9 @@ export function AgencyPeopleGuidedMember({
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-sm font-semibold text-highlighted">Employment</h3>
-                    <p className="text-muted text-sm">Status, employment type, and work model.</p>
+                    <p className="text-muted text-sm">
+                      Status, department, employment type, and work model.
+                    </p>
                   </div>
                   <FieldGrid>
                     <div className={agencyFormFieldClass}>
@@ -370,6 +380,31 @@ export function AgencyPeopleGuidedMember({
                         <SelectContent>
                           <SelectItem value="active">Active</SelectItem>
                           <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className={agencyFormFieldClass}>
+                      <Label className={agencyFormLabelClass}>Department</Label>
+                      <Select
+                        value={hrDraft.departmentId || "none"}
+                        disabled={!canEditHr}
+                        onValueChange={(value) =>
+                          onHrDraftChange({
+                            ...hrDraft,
+                            departmentId: value === "none" ? "" : value,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="None" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {departments.map((department) => (
+                            <SelectItem key={department.id} value={department.id}>
+                              {department.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

@@ -29,6 +29,7 @@ type AgencyPeopleDirectoryProps = {
   policyEffectiveLabel: string | null;
   quarterlyMinHours: number | null;
   internDurationMonths: number | null;
+  departmentCount: number;
   memberCount: number;
   attentionCount: number;
   cards: readonly PeopleDirectoryCard[];
@@ -48,6 +49,7 @@ export function AgencyPeopleDirectory({
   policyEffectiveLabel,
   quarterlyMinHours,
   internDurationMonths,
+  departmentCount,
   memberCount,
   attentionCount,
   cards,
@@ -170,6 +172,12 @@ export function AgencyPeopleDirectory({
               >
                 {policyEnabled ? "On" : "Off"}
               </span>
+            </dd>
+          </div>
+          <div className="bg-elevated/50 rounded-2xl px-3 py-2.5">
+            <dt className="text-muted text-xs font-medium">Departments</dt>
+            <dd className="text-highlighted mt-1 font-mono text-xl font-medium leading-none tabular-nums tracking-tight">
+              {departmentCount}
             </dd>
           </div>
           <div className="bg-elevated/50 rounded-2xl px-3 py-2.5">

@@ -19,6 +19,11 @@ import type {
 import type { PeopleDirectoryCard } from "../agency-people-directory";
 import type { PeopleExemptionDraft } from "../agency-people-exemptions";
 import {
+  createAgencyDepartment,
+  deleteAgencyDepartment,
+  updateAgencyDepartment,
+} from "../agency-departments";
+import {
   PEOPLE_CONFIG_STEP_IDS,
   PEOPLE_CONFIG_STEP_LABELS,
   peopleConfigBadge,
@@ -50,6 +55,7 @@ function normalizeGenderDraft(value: string | null | undefined): "" | "male" | "
 function emptyHrDraft(): PeopleGuidedHrDraft {
   return {
     status: "active",
+    departmentId: "",
     employmentType: "",
     workModel: "",
     gender: "",
@@ -159,12 +165,28 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     ),
   );
 
+  const departmentsQuery = useQuery(
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.departments.list.queryOptions({ input: { teamId } }),
+        enabled: Boolean(teamId) && active,
+      },
+      "cold",
+      { liveGated: true, teamId },
+    ),
+  );
+
   const policy = policyQuery.data?.policy ?? null;
   const members = summaryQuery.data?.items ?? [];
   const policyEnabled = summaryQuery.data?.policyEnabled ?? false;
   const exemptions = exemptionsQuery.data?.items ?? [];
   const rates = ratesQuery.data?.items ?? [];
+  const departments = (departmentsQuery.data?.items ?? []).map((item) => ({
+    id: item.id,
+    name: item.name,
+  }));
   const teamMembers = teamQuery.data?.members ?? [];
+  const [departmentBusy, setDepartmentBusy] = useState(false);
 
   const [policyDraft, setPolicyDraft] = useState<TenurePolicyDraft>({
     fiscalYearStartMonth: 1,
@@ -254,6 +276,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     const hr = memberProfile.hrProfile;
     setHrDraft({
       status: hr.status,
+      departmentId: hr.departmentId ?? "",
       employmentType: hr.employmentType ?? "",
       workModel: hr.workModel ?? "",
       gender: normalizeGenderDraft(hr.gender),
@@ -339,12 +362,13 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
           ? `${rate.currency} ${(rate.billableRateCents / 100).toFixed(0)}/h`
           : "No rate";
       const quarterLabel = member.currentQuarter?.status.replaceAll("_", " ") ?? "no quarter";
+      const tenureLabel = member.netTenureLabel || "Tenure pending";
       return {
         userId: member.userId,
         userName: member.userName,
         userEmail: member.userEmail,
         userAvatar: avatarByUserId.get(member.userId) ?? null,
-        subtitle: member.netTenureLabel || "Tenure pending",
+        subtitle: member.departmentName ? `${member.departmentName} · ${tenureLabel}` : tenureLabel,
         detail: `${rateLabel} · ${quarterLabel}`,
         completionPercent: peopleConfigCompletionPercent(signals),
         badge: peopleConfigBadge(signals),
@@ -418,6 +442,9 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
         queryKey: orpc.agencyOps.rates.list.key({ input: { teamId } }),
       }),
       queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.departments.list.key({ input: { teamId } }),
+      }),
+      queryClient.invalidateQueries({
         queryKey: orpc.team.get.key({ input: { teamId } }),
       }),
     ]);
@@ -473,6 +500,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       teamId,
       userId: selectedUserId,
       status: hrDraft.status,
+      departmentId: hrDraft.departmentId || null,
       employmentType: hrDraft.employmentType || null,
       workModel: hrDraft.workModel || null,
       gender: normalizeGenderDraft(hrDraft.gender) || null,
@@ -485,6 +513,56 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     });
     await invalidatePeopleQueries();
     toast.success("HR profile saved");
+  }
+
+  async function addDepartment(name: string) {
+    if (!teamId || !isOwner) return;
+    setDepartmentBusy(true);
+    try {
+      await createAgencyDepartment(teamId, name);
+      toast.success("Department added");
+    } catch (error) {
+      toast.error("Couldn't add department", {
+        description: getErrorMessage(error, "Try again."),
+      });
+      throw error;
+    } finally {
+      setDepartmentBusy(false);
+    }
+  }
+
+  async function renameDepartment(departmentId: string, name: string) {
+    if (!teamId || !isOwner) return;
+    setDepartmentBusy(true);
+    try {
+      await updateAgencyDepartment(teamId, departmentId, name);
+      await invalidatePeopleQueries();
+      toast.success("Department renamed");
+    } catch (error) {
+      toast.error("Couldn't rename department", {
+        description: getErrorMessage(error, "Try again."),
+      });
+      throw error;
+    } finally {
+      setDepartmentBusy(false);
+    }
+  }
+
+  async function removeDepartment(departmentId: string) {
+    if (!teamId || !isOwner) return;
+    setDepartmentBusy(true);
+    try {
+      await deleteAgencyDepartment(teamId, departmentId);
+      await invalidatePeopleQueries();
+      toast.success("Department deleted");
+    } catch (error) {
+      toast.error("Couldn't delete department", {
+        description: getErrorMessage(error, "Try again."),
+      });
+      throw error;
+    } finally {
+      setDepartmentBusy(false);
+    }
   }
 
   async function saveRateStep() {
@@ -679,6 +757,12 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     policyEffectiveLabel,
     quarterlyMinHours: policy?.quarterlyMinHours ?? null,
     internDurationMonths: policy?.internDurationMonths ?? null,
+    departmentCount: departments.length,
+    departments,
+    departmentBusy,
+    addDepartment,
+    renameDepartment,
+    removeDepartment,
     directoryCards,
     attentionCount,
     memberCount: members.length,
