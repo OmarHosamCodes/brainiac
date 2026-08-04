@@ -7,13 +7,22 @@ import {
   agencyManagementPaneLabel,
   agencyManagementPaneSubtitle,
 } from "@/features/shared/agency-management-sections";
-import { startOfWeekUtc, toDateInputValue } from "@/features/shared/use-agency-time-range-filters";
+import {
+  selectIsInvoiceMutationPending,
+  useAgencyOpsStore,
+} from "@/features/shared/stores/agency-ops";
+import {
+  resolveAgencyRangeFromPreset,
+  startOfWeekUtc,
+  toDateInputValue,
+} from "@/features/shared/use-agency-time-range-filters";
 import {
   getCurrentTenurePeriodRange,
   getCurrentTenureQuarterMonths,
   resolveDefaultDashboardRangePreset,
   resolveDefaultTenureMonthIndexes,
 } from "@/features/resourcing/tenure-utils";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { orpc } from "@/lib/orpc";
 
 import {
@@ -36,6 +45,14 @@ import {
   type MoneyBillsStatusFilter,
 } from "../money-bills-filters";
 import {
+  buildMoneyBillRows,
+  moneyBillsCreateFormValid,
+  moneyBillsPartyShowsClients,
+  moneyBillsPartyShowsMembers,
+  moneyBillsPaymentCanSubmit,
+  parseMoneyBillPaymentCents,
+} from "../money-bills-rows";
+import {
   MONEY_CALC_OPTIONS_FIXTURE,
   MONEY_COHORT_PANE_OPTIONS,
   MONEY_COHORT_RULES_FIXTURE,
@@ -51,6 +68,9 @@ import {
   type MoneyStatsMetricFixture,
   type MoneyStatsMetricId,
 } from "../money-stats-fixtures";
+
+const BILL_CREATE_FORM_ID = "agency-money-bill-create";
+const BILL_PAYMENT_FORM_ID = "agency-money-bill-payment";
 
 export type MoneyCohortAllocationsSelection =
   | { kind: "rule"; ruleId: MoneyCohortRuleId }
@@ -123,6 +143,8 @@ function buildCardViewModel(card: MoneyStatsCardFixture): MoneyStatsCardViewMode
 
 export function useAgencyMoneySurface(teamId: string) {
   const now = useMemo(() => new Date(), []);
+  const agencyOps = useAgencyOpsStore();
+  const isInvoiceMutationPending = useAgencyOpsStore(selectIsInvoiceMutationPending);
 
   const tenurePolicyQuery = useQuery({
     ...orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
@@ -153,6 +175,13 @@ export function useAgencyMoneySurface(teamId: string) {
   const [partyFilter, setPartyFilter] = useState<MoneyBillsPartyFilter>("all");
   const [statusFilter, setStatusFilter] = useState<MoneyBillsStatusFilter | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [billCreateOpen, setBillCreateOpen] = useState(false);
+  const [billCreateClientId, setBillCreateClientId] = useState("");
+  const [billCreatePeriodStart, setBillCreatePeriodStart] = useState("");
+  const [billCreatePeriodEnd, setBillCreatePeriodEnd] = useState("");
+  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [pendingActionInvoiceId, setPendingActionInvoiceId] = useState<string | null>(null);
   const [expenseRecords, setExpenseRecords] = useState<MoneyExpenseRecord[]>([]);
   const [expenseCreateOpen, setExpenseCreateOpen] = useState(false);
   const [expenseDetailsOpen, setExpenseDetailsOpen] = useState(false);
@@ -176,6 +205,62 @@ export function useAgencyMoneySurface(teamId: string) {
 
   const periodLabel = rangePresetLabel(effectiveRangePreset, tenurePeriodLabel);
 
+  const periodRange = useMemo(
+    () =>
+      resolveAgencyRangeFromPreset(
+        effectiveRangePreset,
+        customFromDate,
+        customToDate,
+        tenurePolicy,
+        now,
+        effectiveTenureMonthIndexes,
+      ),
+    [
+      customFromDate,
+      customToDate,
+      effectiveRangePreset,
+      effectiveTenureMonthIndexes,
+      now,
+      tenurePolicy,
+    ],
+  );
+
+  const showsClientBills = moneyBillsPartyShowsClients(partyFilter);
+  const showsMemberBills = moneyBillsPartyShowsMembers(partyFilter);
+  const loadsPeriodBills = showsClientBills || showsMemberBills;
+
+  const invoicesQuery = useQuery({
+    ...orpc.agencyOps.invoices.list.queryOptions({
+      input: {
+        teamId,
+        periodStart: periodRange.from,
+        periodEnd: periodRange.to,
+        billStatus: statusFilter ?? undefined,
+        search: searchTerm.trim() || undefined,
+      },
+    }),
+    enabled: Boolean(teamId) && showsClientBills,
+  });
+
+  const periodActivityQuery = useQuery({
+    ...orpc.agencyOps.invoices.periodActivity.queryOptions({
+      input: {
+        teamId,
+        periodStart: periodRange.from,
+        periodEnd: periodRange.to,
+        search: searchTerm.trim() || undefined,
+      },
+    }),
+    enabled: Boolean(teamId) && loadsPeriodBills,
+  });
+
+  const clientsQuery = useQuery({
+    ...orpc.agencyOps.clients.list.queryOptions({
+      input: { teamId, page: 1, pageSize: 200 },
+    }),
+    enabled: Boolean(teamId),
+  });
+
   const statsCards = useMemo(
     () => MONEY_STATS_CARDS_FIXTURE.map((card) => buildCardViewModel(card)),
     [],
@@ -190,6 +275,62 @@ export function useAgencyMoneySurface(teamId: string) {
   const billsActiveFilterSummary = useMemo(
     () => moneyBillsActiveFilterSummary(partyFilter, statusFilter),
     [partyFilter, statusFilter],
+  );
+
+  const billRows = useMemo(
+    () =>
+      buildMoneyBillRows({
+        party: partyFilter,
+        statusFilter,
+        invoices: showsClientBills ? (invoicesQuery.data?.items ?? []) : [],
+        clients: periodActivityQuery.data?.clients ?? [],
+        members: periodActivityQuery.data?.members ?? [],
+      }),
+    [
+      invoicesQuery.data?.items,
+      partyFilter,
+      periodActivityQuery.data?.clients,
+      periodActivityQuery.data?.members,
+      showsClientBills,
+      statusFilter,
+    ],
+  );
+
+  const paymentRow = useMemo(() => {
+    const row = billRows.find((item) => item.id === paymentInvoiceId);
+    return row?.kind === "invoice" ? row : null;
+  }, [billRows, paymentInvoiceId]);
+
+  const clients = useMemo(() => {
+    const activityClients = (periodActivityQuery.data?.clients ?? []).map((client) => ({
+      id: client.clientId,
+      name: client.clientName,
+    }));
+    if (activityClients.length > 0) return activityClients;
+    return (clientsQuery.data?.items ?? []).map((client) => ({
+      id: client.id,
+      name: client.name,
+    }));
+  }, [clientsQuery.data?.items, periodActivityQuery.data?.clients]);
+
+  const createFormValid = moneyBillsCreateFormValid(
+    billCreateClientId,
+    billCreatePeriodStart,
+    billCreatePeriodEnd,
+  );
+  const paymentCanSubmit = paymentRow
+    ? moneyBillsPaymentCanSubmit(paymentAmount, paymentRow.remainingCents)
+    : false;
+
+  const billsIsLoading =
+    loadsPeriodBills &&
+    ((showsClientBills && invoicesQuery.isPending) || periodActivityQuery.isPending);
+  const billsIsError =
+    loadsPeriodBills &&
+    ((showsClientBills && invoicesQuery.isError) || periodActivityQuery.isError);
+  const billsErrorMessage = getErrorMessage(
+    invoicesQuery.error ?? periodActivityQuery.error,
+    "Try refreshing.",
   );
 
   const upcomingExpenses = useMemo(
@@ -224,6 +365,102 @@ export function useAgencyMoneySurface(teamId: string) {
 
   function onClearStatusFilter() {
     setStatusFilter(null);
+  }
+
+  function resetBillCreateForm() {
+    setBillCreateClientId("");
+    setBillCreatePeriodStart("");
+    setBillCreatePeriodEnd("");
+  }
+
+  function openBillCreate(clientId = "") {
+    setBillCreateClientId(clientId);
+    setBillCreatePeriodStart(toDateInputValue(new Date(periodRange.from)));
+    setBillCreatePeriodEnd(toDateInputValue(new Date(periodRange.to)));
+    setBillCreateOpen(true);
+  }
+
+  function onBillCreateOpenChange(open: boolean) {
+    setBillCreateOpen(open);
+    if (!open) resetBillCreateForm();
+  }
+
+  function onCreateInvoiceForClient(clientId: string) {
+    openBillCreate(clientId);
+  }
+
+  async function onBillCreateSubmit(event: { preventDefault: () => void }) {
+    event.preventDefault();
+    if (!createFormValid) return;
+    const client = clients.find((item) => item.id === billCreateClientId);
+    await agencyOps.createInvoice(
+      {
+        teamId,
+        clientId: billCreateClientId,
+        clientName: client?.name ?? "",
+        periodStart: new Date(billCreatePeriodStart).toISOString(),
+        periodEnd: new Date(`${billCreatePeriodEnd}T23:59:59.999`).toISOString(),
+      },
+      { onSuccess: () => onBillCreateOpenChange(false) },
+    );
+  }
+
+  function onPaymentOpenChange(open: boolean) {
+    if (!open) {
+      setPaymentInvoiceId(null);
+      setPaymentAmount("");
+    }
+  }
+
+  function onOpenPayment(invoiceId: string) {
+    const row = billRows.find((item) => item.id === invoiceId);
+    setPaymentInvoiceId(invoiceId);
+    setPaymentAmount(row?.kind === "invoice" ? (row.remainingCents / 100).toFixed(2) : "");
+  }
+
+  async function onPaymentSubmit(event: { preventDefault: () => void }) {
+    event.preventDefault();
+    if (!paymentRow) return;
+    const amountCents = parseMoneyBillPaymentCents(paymentAmount, paymentRow.remainingCents);
+    if (amountCents === null) return;
+    setPendingActionInvoiceId(paymentRow.id);
+    await agencyOps.recordInvoicePayment(
+      { teamId, invoiceId: paymentRow.id, amountCents },
+      {
+        onSuccess: () => {
+          onPaymentOpenChange(false);
+          setPendingActionInvoiceId(null);
+        },
+      },
+    );
+    setPendingActionInvoiceId(null);
+  }
+
+  async function onSendBill(invoiceId: string) {
+    setPendingActionInvoiceId(invoiceId);
+    await agencyOps.updateInvoiceStatus(
+      { teamId, invoiceId, status: "sent" },
+      { onSuccess: () => setPendingActionInvoiceId(null) },
+    );
+    setPendingActionInvoiceId(null);
+  }
+
+  async function onMarkBillPaid(invoiceId: string) {
+    setPendingActionInvoiceId(invoiceId);
+    await agencyOps.updateInvoiceStatus(
+      { teamId, invoiceId, status: "paid" },
+      { onSuccess: () => setPendingActionInvoiceId(null) },
+    );
+    setPendingActionInvoiceId(null);
+  }
+
+  async function onRefundBill(invoiceId: string) {
+    setPendingActionInvoiceId(invoiceId);
+    await agencyOps.updateInvoiceStatus(
+      { teamId, invoiceId, status: "refunded" },
+      { onSuccess: () => setPendingActionInvoiceId(null) },
+    );
+    setPendingActionInvoiceId(null);
   }
 
   function resetExpenseCreateForm() {
@@ -304,7 +541,50 @@ export function useAgencyMoneySurface(teamId: string) {
       onSearchTermChange: setSearchTerm,
       activeFilterSummary: billsActiveFilterSummary,
       emptyCopy: billsEmptyCopy,
-      billCount: 0,
+      billCount: billRows.length,
+      rows: billRows,
+      isLoading: billsIsLoading,
+      isError: billsIsError,
+      errorMessage: billsErrorMessage,
+      onRetry: () => {
+        void invoicesQuery.refetch();
+        void periodActivityQuery.refetch();
+      },
+      isMutationPending: isInvoiceMutationPending,
+      pendingActionInvoiceId,
+      onOpenCreate: () => openBillCreate(),
+      onCreateInvoiceForClient,
+      onSend: onSendBill,
+      onMarkPaid: onMarkBillPaid,
+      onRefund: onRefundBill,
+      onOpenPayment,
+      create: {
+        open: billCreateOpen,
+        onOpenChange: onBillCreateOpenChange,
+        formId: BILL_CREATE_FORM_ID,
+        clients,
+        clientId: billCreateClientId,
+        onClientIdChange: setBillCreateClientId,
+        periodStart: billCreatePeriodStart,
+        onPeriodStartChange: setBillCreatePeriodStart,
+        periodEnd: billCreatePeriodEnd,
+        onPeriodEndChange: setBillCreatePeriodEnd,
+        canSubmit: createFormValid && !isInvoiceMutationPending,
+        onSubmit: onBillCreateSubmit,
+      },
+      payment: {
+        open: Boolean(paymentRow),
+        onOpenChange: onPaymentOpenChange,
+        formId: BILL_PAYMENT_FORM_ID,
+        invoiceNumber: paymentRow?.number ?? "",
+        clientName: paymentRow?.clientName ?? "",
+        remainingLabel: paymentRow?.remainingLabel ?? "",
+        currency: paymentRow?.currency ?? "USD",
+        amount: paymentAmount,
+        onAmountChange: setPaymentAmount,
+        canSubmit: paymentCanSubmit && !isInvoiceMutationPending,
+        onSubmit: onPaymentSubmit,
+      },
     },
     expenses: {
       title: "Expenses",

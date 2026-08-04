@@ -19,7 +19,9 @@ export type AgencyBillingSurfaceViewModel = {
     outstandingCents: number;
     draftCount: number;
     sentCount: number;
+    partialCount: number;
     paidCount: number;
+    refundedCount: number;
     currency: string;
   } | null;
   clients: Array<{ id: string; name: string }>;
@@ -28,8 +30,11 @@ export type AgencyBillingSurfaceViewModel = {
     number: string;
     clientName: string;
     amountCents: number;
+    receivedCents: number;
+    remainingCents: number;
     currency: string;
-    status: LaneId;
+    status: "draft" | "sent" | "partial" | "paid" | "refunded";
+    billStatus: "outstanding" | "partial" | "paid" | "refunded";
     periodStart: string;
     periodEnd: string;
   }>;

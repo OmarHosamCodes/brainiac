@@ -14,8 +14,12 @@ import {
 } from "lucide-react";
 
 import { RangePresetChooser } from "@/features/dashboard/agency-dashboard-command-bar";
+import { MemberProfileLeaveRangePicker } from "@/features/member-profile/member-profile-leave-range-picker";
+import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
+import { AgencyMultiSelectFilter } from "@/features/shared/filters/agency-multi-select-filter";
 import {
+  agencyErrorPanelClass,
   agencyFocusRingClass,
   agencyFormFieldClass,
   agencyFormLabelClass,
@@ -26,6 +30,7 @@ import {
   agencySectionTitleClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
+import { projectHueStyle } from "@/features/shared/project-palette";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
@@ -39,6 +44,7 @@ import {
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Skeleton } from "@/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Textarea } from "@/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
@@ -51,6 +57,13 @@ import {
 } from "./hooks/use-agency-money-surface";
 import { type MoneyExpenseKind, type MoneyExpensePeriod } from "./money-expense-form";
 import { type MoneyBillsPartyFilter, type MoneyBillsStatusFilter } from "./money-bills-filters";
+import {
+  groupMoneyBillRows,
+  moneyBillHueId,
+  moneyBillInitials,
+  moneyBillListInsight,
+  type MoneyBillRow,
+} from "./money-bills-rows";
 import {
   type MoneyStatsMetricFixture,
   type MoneyStatsMetricKind,
@@ -389,9 +402,181 @@ function MoneyListGhostPreview({ rows = 3 }: { rows?: number }) {
   );
 }
 
+function BillClientMark({ title, hueId }: { title: string; hueId: string }) {
+  return (
+    <span
+      className="relative flex size-9 shrink-0 items-center justify-center rounded-xl border border-default text-[0.7rem] font-semibold tracking-wide text-[var(--project-hue)] dark:text-[var(--project-hue-dark)] bg-[var(--project-hue-soft)] dark:bg-[var(--project-hue-soft-dark)]"
+      style={projectHueStyle(hueId)}
+      aria-hidden
+    >
+      {moneyBillInitials(title)}
+      <span
+        className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-[var(--project-hue)] dark:bg-[var(--project-hue-dark)] ring-2 ring-default"
+        aria-hidden
+      />
+    </span>
+  );
+}
+
+function BillListRow({
+  row,
+  searchTerm,
+  pending,
+  isMutationPending,
+  onCreateInvoiceForClient,
+  onSend,
+  onOpenPayment,
+  onMarkPaid,
+  onRefund,
+}: {
+  row: MoneyBillRow;
+  searchTerm: string;
+  pending: boolean;
+  isMutationPending: boolean;
+  onCreateInvoiceForClient: (clientId: string) => void;
+  onSend: (invoiceId: string) => void;
+  onOpenPayment: (invoiceId: string) => void;
+  onMarkPaid: (invoiceId: string) => void;
+  onRefund: (invoiceId: string) => void;
+}) {
+  const hueId = moneyBillHueId(row);
+  const isReady = row.kind === "client-activity";
+
+  return (
+    <li
+      className={cn(
+        "group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors",
+        isReady
+          ? "border border-default hover:bg-elevated/50"
+          : "border border-transparent hover:border-default hover:bg-elevated/40",
+      )}
+    >
+      {row.kind === "member-activity" ? (
+        <AgencyMemberAvatar
+          name={row.userName}
+          userId={row.userId}
+          avatarUrl={row.userAvatar}
+          size="md"
+          className="size-9"
+        />
+      ) : hueId ? (
+        <BillClientMark title={row.title} hueId={hueId} />
+      ) : null}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+          <p className="truncate text-sm font-medium text-highlighted">
+            <AgencySearchHighlight text={row.title} query={searchTerm} />
+          </p>
+          {row.kind === "invoice" ? (
+            <span
+              className={cn(
+                "inline-flex h-5 items-center rounded-md px-1.5 text-[0.65rem] font-medium tracking-wide",
+                hueId
+                  ? "bg-[var(--project-hue-soft)] text-[var(--project-hue)] dark:bg-[var(--project-hue-soft-dark)] dark:text-[var(--project-hue-dark)]"
+                  : "bg-elevated text-muted",
+              )}
+              style={hueId ? projectHueStyle(hueId) : undefined}
+            >
+              {row.statusLabel}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-0.5 truncate text-xs text-muted">
+          <AgencySearchHighlight text={row.subtitle} query={searchTerm} />
+          {row.kind === "invoice" && row.receivedCents > 0 && row.remainingCents > 0 ? (
+            <>
+              <span aria-hidden> · </span>
+              {row.receivedLabel} in · {row.remainingLabel} left
+            </>
+          ) : null}
+        </p>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <span
+          className={cn(
+            "font-mono text-sm tabular-nums",
+            row.kind === "member-activity" ? "text-muted" : "text-highlighted",
+          )}
+        >
+          {row.kind === "invoice" ? row.amountLabel : row.metaLabel}
+        </span>
+
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
+          {row.canCreateInvoice && row.kind === "client-activity" ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 rounded-lg px-3"
+              disabled={isMutationPending}
+              onClick={() => onCreateInvoiceForClient(row.clientId)}
+            >
+              Draft invoice
+            </Button>
+          ) : null}
+          {row.canSend ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-lg"
+              disabled={pending || isMutationPending}
+              onClick={() => void onSend(row.id)}
+            >
+              Send
+            </Button>
+          ) : null}
+          {row.canRecordPayment ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-lg"
+              disabled={pending || isMutationPending}
+              onClick={() => onOpenPayment(row.id)}
+            >
+              Payment
+            </Button>
+          ) : null}
+          {row.canMarkPaid ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 rounded-lg"
+              disabled={pending || isMutationPending}
+              onClick={() => void onMarkPaid(row.id)}
+            >
+              Mark paid
+            </Button>
+          ) : null}
+          {row.canRefund ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 rounded-lg text-muted opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+              disabled={pending || isMutationPending}
+              onClick={() => void onRefund(row.id)}
+            >
+              Refund
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </li>
+  );
+}
+
 function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }) {
   const billCountLabel = `${bills.billCount} ${bills.billCount === 1 ? "bill" : "bills"}`;
   const hasStatusFilters = bills.statusOptions.length > 0;
+  const create = bills.create;
+  const payment = bills.payment;
+  const showEmpty = !bills.isLoading && !bills.isError && bills.rows.length === 0;
+  const sections = groupMoneyBillRows(bills.rows);
+  const insight = moneyBillListInsight(bills.rows);
+  const showSectionHeaders = sections.length > 1;
 
   return (
     <section
@@ -426,6 +611,23 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             <span className={cn(agencyMetricClass, "text-xs tabular-nums text-muted")}>
               {billCountLabel}
             </span>
+            <TooltipProvider delayDuration={120}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    className="rounded-xl"
+                    onClick={bills.onOpenCreate}
+                    aria-label="Create invoice"
+                  >
+                    <Plus className="size-4" aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Create invoice</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 
@@ -487,20 +689,185 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
       </div>
 
       <div className="relative flex flex-1 flex-col pb-5">
-        <div className="px-4 pt-3">
-          <MoneyListGhostPreview />
-        </div>
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-default to-transparent" />
-        <div className="relative z-10 mx-4 mt-1 flex flex-col items-center gap-2 rounded-2xl border border-default bg-default/95 px-5 py-8 text-center shadow-sm backdrop-blur-sm supports-backdrop-filter:bg-default/90">
-          <Receipt className="size-6 text-muted" aria-hidden />
-          <p className="text-sm font-semibold text-highlighted">
-            <AgencySearchHighlight text={bills.emptyCopy.title} query={bills.searchTerm} />
-          </p>
-          <p className="max-w-sm text-xs text-muted text-balance">
-            <AgencySearchHighlight text={bills.emptyCopy.body} query={bills.searchTerm} />
-          </p>
-        </div>
+        {bills.isLoading ? (
+          <div
+            className="flex flex-col gap-2 px-4 pt-4"
+            aria-busy="true"
+            aria-label="Loading bills"
+          >
+            {[1, 2, 3].map((item) => (
+              <Skeleton key={item} className="h-16 rounded-xl" />
+            ))}
+          </div>
+        ) : null}
+
+        {bills.isError ? (
+          <div className={cn(agencyErrorPanelClass, "m-4")} role="alert">
+            <p className="text-sm font-medium text-highlighted">Couldn’t load bills</p>
+            <p className="mt-1 text-xs text-muted">{bills.errorMessage}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={bills.onRetry}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : null}
+
+        {!bills.isLoading && !bills.isError && bills.rows.length > 0 ? (
+          <div className="flex flex-col gap-4 px-4 pt-4" aria-label="Bill list">
+            {insight ? (
+              <div className="flex items-center gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2">
+                <Receipt className="size-3.5 shrink-0 text-primary" aria-hidden />
+                <p className="text-xs font-medium text-highlighted">{insight}</p>
+              </div>
+            ) : null}
+
+            {sections.map((section) => (
+              <section
+                key={section.id}
+                className="flex flex-col gap-1.5"
+                aria-label={section.title}
+              >
+                {showSectionHeaders ? (
+                  <div className="flex items-baseline justify-between gap-2 px-1 pt-1">
+                    <h3 className="text-xs font-semibold tracking-wide text-highlighted uppercase">
+                      {section.title}
+                    </h3>
+                    <span className="text-[0.7rem] text-muted">{section.hint}</span>
+                  </div>
+                ) : null}
+                <ul className="flex flex-col gap-1">
+                  {section.rows.map((row) => (
+                    <BillListRow
+                      key={row.id}
+                      row={row}
+                      searchTerm={bills.searchTerm}
+                      pending={bills.pendingActionInvoiceId === row.id}
+                      isMutationPending={bills.isMutationPending}
+                      onCreateInvoiceForClient={bills.onCreateInvoiceForClient}
+                      onSend={bills.onSend}
+                      onOpenPayment={bills.onOpenPayment}
+                      onMarkPaid={bills.onMarkPaid}
+                      onRefund={bills.onRefund}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        ) : null}
+
+        {showEmpty ? (
+          <>
+            <div className="px-4 pt-3">
+              <MoneyListGhostPreview />
+            </div>
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-default to-transparent" />
+            <div className="relative z-10 mx-4 mt-1 flex flex-col items-center gap-2 rounded-2xl border border-default bg-default/95 px-5 py-8 text-center shadow-sm backdrop-blur-sm supports-backdrop-filter:bg-default/90">
+              <Receipt className="size-6 text-muted" aria-hidden />
+              <p className="text-sm font-semibold text-highlighted">
+                <AgencySearchHighlight text={bills.emptyCopy.title} query={bills.searchTerm} />
+              </p>
+              <p className="max-w-sm text-xs text-muted text-balance">
+                <AgencySearchHighlight text={bills.emptyCopy.body} query={bills.searchTerm} />
+              </p>
+            </div>
+          </>
+        ) : null}
       </div>
+
+      <Dialog open={create.open} onOpenChange={create.onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create invoice</DialogTitle>
+            <DialogDescription>
+              Draft a client invoice from tracked time in the selected period.
+            </DialogDescription>
+          </DialogHeader>
+          <form id={create.formId} className="flex flex-col gap-4" onSubmit={create.onSubmit}>
+            <div className="flex flex-col gap-1.5">
+              <Label className={agencyFormLabelClass}>Client</Label>
+              <AgencyMultiSelectFilter
+                label="Select client"
+                selectionMode="single"
+                values={create.clientId ? [create.clientId] : []}
+                options={create.clients.map((client) => ({
+                  value: client.id,
+                  label: client.name,
+                }))}
+                onValuesChange={(ids) => create.onClientIdChange(ids[0] ?? "")}
+                searchPlaceholder="Search clients"
+                triggerClassName="h-10 max-w-none w-full rounded-xl text-sm"
+                contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[22rem]"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="money-bill-period" className={agencyFormLabelClass}>
+                Period
+              </Label>
+              <MemberProfileLeaveRangePicker
+                triggerId="money-bill-period"
+                startDate={create.periodStart}
+                endDate={create.periodEnd}
+                emptyLabel="Select invoice period"
+                ariaLabel="Invoice period"
+                onRangeChange={(next) => {
+                  create.onPeriodStartChange(next.startDate);
+                  create.onPeriodEndChange(next.endDate);
+                }}
+              />
+            </div>
+          </form>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => create.onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form={create.formId} disabled={!create.canSubmit}>
+              Create draft
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={payment.open} onOpenChange={payment.onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record payment</DialogTitle>
+            <DialogDescription>
+              {payment.clientName} · {payment.invoiceNumber}. Remaining {payment.remainingLabel}.
+            </DialogDescription>
+          </DialogHeader>
+          <form id={payment.formId} className="flex flex-col gap-4" onSubmit={payment.onSubmit}>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="money-bill-payment-amount" className={agencyFormLabelClass}>
+                Amount ({payment.currency})
+              </Label>
+              <Input
+                id="money-bill-payment-amount"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                value={payment.amount}
+                onChange={(event) => payment.onAmountChange(event.target.value)}
+                className={agencyFormFieldClass}
+              />
+            </div>
+          </form>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => payment.onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form={payment.formId} disabled={!payment.canSubmit}>
+              Record
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

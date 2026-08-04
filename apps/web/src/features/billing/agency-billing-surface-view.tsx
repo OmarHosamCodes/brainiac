@@ -71,7 +71,11 @@ export function AgencyBillingSurfaceView({ viewModel }: AgencyBillingSurfaceView
   } = viewModel;
 
   function laneItems(laneId: LaneId) {
-    return invoices.filter((invoice) => invoice.status === laneId);
+    return invoices.filter((invoice) => {
+      if (laneId === "sent") return invoice.status === "sent" || invoice.status === "partial";
+      if (laneId === "paid") return invoice.status === "paid" || invoice.status === "refunded";
+      return invoice.status === laneId;
+    });
   }
 
   function laneCount(laneId: LaneId): number {
