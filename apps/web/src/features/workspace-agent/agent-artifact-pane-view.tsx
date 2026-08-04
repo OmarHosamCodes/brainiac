@@ -44,18 +44,17 @@ export function AgentArtifactPaneView({
       aria-label={`Canvas: ${artifact.title}`}
       className={cn("flex min-h-0 flex-col", className)}
     >
-      <header className="flex shrink-0 items-center gap-1.5 border-b border-border px-2.5 py-1">
-        <p className="min-w-0 flex-1 truncate text-xs font-medium text-foreground/90">
+      <header className="flex min-h-11 shrink-0 items-center gap-2 border-b border-border bg-muted/30 px-3">
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight text-foreground">
           {artifact.title}
         </p>
-        <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-medium">
+        <Badge variant="secondary" className="h-5 px-2 text-[10px] font-medium">
           {artifact.kind === "react" ? "Sandbox" : "View"}
         </Badge>
         <Button
           type="button"
           size="sm"
-          variant="ghost"
-          className="h-7 gap-1 px-2 text-muted-foreground hover:text-foreground"
+          className="h-8 gap-1 rounded-full px-3 font-medium"
           onClick={onExpand}
         >
           <Maximize2 className="size-3.5" aria-hidden />
@@ -66,7 +65,7 @@ export function AgentArtifactPaneView({
           size="icon"
           variant="ghost"
           aria-label="Dismiss canvas"
-          className="size-7 text-muted-foreground hover:text-foreground"
+          className="size-8 rounded-full text-muted-foreground hover:text-foreground"
           onClick={onDismiss}
         >
           <X className="size-3.5" aria-hidden />

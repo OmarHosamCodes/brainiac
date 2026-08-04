@@ -26,8 +26,11 @@ import { useWorkspaceAgentModelPreferences } from "@/features/workspace-agent/ho
 import { useWorkspaceAgentModelPreset } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preset";
 import { OrchTurnStreamTransport } from "@/features/workspace-agent/orch-turn-stream-transport";
 import {
+  collectAnsweredQuestionIds,
   collectArtifactsFromMessages,
   dashboardMessagesToUIMessages,
+  formatAgencyQuestionAnswerMessage,
+  type OrchAgencyQuestionAnswer,
   type OrchUIDataParts,
   type OrchUIMessage,
 } from "@/features/workspace-agent/orch-ui-message";
@@ -81,6 +84,16 @@ export function useWorkspaceAgent() {
   const [focusedArtifactId, setFocusedArtifactId] = useState<string | null>(null);
   const [canvasOpen, setCanvasOpen] = useState(false);
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+  const [proposalBusyId, setProposalBusyId] = useState<string | null>(null);
+  const [planConfirmingId, setPlanConfirmingId] = useState<string | null>(null);
+  const [answeredQuestionIds, setAnsweredQuestionIds] = useState<Set<string>>(() => new Set());
+  const [resolvedPlanIds, setResolvedPlanIds] = useState<Set<string>>(() => new Set());
+  const [resolvedProposalIds, setResolvedProposalIds] = useState<Set<string>>(() => new Set());
+  const [dismissedStickyKeys, setDismissedStickyKeys] = useState<Set<string>>(() => new Set());
+  const [questionSubmittingId, setQuestionSubmittingId] = useState<string | null>(null);
+  const [questionDrafts, setQuestionDrafts] = useState<
+    Record<string, { selectedOptionIds: string[]; freeText: string }>
+  >({});
 
   const data = useWorkspaceAgentData({
     activeConversationId,
@@ -233,6 +246,7 @@ export function useWorkspaceAgent() {
     const next = dashboardMessagesToUIMessages(activeConversation.messages);
     // Stale get-query (user-only) must not wipe a richer just-streamed thread.
     if (next.length < messages.length) return;
+    setAnsweredQuestionIds(collectAnsweredQuestionIds(activeConversation.messages));
     setMessages(next);
   }, [
     activeConversation?.id,
@@ -298,6 +312,12 @@ export function useWorkspaceAgent() {
       setDismissedArtifactCount(0);
       setFocusedArtifactId(null);
       setCanvasOpen(false);
+      setAnsweredQuestionIds(new Set());
+      setResolvedPlanIds(new Set());
+      setResolvedProposalIds(new Set());
+      setDismissedStickyKeys(new Set());
+      setQuestionSubmittingId(null);
+      setQuestionDrafts({});
       if (!conversationId) {
         setMessages([]);
       }
@@ -326,10 +346,10 @@ export function useWorkspaceAgent() {
       const content = input.text.trim();
       const attachments = input.attachments ?? [];
       const model = modelPresetState.outboundModelId?.trim();
-      if ((!content && attachments.length === 0) || isStreaming) return;
+      if ((!content && attachments.length === 0) || isStreaming) return false;
       if (surface === "agency" && !teamId) {
         setError("Select an Agency team before asking about time.");
-        return;
+        return false;
       }
 
       const scopedNodes =
@@ -367,9 +387,11 @@ export function useWorkspaceAgent() {
             },
           },
         );
+        return true;
       } catch (streamError) {
         setDraft(content);
         setError(getErrorMessage(streamError, "Failed to reach the agent."));
+        return false;
       }
     },
     [
@@ -452,9 +474,6 @@ export function useWorkspaceAgent() {
     return artifacts.length > dismissedArtifactCount ? (artifacts.at(-1) ?? null) : null;
   }, [artifacts, dismissedArtifactCount, focusedArtifactId]);
 
-  const [proposalBusyId, setProposalBusyId] = useState<string | null>(null);
-  const [planConfirmingId, setPlanConfirmingId] = useState<string | null>(null);
-
   const invalidateAgencyCaches = useCallback(async () => {
     if (!teamId) return;
     await Promise.all([
@@ -505,6 +524,7 @@ export function useWorkspaceAgent() {
       setPlanConfirmingId(plan.planId);
       try {
         const result = await confirmPlanMutation.mutateAsync(plan);
+        setResolvedPlanIds((prev) => new Set(prev).add(plan.planId));
         toast.success(
           `Plan confirmed — ${result.proposals.length} proposal${result.proposals.length === 1 ? "" : "s"} ready to Approve.`,
         );
@@ -522,6 +542,7 @@ export function useWorkspaceAgent() {
       setProposalBusyId(proposalId);
       try {
         await approveProposalMutation.mutateAsync(proposalId);
+        setResolvedProposalIds((prev) => new Set(prev).add(proposalId));
         await invalidateAgencyCaches();
         toast.success("Change approved and applied.");
       } catch (approveError) {
@@ -538,6 +559,7 @@ export function useWorkspaceAgent() {
       setProposalBusyId(proposalId);
       try {
         await rejectProposalMutation.mutateAsync(proposalId);
+        setResolvedProposalIds((prev) => new Set(prev).add(proposalId));
         toast.message("Proposal rejected.");
       } catch (rejectError) {
         setError(getErrorMessage(rejectError, "Failed to reject proposal."));
@@ -546,6 +568,48 @@ export function useWorkspaceAgent() {
       }
     },
     [rejectProposalMutation],
+  );
+
+  const onDismissStickyDock = useCallback((key: string) => {
+    setDismissedStickyKeys((prev) => new Set(prev).add(key));
+  }, []);
+
+  const onQuestionSelectedOptionIdsChange = useCallback((questionId: string, ids: string[]) => {
+    setQuestionDrafts((prev) => ({
+      ...prev,
+      [questionId]: {
+        selectedOptionIds: ids,
+        freeText: prev[questionId]?.freeText ?? "",
+      },
+    }));
+  }, []);
+
+  const onQuestionFreeTextChange = useCallback((questionId: string, value: string) => {
+    setQuestionDrafts((prev) => ({
+      ...prev,
+      [questionId]: {
+        selectedOptionIds: prev[questionId]?.selectedOptionIds ?? [],
+        freeText: value,
+      },
+    }));
+  }, []);
+
+  const onAnswerQuestion = useCallback(
+    async (answer: OrchAgencyQuestionAnswer) => {
+      if (answeredQuestionIds.has(answer.questionId) || isStreaming) return;
+      const content = formatAgencyQuestionAnswerMessage(answer);
+
+      setQuestionSubmittingId(answer.questionId);
+      try {
+        const sent = await sendMessage({ text: content });
+        if (sent) {
+          setAnsweredQuestionIds((prev) => new Set(prev).add(answer.questionId));
+        }
+      } finally {
+        setQuestionSubmittingId(null);
+      }
+    },
+    [answeredQuestionIds, isStreaming, sendMessage],
   );
 
   const dismissArtifact = useCallback(() => {
@@ -573,6 +637,25 @@ export function useWorkspaceAgent() {
   const { closeRef: canvasCloseRef } = useAgentCanvasOverlay(canvasOverlayActive, closeCanvas);
 
   const placeholder = surface === "agency" ? "Ask about your time" : "Ask about this canvas";
+  const wayfinderSuggestions =
+    surface === "agency"
+      ? [
+          { id: "summary", label: "Summarize my time this week" },
+          { id: "waste", label: "Where is the waste?" },
+          { id: "report", label: "Draft a report plan" },
+        ]
+      : [
+          { id: "explain", label: "Explain this board" },
+          { id: "find", label: "Find a node" },
+          { id: "layout", label: "Propose a layout change" },
+        ];
+  const onSelectWayfinder = useCallback(
+    (label: string) => {
+      setDraft(label);
+      setExpanded(true);
+    },
+    [setDraft, setExpanded],
+  );
   const bottomOffsetClass = surface === "agency" ? "bottom-8" : "bottom-4";
   const streamingMessageId =
     isStreaming && messages[messages.length - 1]?.role === "assistant"
@@ -681,9 +764,21 @@ export function useWorkspaceAgent() {
     dismissArtifact,
     proposalBusyId,
     planConfirmingId,
+    answeredQuestionIds,
+    resolvedPlanIds,
+    resolvedProposalIds,
+    dismissedStickyKeys,
+    onDismissStickyDock,
+    questionSubmittingId,
+    questionDrafts,
     onConfirmPlan: (plan: OrchUIDataParts["orchPlan"]) => void onConfirmPlan(plan),
     onApproveProposal: (proposalId: string) => void onApproveProposal(proposalId),
     onRejectProposal: (proposalId: string) => void onRejectProposal(proposalId),
+    onAnswerQuestion: (answer: OrchAgencyQuestionAnswer) => void onAnswerQuestion(answer),
+    onQuestionSelectedOptionIdsChange,
+    onQuestionFreeTextChange,
+    wayfinderSuggestions,
+    onSelectWayfinder,
   };
 }
 

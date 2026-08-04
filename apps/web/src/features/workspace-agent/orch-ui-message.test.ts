@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  collectAnsweredQuestionIds,
   createOrchEventToChunkMapper,
   dashboardMessagesToUIMessages,
+  formatAgencyQuestionAnswerMessage,
   getLastUserText,
 } from "./orch-ui-message";
 
@@ -60,6 +62,21 @@ describe("orch-ui-message", () => {
             version: 1,
             root: { type: "text", text: "Hello canvas" },
           },
+        },
+      }),
+      ...mapEvent({
+        type: "question",
+        question: {
+          questionId: "aq-1",
+          prompt: "Which first?",
+          kind: "single",
+          options: [
+            { id: "a", label: "A" },
+            { id: "b", label: "B" },
+          ],
+          allowFreeText: false,
+          status: "pending",
+          note: "Waiting for the user to answer in the UI.",
         },
       }),
       ...mapEvent({
@@ -123,6 +140,7 @@ describe("orch-ui-message", () => {
       "tool-input-available",
       "tool-output-available",
       "data-orchArtifact",
+      "data-orchQuestion",
       "text-end",
       "data-orchCompleted",
       "finish",
@@ -205,5 +223,124 @@ describe("orch-ui-message", () => {
         },
       },
     });
+  });
+
+  test("rehydrates question cards before tool traces", () => {
+    const [message] = dashboardMessagesToUIMessages([
+      {
+        id: "a1",
+        role: "assistant",
+        content: "Answer the question above to continue.",
+        attachments: [],
+        contextNodeTitles: [],
+        model: "test-model",
+        toolsCalled: [
+          {
+            id: "tool-1",
+            name: "ask_agency_question",
+            input: { prompt: "Which cleanup first?", kind: "single" },
+            output: {
+              questionId: "aq-1",
+              prompt: "Which cleanup first?",
+              kind: "single",
+              options: [
+                { id: "standup", label: "Standup typos" },
+                { id: "internal", label: "Internal meetings" },
+              ],
+              allowFreeText: false,
+              status: "pending",
+              note: "Waiting for the user to answer in the UI.",
+            },
+            status: "completed",
+            error: null,
+          },
+        ],
+        artifacts: [],
+        createdAt: "2026-07-26T00:00:00.000Z",
+      },
+    ]);
+
+    expect(message?.parts.map((part) => part.type)).toEqual([
+      "data-orchQuestion",
+      "dynamic-tool",
+      "text",
+    ]);
+  });
+
+  test("rehydrates plan and proposal cards from persisted tool outputs", () => {
+    const [message] = dashboardMessagesToUIMessages([
+      {
+        id: "a1",
+        role: "assistant",
+        content: "Review the plan and proposal.",
+        attachments: [],
+        contextNodeTitles: [],
+        model: "test-model",
+        toolsCalled: [
+          {
+            id: "tool-plan",
+            name: "draft_agency_plan",
+            input: {},
+            output: {
+              planId: "aplan-1",
+              title: "Clean August",
+              summary: "Fix duplicate entries",
+              steps: [{ label: "Delete duplicate", action: { type: "time_entry.delete" } }],
+            },
+            status: "completed",
+            error: null,
+          },
+          {
+            id: "tool-proposal",
+            name: "propose_agency_action",
+            input: {},
+            output: {
+              proposalId: "proposal-1",
+              label: "Delete duplicate",
+              action: { type: "time_entry.delete" },
+              before: { id: "entry-1" },
+              after: null,
+            },
+            status: "completed",
+            error: null,
+          },
+        ],
+        artifacts: [],
+        createdAt: "2026-07-26T00:00:00.000Z",
+      },
+    ]);
+
+    expect(message?.parts.map((part) => part.type)).toEqual([
+      "data-orchPlan",
+      "data-orchProposal",
+      "dynamic-tool",
+      "dynamic-tool",
+      "text",
+    ]);
+  });
+
+  test("formats and detects answered question ids", () => {
+    const content = formatAgencyQuestionAnswerMessage({
+      questionId: "aq-1",
+      selectedOptionIds: ["standup"],
+      selectedLabels: ["Standup typos"],
+      freeText: "",
+    });
+    expect(content).toBe("Answer to question aq-1: Standup typos");
+    expect(
+      collectAnsweredQuestionIds([
+        {
+          id: "u1",
+          role: "user",
+          content,
+          attachments: [],
+          contextNodeTitles: [],
+          model: null,
+          toolsCalled: [],
+          artifacts: [],
+          createdAt: "2026-07-26T00:00:00.000Z",
+        },
+      ]),
+    ).toEqual(new Set(["aq-1"]));
   });
 });

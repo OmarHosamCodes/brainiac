@@ -45,11 +45,45 @@ export type OrchUIDataParts = {
     before: unknown;
     after: unknown;
   };
+  orchQuestion: {
+    questionId: string;
+    prompt: string;
+    kind: "single" | "multi" | "text";
+    options: Array<{ id: string; label: string; hint?: string }>;
+    allowFreeText: boolean;
+    context?: string;
+    status: "pending";
+    note: string;
+  };
+};
+
+export type OrchAgencyQuestionAnswer = {
+  questionId: string;
+  selectedOptionIds: string[];
+  selectedLabels: string[];
+  freeText: string;
 };
 
 export type OrchUIMessage = UIMessage<unknown, OrchUIDataParts>;
 
 export type OrchUIMessageChunk = UIMessageChunk<unknown, OrchUIDataParts>;
+
+const AGENCY_QUESTION_ANSWER_PREFIX = "Answer to question ";
+
+export function formatAgencyQuestionAnswerMessage(answer: OrchAgencyQuestionAnswer): string {
+  const parts = [...answer.selectedLabels, answer.freeText].filter(Boolean);
+  return `${AGENCY_QUESTION_ANSWER_PREFIX}${answer.questionId}: ${parts.join(" — ")}`;
+}
+
+export function collectAnsweredQuestionIds(messages: DashboardConversationMessage[]): Set<string> {
+  const answered = new Set<string>();
+  for (const message of messages) {
+    if (message.role !== "user") continue;
+    const match = message.content.match(/^Answer to question ([^:]+):/);
+    if (match?.[1]) answered.add(match[1]);
+  }
+  return answered;
+}
 
 export function getLastUserText(messages: UIMessage[]): string {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -71,10 +105,6 @@ export function dashboardMessagesToUIMessages(
   return messages.map((message) => {
     const parts: OrchUIMessage["parts"] = [];
 
-    if (message.content.trim()) {
-      parts.push({ type: "text", text: message.content, state: "done" });
-    }
-
     for (const attachment of message.attachments ?? []) {
       parts.push({
         type: "data-orchAttachment",
@@ -88,11 +118,20 @@ export function dashboardMessagesToUIMessages(
       });
     }
 
-    if (parts.length === 0) {
-      parts.push({ type: "text", text: "", state: "done" });
-    }
-
     if (message.role === "assistant") {
+      for (const entry of message.toolsCalled) {
+        if (typeof entry !== "string") {
+          const primaryPart = toolCallToPrimaryDataPart(entry);
+          if (primaryPart) parts.push(primaryPart);
+        }
+      }
+      for (const artifact of message.artifacts ?? []) {
+        parts.push({
+          type: "data-orchArtifact",
+          id: artifact.id,
+          data: artifact,
+        });
+      }
       for (const entry of message.toolsCalled) {
         if (typeof entry === "string") {
           parts.push({
@@ -107,13 +146,14 @@ export function dashboardMessagesToUIMessages(
         }
         parts.push(toolCallToDynamicPart(entry));
       }
-      for (const artifact of message.artifacts ?? []) {
-        parts.push({
-          type: "data-orchArtifact",
-          id: artifact.id,
-          data: artifact,
-        });
-      }
+    }
+
+    if (message.content.trim()) {
+      parts.push({ type: "text", text: message.content, state: "done" });
+    }
+
+    if (parts.length === 0) {
+      parts.push({ type: "text", text: "", state: "done" });
     }
 
     return {
@@ -122,6 +162,114 @@ export function dashboardMessagesToUIMessages(
       parts,
     };
   });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function toolCallToPrimaryDataPart(tool: AgentToolCall): OrchUIMessage["parts"][number] | null {
+  if (tool.status !== "completed" || !isRecord(tool.output)) return null;
+
+  switch (tool.name) {
+    case "ask_agency_question": {
+      const output = tool.output;
+      if (
+        typeof output.questionId !== "string" ||
+        typeof output.prompt !== "string" ||
+        (output.kind !== "single" && output.kind !== "multi" && output.kind !== "text") ||
+        !Array.isArray(output.options) ||
+        typeof output.allowFreeText !== "boolean" ||
+        output.status !== "pending" ||
+        typeof output.note !== "string"
+      ) {
+        return null;
+      }
+      const options = output.options.flatMap((option) => {
+        if (
+          !isRecord(option) ||
+          typeof option.id !== "string" ||
+          typeof option.label !== "string"
+        ) {
+          return [];
+        }
+        return [
+          {
+            id: option.id,
+            label: option.label,
+            ...(typeof option.hint === "string" ? { hint: option.hint } : {}),
+          },
+        ];
+      });
+      return {
+        type: "data-orchQuestion",
+        id: output.questionId,
+        data: {
+          questionId: output.questionId,
+          prompt: output.prompt,
+          kind: output.kind,
+          options,
+          allowFreeText: output.allowFreeText,
+          ...(typeof output.context === "string" ? { context: output.context } : {}),
+          status: "pending",
+          note: output.note,
+        },
+      };
+    }
+    case "draft_agency_plan": {
+      const output = tool.output;
+      if (
+        typeof output.planId !== "string" ||
+        typeof output.title !== "string" ||
+        typeof output.summary !== "string" ||
+        !Array.isArray(output.steps)
+      ) {
+        return null;
+      }
+      const steps = output.steps.flatMap((step) =>
+        isRecord(step) && typeof step.label === "string"
+          ? [{ label: step.label, action: step.action }]
+          : [],
+      );
+      if (steps.length === 0) return null;
+      return {
+        type: "data-orchPlan",
+        id: output.planId,
+        data: {
+          planId: output.planId,
+          title: output.title,
+          summary: output.summary,
+          steps,
+        },
+      };
+    }
+    case "propose_agency_action": {
+      const output = tool.output;
+      if (
+        typeof output.proposalId !== "string" ||
+        typeof output.label !== "string" ||
+        !("action" in output) ||
+        !("before" in output) ||
+        !("after" in output)
+      ) {
+        return null;
+      }
+      return {
+        type: "data-orchProposal",
+        id: output.proposalId,
+        data: {
+          proposalId: output.proposalId,
+          status: "pending",
+          label: output.label,
+          action: output.action,
+          before: output.before,
+          after: output.after,
+        },
+      };
+    }
+    default:
+      return null;
+  }
 }
 
 function toolCallToDynamicPart(tool: AgentToolCall): OrchUIMessage["parts"][number] {
@@ -246,6 +394,14 @@ export function createOrchEventToChunkMapper() {
             type: "data-orchProposal",
             id: event.proposal.proposalId,
             data: event.proposal,
+          },
+        ];
+      case "question":
+        return [
+          {
+            type: "data-orchQuestion",
+            id: event.question.questionId,
+            data: event.question,
           },
         ];
       case "error":

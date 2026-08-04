@@ -107,10 +107,11 @@ type WorkspaceAgentComposerViewProps = {
 const MODE_OPTIONS: Array<{
   preset: DashboardAgentToolPreset;
   label: string;
+  helper: string;
 }> = [
-  { preset: "ask", label: "Ask" },
-  { preset: "plan", label: "Plan" },
-  { preset: "agent", label: "Agent" },
+  { preset: "ask", label: "Ask", helper: "Answers only — no writes" },
+  { preset: "plan", label: "Plan", helper: "Draft a plan to confirm" },
+  { preset: "agent", label: "Agent", helper: "Propose changes to approve" },
 ];
 
 function modeIcon(preset: DashboardAgentToolPreset) {
@@ -142,8 +143,6 @@ function modeLabel(preset: DashboardAgentToolPreset) {
     }
   }
 }
-
-const LAYOUT_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 export function WorkspaceAgentComposerView({
   draft,
@@ -233,7 +232,7 @@ export function WorkspaceAgentComposerView({
         <div
           className={cn(
             "flex items-center justify-end gap-1.5",
-            nestedInShell ? "border-b border-border px-3 py-1.5" : "mb-2 px-0.5",
+            nestedInShell ? "hidden" : "mb-2 px-0.5",
           )}
         >
           <WorkspaceAgentComposerHistoryBillView
@@ -256,7 +255,7 @@ export function WorkspaceAgentComposerView({
                 variant={scopeModeActive ? "default" : "secondary"}
                 aria-pressed={scopeModeActive}
                 aria-label={scopeModeActive ? "Exit sniper mode" : "Sniper mode"}
-                className="size-7 rounded-full border border-border shadow-sm"
+                className="size-7 rounded-full border border-border"
                 onClick={onToggleScopeMode}
               >
                 <Crosshair className="size-3.5" aria-hidden />
@@ -271,18 +270,21 @@ export function WorkspaceAgentComposerView({
         <motion.div
           layout
           layoutId={shellLayoutId}
-          transition={{ layout: { duration: 0.38, ease: LAYOUT_EASE } }}
+          transition={{ layout: { type: "spring", stiffness: 380, damping: 34 } }}
           style={{ borderRadius }}
           className={cn(
             "overflow-hidden text-card-foreground",
-            nestedInShell ? "border-0 bg-transparent" : "border border-border bg-card",
-            dimmed && "ring-1 ring-foreground/20",
+            nestedInShell ? "border-0 bg-transparent" : "border border-border bg-card shadow-lg",
+            dimmed && "ring-1 ring-foreground/25",
           )}
         >
           <PromptInput
             className={cn(
               "border-0 bg-transparent shadow-none",
               "[&_[data-slot=input-group]]:rounded-none [&_[data-slot=input-group]]:border-0 [&_[data-slot=input-group]]:bg-transparent [&_[data-slot=input-group]]:shadow-none",
+              nestedInShell
+                ? "[&_[data-slot=input-group]]:px-1"
+                : "[&_[data-slot=input-group]]:p-1",
             )}
             accept={AGENT_ATTACHMENT_ACCEPT}
             multiple
@@ -363,21 +365,25 @@ export function WorkspaceAgentComposerView({
                 aria-label="Message to agent"
                 autoFocus
                 className={cn(
-                  "max-h-40 min-h-7 field-sizing-content resize-none rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-5 text-foreground shadow-none",
-                  "placeholder:text-foreground/55 focus-visible:border-transparent focus-visible:ring-0",
-                  compact && "min-h-9 py-2.5",
+                  "max-h-40 field-sizing-content resize-none rounded-none border-0 bg-transparent px-3 text-[14px] leading-6 text-foreground shadow-none",
+                  "placeholder:text-muted-foreground/80 focus-visible:border-transparent focus-visible:ring-0",
+                  nestedInShell ? "min-h-9 py-2.5" : "min-h-[52px] py-3.5",
+                  compact && nestedInShell && "min-h-10 py-3",
                 )}
                 onChange={(event) => onDraftChange(event.target.value)}
               />
             </PromptInputBody>
 
-            <PromptInputFooter className="px-1.5 pb-1.5">
-              <PromptInputTools>
+            <PromptInputFooter className={cn("gap-2 px-2 pb-2", !nestedInShell && "pt-0.5")}>
+              <PromptInputTools className="gap-1.5">
                 <Popover open={toolsMenuOpen} onOpenChange={onToolsMenuOpenChange}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <PopoverTrigger asChild>
-                        <PromptInputButton aria-label="Modes, context, and tools">
+                        <PromptInputButton
+                          aria-label="Modes, context, and tools"
+                          className="size-8 rounded-full"
+                        >
                           <Plus />
                         </PromptInputButton>
                       </PopoverTrigger>
@@ -434,7 +440,12 @@ export function WorkspaceAgentComposerView({
                             }}
                           >
                             <ModeIcon className="size-4 text-muted-foreground" aria-hidden />
-                            <span className="flex-1">{mode.label}</span>
+                            <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                              <span>{mode.label}</span>
+                              <span className="text-[11px] font-normal text-muted-foreground">
+                                {mode.helper}
+                              </span>
+                            </span>
                             {selected ? (
                               <Check className="size-4 text-foreground" aria-hidden />
                             ) : null}
@@ -460,7 +471,7 @@ export function WorkspaceAgentComposerView({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
                       transition={{ duration: 0.16, ease: [0.25, 1, 0.5, 1] }}
-                      className="inline-flex h-6 items-center gap-0.5 rounded-full border border-border bg-secondary pr-1 pl-1.5 text-xs font-medium text-secondary-foreground"
+                      className="inline-flex h-7 items-center gap-0.5 rounded-full border border-border bg-secondary pr-1 pl-2 text-xs font-medium text-secondary-foreground"
                     >
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -504,7 +515,7 @@ export function WorkspaceAgentComposerView({
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
                       transition={{ duration: 0.16, ease: [0.25, 1, 0.5, 1] }}
-                      className="inline-flex h-6 items-center gap-0.5 rounded-full border border-border bg-secondary pr-1 pl-1.5 text-xs font-medium text-secondary-foreground"
+                      className="inline-flex h-7 items-center gap-0.5 rounded-full border border-border bg-secondary pr-1 pl-2 text-xs font-medium text-secondary-foreground"
                     >
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -546,7 +557,7 @@ export function WorkspaceAgentComposerView({
                     <TooltipTrigger asChild>
                       <PopoverTrigger asChild>
                         <PromptInputButton
-                          className="px-2 text-muted-foreground hover:text-foreground"
+                          className="h-8 gap-1 rounded-full px-2.5 text-muted-foreground hover:text-foreground"
                           aria-label={`Model: ${selectedModelLabel}`}
                         >
                           <span>{selectedModelButtonLabel}</span>

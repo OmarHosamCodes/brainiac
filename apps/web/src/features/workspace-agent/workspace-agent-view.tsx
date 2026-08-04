@@ -11,13 +11,12 @@ type WorkspaceAgentViewProps = {
   view: WorkspaceAgentViewModel;
 };
 
-const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
 const SHELL_LAYOUT_ID = "workspace-agent-shell";
 
-const layoutTransition = { duration: 0.38, ease: EASE_OUT_EXPO };
-const contentEnter = { duration: 0.2, ease: EASE_OUT_QUART, delay: 0.06 };
+const layoutTransition = { type: "spring" as const, stiffness: 380, damping: 34, mass: 0.9 };
+const contentEnter = { type: "spring" as const, stiffness: 420, damping: 36, mass: 0.8 };
 const contentExit = { duration: 0.12, ease: EASE_OUT_QUART };
 
 export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
@@ -63,8 +62,8 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                         ? "workspace-agent-pill-shimmer h-1.5 w-28 bg-foreground/40"
                         : "h-1.5 w-32 bg-foreground/35",
                       "motion-safe:transition-[width,height,padding,background-color,border-color] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.25,1,0.5,1)]",
-                      "group-hover/pill:h-11 group-hover/pill:w-full group-hover/pill:justify-between group-hover/pill:border-border group-hover/pill:bg-card group-hover/pill:px-4",
-                      "focus-visible:h-11 focus-visible:w-full focus-visible:justify-between focus-visible:border-border focus-visible:bg-card focus-visible:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                      "group-hover/pill:h-11 group-hover/pill:w-full group-hover/pill:justify-between group-hover/pill:border-border group-hover/pill:bg-card group-hover/pill:px-4 group-hover/pill:shadow-md",
+                      "focus-visible:h-11 focus-visible:w-full focus-visible:justify-between focus-visible:border-border focus-visible:bg-card focus-visible:px-4 focus-visible:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                     )}
                     onClick={() => view.setExpanded(true)}
                   >
@@ -95,8 +94,9 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                   : {})}
                 className={cn(
                   "pointer-events-auto flex w-full flex-col",
-                  showArtifactSplit ? "max-w-[1080px]" : "max-w-[720px]",
-                  showChat && "overflow-hidden border border-border bg-card text-card-foreground",
+                  showArtifactSplit ? "max-w-[1080px]" : "max-w-[760px]",
+                  showChat &&
+                    "overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-lg",
                 )}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -147,9 +147,21 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                         onOpenArtifactCanvas={view.openArtifactCanvas}
                         proposalBusyId={view.proposalBusyId}
                         planConfirmingId={view.planConfirmingId}
+                        answeredQuestionIds={view.answeredQuestionIds}
+                        resolvedPlanIds={view.resolvedPlanIds}
+                        resolvedProposalIds={view.resolvedProposalIds}
+                        dismissedStickyKeys={view.dismissedStickyKeys}
+                        onDismissStickyDock={view.onDismissStickyDock}
+                        questionSubmittingId={view.questionSubmittingId}
+                        questionDrafts={view.questionDrafts}
                         onConfirmPlan={view.onConfirmPlan}
                         onApproveProposal={view.onApproveProposal}
                         onRejectProposal={view.onRejectProposal}
+                        onAnswerQuestion={view.onAnswerQuestion}
+                        onQuestionSelectedOptionIdsChange={view.onQuestionSelectedOptionIdsChange}
+                        onQuestionFreeTextChange={view.onQuestionFreeTextChange}
+                        wayfinderSuggestions={view.wayfinderSuggestions}
+                        onSelectWayfinder={view.onSelectWayfinder}
                       />
                     </motion.div>
                   ) : null}

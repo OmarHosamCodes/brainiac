@@ -3,16 +3,28 @@ import { History, MoreHorizontal, Paperclip, Plus, Trash2 } from "lucide-react";
 
 import { AgencyPlanCardView } from "@/features/workspace-agent/agency-plan-card-view";
 import { AgencyProposalCardView } from "@/features/workspace-agent/agency-proposal-card-view";
+import { AgencyQuestionCardView } from "@/features/workspace-agent/agency-question-card-view";
 import { AgentArtifactPaneView } from "@/features/workspace-agent/agent-artifact-pane-view";
 import { AgentMessageArtifactCardView } from "@/features/workspace-agent/agent-message-artifact-card-view";
+import {
+  AgentStickyArchiveReceiptView,
+  AgentStickyDockView,
+} from "@/features/workspace-agent/agent-sticky-dock-view";
 import { WorkspaceAgentAssistantTextView } from "@/features/workspace-agent/assistant-text-view";
 import {
   getMessageArtifacts,
   getMessageAttachments,
   getMessageText,
+  type OrchAgencyQuestionAnswer,
   type OrchUIDataParts,
   type OrchUIMessage,
 } from "@/features/workspace-agent/orch-ui-message";
+import {
+  isPartStickyDocked,
+  resolveStickyDockItem,
+  stickyDockItemKey,
+  type StickyDockItem,
+} from "@/features/workspace-agent/sticky-dock";
 import {
   toolPartsToThinkingSteps,
   WorkspaceAgentThinkingActivityView,
@@ -92,9 +104,22 @@ type WorkspaceAgentChatPanelViewProps = {
   onOpenArtifactCanvas: (artifact: AiUiArtifact) => void;
   proposalBusyId: string | null;
   planConfirmingId: string | null;
+  answeredQuestionIds: ReadonlySet<string>;
+  resolvedPlanIds: ReadonlySet<string>;
+  resolvedProposalIds: ReadonlySet<string>;
+  dismissedStickyKeys: ReadonlySet<string>;
+  onDismissStickyDock: (key: string) => void;
+  questionSubmittingId: string | null;
+  questionDrafts: Record<string, { selectedOptionIds: string[]; freeText: string }>;
   onConfirmPlan: (plan: OrchUIDataParts["orchPlan"]) => void;
   onApproveProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
+  onAnswerQuestion: (answer: OrchAgencyQuestionAnswer) => void;
+  onQuestionSelectedOptionIdsChange: (questionId: string, ids: string[]) => void;
+  onQuestionFreeTextChange: (questionId: string, value: string) => void;
+  /** Empty-thread starter prompts (Agency vs Canvas). */
+  wayfinderSuggestions: Array<{ id: string; label: string }>;
+  onSelectWayfinder: (label: string) => void;
 };
 
 function formatConversationStamp(value: string): string {
@@ -113,18 +138,36 @@ function WorkspaceAgentMessagePartsView({
   isStreamingMessage,
   proposalBusyId,
   planConfirmingId,
+  answeredQuestionIds,
+  resolvedPlanIds,
+  resolvedProposalIds,
+  stickyItem,
+  questionSubmittingId,
+  questionDrafts,
   onConfirmPlan,
   onApproveProposal,
   onRejectProposal,
+  onAnswerQuestion,
+  onQuestionSelectedOptionIdsChange,
+  onQuestionFreeTextChange,
   onOpenArtifactCanvas,
 }: {
   message: OrchUIMessage;
   isStreamingMessage: boolean;
   proposalBusyId: string | null;
   planConfirmingId: string | null;
+  answeredQuestionIds: ReadonlySet<string>;
+  resolvedPlanIds: ReadonlySet<string>;
+  resolvedProposalIds: ReadonlySet<string>;
+  stickyItem: StickyDockItem | null;
+  questionSubmittingId: string | null;
+  questionDrafts: Record<string, { selectedOptionIds: string[]; freeText: string }>;
   onConfirmPlan: (plan: OrchUIDataParts["orchPlan"]) => void;
   onApproveProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
+  onAnswerQuestion: (answer: OrchAgencyQuestionAnswer) => void;
+  onQuestionSelectedOptionIdsChange: (questionId: string, ids: string[]) => void;
+  onQuestionFreeTextChange: (questionId: string, value: string) => void;
   onOpenArtifactCanvas: (artifact: AiUiArtifact) => void;
 }) {
   const text = getMessageText(message);
@@ -145,6 +188,21 @@ function WorkspaceAgentMessagePartsView({
       data: OrchUIDataParts["orchProposal"];
     } => part.type === "data-orchProposal",
   );
+  const questionParts = message.parts.filter(
+    (
+      part,
+    ): part is {
+      type: "data-orchQuestion";
+      id?: string;
+      data: OrchUIDataParts["orchQuestion"];
+    } => part.type === "data-orchQuestion",
+  );
+  const hasPrimaryContent =
+    questionParts.length > 0 ||
+    planParts.length > 0 ||
+    proposalParts.length > 0 ||
+    messageArtifacts.length > 0 ||
+    Boolean(text);
   return (
     <>
       {attachments.length > 0 ? (
@@ -182,36 +240,122 @@ function WorkspaceAgentMessagePartsView({
         </div>
       ) : null}
 
-      {message.role === "assistant" && (thinkingSteps.length > 0 || isStreamingMessage) ? (
+      {message.role === "assistant" &&
+      !hasPrimaryContent &&
+      (thinkingSteps.length > 0 || isStreamingMessage) ? (
         <WorkspaceAgentThinkingActivityView steps={thinkingSteps} live={isStreamingMessage} />
       ) : null}
 
-      {planParts.map((part) => (
-        <AgencyPlanCardView
-          key={part.id ?? part.data.planId}
-          plan={part.data}
-          confirming={planConfirmingId === part.data.planId}
-          onConfirm={() => onConfirmPlan(part.data)}
-        />
-      ))}
+      {questionParts.map((part) => {
+        if (isPartStickyDocked(stickyItem, "question", part.data.questionId)) return null;
+        const answered = answeredQuestionIds.has(part.data.questionId);
+        if (answered) {
+          return (
+            <AgentStickyArchiveReceiptView
+              key={part.id ?? part.data.questionId}
+              label="Question answered"
+              detail="In history"
+            />
+          );
+        }
+        const draft = questionDrafts[part.data.questionId] ?? {
+          selectedOptionIds: [] as string[],
+          freeText: "",
+        };
+        const submitting = questionSubmittingId === part.data.questionId;
+        const freeText = draft.freeText;
+        const selectedOptionIds = draft.selectedOptionIds;
+        const canSubmit =
+          !answered &&
+          !submitting &&
+          (part.data.kind === "text"
+            ? freeText.trim().length > 0
+            : part.data.kind === "single"
+              ? selectedOptionIds.length === 1 ||
+                (part.data.allowFreeText && freeText.trim().length > 0)
+              : selectedOptionIds.length > 0 ||
+                (part.data.allowFreeText && freeText.trim().length > 0));
+        const selectedLabels = part.data.options
+          .filter((option) => selectedOptionIds.includes(option.id))
+          .map((option) => option.label);
+        return (
+          <AgencyQuestionCardView
+            key={part.id ?? part.data.questionId}
+            question={part.data}
+            selectedOptionIds={selectedOptionIds}
+            freeText={freeText}
+            answered={answered}
+            submitting={submitting}
+            canSubmit={canSubmit}
+            onSelectedOptionIdsChange={(ids) =>
+              onQuestionSelectedOptionIdsChange(part.data.questionId, ids)
+            }
+            onFreeTextChange={(value) => onQuestionFreeTextChange(part.data.questionId, value)}
+            onSubmit={() =>
+              onAnswerQuestion({
+                questionId: part.data.questionId,
+                selectedOptionIds,
+                selectedLabels,
+                freeText: freeText.trim(),
+              })
+            }
+          />
+        );
+      })}
 
-      {proposalParts.map((part) => (
-        <AgencyProposalCardView
-          key={part.id ?? part.data.proposalId}
-          proposal={part.data}
-          busy={proposalBusyId === part.data.proposalId}
-          onApprove={() => onApproveProposal(part.data.proposalId)}
-          onReject={() => onRejectProposal(part.data.proposalId)}
-        />
-      ))}
+      {planParts.map((part) => {
+        if (isPartStickyDocked(stickyItem, "plan", part.data.planId)) return null;
+        if (resolvedPlanIds.has(part.data.planId)) {
+          return (
+            <AgentStickyArchiveReceiptView
+              key={part.id ?? part.data.planId}
+              label="Plan confirmed"
+              detail={part.data.title}
+            />
+          );
+        }
+        return (
+          <AgencyPlanCardView
+            key={part.id ?? part.data.planId}
+            plan={part.data}
+            confirming={planConfirmingId === part.data.planId}
+            onConfirm={() => onConfirmPlan(part.data)}
+          />
+        );
+      })}
 
-      {messageArtifacts.map((artifact) => (
-        <AgentMessageArtifactCardView
-          key={artifact.id}
-          artifact={artifact}
-          onOpen={() => onOpenArtifactCanvas(artifact)}
-        />
-      ))}
+      {proposalParts.map((part) => {
+        if (isPartStickyDocked(stickyItem, "proposal", part.data.proposalId)) return null;
+        if (resolvedProposalIds.has(part.data.proposalId)) {
+          return (
+            <AgentStickyArchiveReceiptView
+              key={part.id ?? part.data.proposalId}
+              label="Proposal resolved"
+              detail={part.data.label}
+            />
+          );
+        }
+        return (
+          <AgencyProposalCardView
+            key={part.id ?? part.data.proposalId}
+            proposal={part.data}
+            busy={proposalBusyId === part.data.proposalId}
+            onApprove={() => onApproveProposal(part.data.proposalId)}
+            onReject={() => onRejectProposal(part.data.proposalId)}
+          />
+        );
+      })}
+
+      {messageArtifacts.map((artifact) => {
+        if (isPartStickyDocked(stickyItem, "artifact", artifact.id)) return null;
+        return (
+          <AgentMessageArtifactCardView
+            key={artifact.id}
+            artifact={artifact}
+            onOpen={() => onOpenArtifactCanvas(artifact)}
+          />
+        );
+      })}
 
       {text ? (
         message.role === "user" ? (
@@ -242,6 +386,12 @@ function WorkspaceAgentMessagePartsView({
             </span>
           </MarkerContent>
         </Marker>
+      ) : null}
+
+      {message.role === "assistant" &&
+      hasPrimaryContent &&
+      (thinkingSteps.length > 0 || isStreamingMessage) ? (
+        <WorkspaceAgentThinkingActivityView steps={thinkingSteps} live={isStreamingMessage} />
       ) : null}
     </>
   );
@@ -281,9 +431,21 @@ export function WorkspaceAgentChatPanelView({
   onOpenArtifactCanvas,
   proposalBusyId,
   planConfirmingId,
+  answeredQuestionIds,
+  resolvedPlanIds,
+  resolvedProposalIds,
+  dismissedStickyKeys,
+  onDismissStickyDock,
+  questionSubmittingId,
+  questionDrafts,
   onConfirmPlan,
   onApproveProposal,
   onRejectProposal,
+  onAnswerQuestion,
+  onQuestionSelectedOptionIdsChange,
+  onQuestionFreeTextChange,
+  wayfinderSuggestions,
+  onSelectWayfinder,
 }: WorkspaceAgentChatPanelViewProps) {
   let lastAssistantIndex = -1;
   for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -294,10 +456,45 @@ export function WorkspaceAgentChatPanelView({
   }
 
   const showCanvas = activeArtifact !== null;
+  const stickyItem = resolveStickyDockItem({
+    messages,
+    answeredQuestionIds,
+    resolvedPlanIds,
+    resolvedProposalIds,
+    activeArtifactId: activeArtifact?.id ?? null,
+    dismissedStickyKeys,
+  });
+
+  const stickyQuestionDraft =
+    stickyItem?.kind === "question"
+      ? (questionDrafts[stickyItem.question.questionId] ?? {
+          selectedOptionIds: [] as string[],
+          freeText: "",
+        })
+      : null;
+  const stickyQuestionCanSubmit = (() => {
+    if (stickyItem?.kind !== "question" || !stickyQuestionDraft) return false;
+    const q = stickyItem.question;
+    const freeText = stickyQuestionDraft.freeText;
+    const selectedOptionIds = stickyQuestionDraft.selectedOptionIds;
+    const answered = answeredQuestionIds.has(q.questionId);
+    const submitting = questionSubmittingId === q.questionId;
+    if (answered || submitting) return false;
+    if (q.kind === "text") return freeText.trim().length > 0;
+    if (q.kind === "single") {
+      return selectedOptionIds.length === 1 || (q.allowFreeText && freeText.trim().length > 0);
+    }
+    return selectedOptionIds.length > 0 || (q.allowFreeText && freeText.trim().length > 0);
+  })();
 
   return (
-    <div className="flex max-h-[min(60vh,520px)] min-h-0 flex-col border-b border-border">
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+    <div
+      className={cn(
+        "flex max-h-[min(60vh,520px)] min-h-0 flex-col",
+        stickyItem ? "border-b-0" : "border-b border-border",
+      )}
+    >
+      <div className="flex min-h-12 items-center gap-2 border-b border-border bg-muted/20 px-3">
         <TooltipProvider>
           <DropdownMenu open={threadMenuOpen} onOpenChange={onThreadMenuOpenChange}>
             <Tooltip>
@@ -368,7 +565,9 @@ export function WorkspaceAgentChatPanelView({
           </DropdownMenu>
         </TooltipProvider>
 
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{title}</p>
+        <p className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-foreground">
+          {title}
+        </p>
 
         {canManageConversation ? (
           <Popover>
@@ -406,58 +605,135 @@ export function WorkspaceAgentChatPanelView({
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <MessageScrollerProvider>
-          <div className={cn("min-h-0 overflow-hidden", showCanvas ? "w-2/5 shrink-0" : "flex-1")}>
-            <MessageScroller className="min-h-0 h-full">
-              <MessageScrollerViewport className="px-3 py-3">
-                <MessageScrollerContent className="gap-3">
-                  {messages.length === 0 ? (
-                    <p className="py-8 text-center text-sm text-foreground/70">
-                      Send a message to start.
-                    </p>
-                  ) : (
-                    messages.map((message, index) => {
-                      const isStreamingMessage =
-                        isStreaming &&
-                        message.role === "assistant" &&
-                        message.id === streamingMessageId;
-                      const isLastAssistant =
-                        message.role === "assistant" && index === lastAssistantIndex;
-                      const isLast = index === messages.length - 1;
+        <div
+          className={cn(
+            "flex min-h-0 flex-col overflow-hidden",
+            showCanvas ? "w-2/5 shrink-0" : "flex-1",
+          )}
+        >
+          <MessageScrollerProvider>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <MessageScroller className="min-h-0 h-full">
+                <MessageScrollerViewport className="px-3 py-3">
+                  <MessageScrollerContent className="gap-3">
+                    {messages.length === 0 ? (
+                      <div className="flex flex-col items-center gap-3 py-8">
+                        <p className="text-center text-sm text-muted-foreground">
+                          Ask Orch anything about this workspace.
+                        </p>
+                        {wayfinderSuggestions.length > 0 ? (
+                          <div className="flex max-w-md flex-wrap justify-center gap-2">
+                            {wayfinderSuggestions.map((suggestion) => (
+                              <Button
+                                key={suggestion.id}
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-9 rounded-full border-border bg-card px-3.5 hover:bg-muted/60"
+                                onClick={() => onSelectWayfinder(suggestion.label)}
+                              >
+                                {suggestion.label}
+                              </Button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      messages.map((message, index) => {
+                        const isStreamingMessage =
+                          isStreaming &&
+                          message.role === "assistant" &&
+                          message.id === streamingMessageId;
+                        const isLastAssistant =
+                          message.role === "assistant" && index === lastAssistantIndex;
+                        const isLast = index === messages.length - 1;
 
-                      return (
-                        <MessageScrollerItem key={message.id} scrollAnchor={isLast}>
-                          <Message align={message.role === "user" ? "end" : "start"}>
-                            <MessageContent>
-                              <WorkspaceAgentMessagePartsView
-                                message={message}
-                                isStreamingMessage={isStreamingMessage}
-                                proposalBusyId={proposalBusyId}
-                                planConfirmingId={planConfirmingId}
-                                onConfirmPlan={onConfirmPlan}
-                                onApproveProposal={onApproveProposal}
-                                onRejectProposal={onRejectProposal}
-                                onOpenArtifactCanvas={onOpenArtifactCanvas}
-                              />
-                              {streamStopped && !isStreaming && isLastAssistant ? (
-                                <Marker>
-                                  <MarkerContent className="text-muted-foreground">
-                                    Stopped
-                                  </MarkerContent>
-                                </Marker>
-                              ) : null}
-                            </MessageContent>
-                          </Message>
-                        </MessageScrollerItem>
-                      );
-                    })
-                  )}
-                </MessageScrollerContent>
-              </MessageScrollerViewport>
-              <MessageScrollerButton direction="end" />
-            </MessageScroller>
-          </div>
-        </MessageScrollerProvider>
+                        return (
+                          <MessageScrollerItem key={message.id} scrollAnchor={isLast}>
+                            <Message align={message.role === "user" ? "end" : "start"}>
+                              <MessageContent>
+                                <WorkspaceAgentMessagePartsView
+                                  message={message}
+                                  isStreamingMessage={isStreamingMessage}
+                                  proposalBusyId={proposalBusyId}
+                                  planConfirmingId={planConfirmingId}
+                                  answeredQuestionIds={answeredQuestionIds}
+                                  resolvedPlanIds={resolvedPlanIds}
+                                  resolvedProposalIds={resolvedProposalIds}
+                                  stickyItem={stickyItem}
+                                  questionSubmittingId={questionSubmittingId}
+                                  questionDrafts={questionDrafts}
+                                  onConfirmPlan={onConfirmPlan}
+                                  onApproveProposal={onApproveProposal}
+                                  onRejectProposal={onRejectProposal}
+                                  onAnswerQuestion={onAnswerQuestion}
+                                  onQuestionSelectedOptionIdsChange={
+                                    onQuestionSelectedOptionIdsChange
+                                  }
+                                  onQuestionFreeTextChange={onQuestionFreeTextChange}
+                                  onOpenArtifactCanvas={onOpenArtifactCanvas}
+                                />
+                                {streamStopped && !isStreaming && isLastAssistant ? (
+                                  <Marker>
+                                    <MarkerContent className="text-muted-foreground">
+                                      Stopped
+                                    </MarkerContent>
+                                  </Marker>
+                                ) : null}
+                              </MessageContent>
+                            </Message>
+                          </MessageScrollerItem>
+                        );
+                      })
+                    )}
+                  </MessageScrollerContent>
+                </MessageScrollerViewport>
+                <MessageScrollerButton direction="end" />
+              </MessageScroller>
+            </div>
+          </MessageScrollerProvider>
+
+          <AgentStickyDockView
+            item={stickyItem}
+            questionDraft={stickyQuestionDraft}
+            questionAnswered={
+              stickyItem?.kind === "question"
+                ? answeredQuestionIds.has(stickyItem.question.questionId)
+                : false
+            }
+            questionSubmitting={
+              stickyItem?.kind === "question"
+                ? questionSubmittingId === stickyItem.question.questionId
+                : false
+            }
+            questionCanSubmit={stickyQuestionCanSubmit}
+            planConfirming={
+              stickyItem?.kind === "plan" ? planConfirmingId === stickyItem.plan.planId : false
+            }
+            proposalBusy={
+              stickyItem?.kind === "proposal"
+                ? proposalBusyId === stickyItem.proposal.proposalId
+                : false
+            }
+            onQuestionSelectedOptionIdsChange={(ids) => {
+              if (stickyItem?.kind !== "question") return;
+              onQuestionSelectedOptionIdsChange(stickyItem.question.questionId, ids);
+            }}
+            onQuestionFreeTextChange={(value) => {
+              if (stickyItem?.kind !== "question") return;
+              onQuestionFreeTextChange(stickyItem.question.questionId, value);
+            }}
+            onAnswerQuestion={onAnswerQuestion}
+            onConfirmPlan={onConfirmPlan}
+            onApproveProposal={onApproveProposal}
+            onRejectProposal={onRejectProposal}
+            onOpenArtifact={onOpenArtifactCanvas}
+            onDismiss={() => {
+              if (!stickyItem) return;
+              onDismissStickyDock(stickyDockItemKey(stickyItem));
+            }}
+          />
+        </div>
 
         {showCanvas && activeArtifact ? (
           <AgentArtifactPaneView

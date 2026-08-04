@@ -1,4 +1,4 @@
-import { Check, Loader2, Sparkles } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { cn } from "@/lib/utils";
@@ -8,6 +8,9 @@ const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 /** Readable labels for common canvas + agency tools. */
 const TOOL_LABELS: Record<string, string> = {
   ui_present: "Painting canvas",
+  ask_agency_question: "Asking a question",
+  draft_agency_plan: "Drafting plan",
+  propose_agency_action: "Proposing change",
   list_dashboard_nodes: "Listing nodes",
   search_dashboard: "Searching canvas",
   list_marketplace_items: "Listing marketplace",
@@ -51,15 +54,9 @@ function toolLabel(name: string): string {
     .join(" ");
 }
 
-const STEP_TONES = [
-  "bg-secondary/20 text-secondary-foreground",
-  "bg-primary/18 text-primary",
-  "bg-chart-1/20 text-chart-1",
-  "bg-chart-3/20 text-chart-3",
-  "bg-chart-5/20 text-chart-5",
-] as const;
+const STEP_DONE_TONE = "bg-secondary text-secondary-foreground";
 
-/** Waiting → colored steps; active burns primary; complete settles secondary. */
+/** Quiet stream-of-thought: muted timeline, active step uses primary only. */
 export function WorkspaceAgentThinkingActivityView({
   steps,
   live,
@@ -85,64 +82,33 @@ export function WorkspaceAgentThinkingActivityView({
         : "Working";
 
   return (
-    <motion.div
+    <motion.details
+      open={!stepsComplete}
       layout
       className={cn(
-        "relative max-w-[min(100%,36rem)] overflow-hidden rounded-xl border shadow-sm",
-        working ? "border-primary/35 bg-primary/6" : "border-border bg-muted/40",
+        "relative max-w-[min(100%,36rem)] overflow-hidden rounded-xl border",
+        working ? "border-border bg-muted/50" : "border-border bg-muted/40",
       )}
       role="status"
       aria-label="Assistant activity"
       aria-live="polite"
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.36, ease: EASE_OUT_EXPO }}
+      transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
     >
-      {working ? (
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,transparent_40%,color-mix(in_oklab,var(--primary)_16%,transparent)_50%,transparent_60%)] motion-reduce:hidden"
-          animate={{ x: ["-40%", "120%"] }}
-          transition={{
-            duration: 2,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "linear",
-          }}
-        />
-      ) : null}
-
-      <div className="relative flex items-center gap-2 px-2.5 py-2">
+      <summary className="relative flex cursor-pointer list-none items-center gap-2 px-2.5 py-2 [&::-webkit-details-marker]:hidden">
         <span className="relative flex size-5 shrink-0 items-center justify-center">
           {working ? (
-            <>
-              <span
-                aria-hidden
-                className="absolute inset-0 rounded-full bg-primary/30 motion-safe:animate-ping"
-              />
-              <motion.span
-                animate={{ rotate: [0, 10, -6, 0], scale: [1, 1.08, 1] }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Number.POSITIVE_INFINITY,
-                  ease: EASE_OUT_EXPO,
-                }}
-                className="relative flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
-              >
-                <Sparkles className="size-3" aria-hidden />
-              </motion.span>
-            </>
+            <span className="flex size-5 items-center justify-center rounded-full bg-muted text-foreground">
+              <Loader2 className="size-3 animate-spin motion-reduce:animate-none" aria-hidden />
+            </span>
           ) : (
             <motion.span
               key="done-badge"
-              initial={{ scale: 0.45, rotate: -16, opacity: 0 }}
-              animate={{ scale: 1, rotate: 0, opacity: 1 }}
-              transition={{
-                type: "spring",
-                stiffness: 420,
-                damping: 18,
-                mass: 0.55,
-              }}
-              className="flex size-5 items-center justify-center rounded-full bg-secondary text-secondary-foreground shadow-sm"
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.18, ease: EASE_OUT_EXPO }}
+              className="flex size-5 items-center justify-center rounded-full bg-secondary text-secondary-foreground"
             >
               <Check className="size-3 stroke-[2.5]" aria-hidden />
             </motion.span>
@@ -151,17 +117,10 @@ export function WorkspaceAgentThinkingActivityView({
         <p
           className={cn(
             "min-w-0 flex-1 truncate text-[11px] font-semibold tracking-tight",
-            working ? "text-primary" : "text-muted-foreground",
+            working ? "text-foreground" : "text-muted-foreground",
           )}
         >
           {statusLine}
-          {working ? (
-            <span className="ms-0.5 inline-flex gap-px text-primary" aria-hidden>
-              <span className="motion-safe:animate-pulse">.</span>
-              <span className="motion-safe:animate-pulse [animation-delay:120ms]">.</span>
-              <span className="motion-safe:animate-pulse [animation-delay:240ms]">.</span>
-            </span>
-          ) : null}
         </p>
         {steps.length > 0 ? (
           <motion.span
@@ -169,71 +128,51 @@ export function WorkspaceAgentThinkingActivityView({
             initial={{ scale: 0.9, opacity: 0.6 }}
             animate={{ scale: 1, opacity: 1 }}
             className={cn(
-              "shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums",
-              stepsComplete
-                ? "bg-secondary/25 text-muted-foreground"
-                : "bg-primary/15 text-primary",
+              "shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-medium tabular-nums text-muted-foreground",
+              stepsComplete ? "bg-secondary/30" : "bg-muted",
             )}
           >
             {doneCount}/{steps.length}
           </motion.span>
         ) : null}
-      </div>
+      </summary>
 
       {steps.length > 0 ? (
         <ul className="relative flex flex-col gap-0.5 border-t border-border/40 px-1.5 py-1.5">
           <AnimatePresence initial={false}>
             {steps.map((state, index) => {
               const isActive = working && state.id === active?.id;
-              const tone = STEP_TONES[index % STEP_TONES.length]!;
               return (
                 <motion.li
                   key={state.id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   transition={{
-                    duration: 0.28,
-                    delay: Math.min(index, 5) * 0.04,
+                    duration: 0.16,
+                    delay: Math.min(index, 5) * 0.03,
                     ease: EASE_OUT_EXPO,
                   }}
                   className={cn(
                     "flex items-center gap-2 rounded-lg px-1.5 py-1 text-[11px] leading-none",
-                    isActive && "bg-primary/12 ring-1 ring-primary/25",
+                    isActive && "bg-muted",
                     state.done && !isActive && "text-foreground/70",
                     !state.done && !isActive && "text-muted-foreground",
                   )}
                 >
                   <span className="flex size-4 shrink-0 items-center justify-center">
                     {state.done ? (
-                      <motion.span
-                        initial={{ scale: 0.25, rotate: -30, opacity: 0 }}
-                        animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 480,
-                          damping: 16,
-                        }}
-                        className={cn("flex size-4 items-center justify-center rounded-full", tone)}
+                      <span
+                        className={cn(
+                          "flex size-4 items-center justify-center rounded-full",
+                          STEP_DONE_TONE,
+                        )}
                       >
                         <Check className="size-2.5 stroke-[2.5]" aria-hidden />
-                      </motion.span>
+                      </span>
                     ) : isActive ? (
                       <span className="relative flex size-4 items-center justify-center">
-                        <motion.span
-                          aria-hidden
-                          className="absolute inset-0 rounded-full bg-primary/35 motion-reduce:hidden"
-                          animate={{
-                            scale: [1, 1.45, 1],
-                            opacity: [0.55, 0, 0.55],
-                          }}
-                          transition={{
-                            duration: 1.15,
-                            repeat: Number.POSITIVE_INFINITY,
-                            ease: EASE_OUT_EXPO,
-                          }}
-                        />
                         <Loader2
-                          className="relative size-3.5 animate-spin text-primary motion-reduce:animate-none"
+                          className="relative size-3.5 animate-spin text-foreground motion-reduce:animate-none"
                           aria-hidden
                         />
                       </span>
@@ -244,7 +183,7 @@ export function WorkspaceAgentThinkingActivityView({
                   <span
                     className={cn(
                       "min-w-0 flex-1 truncate",
-                      isActive && "font-semibold text-primary",
+                      isActive && "font-semibold text-foreground",
                       state.done && "font-medium",
                     )}
                   >
@@ -259,7 +198,7 @@ export function WorkspaceAgentThinkingActivityView({
           </AnimatePresence>
         </ul>
       ) : null}
-    </motion.div>
+    </motion.details>
   );
 }
 

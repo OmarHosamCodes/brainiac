@@ -65,7 +65,7 @@ export function WorkspaceAgentComposerHistoryBillView({
               variant="secondary"
               aria-label={`Usage bill ${billLabel}. Open chat history`}
               className={cn(
-                "h-7 gap-1 rounded-full border border-border px-2.5 text-xs font-medium shadow-sm",
+                "h-7 gap-1 rounded-full border border-border px-2.5 text-xs font-medium",
                 hasSpend ? "text-info" : "text-muted-foreground",
               )}
             >

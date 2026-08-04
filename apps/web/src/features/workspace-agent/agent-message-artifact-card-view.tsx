@@ -1,31 +1,38 @@
 import type { AiUiArtifact } from "@orch/agent/types";
 import { Maximize2 } from "lucide-react";
 
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { cn } from "@/lib/utils";
 
-/** Inline message control to reopen a turn's canvas artifact. */
+/** Inline message control to reopen a turn's canvas artifact — Approach A pill chip. */
 export function AgentMessageArtifactCardView({
   artifact,
   onOpen,
+  className,
 }: {
   artifact: AiUiArtifact;
   onOpen: () => void;
+  className?: string;
 }) {
   return (
-    <div className="flex max-w-[min(100%,36rem)] items-center gap-2 rounded-xl border border-border bg-muted/40 px-2.5 py-2">
+    <div
+      className={cn(
+        "inline-flex max-w-[min(100%,36rem)] items-center gap-2 rounded-full border border-border bg-card py-1.5 ps-3 pe-1.5",
+        className,
+      )}
+    >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{artifact.title}</p>
-        <p className="text-xs text-muted-foreground">Canvas from this reply</p>
+        <p className="truncate text-sm font-medium tracking-tight text-foreground">
+          {artifact.title}
+        </p>
+        <p className="text-[11px] text-muted-foreground">
+          {artifact.kind === "react" ? "Sandbox canvas" : "Canvas from this reply"}
+        </p>
       </div>
-      <Badge variant="secondary" className="h-5 shrink-0 px-1.5 text-[10px] font-medium">
-        {artifact.kind === "react" ? "Sandbox" : "View"}
-      </Badge>
       <Button
         type="button"
         size="sm"
-        variant="secondary"
-        className="h-7 shrink-0 gap-1 px-2"
+        className="h-8 shrink-0 gap-1 rounded-full px-3 font-medium"
         onClick={onOpen}
       >
         <Maximize2 className="size-3.5" aria-hidden />

@@ -57,6 +57,7 @@ export function WorkspaceAgentComposerSubmitGate({
           aria-label={label}
           type={isPending ? "button" : "submit"}
           onClick={isPending ? onStop : undefined}
+          className="size-8 rounded-full"
         />
       </TooltipTrigger>
       <TooltipContent side="top">{label}</TooltipContent>

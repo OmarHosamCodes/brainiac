@@ -13,31 +13,55 @@ type AgencyPlanCardViewProps = {
   confirming: boolean;
   onConfirm: () => void;
   className?: string;
+  embedded?: boolean;
 };
 
-/** Presentational Confirm-plan card for Agency Plan mode. */
+/** Presentational Confirm-plan card — Approach A numbered steps + ink CTA. */
 export function AgencyPlanCardView({
   plan,
   confirming,
   onConfirm,
   className,
+  embedded = false,
 }: AgencyPlanCardViewProps) {
   return (
     <div
       className={cn(
-        "max-w-[min(100%,36rem)] rounded-lg border border-border bg-card p-3 text-card-foreground",
+        "max-w-[min(100%,36rem)] text-card-foreground",
+        embedded
+          ? "rounded-none border-0 bg-transparent p-0"
+          : "rounded-xl border border-border bg-card p-4",
         className,
       )}
     >
-      <div className="text-sm font-medium">{plan.title}</div>
-      <p className="mt-1 text-xs text-muted-foreground">{plan.summary}</p>
-      <ol className="mt-2 list-decimal space-y-1 ps-4 text-xs">
+      <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        Plan to confirm
+      </p>
+      <div className="mt-1.5 text-base font-semibold tracking-tight">{plan.title}</div>
+      <p className="mt-1 max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
+        {plan.summary}
+      </p>
+      <ol className="mt-3 grid gap-2">
         {plan.steps.map((step, index) => (
-          <li key={`${plan.planId}-${index}`}>{step.label}</li>
+          <li
+            key={`${plan.planId}-${index}`}
+            className="grid grid-cols-[22px_1fr] items-start gap-2 text-xs"
+          >
+            <span className="flex size-[22px] items-center justify-center rounded-full bg-muted text-[10px] font-semibold tabular-nums text-muted-foreground">
+              {index + 1}
+            </span>
+            <span className="pt-0.5 leading-snug text-foreground">{step.label}</span>
+          </li>
         ))}
       </ol>
-      <div className="mt-3 flex justify-end">
-        <Button type="button" size="sm" disabled={confirming} onClick={onConfirm}>
+      <div className="mt-3.5 flex justify-end">
+        <Button
+          type="button"
+          size="sm"
+          disabled={confirming}
+          onClick={onConfirm}
+          className="h-8 min-w-28 rounded-full px-4 font-medium"
+        >
           {confirming ? "Confirming…" : "Confirm plan"}
         </Button>
       </div>
