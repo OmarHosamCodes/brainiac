@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
 
 import { Checkbox } from "@/ui/checkbox";
 import { Input } from "@/ui/input";
@@ -47,6 +47,10 @@ type AgencyMultiSelectFilterProps = {
   disabled?: boolean;
   searchPlaceholder?: string;
   statusFilter?: AgencyMultiSelectStatusFilter;
+  /** default multiple — dashboard command bar. single closes on pick (no Select all). */
+  selectionMode?: "multiple" | "single";
+  triggerClassName?: string;
+  contentClassName?: string;
 };
 
 function optionMatchesQuery(option: AgencyFilterOption, query: string): boolean {
@@ -129,6 +133,35 @@ function SectionHeader({ children }: { children: ReactNode }) {
   );
 }
 
+function FilterSingleOption({
+  selected,
+  onSelect,
+  label,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  label: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "flex w-full min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold transition-colors hover:bg-default/80",
+        agencyFocusRingClass,
+      )}
+    >
+      <Check
+        className={cn("size-3.5 shrink-0", selected ? "text-highlighted" : "text-transparent")}
+        aria-hidden
+      />
+      <span className={cn("min-w-0 flex-1 truncate", selected ? "text-highlighted" : "text-muted")}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
 export function AgencyMultiSelectFilter({
   label,
   values,
@@ -138,11 +171,15 @@ export function AgencyMultiSelectFilter({
   disabled,
   searchPlaceholder,
   statusFilter,
+  selectionMode = "multiple",
+  triggerClassName,
+  contentClassName,
 }: AgencyMultiSelectFilterProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const selected = new Set(values);
   const query = searchTerm.trim().toLowerCase();
+  const isSingle = selectionMode === "single";
 
   const flatOptions = useMemo(() => {
     if (groups) {
@@ -183,6 +220,12 @@ export function AgencyMultiSelectFilter({
   const someVisibleSelected = visibleOptions.some((option) => selected.has(option.value));
 
   function toggleValue(value: string) {
+    if (isSingle) {
+      onValuesChange([value]);
+      setOpen(false);
+      setSearchTerm("");
+      return;
+    }
     if (selected.has(value)) {
       onValuesChange(values.filter((entry) => entry !== value));
       return;
@@ -201,6 +244,27 @@ export function AgencyMultiSelectFilter({
       next.add(id);
     }
     onValuesChange([...next]);
+  }
+
+  function renderOption(option: AgencyFilterOption) {
+    if (isSingle) {
+      return (
+        <FilterSingleOption
+          key={option.value}
+          selected={selected.has(option.value)}
+          onSelect={() => toggleValue(option.value)}
+          label={option.label}
+        />
+      );
+    }
+    return (
+      <FilterCheckbox
+        key={option.value}
+        checked={selected.has(option.value)}
+        onChange={() => toggleValue(option.value)}
+        label={option.label}
+      />
+    );
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -223,6 +287,7 @@ export function AgencyMultiSelectFilter({
           className={cn(
             agencyCommandBarFilterTriggerClass,
             values.length > 0 ? "text-highlighted" : "text-muted",
+            triggerClassName,
           )}
           aria-label={label}
         >
@@ -232,7 +297,7 @@ export function AgencyMultiSelectFilter({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
+        className={cn("w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0", contentClassName)}
       >
         <div className="border-b border-default p-2">
           <div className="relative">
@@ -283,12 +348,14 @@ export function AgencyMultiSelectFilter({
         ) : null}
 
         <div className="max-h-72 overflow-x-hidden overflow-y-auto px-1 py-1">
-          <FilterCheckbox
-            checked={allVisibleSelected}
-            indeterminate={someVisibleSelected && !allVisibleSelected}
-            onChange={handleSelectAll}
-            label="Select all"
-          />
+          {!isSingle ? (
+            <FilterCheckbox
+              checked={allVisibleSelected}
+              indeterminate={someVisibleSelected && !allVisibleSelected}
+              onChange={handleSelectAll}
+              label="Select all"
+            />
+          ) : null}
 
           {!hasResults ? (
             <p className="px-4 py-4 text-center text-xs text-muted">
@@ -303,35 +370,14 @@ export function AgencyMultiSelectFilter({
                   ? group.sections.map((section) => (
                       <div key={`${group.groupLabel}-${section.sectionLabel}`}>
                         <SectionHeader>{section.sectionLabel}</SectionHeader>
-                        {section.options.map((option) => (
-                          <FilterCheckbox
-                            key={option.value}
-                            checked={selected.has(option.value)}
-                            onChange={() => toggleValue(option.value)}
-                            label={option.label}
-                          />
-                        ))}
+                        {section.options.map((option) => renderOption(option))}
                       </div>
                     ))
-                  : (group.options ?? []).map((option) => (
-                      <FilterCheckbox
-                        key={option.value}
-                        checked={selected.has(option.value)}
-                        onChange={() => toggleValue(option.value)}
-                        label={option.label}
-                      />
-                    ))}
+                  : (group.options ?? []).map((option) => renderOption(option))}
               </div>
             ))
           ) : (
-            filteredFlatOptions.map((option) => (
-              <FilterCheckbox
-                key={option.value}
-                checked={selected.has(option.value)}
-                onChange={() => toggleValue(option.value)}
-                label={option.label}
-              />
-            ))
+            filteredFlatOptions.map((option) => renderOption(option))
           )}
         </div>
       </PopoverContent>

@@ -38,8 +38,8 @@ function formatDisplayDay(value: string): string {
   });
 }
 
-function rangeLabel(startDate: string, endDate: string): string {
-  if (!startDate || !endDate) return "Select off day dates";
+function rangeLabel(startDate: string, endDate: string, emptyLabel: string): string {
+  if (!startDate || !endDate) return emptyLabel;
   if (startDate === endDate) return formatDisplayDay(startDate);
   return `${formatDisplayDay(startDate)} → ${formatDisplayDay(endDate)}`;
 }
@@ -53,6 +53,7 @@ type MemberProfileOffDayRangePanelProps = {
   onCancel: () => void;
   /** Keep the start day fixed (calendar Select flow). */
   lockStart?: boolean;
+  emptyLabel?: string;
 };
 
 /** Shared range calendar used by the off-day dialog picker and calendar Select flow. */
@@ -62,6 +63,7 @@ export function MemberProfileOffDayRangePanel({
   onConfirm,
   onCancel,
   lockStart = false,
+  emptyLabel = "Select off day dates",
 }: MemberProfileOffDayRangePanelProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [draftStart, setDraftStart] = useState(startDate);
@@ -71,7 +73,7 @@ export function MemberProfileOffDayRangePanel({
   const to = parseLocalDateKey(draftEnd);
   const selected: DateRange | undefined = from ? { from, to: to ?? from } : undefined;
   const canConfirm = Boolean(draftStart && draftEnd && draftEnd >= draftStart);
-  const draftLabel = rangeLabel(draftStart, draftEnd);
+  const draftLabel = rangeLabel(draftStart, draftEnd, emptyLabel);
 
   return (
     <div>
@@ -144,18 +146,26 @@ type MemberProfileLeaveRangePickerProps = {
   startDate: string;
   endDate: string;
   onRangeChange: (next: RangeValue) => void;
+  emptyLabel?: string;
+  ariaLabel?: string;
+  triggerId?: string;
+  triggerClassName?: string;
 };
 
 export function MemberProfileLeaveRangePicker({
   startDate,
   endDate,
   onRangeChange,
+  emptyLabel = "Select off day dates",
+  ariaLabel = "Off day date range",
+  triggerId = "leave-range",
+  triggerClassName,
 }: MemberProfileLeaveRangePickerProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [open, setOpen] = useState(false);
   const [justConfirmed, setJustConfirmed] = useState(false);
 
-  const committedLabel = rangeLabel(startDate, endDate);
+  const committedLabel = rangeLabel(startDate, endDate, emptyLabel);
 
   function openPicker(nextOpen: boolean) {
     if (nextOpen) {
@@ -172,7 +182,7 @@ export function MemberProfileLeaveRangePicker({
         <Button
           type="button"
           variant="outline"
-          id="leave-range"
+          id={triggerId}
           className={cn(
             "h-auto min-h-10 w-full justify-start gap-2 overflow-hidden px-3 py-2 text-left font-normal",
             "transition-[transform,background-color,border-color,box-shadow] duration-200 ease-out",
@@ -182,8 +192,9 @@ export function MemberProfileLeaveRangePicker({
             justConfirmed && "border-primary/35 ring-1 ring-primary/20",
             "motion-reduce:transition-none motion-reduce:active:scale-100",
             agencyFocusRingClass,
+            triggerClassName,
           )}
-          aria-label="Off day date range"
+          aria-label={ariaLabel}
           aria-expanded={open}
         >
           <motion.span
@@ -225,6 +236,7 @@ export function MemberProfileLeaveRangePicker({
             key={`${startDate}:${endDate}`}
             startDate={startDate}
             endDate={endDate}
+            emptyLabel={emptyLabel}
             onCancel={() => openPicker(false)}
             onConfirm={(next) => {
               onRangeChange(next);
