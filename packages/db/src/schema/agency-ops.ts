@@ -614,7 +614,14 @@ export const agencyOpsInvoiceLineItem = pgTable(
 // ---------------------------------------------------------------------------
 
 export type AgencyOpsPayoutRunStatus = "draft" | "paying" | "paid";
-export type AgencyOpsPayoutSectionKey = "salaries";
+export type AgencyOpsPayoutSectionKey =
+  | "salaries"
+  | "team_loss"
+  | "device_comp"
+  | "paid_vacation"
+  | "debt_discount"
+  | "charity"
+  | "pbc";
 export type AgencyOpsPayoutLineStatus = "draft" | "partial" | "paid";
 
 export const agencyOpsPayoutRun = pgTable(
@@ -677,10 +684,11 @@ export const agencyOpsPayoutLine = pgTable(
     sectionId: text("section_id")
       .notNull()
       .references(() => agencyOpsPayoutSection.id, { onDelete: "cascade" }),
-    payeeUserId: text("payee_user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "restrict" }),
+    /** Null for non-member adjustment lines (debt, charity, ops). */
+    payeeUserId: text("payee_user_id").references(() => user.id, { onDelete: "restrict" }),
     label: text("label").notNull().default(""),
+    /** Optional cohort bucket label (Money settings rules). */
+    cohortKey: text("cohort_key"),
     amountCents: integer("amount_cents").notNull().default(0),
     paidCents: integer("paid_cents").notNull().default(0),
     status: text("status").$type<AgencyOpsPayoutLineStatus>().notNull().default("draft"),
@@ -697,10 +705,89 @@ export const agencyOpsPayoutLine = pgTable(
   (table) => [
     index("agency_ops_payout_line_section_idx").on(table.sectionId),
     index("agency_ops_payout_line_payee_idx").on(table.payeeUserId),
-    uniqueIndex("agency_ops_payout_line_section_payee_unique").on(
-      table.sectionId,
-      table.payeeUserId,
-    ),
+    // Partial uniques: one line per member payee; one label per non-member line.
+    uniqueIndex("agency_ops_payout_line_section_payee_unique")
+      .on(table.sectionId, table.payeeUserId)
+      .where(sql`${table.payeeUserId} is not null`),
+    uniqueIndex("agency_ops_payout_line_section_label_unique")
+      .on(table.sectionId, table.label)
+      .where(sql`${table.payeeUserId} is null`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Money settings (rules / formulas persistence)
+// ---------------------------------------------------------------------------
+
+export type AgencyOpsMoneyRulesJson = {
+  enabledRuleIds: string[];
+  notesByRuleId?: Record<string, string>;
+};
+
+export type AgencyOpsMoneyCalcOptionsJson = {
+  enabledOptionIds: string[];
+  notesByOptionId?: Record<string, string>;
+};
+
+export const agencyOpsMoneySettings = pgTable("agency_ops_money_settings", {
+  teamId: text("team_id")
+    .primaryKey()
+    .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+  rulesJson: jsonb("rules_json")
+    .$type<AgencyOpsMoneyRulesJson>()
+    .notNull()
+    .default({ enabledRuleIds: [] }),
+  calcOptionsJson: jsonb("calc_options_json")
+    .$type<AgencyOpsMoneyCalcOptionsJson>()
+    .notNull()
+    .default({ enabledOptionIds: [] }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+// ---------------------------------------------------------------------------
+// Ops expenses (vendor / subscription spend — Money Expenses card)
+// ---------------------------------------------------------------------------
+
+export type AgencyOpsExpenseKind = "one_time" | "subscription";
+export type AgencyOpsExpensePeriod = "weekly" | "monthly" | "quarterly" | "yearly";
+export type AgencyOpsExpenseStatus = "due" | "partial" | "paid";
+
+export const agencyOpsExpense = pgTable(
+  "agency_ops_expense",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    kind: text("kind").$type<AgencyOpsExpenseKind>().notNull(),
+    period: text("period").$type<AgencyOpsExpensePeriod>(),
+    note: text("note").notNull().default(""),
+    amountCents: integer("amount_cents").notNull().default(0),
+    currency: text("currency").notNull().default("USD"),
+    status: text("status").$type<AgencyOpsExpenseStatus>().notNull().default("due"),
+    paidCents: integer("paid_cents").notNull().default(0),
+    /** Next due date for subscriptions. */
+    nextDueAt: timestamp("next_due_at"),
+    /** Spend date for one-time expenses. */
+    occurredAt: timestamp("occurred_at"),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_expense_team_idx").on(table.teamId),
+    index("agency_ops_expense_team_kind_idx").on(table.teamId, table.kind),
+    index("agency_ops_expense_team_next_due_idx").on(table.teamId, table.nextDueAt),
   ],
 );
 
