@@ -44,9 +44,11 @@ import {
 } from "@/features/workspace-agent/composer-attachment-controls";
 import { WorkspaceAgentComposerHistoryBillView } from "@/features/workspace-agent/composer-history-bill-view";
 import { WorkspaceAgentModelPresetMenuView } from "@/features/workspace-agent/model-preset-menu-view";
+import { WorkspaceAgentQuickStartChipsView } from "@/features/workspace-agent/quick-start-chips-view";
 import { WorkspaceAgentScopeChipView } from "@/features/workspace-agent/scope-chip-view";
 import { WorkspaceAgentToolMenuView } from "@/features/workspace-agent/tool-menu-view";
 import type { WorkspaceAgentScopeChip } from "@/features/workspace-agent/hooks/use-workspace-agent";
+import type { WorkspaceAgentQuickStart } from "@/features/workspace-agent/workspace-agent-quick-starts";
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Separator } from "@/ui/separator";
@@ -102,6 +104,9 @@ type WorkspaceAgentComposerViewProps = {
   dimmed: boolean;
   shellLayoutId?: string;
   nestedInShell?: boolean;
+  quickStarts: WorkspaceAgentQuickStart[];
+  showQuickStarts: boolean;
+  onSelectQuickStart: (start: WorkspaceAgentQuickStart) => void;
 };
 
 const MODE_OPTIONS: Array<{
@@ -192,6 +197,9 @@ export function WorkspaceAgentComposerView({
   dimmed,
   shellLayoutId,
   nestedInShell = false,
+  quickStarts,
+  showQuickStarts,
+  onSelectQuickStart,
 }: WorkspaceAgentComposerViewProps) {
   const showMentions = mentionSuggestions.length > 0;
   const hasChips = scopeChips.length > 0;
@@ -207,6 +215,7 @@ export function WorkspaceAgentComposerView({
   const modelTooltip = resolvedModelLabel
     ? `${selectedModelLabel} · ${resolvedModelLabel}`
     : selectedModelLabel;
+  const showFloatingChrome = !nestedInShell;
 
   return (
     <TooltipProvider>
@@ -229,43 +238,51 @@ export function WorkspaceAgentComposerView({
           ) : null}
         </AnimatePresence>
 
-        <div
-          className={cn(
-            "flex items-center justify-end gap-1.5",
-            nestedInShell ? "hidden" : "mb-2 px-0.5",
-          )}
-        >
-          <WorkspaceAgentComposerHistoryBillView
-            open={historyBillOpen}
-            onOpenChange={onHistoryBillOpenChange}
-            conversationOptions={conversationOptions}
-            conversationsLoading={conversationsLoading}
-            activeConversationId={activeConversationId}
-            activeCostUsd={activeCostUsd}
-            onSelectConversation={onSelectConversation}
-            onStartNewConversation={onStartNewConversation}
-            onDeleteConversation={onDeleteConversation}
-            deletingConversationId={deletingConversationId}
-          />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                size="icon-sm"
-                variant={scopeModeActive ? "default" : "secondary"}
-                aria-pressed={scopeModeActive}
-                aria-label={scopeModeActive ? "Exit sniper mode" : "Sniper mode"}
-                className="size-7 rounded-full border border-border"
-                onClick={onToggleScopeMode}
-              >
-                <Crosshair className="size-3.5" aria-hidden />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              {scopeModeActive ? "Exit sniper mode" : "Sniper mode — click page items to add scope"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {showFloatingChrome ? (
+          <div className="mb-1.5 flex items-end gap-2 px-0.5">
+            <WorkspaceAgentQuickStartChipsView
+              starts={quickStarts}
+              visible={showQuickStarts}
+              onSelect={onSelectQuickStart}
+              className="min-w-0 flex-1"
+              density="compact"
+            />
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              <WorkspaceAgentComposerHistoryBillView
+                open={historyBillOpen}
+                onOpenChange={onHistoryBillOpenChange}
+                conversationOptions={conversationOptions}
+                conversationsLoading={conversationsLoading}
+                activeConversationId={activeConversationId}
+                activeCostUsd={activeCostUsd}
+                onSelectConversation={onSelectConversation}
+                onStartNewConversation={onStartNewConversation}
+                onDeleteConversation={onDeleteConversation}
+                deletingConversationId={deletingConversationId}
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant={scopeModeActive ? "default" : "secondary"}
+                    aria-pressed={scopeModeActive}
+                    aria-label={scopeModeActive ? "Exit sniper mode" : "Sniper mode"}
+                    className="size-7 rounded-full border border-border"
+                    onClick={onToggleScopeMode}
+                  >
+                    <Crosshair className="size-3.5" aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {scopeModeActive
+                    ? "Exit sniper mode"
+                    : "Sniper mode — click page items to add scope"}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        ) : null}
 
         <motion.div
           layout

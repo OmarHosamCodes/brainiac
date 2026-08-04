@@ -26,6 +26,12 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
   const isWorking = view.isPending;
   const collapsedLabel = isWorking ? "Working..." : "Message Orch";
   const showArtifactSplit = Boolean(view.activeArtifact);
+  const showFloatingQuickStarts =
+    view.expanded &&
+    !showChat &&
+    !view.isPending &&
+    view.draft.trim().length === 0 &&
+    view.scopeChips.length === 0;
 
   return (
     <MotionConfig reducedMotion="user" transition={{ layout: layoutTransition }}>
@@ -160,8 +166,9 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                         onAnswerQuestion={view.onAnswerQuestion}
                         onQuestionSelectedOptionIdsChange={view.onQuestionSelectedOptionIdsChange}
                         onQuestionFreeTextChange={view.onQuestionFreeTextChange}
-                        wayfinderSuggestions={view.wayfinderSuggestions}
-                        onSelectWayfinder={view.onSelectWayfinder}
+                        quickStarts={view.quickStarts}
+                        onSelectQuickStart={view.onSelectQuickStart}
+                        emptyHint={view.emptyHint}
                       />
                     </motion.div>
                   ) : null}
@@ -243,6 +250,9 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     dimmed={view.scopeModeActive}
                     shellLayoutId={showChat ? undefined : SHELL_LAYOUT_ID}
                     nestedInShell={showChat}
+                    quickStarts={view.quickStarts}
+                    showQuickStarts={showFloatingQuickStarts}
+                    onSelectQuickStart={view.onSelectQuickStart}
                   />
                 </motion.div>
               </motion.div>

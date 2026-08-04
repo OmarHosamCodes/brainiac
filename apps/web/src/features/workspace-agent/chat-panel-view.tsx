@@ -19,6 +19,8 @@ import {
   type OrchUIDataParts,
   type OrchUIMessage,
 } from "@/features/workspace-agent/orch-ui-message";
+import { WorkspaceAgentQuickStartChipsView } from "@/features/workspace-agent/quick-start-chips-view";
+import type { WorkspaceAgentQuickStart } from "@/features/workspace-agent/workspace-agent-quick-starts";
 import {
   isPartStickyDocked,
   resolveStickyDockItem,
@@ -118,8 +120,9 @@ type WorkspaceAgentChatPanelViewProps = {
   onQuestionSelectedOptionIdsChange: (questionId: string, ids: string[]) => void;
   onQuestionFreeTextChange: (questionId: string, value: string) => void;
   /** Empty-thread starter prompts (Agency vs Canvas). */
-  wayfinderSuggestions: Array<{ id: string; label: string }>;
-  onSelectWayfinder: (label: string) => void;
+  quickStarts: WorkspaceAgentQuickStart[];
+  onSelectQuickStart: (start: WorkspaceAgentQuickStart) => void;
+  emptyHint: string;
 };
 
 function formatConversationStamp(value: string): string {
@@ -444,8 +447,9 @@ export function WorkspaceAgentChatPanelView({
   onAnswerQuestion,
   onQuestionSelectedOptionIdsChange,
   onQuestionFreeTextChange,
-  wayfinderSuggestions,
-  onSelectWayfinder,
+  quickStarts,
+  onSelectQuickStart,
+  emptyHint,
 }: WorkspaceAgentChatPanelViewProps) {
   let lastAssistantIndex = -1;
   for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -618,25 +622,14 @@ export function WorkspaceAgentChatPanelView({
                   <MessageScrollerContent className="gap-3">
                     {messages.length === 0 ? (
                       <div className="flex flex-col items-center gap-3 py-8">
-                        <p className="text-center text-sm text-muted-foreground">
-                          Ask Orch anything about this workspace.
-                        </p>
-                        {wayfinderSuggestions.length > 0 ? (
-                          <div className="flex max-w-md flex-wrap justify-center gap-2">
-                            {wayfinderSuggestions.map((suggestion) => (
-                              <Button
-                                key={suggestion.id}
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="h-9 rounded-full border-border bg-card px-3.5 hover:bg-muted/60"
-                                onClick={() => onSelectWayfinder(suggestion.label)}
-                              >
-                                {suggestion.label}
-                              </Button>
-                            ))}
-                          </div>
-                        ) : null}
+                        <p className="text-center text-sm text-muted-foreground">{emptyHint}</p>
+                        <WorkspaceAgentQuickStartChipsView
+                          starts={quickStarts}
+                          visible={quickStarts.length > 0}
+                          onSelect={onSelectQuickStart}
+                          className="max-w-md justify-center"
+                          density="comfortable"
+                        />
                       </div>
                     ) : (
                       messages.map((message, index) => {

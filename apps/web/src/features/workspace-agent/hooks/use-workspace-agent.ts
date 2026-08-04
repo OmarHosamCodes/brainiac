@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 
+import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
 import { useAgentCanvasOverlay } from "@/features/workspace-agent/hooks/use-agent-canvas-overlay";
 import { useAgentScopeModeListener } from "@/features/workspace-agent/hooks/use-agent-scope-mode-listener";
 import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agency-timer";
@@ -35,6 +36,10 @@ import {
   type OrchUIMessage,
 } from "@/features/workspace-agent/orch-ui-message";
 import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
+import {
+  buildWorkspaceAgentQuickStarts,
+  type WorkspaceAgentQuickStart,
+} from "@/features/workspace-agent/workspace-agent-quick-starts";
 import { applyBoundWorkspaceSnapshot } from "@/features/workspace/workspace-snapshot-handler";
 import { orpc, orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -342,7 +347,13 @@ export function useWorkspaceAgent() {
   }, [stop]);
 
   const sendMessage = useCallback(
-    async (input: { text: string; attachments?: AgentTextAttachment[] } = { text: draft }) => {
+    async (
+      input: {
+        text: string;
+        attachments?: AgentTextAttachment[];
+        toolPreset?: DashboardAgentToolPreset;
+      } = { text: draft },
+    ) => {
       const content = input.text.trim();
       const attachments = input.attachments ?? [];
       const model = modelPresetState.outboundModelId?.trim();
@@ -350,6 +361,11 @@ export function useWorkspaceAgent() {
       if (surface === "agency" && !teamId) {
         setError("Select an Agency team before asking about time.");
         return false;
+      }
+
+      const toolPreset = input.toolPreset ?? selectedToolPreset;
+      if (input.toolPreset && input.toolPreset !== selectedToolPreset) {
+        setSelectedToolPreset(input.toolPreset);
       }
 
       const scopedNodes =
@@ -372,7 +388,7 @@ export function useWorkspaceAgent() {
               attachments,
               conversationId: activeConversationId ?? undefined,
               surface,
-              toolPreset: selectedToolPreset,
+              toolPreset,
               modelPreset: modelPresetState.modelPreset,
               scopeRefs: scopeChips,
               contextNodeTitles: scopeChips.map((chip) => chip.label),
@@ -637,25 +653,27 @@ export function useWorkspaceAgent() {
   const { closeRef: canvasCloseRef } = useAgentCanvasOverlay(canvasOverlayActive, closeCanvas);
 
   const placeholder = surface === "agency" ? "Ask about your time" : "Ask about this canvas";
-  const wayfinderSuggestions =
-    surface === "agency"
-      ? [
-          { id: "summary", label: "Summarize my time this week" },
-          { id: "waste", label: "Where is the waste?" },
-          { id: "report", label: "Draft a report plan" },
-        ]
-      : [
-          { id: "explain", label: "Explain this board" },
-          { id: "find", label: "Find a node" },
-          { id: "layout", label: "Propose a layout change" },
-        ];
-  const onSelectWayfinder = useCallback(
-    (label: string) => {
-      setDraft(label);
-      setExpanded(true);
-    },
-    [setDraft, setExpanded],
+
+  const agencyTeamIdForTimer = surface === "agency" ? (teamId ?? "") : "";
+  const activeTimerQuery = useAgencyActiveTimerQuery(agencyTeamIdForTimer);
+  const hasActiveTimer = surface === "agency" && Boolean(activeTimerQuery.data?.timer);
+
+  const quickStarts = useMemo(
+    () => buildWorkspaceAgentQuickStarts({ surface, hasActiveTimer }),
+    [hasActiveTimer, surface],
   );
+
+  const onSelectQuickStart = useCallback(
+    (start: WorkspaceAgentQuickStart) => {
+      setExpanded(true);
+      void sendMessage({ text: start.prompt, toolPreset: start.toolPreset });
+    },
+    [sendMessage, setExpanded],
+  );
+  const emptyHint =
+    surface === "agency"
+      ? "Ask about your time, waste, or who's tracking."
+      : "Ask about this board.";
   const bottomOffsetClass = surface === "agency" ? "bottom-8" : "bottom-4";
   const streamingMessageId =
     isStreaming && messages[messages.length - 1]?.role === "assistant"
@@ -777,8 +795,9 @@ export function useWorkspaceAgent() {
     onAnswerQuestion: (answer: OrchAgencyQuestionAnswer) => void onAnswerQuestion(answer),
     onQuestionSelectedOptionIdsChange,
     onQuestionFreeTextChange,
-    wayfinderSuggestions,
-    onSelectWayfinder,
+    quickStarts,
+    onSelectQuickStart,
+    emptyHint,
   };
 }
 
