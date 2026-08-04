@@ -3,6 +3,7 @@ import { formatDuration } from "@/lib/utils/format-duration";
 import type { MoneyBillsPartyFilter, MoneyBillsStatusFilter } from "./money-bills-filters";
 
 export type MoneyBillInvoiceStatus = "draft" | "sent" | "partial" | "paid" | "refunded";
+export type MoneyBillPayoutStatus = "draft" | "partial" | "paid";
 export type MoneyBillStatus = "outstanding" | "partial" | "paid" | "refunded";
 
 export type MoneyBillInvoiceSource = {
@@ -33,6 +34,23 @@ export type MoneyBillMemberActivitySource = {
   durationSeconds: number;
 };
 
+export type MoneyBillTeamPayoutSource = {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  label: string;
+  status: MoneyBillPayoutStatus;
+  billStatus: Exclude<MoneyBillStatus, "refunded">;
+  amountCents: number;
+  paidCents: number;
+  remainingCents: number;
+  currency: string;
+  durationSeconds: number;
+  periodStart: string;
+  periodEnd: string;
+};
+
 type MoneyBillRowBase = {
   id: string;
   title: string;
@@ -44,6 +62,7 @@ type MoneyBillRowBase = {
   canRecordPayment: boolean;
   canRefund: boolean;
   canCreateInvoice: boolean;
+  canCreatePayout: boolean;
 };
 
 export type MoneyBillInvoiceRow = MoneyBillRowBase & {
@@ -84,10 +103,33 @@ export type MoneyBillMemberActivityRow = MoneyBillRowBase & {
   durationLabel: string;
 };
 
+export type MoneyBillTeamPayoutRow = MoneyBillRowBase & {
+  kind: "team-payout";
+  party: "team";
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  label: string;
+  status: MoneyBillPayoutStatus;
+  billStatus: Exclude<MoneyBillStatus, "refunded">;
+  billStatusLabel: string;
+  amountCents: number;
+  paidCents: number;
+  remainingCents: number;
+  currency: string;
+  amountLabel: string;
+  paidLabel: string;
+  remainingLabel: string;
+  durationSeconds: number;
+  durationLabel: string;
+  periodLabel: string;
+};
+
 export type MoneyBillRow =
   | MoneyBillInvoiceRow
   | MoneyBillClientActivityRow
-  | MoneyBillMemberActivityRow;
+  | MoneyBillMemberActivityRow
+  | MoneyBillTeamPayoutRow;
 
 export function moneyBillStatusLabel(billStatus: MoneyBillStatus): string {
   switch (billStatus) {
@@ -174,6 +216,7 @@ export function moneyBillRowFromInvoice(invoice: MoneyBillInvoiceSource): MoneyB
     canRefund:
       invoice.status === "sent" || invoice.status === "partial" || invoice.status === "paid",
     canCreateInvoice: false,
+    canCreatePayout: false,
   };
 }
 
@@ -198,6 +241,7 @@ export function moneyBillRowFromClientActivity(
     canRecordPayment: false,
     canRefund: false,
     canCreateInvoice: true,
+    canCreatePayout: false,
   };
 }
 
@@ -210,9 +254,9 @@ export function moneyBillRowFromMemberActivity(
     id: `member-activity:${member.userId}`,
     party: "team",
     title: member.userName,
-    subtitle: "Logged time this period",
+    subtitle: "Ready to pay from tracked time",
     metaLabel: durationLabel,
-    statusLabel: "Worked",
+    statusLabel: "Ready",
     userId: member.userId,
     userName: member.userName,
     userAvatar: member.userAvatar,
@@ -223,6 +267,48 @@ export function moneyBillRowFromMemberActivity(
     canRecordPayment: false,
     canRefund: false,
     canCreateInvoice: false,
+    canCreatePayout: true,
+  };
+}
+
+export function moneyBillRowFromPayoutLine(
+  payout: MoneyBillTeamPayoutSource,
+): MoneyBillTeamPayoutRow {
+  const billStatusLabel = moneyBillStatusLabel(payout.billStatus);
+  const periodLabel = formatMoneyBillPeriod(payout.periodStart, payout.periodEnd);
+  const amountLabel = formatMoneyBillCents(payout.amountCents, payout.currency);
+  const durationLabel = formatDuration(payout.durationSeconds, "short");
+  return {
+    kind: "team-payout",
+    id: payout.id,
+    party: "team",
+    title: payout.userName,
+    subtitle: `${payout.label} · ${periodLabel}`,
+    metaLabel: amountLabel,
+    statusLabel: billStatusLabel,
+    userId: payout.userId,
+    userName: payout.userName,
+    userAvatar: payout.userAvatar,
+    label: payout.label,
+    status: payout.status,
+    billStatus: payout.billStatus,
+    billStatusLabel,
+    amountCents: payout.amountCents,
+    paidCents: payout.paidCents,
+    remainingCents: payout.remainingCents,
+    currency: payout.currency,
+    amountLabel,
+    paidLabel: formatMoneyBillCents(payout.paidCents, payout.currency),
+    remainingLabel: formatMoneyBillCents(payout.remainingCents, payout.currency),
+    durationSeconds: payout.durationSeconds,
+    durationLabel,
+    periodLabel,
+    canSend: false,
+    canMarkPaid: payout.status === "draft" || payout.status === "partial",
+    canRecordPayment: payout.status === "draft" || payout.status === "partial",
+    canRefund: false,
+    canCreateInvoice: false,
+    canCreatePayout: false,
   };
 }
 
@@ -234,6 +320,7 @@ export function moneyBillHueId(row: MoneyBillRow): string | null {
     case "invoice":
       return row.clientId;
     case "member-activity":
+    case "team-payout":
       return null;
     default: {
       const _exhaustive: never = row;
@@ -242,7 +329,31 @@ export function moneyBillHueId(row: MoneyBillRow): string | null {
   }
 }
 
-export type MoneyBillRowSectionId = "ready" | "invoices" | "team";
+export function moneyBillClientHref(clientId: string): string {
+  return `/agency?section=clients&client=${encodeURIComponent(clientId)}`;
+}
+
+export function moneyBillMemberHref(userId: string): string {
+  return `/agency/members/${encodeURIComponent(userId)}`;
+}
+
+/** Agency deep-link for the bill party name (Clients segment or member profile). */
+export function moneyBillPartyHref(row: MoneyBillRow): string {
+  switch (row.kind) {
+    case "client-activity":
+    case "invoice":
+      return moneyBillClientHref(row.clientId);
+    case "member-activity":
+    case "team-payout":
+      return moneyBillMemberHref(row.userId);
+    default: {
+      const _exhaustive: never = row;
+      return _exhaustive;
+    }
+  }
+}
+
+export type MoneyBillRowSectionId = "ready" | "invoices" | "ready-payout" | "team";
 
 export type MoneyBillRowSection = {
   id: MoneyBillRowSectionId;
@@ -251,12 +362,13 @@ export type MoneyBillRowSection = {
   rows: MoneyBillRow[];
 };
 
-const SECTION_ORDER: MoneyBillRowSectionId[] = ["ready", "invoices", "team"];
+const SECTION_ORDER: MoneyBillRowSectionId[] = ["ready", "invoices", "ready-payout", "team"];
 
 export function groupMoneyBillRows(rows: MoneyBillRow[]): MoneyBillRowSection[] {
   const buckets: Record<MoneyBillRowSectionId, MoneyBillRow[]> = {
     ready: [],
     invoices: [],
+    "ready-payout": [],
     team: [],
   };
   for (const row of rows) {
@@ -268,6 +380,9 @@ export function groupMoneyBillRows(rows: MoneyBillRow[]): MoneyBillRowSection[] 
         buckets.invoices.push(row);
         break;
       case "member-activity":
+        buckets["ready-payout"].push(row);
+        break;
+      case "team-payout":
         buckets.team.push(row);
         break;
       default: {
@@ -298,11 +413,19 @@ export function groupMoneyBillRows(rows: MoneyBillRow[]): MoneyBillRowSection[] 
           rows: sectionRows,
         });
         break;
+      case "ready-payout":
+        sections.push({
+          id,
+          title: "Ready to pay",
+          hint: `${sectionRows.length} member${sectionRows.length === 1 ? "" : "s"} with tracked time`,
+          rows: sectionRows,
+        });
+        break;
       case "team":
         sections.push({
           id,
-          title: "Team this period",
-          hint: `${sectionRows.length} member${sectionRows.length === 1 ? "" : "s"} logged time`,
+          title: "Payouts",
+          hint: `${sectionRows.length} in this period`,
           rows: sectionRows,
         });
         break;
@@ -316,11 +439,20 @@ export function groupMoneyBillRows(rows: MoneyBillRow[]): MoneyBillRowSection[] 
 }
 
 export function moneyBillListInsight(rows: MoneyBillRow[]): string | null {
-  const ready = rows.filter((row) => row.kind === "client-activity");
-  if (ready.length === 0) return null;
-  const totalSeconds = ready.reduce((sum, row) => sum + row.durationSeconds, 0);
-  const hoursLabel = formatDuration(totalSeconds, "short");
-  return `${ready.length} client${ready.length === 1 ? "" : "s"} ready · ${hoursLabel} unbilled`;
+  const readyClients = rows.filter((row) => row.kind === "client-activity");
+  const readyPayouts = rows.filter((row) => row.kind === "member-activity");
+  const parts: string[] = [];
+  if (readyClients.length > 0) {
+    const totalSeconds = readyClients.reduce((sum, row) => sum + row.durationSeconds, 0);
+    parts.push(
+      `${readyClients.length} client${readyClients.length === 1 ? "" : "s"} ready · ${formatDuration(totalSeconds, "short")} unbilled`,
+    );
+  }
+  if (readyPayouts.length > 0) {
+    parts.push(`${readyPayouts.length} member${readyPayouts.length === 1 ? "" : "s"} ready to pay`);
+  }
+  if (parts.length === 0) return null;
+  return parts.join(" · ");
 }
 
 export function moneyBillInitials(title: string): string {
@@ -331,8 +463,8 @@ export function moneyBillInitials(title: string): string {
 }
 
 /**
- * Default Bills list: invoices + uninvoiced clients with time + members who worked.
- * Status filter applies to invoices (and uninvoiced clients only when Outstanding).
+ * Bills list: invoices + uninvoiced clients + payout lines + members without a line.
+ * Status filter applies to invoices/payouts; ready rows only when Outstanding or unset.
  */
 export function buildMoneyBillRows(input: {
   party: MoneyBillsPartyFilter;
@@ -340,6 +472,7 @@ export function buildMoneyBillRows(input: {
   invoices: MoneyBillInvoiceSource[];
   clients: MoneyBillClientActivitySource[];
   members: MoneyBillMemberActivitySource[];
+  payouts: MoneyBillTeamPayoutSource[];
 }): MoneyBillRow[] {
   const rows: MoneyBillRow[] = [];
   const showClients = moneyBillsPartyShowsClients(input.party);
@@ -360,9 +493,18 @@ export function buildMoneyBillRows(input: {
     }
   }
 
-  if (showMembers && input.statusFilter === null) {
-    for (const member of input.members) {
-      rows.push(moneyBillRowFromMemberActivity(member));
+  if (showMembers) {
+    for (const payout of input.payouts) {
+      rows.push(moneyBillRowFromPayoutLine(payout));
+    }
+
+    const paidMemberIds = new Set(input.payouts.map((payout) => payout.userId));
+    const showReady = input.statusFilter === null || input.statusFilter === "outstanding";
+    if (showReady) {
+      for (const member of input.members) {
+        if (paidMemberIds.has(member.userId)) continue;
+        rows.push(moneyBillRowFromMemberActivity(member));
+      }
     }
   }
 

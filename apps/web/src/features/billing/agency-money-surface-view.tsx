@@ -423,7 +423,10 @@ function BillListRow({
   searchTerm,
   pending,
   isMutationPending,
+  onOpenClient,
+  onOpenMember,
   onCreateInvoiceForClient,
+  onCreatePayoutForMember,
   onSend,
   onOpenPayment,
   onMarkPaid,
@@ -433,14 +436,36 @@ function BillListRow({
   searchTerm: string;
   pending: boolean;
   isMutationPending: boolean;
+  onOpenClient: (clientId: string) => void;
+  onOpenMember: (userId: string) => void;
   onCreateInvoiceForClient: (clientId: string) => void;
+  onCreatePayoutForMember: (userId: string) => void;
   onSend: (invoiceId: string) => void;
-  onOpenPayment: (invoiceId: string) => void;
-  onMarkPaid: (invoiceId: string) => void;
+  onOpenPayment: (rowId: string) => void;
+  onMarkPaid: (rowId: string) => void;
   onRefund: (invoiceId: string) => void;
 }) {
   const hueId = moneyBillHueId(row);
-  const isReady = row.kind === "client-activity";
+  const isReady = row.kind === "client-activity" || row.kind === "member-activity";
+  const showMemberAvatar = row.kind === "member-activity" || row.kind === "team-payout";
+  const showStatusChip = row.kind === "invoice" || row.kind === "team-payout";
+
+  function onOpenParty() {
+    switch (row.kind) {
+      case "invoice":
+      case "client-activity":
+        onOpenClient(row.clientId);
+        break;
+      case "member-activity":
+      case "team-payout":
+        onOpenMember(row.userId);
+        break;
+      default: {
+        const _exhaustive: never = row;
+        void _exhaustive;
+      }
+    }
+  }
 
   return (
     <li
@@ -451,7 +476,7 @@ function BillListRow({
           : "border border-transparent hover:border-default hover:bg-elevated/40",
       )}
     >
-      {row.kind === "member-activity" ? (
+      {showMemberAvatar ? (
         <AgencyMemberAvatar
           name={row.userName}
           userId={row.userId}
@@ -465,10 +490,18 @@ function BillListRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-          <p className="truncate text-sm font-medium text-highlighted">
+          <button
+            type="button"
+            onClick={onOpenParty}
+            className={cn(
+              "min-w-0 truncate text-left text-sm font-medium text-highlighted hover:underline",
+              agencyFocusRingClass,
+              "rounded-sm",
+            )}
+          >
             <AgencySearchHighlight text={row.title} query={searchTerm} />
-          </p>
-          {row.kind === "invoice" ? (
+          </button>
+          {showStatusChip ? (
             <span
               className={cn(
                 "inline-flex h-5 items-center rounded-md px-1.5 text-[0.65rem] font-medium tracking-wide",
@@ -490,6 +523,12 @@ function BillListRow({
               {row.receivedLabel} in · {row.remainingLabel} left
             </>
           ) : null}
+          {row.kind === "team-payout" && row.paidCents > 0 && row.remainingCents > 0 ? (
+            <>
+              <span aria-hidden> · </span>
+              {row.paidLabel} paid · {row.remainingLabel} left
+            </>
+          ) : null}
         </p>
       </div>
 
@@ -500,7 +539,7 @@ function BillListRow({
             row.kind === "member-activity" ? "text-muted" : "text-highlighted",
           )}
         >
-          {row.kind === "invoice" ? row.amountLabel : row.metaLabel}
+          {row.kind === "invoice" || row.kind === "team-payout" ? row.amountLabel : row.metaLabel}
         </span>
 
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
@@ -513,6 +552,17 @@ function BillListRow({
               onClick={() => onCreateInvoiceForClient(row.clientId)}
             >
               Draft invoice
+            </Button>
+          ) : null}
+          {row.canCreatePayout && row.kind === "member-activity" ? (
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 rounded-lg px-3"
+              disabled={pending || isMutationPending}
+              onClick={() => void onCreatePayoutForMember(row.userId)}
+            >
+              Draft payout
             </Button>
           ) : null}
           {row.canSend ? (
@@ -748,7 +798,10 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                       searchTerm={bills.searchTerm}
                       pending={bills.pendingActionInvoiceId === row.id}
                       isMutationPending={bills.isMutationPending}
+                      onOpenClient={bills.onOpenClient}
+                      onOpenMember={bills.onOpenMember}
                       onCreateInvoiceForClient={bills.onCreateInvoiceForClient}
+                      onCreatePayoutForMember={bills.onCreatePayoutForMember}
                       onSend={bills.onSend}
                       onOpenPayment={bills.onOpenPayment}
                       onMarkPaid={bills.onMarkPaid}
@@ -838,7 +891,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
           <DialogHeader>
             <DialogTitle>Record payment</DialogTitle>
             <DialogDescription>
-              {payment.clientName} · {payment.invoiceNumber}. Remaining {payment.remainingLabel}.
+              {payment.partyName} · {payment.referenceLabel}. Remaining {payment.remainingLabel}.
             </DialogDescription>
           </DialogHeader>
           <form id={payment.formId} className="flex flex-col gap-4" onSubmit={payment.onSubmit}>

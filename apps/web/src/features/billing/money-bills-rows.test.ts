@@ -5,7 +5,9 @@ import {
   groupMoneyBillRows,
   moneyBillInitials,
   moneyBillListInsight,
+  moneyBillPartyHref,
   moneyBillRowFromInvoice,
+  moneyBillRowFromPayoutLine,
   moneyBillsCreateFormValid,
   moneyBillsPartyShowsClients,
   moneyBillsPartyShowsMembers,
@@ -52,8 +54,33 @@ describe("moneyBillRowFromInvoice", () => {
   });
 });
 
+describe("moneyBillRowFromPayoutLine", () => {
+  test("draft can record payment and mark paid", () => {
+    const row = moneyBillRowFromPayoutLine({
+      id: "pay_1",
+      userId: "u1",
+      userName: "Ada",
+      userAvatar: null,
+      label: "Salary · Ada",
+      status: "draft",
+      billStatus: "outstanding",
+      amountCents: 5000,
+      paidCents: 0,
+      remainingCents: 5000,
+      currency: "USD",
+      durationSeconds: 3600,
+      periodStart: "2026-08-01T00:00:00.000Z",
+      periodEnd: "2026-08-31T23:59:59.999Z",
+    });
+    expect(row.kind).toBe("team-payout");
+    expect(row.canRecordPayment).toBe(true);
+    expect(row.canMarkPaid).toBe(true);
+    expect(row.billStatusLabel).toBe("Outstanding");
+  });
+});
+
 describe("buildMoneyBillRows", () => {
-  test("default all includes uninvoiced clients and members", () => {
+  test("default all includes uninvoiced clients and ready members", () => {
     const rows = buildMoneyBillRows({
       party: "all",
       statusFilter: null,
@@ -78,32 +105,80 @@ describe("buildMoneyBillRows", () => {
         { clientId: "c2", clientName: "Beta", durationSeconds: 1800 },
       ],
       members: [{ userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 7200 }],
+      payouts: [],
     });
     expect(rows.map((row) => row.kind)).toEqual(["invoice", "client-activity", "member-activity"]);
     expect(rows[1]?.title).toBe("Beta");
     expect(rows[2]?.title).toBe("Ada");
+    expect(rows[2]?.canCreatePayout).toBe(true);
   });
 
-  test("team party shows only members", () => {
+  test("excludes members who already have a payout line", () => {
     const rows = buildMoneyBillRows({
       party: "team",
       statusFilter: null,
       invoices: [],
-      clients: [{ clientId: "c1", clientName: "Acme", durationSeconds: 100 }],
+      clients: [],
       members: [
-        { userId: "u1", userName: "Ada", userAvatar: "https://img/a.png", durationSeconds: 100 },
+        { userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 7200 },
+        { userId: "u2", userName: "Bob", userAvatar: null, durationSeconds: 3600 },
+      ],
+      payouts: [
+        {
+          id: "pay_1",
+          userId: "u1",
+          userName: "Ada",
+          userAvatar: null,
+          label: "Salary · Ada",
+          status: "draft",
+          billStatus: "outstanding",
+          amountCents: 5000,
+          paidCents: 0,
+          remainingCents: 5000,
+          currency: "USD",
+          durationSeconds: 7200,
+          periodStart: "2026-08-01T00:00:00.000Z",
+          periodEnd: "2026-08-31T23:59:59.999Z",
+        },
+      ],
+    });
+    expect(rows.map((row) => row.kind)).toEqual(["team-payout", "member-activity"]);
+    expect(rows[1]?.title).toBe("Bob");
+  });
+
+  test("paid status filter hides ready members", () => {
+    const rows = buildMoneyBillRows({
+      party: "team",
+      statusFilter: "paid",
+      invoices: [],
+      clients: [],
+      members: [{ userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 100 }],
+      payouts: [
+        {
+          id: "pay_1",
+          userId: "u2",
+          userName: "Bob",
+          userAvatar: null,
+          label: "Salary · Bob",
+          status: "paid",
+          billStatus: "paid",
+          amountCents: 1000,
+          paidCents: 1000,
+          remainingCents: 0,
+          currency: "USD",
+          durationSeconds: 100,
+          periodStart: "2026-08-01T00:00:00.000Z",
+          periodEnd: "2026-08-31T23:59:59.999Z",
+        },
       ],
     });
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.kind).toBe("member-activity");
-    if (rows[0]?.kind === "member-activity") {
-      expect(rows[0].userAvatar).toBe("https://img/a.png");
-    }
+    expect(rows[0]?.kind).toBe("team-payout");
   });
 });
 
 describe("groupMoneyBillRows", () => {
-  test("orders ready before invoices before team", () => {
+  test("orders ready before invoices before ready-payout before team", () => {
     const rows = buildMoneyBillRows({
       party: "all",
       statusFilter: null,
@@ -125,28 +200,50 @@ describe("groupMoneyBillRows", () => {
       ],
       clients: [{ clientId: "c2", clientName: "Beta", durationSeconds: 1800 }],
       members: [{ userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 7200 }],
+      payouts: [
+        {
+          id: "pay_1",
+          userId: "u2",
+          userName: "Bob",
+          userAvatar: null,
+          label: "Salary · Bob",
+          status: "draft",
+          billStatus: "outstanding",
+          amountCents: 2000,
+          paidCents: 0,
+          remainingCents: 2000,
+          currency: "USD",
+          durationSeconds: 3600,
+          periodStart: "2026-08-01T00:00:00.000Z",
+          periodEnd: "2026-08-31T23:59:59.999Z",
+        },
+      ],
     });
     expect(groupMoneyBillRows(rows).map((section) => section.id)).toEqual([
       "ready",
       "invoices",
+      "ready-payout",
       "team",
     ]);
   });
 });
 
 describe("moneyBillListInsight", () => {
-  test("summarizes unbilled clients", () => {
+  test("summarizes unbilled clients and ready payouts", () => {
     const rows = buildMoneyBillRows({
-      party: "client",
+      party: "all",
       statusFilter: null,
       invoices: [],
       clients: [
         { clientId: "c1", clientName: "Acme", durationSeconds: 3600 },
         { clientId: "c2", clientName: "Beta", durationSeconds: 1800 },
       ],
-      members: [],
+      members: [{ userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 100 }],
+      payouts: [],
     });
-    expect(moneyBillListInsight(rows)).toBe("2 clients ready · 01:30 unbilled");
+    expect(moneyBillListInsight(rows)).toBe(
+      "2 clients ready · 01:30 unbilled · 1 member ready to pay",
+    );
   });
 });
 
@@ -154,6 +251,46 @@ describe("moneyBillInitials", () => {
   test("uses first letters of two words", () => {
     expect(moneyBillInitials("DR El Nazzer")).toBe("DE");
     expect(moneyBillInitials("Consultation")).toBe("CO");
+  });
+});
+
+describe("moneyBillPartyHref", () => {
+  test("clients open Clients segment with client id", () => {
+    const row = moneyBillRowFromInvoice({
+      id: "inv_1",
+      clientId: "cli_1",
+      clientName: "Acme",
+      number: "INV-0001",
+      status: "draft",
+      billStatus: "outstanding",
+      amountCents: 1000,
+      receivedCents: 0,
+      remainingCents: 1000,
+      currency: "USD",
+      periodStart: "2026-08-01T00:00:00.000Z",
+      periodEnd: "2026-08-31T23:59:59.999Z",
+    });
+    expect(moneyBillPartyHref(row)).toBe("/agency?section=clients&client=cli_1");
+  });
+
+  test("members open member profile", () => {
+    const row = moneyBillRowFromPayoutLine({
+      id: "pay_1",
+      userId: "u1",
+      userName: "Ada",
+      userAvatar: null,
+      label: "Salary · Ada",
+      status: "draft",
+      billStatus: "outstanding",
+      amountCents: 5000,
+      paidCents: 0,
+      remainingCents: 5000,
+      currency: "USD",
+      durationSeconds: 3600,
+      periodStart: "2026-08-01T00:00:00.000Z",
+      periodEnd: "2026-08-31T23:59:59.999Z",
+    });
+    expect(moneyBillPartyHref(row)).toBe("/agency/members/u1");
   });
 });
 

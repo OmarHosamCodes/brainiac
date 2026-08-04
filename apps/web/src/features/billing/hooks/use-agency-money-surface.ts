@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
 import { rangePresetLabel } from "@/features/dashboard/agency-dashboard-command-bar";
@@ -46,6 +47,8 @@ import {
 } from "../money-bills-filters";
 import {
   buildMoneyBillRows,
+  moneyBillClientHref,
+  moneyBillMemberHref,
   moneyBillsCreateFormValid,
   moneyBillsPartyShowsClients,
   moneyBillsPartyShowsMembers,
@@ -143,6 +146,7 @@ function buildCardViewModel(card: MoneyStatsCardFixture): MoneyStatsCardViewMode
 
 export function useAgencyMoneySurface(teamId: string) {
   const now = useMemo(() => new Date(), []);
+  const navigate = useNavigate();
   const agencyOps = useAgencyOpsStore();
   const isInvoiceMutationPending = useAgencyOpsStore(selectIsInvoiceMutationPending);
 
@@ -229,6 +233,11 @@ export function useAgencyMoneySurface(teamId: string) {
   const showsMemberBills = moneyBillsPartyShowsMembers(partyFilter);
   const loadsPeriodBills = showsClientBills || showsMemberBills;
 
+  const teamBillStatus =
+    statusFilter === "outstanding" || statusFilter === "partial" || statusFilter === "paid"
+      ? statusFilter
+      : undefined;
+
   const invoicesQuery = useQuery({
     ...orpc.agencyOps.invoices.list.queryOptions({
       input: {
@@ -240,6 +249,19 @@ export function useAgencyMoneySurface(teamId: string) {
       },
     }),
     enabled: Boolean(teamId) && showsClientBills,
+  });
+
+  const payoutsQuery = useQuery({
+    ...orpc.agencyOps.payouts.list.queryOptions({
+      input: {
+        teamId,
+        periodStart: periodRange.from,
+        periodEnd: periodRange.to,
+        billStatus: teamBillStatus,
+        search: searchTerm.trim() || undefined,
+      },
+    }),
+    enabled: Boolean(teamId) && showsMemberBills,
   });
 
   const periodActivityQuery = useQuery({
@@ -284,21 +306,25 @@ export function useAgencyMoneySurface(teamId: string) {
         statusFilter,
         invoices: showsClientBills ? (invoicesQuery.data?.items ?? []) : [],
         clients: periodActivityQuery.data?.clients ?? [],
-        members: periodActivityQuery.data?.members ?? [],
+        members: showsMemberBills ? (periodActivityQuery.data?.members ?? []) : [],
+        payouts: showsMemberBills ? (payoutsQuery.data?.items ?? []) : [],
       }),
     [
       invoicesQuery.data?.items,
       partyFilter,
       periodActivityQuery.data?.clients,
       periodActivityQuery.data?.members,
+      payoutsQuery.data?.items,
       showsClientBills,
+      showsMemberBills,
       statusFilter,
     ],
   );
 
   const paymentRow = useMemo(() => {
     const row = billRows.find((item) => item.id === paymentInvoiceId);
-    return row?.kind === "invoice" ? row : null;
+    if (row?.kind === "invoice" || row?.kind === "team-payout") return row;
+    return null;
   }, [billRows, paymentInvoiceId]);
 
   const clients = useMemo(() => {
@@ -324,12 +350,16 @@ export function useAgencyMoneySurface(teamId: string) {
 
   const billsIsLoading =
     loadsPeriodBills &&
-    ((showsClientBills && invoicesQuery.isPending) || periodActivityQuery.isPending);
+    ((showsClientBills && invoicesQuery.isPending) ||
+      (showsMemberBills && payoutsQuery.isPending) ||
+      periodActivityQuery.isPending);
   const billsIsError =
     loadsPeriodBills &&
-    ((showsClientBills && invoicesQuery.isError) || periodActivityQuery.isError);
+    ((showsClientBills && invoicesQuery.isError) ||
+      (showsMemberBills && payoutsQuery.isError) ||
+      periodActivityQuery.isError);
   const billsErrorMessage = getErrorMessage(
-    invoicesQuery.error ?? periodActivityQuery.error,
+    invoicesQuery.error ?? payoutsQuery.error ?? periodActivityQuery.error,
     "Try refreshing.",
   );
 
@@ -389,6 +419,30 @@ export function useAgencyMoneySurface(teamId: string) {
     openBillCreate(clientId);
   }
 
+  function onOpenClient(clientId: string) {
+    navigate(moneyBillClientHref(clientId));
+  }
+
+  function onOpenMember(userId: string) {
+    navigate(moneyBillMemberHref(userId));
+  }
+
+  async function onCreatePayoutForMember(userId: string) {
+    const member = (periodActivityQuery.data?.members ?? []).find((item) => item.userId === userId);
+    setPendingActionInvoiceId(`member-activity:${userId}`);
+    await agencyOps.createPayoutFromMember(
+      {
+        teamId,
+        userId,
+        userName: member?.userName ?? "",
+        periodStart: periodRange.from,
+        periodEnd: periodRange.to,
+      },
+      { onSuccess: () => setPendingActionInvoiceId(null) },
+    );
+    setPendingActionInvoiceId(null);
+  }
+
   async function onBillCreateSubmit(event: { preventDefault: () => void }) {
     event.preventDefault();
     if (!createFormValid) return;
@@ -412,10 +466,14 @@ export function useAgencyMoneySurface(teamId: string) {
     }
   }
 
-  function onOpenPayment(invoiceId: string) {
-    const row = billRows.find((item) => item.id === invoiceId);
-    setPaymentInvoiceId(invoiceId);
-    setPaymentAmount(row?.kind === "invoice" ? (row.remainingCents / 100).toFixed(2) : "");
+  function onOpenPayment(rowId: string) {
+    const row = billRows.find((item) => item.id === rowId);
+    setPaymentInvoiceId(rowId);
+    if (row?.kind === "invoice" || row?.kind === "team-payout") {
+      setPaymentAmount((row.remainingCents / 100).toFixed(2));
+      return;
+    }
+    setPaymentAmount("");
   }
 
   async function onPaymentSubmit(event: { preventDefault: () => void }) {
@@ -424,15 +482,27 @@ export function useAgencyMoneySurface(teamId: string) {
     const amountCents = parseMoneyBillPaymentCents(paymentAmount, paymentRow.remainingCents);
     if (amountCents === null) return;
     setPendingActionInvoiceId(paymentRow.id);
-    await agencyOps.recordInvoicePayment(
-      { teamId, invoiceId: paymentRow.id, amountCents },
-      {
-        onSuccess: () => {
-          onPaymentOpenChange(false);
-          setPendingActionInvoiceId(null);
+    if (paymentRow.kind === "invoice") {
+      await agencyOps.recordInvoicePayment(
+        { teamId, invoiceId: paymentRow.id, amountCents },
+        {
+          onSuccess: () => {
+            onPaymentOpenChange(false);
+            setPendingActionInvoiceId(null);
+          },
         },
-      },
-    );
+      );
+    } else {
+      await agencyOps.recordPayoutPayment(
+        { teamId, lineId: paymentRow.id, amountCents },
+        {
+          onSuccess: () => {
+            onPaymentOpenChange(false);
+            setPendingActionInvoiceId(null);
+          },
+        },
+      );
+    }
     setPendingActionInvoiceId(null);
   }
 
@@ -445,12 +515,20 @@ export function useAgencyMoneySurface(teamId: string) {
     setPendingActionInvoiceId(null);
   }
 
-  async function onMarkBillPaid(invoiceId: string) {
-    setPendingActionInvoiceId(invoiceId);
-    await agencyOps.updateInvoiceStatus(
-      { teamId, invoiceId, status: "paid" },
-      { onSuccess: () => setPendingActionInvoiceId(null) },
-    );
+  async function onMarkBillPaid(rowId: string) {
+    setPendingActionInvoiceId(rowId);
+    const row = billRows.find((item) => item.id === rowId);
+    if (row?.kind === "team-payout") {
+      await agencyOps.updatePayoutLineStatus(
+        { teamId, lineId: rowId, status: "paid" },
+        { onSuccess: () => setPendingActionInvoiceId(null) },
+      );
+    } else {
+      await agencyOps.updateInvoiceStatus(
+        { teamId, invoiceId: rowId, status: "paid" },
+        { onSuccess: () => setPendingActionInvoiceId(null) },
+      );
+    }
     setPendingActionInvoiceId(null);
   }
 
@@ -548,12 +626,16 @@ export function useAgencyMoneySurface(teamId: string) {
       errorMessage: billsErrorMessage,
       onRetry: () => {
         void invoicesQuery.refetch();
+        void payoutsQuery.refetch();
         void periodActivityQuery.refetch();
       },
       isMutationPending: isInvoiceMutationPending,
       pendingActionInvoiceId,
       onOpenCreate: () => openBillCreate(),
+      onOpenClient,
+      onOpenMember,
       onCreateInvoiceForClient,
+      onCreatePayoutForMember,
       onSend: onSendBill,
       onMarkPaid: onMarkBillPaid,
       onRefund: onRefundBill,
@@ -576,8 +658,18 @@ export function useAgencyMoneySurface(teamId: string) {
         open: Boolean(paymentRow),
         onOpenChange: onPaymentOpenChange,
         formId: BILL_PAYMENT_FORM_ID,
-        invoiceNumber: paymentRow?.number ?? "",
-        clientName: paymentRow?.clientName ?? "",
+        partyName:
+          paymentRow?.kind === "invoice"
+            ? paymentRow.clientName
+            : paymentRow?.kind === "team-payout"
+              ? paymentRow.userName
+              : "",
+        referenceLabel:
+          paymentRow?.kind === "invoice"
+            ? paymentRow.number
+            : paymentRow?.kind === "team-payout"
+              ? paymentRow.label
+              : "",
         remainingLabel: paymentRow?.remainingLabel ?? "",
         currency: paymentRow?.currency ?? "USD",
         amount: paymentAmount,
