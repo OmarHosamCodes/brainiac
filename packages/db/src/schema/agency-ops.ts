@@ -312,6 +312,29 @@ export const agencyOpsTag = pgTable(
   ],
 );
 
+export const agencyOpsDepartment = pgTable(
+  "agency_ops_department",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_department_team_idx").on(table.teamId),
+    uniqueIndex("agency_ops_department_team_name_uidx").on(table.teamId, table.name),
+  ],
+);
+
 export const agencyOpsTimeEntry = pgTable(
   "agency_ops_time_entry",
   {
@@ -835,6 +858,9 @@ export const agencyOpsMemberHrProfile = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    departmentId: text("department_id").references(() => agencyOpsDepartment.id, {
+      onDelete: "set null",
+    }),
     status: text("status").$type<AgencyOpsMemberEmploymentStatus>().notNull().default("active"),
     employmentType: text("employment_type").$type<AgencyOpsMemberEmploymentType>(),
     workModel: text("work_model").$type<AgencyOpsMemberWorkModel>(),
@@ -859,5 +885,6 @@ export const agencyOpsMemberHrProfile = pgTable(
   (table) => [
     uniqueIndex("agency_ops_member_hr_profile_team_user_uidx").on(table.teamId, table.userId),
     index("agency_ops_member_hr_profile_team_idx").on(table.teamId),
+    index("agency_ops_member_hr_profile_team_department_idx").on(table.teamId, table.departmentId),
   ],
 );
