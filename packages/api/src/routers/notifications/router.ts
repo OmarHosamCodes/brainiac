@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { protectedProProcedure } from "../../procedures";
 import {
+  notificationDeliverySettingsSchema,
+  notificationDeliverySettingsSetInputSchema,
   notificationListInputSchema,
   notificationMarkReadInputSchema,
   notificationPreferenceSchema,
@@ -17,6 +19,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   markNotificationsSeen,
+  setNotificationDeliverySettings,
   setNotificationPreferences,
   subscribePush,
   unsubscribePush,
@@ -38,7 +41,10 @@ export const notificationsRouter = {
     .input(teamScopedNotificationInputSchema)
     .handler(async ({ context, input }) => {
       return z
-        .object({ count: z.number().int().nonnegative() })
+        .object({
+          count: z.number().int().nonnegative(),
+          actionCount: z.number().int().nonnegative(),
+        })
         .parse(await getUnreadNotificationCount(context.session.user.id, input));
     }),
   markSeen: protectedProProcedure
@@ -67,7 +73,12 @@ export const notificationsRouter = {
       .input(teamScopedNotificationInputSchema)
       .handler(async ({ context, input }) => {
         const result = await getNotificationPreferences(context.session.user.id, input);
-        return z.object({ items: z.array(notificationPreferenceSchema) }).parse(result);
+        return z
+          .object({
+            items: z.array(notificationPreferenceSchema),
+            delivery: notificationDeliverySettingsSchema,
+          })
+          .parse(result);
       }),
     set: protectedProProcedure
       .input(
@@ -77,7 +88,23 @@ export const notificationsRouter = {
       )
       .handler(async ({ context, input }) => {
         const result = await setNotificationPreferences(context.session.user.id, input);
-        return z.object({ items: z.array(notificationPreferenceSchema) }).parse(result);
+        return z
+          .object({
+            items: z.array(notificationPreferenceSchema),
+            delivery: notificationDeliverySettingsSchema,
+          })
+          .parse(result);
+      }),
+    setDelivery: protectedProProcedure
+      .input(notificationDeliverySettingsSetInputSchema)
+      .handler(async ({ context, input }) => {
+        const result = await setNotificationDeliverySettings(context.session.user.id, input);
+        return z
+          .object({
+            items: z.array(notificationPreferenceSchema),
+            delivery: notificationDeliverySettingsSchema,
+          })
+          .parse(result);
       }),
   },
   push: {

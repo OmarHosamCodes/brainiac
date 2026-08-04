@@ -20,11 +20,40 @@ export async function notifyTaskAssigned(input: {
     teamId: input.teamId,
     recipientUserIds: recipients,
     type: "task.assigned",
+    assignedToTeam: input.assignedToTeam,
     payload: {
       taskId: input.taskId,
       taskTitle: input.taskTitle,
       projectId: input.projectId,
       projectName: input.projectName,
+    },
+  });
+}
+
+export async function notifyTaskMessage(input: {
+  teamId: string;
+  actorUserId: string;
+  taskId: string;
+  taskTitle: string;
+  projectId: string;
+  projectName: string;
+  messageId: string;
+  messagePreview?: string;
+  /** Thread participants / assignees who should be interrupted (actor excluded in fanout). */
+  recipientUserIds: string[];
+}) {
+  await fanOutNotification(input.actorUserId, {
+    teamId: input.teamId,
+    recipientUserIds: input.recipientUserIds,
+    type: "task.message",
+    payload: {
+      taskId: input.taskId,
+      taskTitle: input.taskTitle,
+      projectId: input.projectId,
+      projectName: input.projectName,
+      messageId: input.messageId,
+      messagePreview: input.messagePreview,
+      messageCount: 1,
     },
   });
 }

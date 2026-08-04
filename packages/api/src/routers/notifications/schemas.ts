@@ -1,4 +1,7 @@
 export {
+  notificationDeliveryClassSchema,
+  notificationDeliverySettingsSchema,
+  notificationDeliverySettingsSetInputSchema,
   notificationListInputSchema,
   notificationMarkReadInputSchema,
   notificationPreferenceSchema,

@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 538 |
+| golden-feature | 546 |
 | server-operation | 12 |
 | shared-infrastructure | 271 |
 | static-presentation | 15 |
@@ -44,7 +44,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | integrations | 2 |
 | marketing | 16 |
 | member-profile | 24 |
-| notifications | 20 |
+| notifications | 28 |
 | performance | 8 |
 | projects | 24 |
 | reports | 54 |
@@ -197,7 +197,12 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/member-profile/member-profile-heat-strip-fill.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/member-profile/member-profile-leave-range-picker.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/stores/agency-member-profile.ts` | member-profile | client-state | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical client-state layer. | content: oRPC procedures or clients, Zustand client state, exported declarations; structure: source role and exported behavior |
-| `apps/web/src/features/notifications/agency-notifications.tsx` | notifications | web-query | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical web-query layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/notifications/agency-notifications-view.tsx` | notifications | presentational-view | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/notifications/agency-notifications.tsx` | notifications | presentational-view | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/notifications/containers/agency-notifications-container.tsx` | notifications | container | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
+| `apps/web/src/features/notifications/hooks/use-agency-notifications.ts` | notifications | feature-hook | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical feature-hook layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/notifications/notification-presentation.test.ts` | notifications | test | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/notifications/notification-presentation.ts` | notifications | domain-logic | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/notifications/notifications-queries.test.ts` | notifications | test | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical test layer. | content: Bun test declarations, oRPC procedures or clients, TanStack Query orchestration; structure: test filename |
 | `apps/web/src/features/notifications/notifications-queries.ts` | notifications | web-query | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical web-query layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: source role and exported behavior |
 | `apps/web/src/features/projects/agency-project-create-dialog-view.tsx` | projects | presentational-view | golden-feature | projects-domain | Feature-owned projects artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -772,6 +777,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/billing/service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/index.ts` | api-platform | api-router | shared-infrastructure | api-platform | Cross-cutting api-platform api-router support rather than a feature-owned business workflow. | content: exported declarations; structure: router role and procedure declarations |
 | `packages/api/src/routers/notifications/copy.ts` | notifications | domain-logic | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/notifications/delivery-policy.test.ts` | notifications | test | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/notifications/delivery-policy.ts` | notifications | api-service | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/notifications/delivery.ts` | notifications | domain-logic | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/notifications/fanout-helpers.ts` | notifications | api-service | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/notifications/fanout.test.ts` | notifications | test | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
@@ -843,6 +850,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/db/src/migrations/0033_member_hr_leave_allowance_period.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0034_member_hr_off_allowance_days.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0035_agency_proposal_nullable_states.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
+| `packages/db/src/migrations/0036_notification_productivity.sql` | notifications | persistence-migration | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/meta/0000_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0001_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0002_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |

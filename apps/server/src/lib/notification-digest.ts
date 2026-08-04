@@ -2,34 +2,78 @@ import { db } from "@orch/db";
 import {
   agencyOpsProjectTask,
   agencyOpsTimeEntry,
+  notificationDigestSent,
+  notificationDeliverySettings,
   workspaceTeam,
   workspaceTeamMember,
 } from "@orch/db/schema";
+import { createWorkspaceId } from "@orch/workspace";
 import { and, eq, gte, isNull, lt, sql } from "drizzle-orm";
 
-import { emitTeamDigestNotification } from "@orch/api/routers/notifications/service";
+import {
+  DIGEST_LOCAL_HOUR,
+  getLocalDateString,
+  getLocalHour,
+  getLocalYesterdayDateString,
+} from "@orch/api/routers/notifications/delivery-policy";
+import {
+  emitTeamDigestNotification,
+  flushDueDeferredNotificationPushes,
+} from "@orch/api/routers/notifications/service";
 
-const DIGEST_HOUR_UTC = 8;
-const digestSentForTeamDay = new Set<string>();
-
-function teamDayKey(teamId: string, day: string) {
-  return `${teamId}:${day}`;
+function localDayRangeUtc(day: string, timeZone: string): { start: Date; end: Date } | null {
+  // Approximate local day bounds via iterative scan of UTC hours mapped into the zone.
+  const startGuess = new Date(`${day}T00:00:00.000Z`);
+  let start: Date | null = null;
+  let end: Date | null = null;
+  for (let offsetHours = -36; offsetHours <= 36; offsetHours += 1) {
+    const candidate = new Date(startGuess.getTime() + offsetHours * 60 * 60 * 1000);
+    const local = getLocalDateString(candidate, timeZone);
+    if (local === day && !start) start = candidate;
+    if (start && local !== day) {
+      end = candidate;
+      break;
+    }
+  }
+  if (!start || !end) return null;
+  return { start, end };
 }
 
-function yesterdayUtcRange() {
-  const now = new Date();
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - 1);
-  const day = start.toISOString().slice(0, 10);
-  return { start, end, day };
+async function alreadySentDigest(teamId: string, recipientUserId: string, digestDate: string) {
+  const [row] = await db
+    .select({ id: notificationDigestSent.id })
+    .from(notificationDigestSent)
+    .where(
+      and(
+        eq(notificationDigestSent.teamId, teamId),
+        eq(notificationDigestSent.recipientUserId, recipientUserId),
+        eq(notificationDigestSent.digestDate, digestDate),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
-async function runTeamDigest(teamId: string, day: string, range: { start: Date; end: Date }) {
-  const key = teamDayKey(teamId, day);
-  if (digestSentForTeamDay.has(key)) return;
-  digestSentForTeamDay.add(key);
+async function markDigestSent(teamId: string, recipientUserId: string, digestDate: string) {
+  await db
+    .insert(notificationDigestSent)
+    .values({
+      id: createWorkspaceId("notification-digest"),
+      teamId,
+      recipientUserId,
+      digestDate,
+      createdAt: new Date(),
+    })
+    .onConflictDoNothing({
+      target: [
+        notificationDigestSent.teamId,
+        notificationDigestSent.recipientUserId,
+        notificationDigestSent.digestDate,
+      ],
+    });
+}
 
+async function digestStatsForRange(teamId: string, range: { start: Date; end: Date }) {
   const [hoursRow] = await db
     .select({
       totalSeconds: sql<number>`coalesce(sum(${agencyOpsTimeEntry.durationSeconds}), 0)::int`,
@@ -56,38 +100,78 @@ async function runTeamDigest(teamId: string, day: string, range: { start: Date; 
       ),
     );
 
-  const members = await db
-    .select({ userId: workspaceTeamMember.userId })
-    .from(workspaceTeamMember)
-    .where(eq(workspaceTeamMember.teamId, teamId));
+  return {
+    digestHoursSeconds: hoursRow?.totalSeconds ?? 0,
+    digestTasksCompleted: tasksRow?.count ?? 0,
+  };
+}
 
-  const digestHoursSeconds = hoursRow?.totalSeconds ?? 0;
-  const digestTasksCompleted = tasksRow?.count ?? 0;
+async function runMemberDigest(input: {
+  teamId: string;
+  userId: string;
+  timezone: string;
+  now: Date;
+}) {
+  const localHour = getLocalHour(input.now, input.timezone);
+  if (localHour !== DIGEST_LOCAL_HOUR) return;
 
-  if (digestHoursSeconds === 0 && digestTasksCompleted === 0) {
+  const digestDate = getLocalYesterdayDateString(input.now, input.timezone);
+  if (!digestDate) return;
+  if (await alreadySentDigest(input.teamId, input.userId, digestDate)) return;
+
+  const range = localDayRangeUtc(digestDate, input.timezone);
+  if (!range) return;
+
+  const stats = await digestStatsForRange(input.teamId, range);
+  await markDigestSent(input.teamId, input.userId, digestDate);
+
+  if (stats.digestHoursSeconds === 0 && stats.digestTasksCompleted === 0) {
     return;
   }
 
-  for (const member of members) {
-    await emitTeamDigestNotification(null, {
-      teamId,
-      recipientUserId: member.userId,
-      digestDate: day,
-      digestHoursSeconds,
-      digestTasksCompleted,
-    });
-  }
+  await emitTeamDigestNotification(null, {
+    teamId: input.teamId,
+    recipientUserId: input.userId,
+    digestDate,
+    digestHoursSeconds: stats.digestHoursSeconds,
+    digestTasksCompleted: stats.digestTasksCompleted,
+  });
 }
 
 export async function runNotificationDigestTick() {
   const now = new Date();
-  if (now.getUTCHours() !== DIGEST_HOUR_UTC) return;
+  await flushDueDeferredNotificationPushes(null, {});
 
-  const { start, end, day } = yesterdayUtcRange();
   const teams = await db.select({ id: workspaceTeam.id }).from(workspaceTeam);
 
   for (const team of teams) {
-    await runTeamDigest(team.id, day, { start, end });
+    const members = await db
+      .select({ userId: workspaceTeamMember.userId })
+      .from(workspaceTeamMember)
+      .where(eq(workspaceTeamMember.teamId, team.id));
+
+    for (const member of members) {
+      const [settings] = await db
+        .select({
+          timezone: notificationDeliverySettings.timezone,
+        })
+        .from(notificationDeliverySettings)
+        .where(
+          and(
+            eq(notificationDeliverySettings.userId, member.userId),
+            eq(notificationDeliverySettings.teamId, team.id),
+          ),
+        )
+        .limit(1);
+
+      const timezone = settings?.timezone ?? "UTC";
+      await runMemberDigest({
+        teamId: team.id,
+        userId: member.userId,
+        timezone,
+        now,
+      });
+    }
   }
 }
 
@@ -99,7 +183,7 @@ export function startNotificationDigestScheduler() {
   }, intervalMs);
 }
 
-/** ponytail: test-only reset */
+/** ponytail: test-only no-op retained for callers that cleared the old in-memory set */
 export function resetDigestSentForTest() {
-  digestSentForTeamDay.clear();
+  // Durable dedupe lives in notification_digest_sent; nothing to clear in-process.
 }
