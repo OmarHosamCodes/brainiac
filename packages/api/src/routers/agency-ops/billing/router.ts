@@ -13,18 +13,43 @@ import {
   listBudgetsStub,
 } from "./service";
 import {
+  createPayoutLine,
   createPayoutLineFromMember,
   ensurePayoutPeriod,
+  getPayoutRun,
+  getPayoutSummary,
   listPayoutLines,
   recordPayoutPayment,
   updatePayoutLineStatus,
 } from "./payout-service";
+import {
+  createExpense,
+  listExpenses,
+  recordExpensePayment,
+  removeExpense,
+  updateExpense,
+} from "./expense-service";
+import { getMoneySettings, upsertMoneySettings } from "./money-settings-service";
+import { getPeriodScoreboard } from "./money-scoreboard-service";
 
 const invoiceStatusSchema = z.enum(["draft", "sent", "partial", "paid", "refunded"]);
 const invoiceBillStatusSchema = z.enum(["outstanding", "partial", "paid", "refunded"]);
 const payoutLineStatusSchema = z.enum(["draft", "partial", "paid"]);
 const payoutBillStatusSchema = z.enum(["outstanding", "partial", "paid"]);
 const payoutRunStatusSchema = z.enum(["draft", "paying", "paid"]);
+const payoutSectionKeySchema = z.enum([
+  "salaries",
+  "team_loss",
+  "device_comp",
+  "paid_vacation",
+  "debt_discount",
+  "charity",
+  "pbc",
+]);
+const payoutBillsPartySchema = z.enum(["team", "adjustments", "all"]);
+const expenseKindSchema = z.enum(["one_time", "subscription"]);
+const expensePeriodSchema = z.enum(["weekly", "monthly", "quarterly", "yearly"]);
+const expenseStatusSchema = z.enum(["due", "partial", "paid"]);
 
 const invoiceRecordSchema = z.object({
   id: z.string().min(1),
@@ -46,10 +71,13 @@ const invoiceRecordSchema = z.object({
 const payoutLineRecordSchema = z.object({
   id: z.string().min(1),
   runId: z.string().min(1),
-  userId: z.string().min(1),
+  sectionKey: payoutSectionKeySchema,
+  sectionTitle: z.string().min(1),
+  userId: z.string().min(1).nullable(),
   userName: z.string().min(1),
   userAvatar: z.string().nullable(),
   label: z.string(),
+  cohortKey: z.string().nullable(),
   status: payoutLineStatusSchema,
   billStatus: payoutBillStatusSchema,
   amountCents: z.number().int().nonnegative(),
@@ -70,6 +98,24 @@ const payoutRunRecordSchema = z.object({
   periodStart: z.string().datetime(),
   periodEnd: z.string().datetime(),
   salariesSectionId: z.string().min(1),
+});
+
+const expenseRecordSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  name: z.string().min(1),
+  kind: expenseKindSchema,
+  period: expensePeriodSchema.nullable(),
+  note: z.string(),
+  amountCents: z.number().int().nonnegative(),
+  paidCents: z.number().int().nonnegative(),
+  remainingCents: z.number().int().nonnegative(),
+  currency: z.string().min(1),
+  status: expenseStatusSchema,
+  nextDueAt: z.string().datetime().nullable(),
+  occurredAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
 });
 
 export const billingRouter = {
@@ -162,6 +208,9 @@ export const billingRouter = {
             outstandingCents: z.number().int().nonnegative(),
             currency: z.string().min(1),
             outstandingByCurrency: z.record(z.string(), z.number().int().nonnegative()),
+            billedCents: z.number().int().nonnegative(),
+            receivedCents: z.number().int().nonnegative(),
+            remainingCents: z.number().int().nonnegative(),
           })
           .parse(await getInvoiceSummary(context.session.user.id, input));
       }),
@@ -261,6 +310,55 @@ export const billingRouter = {
           await ensurePayoutPeriod(context.session.user.id, input),
         );
       }),
+    summary: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            salariesDueCents: z.number().int().nonnegative(),
+            salariesPaidCents: z.number().int().nonnegative(),
+            salariesRemainingCents: z.number().int().nonnegative(),
+            currency: z.string().min(1),
+          })
+          .parse(await getPayoutSummary(context.session.user.id, input));
+      }),
+    getRun: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            id: z.string().min(1),
+            teamId: z.string().min(1),
+            status: payoutRunStatusSchema,
+            currency: z.string().min(1),
+            periodStart: z.string().datetime(),
+            periodEnd: z.string().datetime(),
+            salariesSectionId: z.string().min(1),
+            sections: z.array(
+              z.object({
+                id: z.string().min(1),
+                key: payoutSectionKeySchema,
+                title: z.string().min(1),
+                sortOrder: z.number().int().nonnegative(),
+                lineCount: z.number().int().nonnegative(),
+                dueCents: z.number().int().nonnegative(),
+                paidCents: z.number().int().nonnegative(),
+                remainingCents: z.number().int().nonnegative(),
+              }),
+            ),
+          })
+          .parse(await getPayoutRun(context.session.user.id, input));
+      }),
     list: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
@@ -268,6 +366,8 @@ export const billingRouter = {
           periodEnd: z.string().datetime(),
           billStatus: payoutBillStatusSchema.optional(),
           search: z.string().optional(),
+          sectionKey: payoutSectionKeySchema.optional(),
+          billsParty: payoutBillsPartySchema.optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -276,6 +376,22 @@ export const billingRouter = {
             items: z.array(payoutLineRecordSchema),
           })
           .parse(await listPayoutLines(context.session.user.id, input));
+      }),
+    createLine: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          sectionKey: payoutSectionKeySchema,
+          payeeUserId: z.string().min(1).nullable().optional(),
+          label: z.string().min(1),
+          amountCents: z.number().int().positive(),
+          currency: z.string().length(3).optional(),
+          cohortKey: z.string().nullable().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return payoutLineRecordSchema.parse(await createPayoutLine(context.session.user.id, input));
       }),
     createFromMember: protectedProProcedure
       .input(
@@ -314,6 +430,156 @@ export const billingRouter = {
         return payoutLineRecordSchema.parse(
           await updatePayoutLineStatus(context.session.user.id, input),
         );
+      }),
+  },
+
+  expenses: {
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime().optional(),
+          periodEnd: z.string().datetime().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            items: z.array(expenseRecordSchema),
+          })
+          .parse(await listExpenses(context.session.user.id, input));
+      }),
+    create: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          name: z.string().min(1),
+          kind: expenseKindSchema,
+          period: expensePeriodSchema.nullable().optional(),
+          note: z.string().optional(),
+          amountCents: z.number().int().positive(),
+          currency: z.string().length(3).optional(),
+          nextDueAt: z.string().datetime().nullable().optional(),
+          occurredAt: z.string().datetime().nullable().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return expenseRecordSchema.parse(await createExpense(context.session.user.id, input));
+      }),
+    update: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          expenseId: z.string().min(1),
+          name: z.string().min(1).optional(),
+          note: z.string().optional(),
+          amountCents: z.number().int().positive().optional(),
+          currency: z.string().length(3).optional(),
+          period: expensePeriodSchema.nullable().optional(),
+          nextDueAt: z.string().datetime().nullable().optional(),
+          occurredAt: z.string().datetime().nullable().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return expenseRecordSchema.parse(await updateExpense(context.session.user.id, input));
+      }),
+    recordPayment: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          expenseId: z.string().min(1),
+          amountCents: z.number().int().positive(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return expenseRecordSchema.parse(
+          await recordExpensePayment(context.session.user.id, input),
+        );
+      }),
+    remove: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          expenseId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ id: z.string().min(1) })
+          .parse(await removeExpense(context.session.user.id, input));
+      }),
+  },
+
+  money: {
+    periodScoreboard: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            currency: z.string().min(1),
+            totalIncomeCents: z.number().int(),
+            receivedCents: z.number().int().nonnegative(),
+            remainingCents: z.number().int().nonnegative(),
+            salariesCents: z.number().int().nonnegative(),
+            expensesCents: z.number().int().nonnegative(),
+            debtDiscountCents: z.number().int().nonnegative(),
+            paidVacationCents: z.number().int().nonnegative(),
+            teamProfitCents: z.number().int(),
+            profitLossShareCents: z.number().int(),
+            roi: z.number(),
+            deviceCompensationCents: z.number().int().nonnegative(),
+            charityCents: z.number().int().nonnegative(),
+            pbcCents: z.number().int().nonnegative(),
+          })
+          .parse(await getPeriodScoreboard(context.session.user.id, input));
+      }),
+  },
+
+  moneySettings: {
+    get: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
+      return z
+        .object({
+          teamId: z.string().min(1),
+          rules: z.object({
+            enabledRuleIds: z.array(z.string()),
+            notesByRuleId: z.record(z.string(), z.string()).optional(),
+          }),
+          calcOptions: z.object({
+            enabledOptionIds: z.array(z.string()),
+            notesByOptionId: z.record(z.string(), z.string()).optional(),
+          }),
+          updatedAt: z.string().datetime(),
+        })
+        .parse(await getMoneySettings(context.session.user.id, input));
+    }),
+    upsert: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          rules: z.object({
+            enabledRuleIds: z.array(z.string()),
+            notesByRuleId: z.record(z.string(), z.string()).optional(),
+          }),
+          calcOptions: z.object({
+            enabledOptionIds: z.array(z.string()),
+            notesByOptionId: z.record(z.string(), z.string()).optional(),
+          }),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            teamId: z.string().min(1),
+            rules: z.object({
+              enabledRuleIds: z.array(z.string()),
+              notesByRuleId: z.record(z.string(), z.string()).optional(),
+            }),
+            calcOptions: z.object({
+              enabledOptionIds: z.array(z.string()),
+              notesByOptionId: z.record(z.string(), z.string()).optional(),
+            }),
+            updatedAt: z.string().datetime(),
+          })
+          .parse(await upsertMoneySettings(context.session.user.id, input));
       }),
   },
 };

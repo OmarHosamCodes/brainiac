@@ -22,6 +22,7 @@ import {
   invoiceStatusesForBillFilter,
   type InvoiceBillStatus,
 } from "./invoice-bill-status";
+import { invoicePeriodTotalsFromRows } from "./invoice-period-totals";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import {
   aggregatePeriodClientActivity,
@@ -317,12 +318,24 @@ export async function getInvoiceSummary(
   let refundedCount = 0;
   // Outstanding remaining keyed by currency (draft/sent/partial).
   const outstandingByCurrency: Record<string, number> = {};
+  const periodRows: Array<{
+    status: string;
+    amountCents: number;
+    receivedCents: number;
+    currency: string;
+  }> = [];
 
   for (const row of rows) {
     const count = Number(row.count ?? 0);
     const amount = Number(row.amountCents ?? 0);
     const received = Number(row.receivedCents ?? 0);
     const remaining = Math.max(0, amount - received);
+    periodRows.push({
+      status: row.status,
+      amountCents: amount,
+      receivedCents: received,
+      currency: row.currency,
+    });
     if (row.status === "draft") {
       draftCount += count;
       outstandingByCurrency[row.currency] = (outstandingByCurrency[row.currency] ?? 0) + remaining;
@@ -339,6 +352,8 @@ export async function getInvoiceSummary(
     }
   }
 
+  const periodTotals = invoicePeriodTotalsFromRows(periodRows);
+
   // For backward-compat convenience: also expose the USD outstanding total
   // (or the single currency if the team uses only one).
   const currencies = Object.keys(outstandingByCurrency);
@@ -346,7 +361,7 @@ export async function getInvoiceSummary(
     currencies.length === 1
       ? (outstandingByCurrency[currencies[0]!] ?? 0)
       : (outstandingByCurrency["USD"] ?? 0);
-  const currency = currencies.length === 1 ? currencies[0]! : "USD";
+  const currency = currencies.length === 1 ? currencies[0]! : periodTotals.currency || "USD";
 
   return {
     draftCount,
@@ -357,6 +372,9 @@ export async function getInvoiceSummary(
     outstandingCents,
     currency,
     outstandingByCurrency,
+    billedCents: periodTotals.billedCents,
+    receivedCents: periodTotals.receivedCents,
+    remainingCents: periodTotals.remainingCents,
   };
 }
 
