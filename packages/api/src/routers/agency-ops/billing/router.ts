@@ -8,8 +8,30 @@ import {
   getInvoiceSummary,
   createInvoice,
   updateInvoiceStatus,
+  recordInvoicePayment,
+  listPeriodBillActivity,
   listBudgetsStub,
 } from "./service";
+
+const invoiceStatusSchema = z.enum(["draft", "sent", "partial", "paid", "refunded"]);
+const invoiceBillStatusSchema = z.enum(["outstanding", "partial", "paid", "refunded"]);
+
+const invoiceRecordSchema = z.object({
+  id: z.string().min(1),
+  clientId: z.string().min(1),
+  clientName: z.string().min(1),
+  number: z.string().min(1),
+  status: invoiceStatusSchema,
+  billStatus: invoiceBillStatusSchema,
+  amountCents: z.number().int().nonnegative(),
+  receivedCents: z.number().int().nonnegative(),
+  remainingCents: z.number().int().nonnegative(),
+  currency: z.string().min(1),
+  periodStart: z.string().datetime(),
+  periodEnd: z.string().datetime(),
+  issuedAt: z.string().datetime().nullable(),
+  paidAt: z.string().datetime().nullable(),
+});
 
 export const billingRouter = {
   budgets: {
@@ -84,13 +106,20 @@ export const billingRouter = {
 
   invoices: {
     summary: protectedProProcedure
-      .input(teamScopedInputSchema)
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime().optional(),
+          periodEnd: z.string().datetime().optional(),
+        }),
+      )
       .handler(async ({ context, input }) => {
         return z
           .object({
             draftCount: z.number().int().nonnegative(),
             sentCount: z.number().int().nonnegative(),
+            partialCount: z.number().int().nonnegative(),
             paidCount: z.number().int().nonnegative(),
+            refundedCount: z.number().int().nonnegative(),
             outstandingCents: z.number().int().nonnegative(),
             currency: z.string().min(1),
             outstandingByCurrency: z.record(z.string(), z.number().int().nonnegative()),
@@ -100,27 +129,17 @@ export const billingRouter = {
     list: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
-          status: z.enum(["draft", "sent", "paid"]).optional(),
+          status: invoiceStatusSchema.optional(),
+          billStatus: invoiceBillStatusSchema.optional(),
+          periodStart: z.string().datetime().optional(),
+          periodEnd: z.string().datetime().optional(),
+          search: z.string().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return z
           .object({
-            items: z.array(
-              z.object({
-                id: z.string().min(1),
-                clientId: z.string().min(1),
-                clientName: z.string().min(1),
-                number: z.string().min(1),
-                status: z.enum(["draft", "sent", "paid"]),
-                amountCents: z.number().int().nonnegative(),
-                currency: z.string().min(1),
-                periodStart: z.string().datetime(),
-                periodEnd: z.string().datetime(),
-                issuedAt: z.string().datetime().nullable(),
-                paidAt: z.string().datetime().nullable(),
-              }),
-            ),
+            items: z.array(invoiceRecordSchema),
           })
           .parse(await listInvoices(context.session.user.id, input));
       }),
@@ -134,45 +153,58 @@ export const billingRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return z
-          .object({
-            id: z.string().min(1),
-            clientId: z.string().min(1),
-            clientName: z.string().min(1),
-            number: z.string().min(1),
-            status: z.enum(["draft", "sent", "paid"]),
-            amountCents: z.number().int().nonnegative(),
-            currency: z.string().min(1),
-            periodStart: z.string().datetime(),
-            periodEnd: z.string().datetime(),
-            issuedAt: z.string().datetime().nullable(),
-            paidAt: z.string().datetime().nullable(),
-          })
-          .parse(await createInvoice(context.session.user.id, input));
+        return invoiceRecordSchema.parse(await createInvoice(context.session.user.id, input));
       }),
     updateStatus: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
           invoiceId: z.string().min(1),
-          status: z.enum(["sent", "paid"]),
+          status: z.enum(["sent", "paid", "refunded"]),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return invoiceRecordSchema.parse(await updateInvoiceStatus(context.session.user.id, input));
+      }),
+    recordPayment: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          invoiceId: z.string().min(1),
+          amountCents: z.number().int().positive(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return invoiceRecordSchema.parse(
+          await recordInvoicePayment(context.session.user.id, input),
+        );
+      }),
+    periodActivity: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          search: z.string().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return z
           .object({
-            id: z.string().min(1),
-            clientId: z.string().min(1),
-            clientName: z.string().min(1),
-            number: z.string().min(1),
-            status: z.enum(["draft", "sent", "paid"]),
-            amountCents: z.number().int().nonnegative(),
-            currency: z.string().min(1),
-            periodStart: z.string().datetime(),
-            periodEnd: z.string().datetime(),
-            issuedAt: z.string().datetime().nullable(),
-            paidAt: z.string().datetime().nullable(),
+            clients: z.array(
+              z.object({
+                clientId: z.string().min(1),
+                clientName: z.string().min(1),
+                durationSeconds: z.number().int().nonnegative(),
+              }),
+            ),
+            members: z.array(
+              z.object({
+                userId: z.string().min(1),
+                userName: z.string().min(1),
+                userAvatar: z.string().nullable(),
+                durationSeconds: z.number().int().nonnegative(),
+              }),
+            ),
           })
-          .parse(await updateInvoiceStatus(context.session.user.id, input));
+          .parse(await listPeriodBillActivity(context.session.user.id, input));
       }),
   },
 };
