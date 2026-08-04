@@ -12,9 +12,19 @@ import {
   listPeriodBillActivity,
   listBudgetsStub,
 } from "./service";
+import {
+  createPayoutLineFromMember,
+  ensurePayoutPeriod,
+  listPayoutLines,
+  recordPayoutPayment,
+  updatePayoutLineStatus,
+} from "./payout-service";
 
 const invoiceStatusSchema = z.enum(["draft", "sent", "partial", "paid", "refunded"]);
 const invoiceBillStatusSchema = z.enum(["outstanding", "partial", "paid", "refunded"]);
+const payoutLineStatusSchema = z.enum(["draft", "partial", "paid"]);
+const payoutBillStatusSchema = z.enum(["outstanding", "partial", "paid"]);
+const payoutRunStatusSchema = z.enum(["draft", "paying", "paid"]);
 
 const invoiceRecordSchema = z.object({
   id: z.string().min(1),
@@ -31,6 +41,35 @@ const invoiceRecordSchema = z.object({
   periodEnd: z.string().datetime(),
   issuedAt: z.string().datetime().nullable(),
   paidAt: z.string().datetime().nullable(),
+});
+
+const payoutLineRecordSchema = z.object({
+  id: z.string().min(1),
+  runId: z.string().min(1),
+  userId: z.string().min(1),
+  userName: z.string().min(1),
+  userAvatar: z.string().nullable(),
+  label: z.string(),
+  status: payoutLineStatusSchema,
+  billStatus: payoutBillStatusSchema,
+  amountCents: z.number().int().nonnegative(),
+  paidCents: z.number().int().nonnegative(),
+  remainingCents: z.number().int().nonnegative(),
+  currency: z.string().min(1),
+  durationSeconds: z.number().int().nonnegative(),
+  rateCents: z.number().int().nonnegative(),
+  periodStart: z.string().datetime(),
+  periodEnd: z.string().datetime(),
+});
+
+const payoutRunRecordSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  status: payoutRunStatusSchema,
+  currency: z.string().min(1),
+  periodStart: z.string().datetime(),
+  periodEnd: z.string().datetime(),
+  salariesSectionId: z.string().min(1),
 });
 
 export const billingRouter = {
@@ -205,6 +244,76 @@ export const billingRouter = {
             ),
           })
           .parse(await listPeriodBillActivity(context.session.user.id, input));
+      }),
+  },
+
+  payouts: {
+    ensurePeriod: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          currency: z.string().length(3).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return payoutRunRecordSchema.parse(
+          await ensurePayoutPeriod(context.session.user.id, input),
+        );
+      }),
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          billStatus: payoutBillStatusSchema.optional(),
+          search: z.string().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            items: z.array(payoutLineRecordSchema),
+          })
+          .parse(await listPayoutLines(context.session.user.id, input));
+      }),
+    createFromMember: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          userId: z.string().min(1),
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          currency: z.string().length(3).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return payoutLineRecordSchema.parse(
+          await createPayoutLineFromMember(context.session.user.id, input),
+        );
+      }),
+    recordPayment: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          lineId: z.string().min(1),
+          amountCents: z.number().int().positive(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return payoutLineRecordSchema.parse(
+          await recordPayoutPayment(context.session.user.id, input),
+        );
+      }),
+    updateStatus: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          lineId: z.string().min(1),
+          status: z.enum(["paid", "draft"]),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return payoutLineRecordSchema.parse(
+          await updatePayoutLineStatus(context.session.user.id, input),
+        );
       }),
   },
 };
