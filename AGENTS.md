@@ -27,3 +27,16 @@
 - Reports aggregated-row entry details reuse the Tracker grouped time-entry log UI, including bulk actions when multiple entries are present; member-profile activity should likewise merge similar events with a multiplier and details dialog and colorize like Tracker entry rows; task names use the full task-cell width; task/description text (Arabic or English) aligns to the start while inputs follow text direction; a dim partial-height vertical separator sits between task and description cells.
 - A weekly Cursor automation produces a canvas report of Cursor-chat vs tracked-time gaps and the proposed additions/new totals before entries are inserted.
 - Browser/Vite code must not import the `@orch/agent` barrel (it pulls dotenv/`process` and crashes the client); use `@orch/agent/types` or `@orch/agent/model-routing` for client-safe values.
+
+## Cursor Cloud specific instructions
+
+Standard commands live in `README.md` / `DEVELOPMENT.md`; these are the non-obvious cloud-VM caveats. The startup update script runs `bun install` only — everything below must be done per session by the agent.
+
+- Runtime & PATH: `bun` (v1.3.10) is symlinked into `/usr/local/bin`, so it works in any shell. Non-interactive shells do NOT source `~/.bashrc`. Node (v22) is also present but the app is Bun-first.
+- Postgres + Redis run natively (not Docker — Docker is unavailable). They are NOT auto-started (no systemd). Start them each session before running the app or DB commands:
+  - `sudo pg_ctlcluster 16 main start` — Postgres is configured to listen on port `5440` to match the default `DATABASE_URL` (`postgresql://postgres:password@localhost:5440/orch`).
+  - `sudo redis-server --daemonize yes --port 6379`
+- `.env` files (root, `apps/server`, `apps/web`) already exist (gitignored, persisted in the snapshot) with a real 48-char `BETTER_AUTH_SECRET`. Env validation uses `skipValidation`, so placeholder Google/Polar/S3/OpenRouter values are fine and the app boots without them — only those integrations (OAuth login, billing, task attachments, AI agent) are degraded. `bun run db:seed` logs a Polar `401`/`invalid_token` error that is expected and non-fatal.
+- Running the full stack: plain `bun run dev` fails on the web (Vite) task with `ERR_UNKNOWN_FILE_EXTENSION ".ts"` for `@orch/env/vite`, because Vite loads its TS config through Node (via turbo) and Node can't import `.ts`. Fix by making `node` resolve to Bun: a shim dir `~/.bun-node-shim` (containing `node` → bun) exists in the snapshot, so run `PATH="$HOME/.bun-node-shim:$PATH" bun run dev`. Alternatively run the two dev servers separately: `bun run dev:server` (API on `:7000`) and `cd apps/web && bunx --bun vite --port 7001` (web on `:7001`).
+- `bun run db:push` fails under turbo with "Cannot run interactive task without Terminal UI". Apply the schema directly instead: `cd packages/db && bun run drizzle-kit push` (add `--force` to skip prompts).
+- App URLs: web `http://localhost:7001`, API `http://localhost:7000` (Vite proxies `/api/auth`, `/rpc`, `/uploads` to the API). Seeded demo login: `founder@orch.test` / `orch1234`.
