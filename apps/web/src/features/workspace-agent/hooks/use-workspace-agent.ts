@@ -230,12 +230,16 @@ export function useWorkspaceAgent() {
       return;
     }
     if (activeConversation?.id !== activeConversationId) return;
-    setMessages(dashboardMessagesToUIMessages(activeConversation.messages));
+    const next = dashboardMessagesToUIMessages(activeConversation.messages);
+    // Stale get-query (user-only) must not wipe a richer just-streamed thread.
+    if (next.length < messages.length) return;
+    setMessages(next);
   }, [
     activeConversation?.id,
     activeConversation?.messages,
     activeConversationId,
     isStreaming,
+    messages.length,
     setMessages,
   ]);
 
@@ -292,6 +296,7 @@ export function useWorkspaceAgent() {
       setStreamStopped(false);
       setDraft("");
       setDismissedArtifactCount(0);
+      setFocusedArtifactId(null);
       setCanvasOpen(false);
       if (!conversationId) {
         setMessages([]);
