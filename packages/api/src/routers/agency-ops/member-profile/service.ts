@@ -1,6 +1,7 @@
 import { db } from "@orch/db";
 import {
   agencyOpsClient,
+  agencyOpsDepartment,
   agencyOpsMemberHrProfile,
   agencyOpsMemberLeave,
   agencyOpsMemberReview,
@@ -69,6 +70,8 @@ function mapLeave(row: typeof agencyOpsMemberLeave.$inferSelect): MemberLeave {
 function defaultHrProfile(): MemberHrProfile {
   return {
     status: "active",
+    departmentId: null,
+    departmentName: null,
     employmentType: null,
     workModel: null,
     gender: null,
@@ -83,9 +86,14 @@ function defaultHrProfile(): MemberHrProfile {
   };
 }
 
-function mapHrProfile(row: typeof agencyOpsMemberHrProfile.$inferSelect): MemberHrProfile {
+function mapHrProfile(
+  row: typeof agencyOpsMemberHrProfile.$inferSelect,
+  departmentName: string | null = null,
+): MemberHrProfile {
   return {
     status: row.status,
+    departmentId: row.departmentId ?? null,
+    departmentName: row.departmentId ? departmentName : null,
     employmentType: row.employmentType,
     workModel: row.workModel,
     gender: row.gender,
@@ -98,6 +106,27 @@ function mapHrProfile(row: typeof agencyOpsMemberHrProfile.$inferSelect): Member
     offAllowanceDays: row.offAllowanceDays,
     leaveAllowancePeriod: row.leaveAllowancePeriod ?? "year",
   };
+}
+
+async function loadDepartmentName(teamId: string, departmentId: string | null) {
+  if (!departmentId) return null;
+  const [row] = await db
+    .select({ name: agencyOpsDepartment.name })
+    .from(agencyOpsDepartment)
+    .where(and(eq(agencyOpsDepartment.id, departmentId), eq(agencyOpsDepartment.teamId, teamId)))
+    .limit(1);
+  return row?.name ?? null;
+}
+
+async function assertDepartmentOnTeam(teamId: string, departmentId: string) {
+  const [row] = await db
+    .select({ id: agencyOpsDepartment.id })
+    .from(agencyOpsDepartment)
+    .where(and(eq(agencyOpsDepartment.id, departmentId), eq(agencyOpsDepartment.teamId, teamId)))
+    .limit(1);
+  if (!row) {
+    throw new ORPCError("BAD_REQUEST", { message: "Department was not found on this team." });
+  }
 }
 
 async function requireSubjectMembership(teamId: string, userId: string) {
@@ -251,8 +280,15 @@ export async function getMemberProfile(
       )
       .orderBy(desc(agencyOpsMemberReview.reviewDate), desc(agencyOpsMemberReview.createdAt)),
     db
-      .select()
+      .select({
+        hr: agencyOpsMemberHrProfile,
+        departmentName: agencyOpsDepartment.name,
+      })
       .from(agencyOpsMemberHrProfile)
+      .leftJoin(
+        agencyOpsDepartment,
+        eq(agencyOpsDepartment.id, agencyOpsMemberHrProfile.departmentId),
+      )
       .where(
         and(
           eq(agencyOpsMemberHrProfile.teamId, input.teamId),
@@ -394,7 +430,7 @@ export async function getMemberProfile(
   const canAddReview = isManagerRole(actorRole);
   const canManageLeave = isSelf || canAddReview;
   const canEditHr = canAddReview;
-  const hrProfile = hrRow ? mapHrProfile(hrRow) : defaultHrProfile();
+  const hrProfile = hrRow ? mapHrProfile(hrRow.hr, hrRow.departmentName) : defaultHrProfile();
 
   const leaveBalances = buildLeaveBalances({
     period: hrProfile.leaveAllowancePeriod,
@@ -460,6 +496,9 @@ export async function upsertMemberHrProfile(
   await requireSubjectMembership(input.teamId, input.userId);
 
   if (input.patch.dateOfBirth) assertDateKey(input.patch.dateOfBirth, "dateOfBirth");
+  if (input.patch.departmentId) {
+    await assertDepartmentOnTeam(input.teamId, input.patch.departmentId);
+  }
 
   const [existing] = await db
     .select()
@@ -472,10 +511,16 @@ export async function upsertMemberHrProfile(
     )
     .limit(1);
 
-  const base = existing ? mapHrProfile(existing) : defaultHrProfile();
+  const existingDepartmentName = existing
+    ? await loadDepartmentName(input.teamId, existing.departmentId)
+    : null;
+  const base = existing ? mapHrProfile(existing, existingDepartmentName) : defaultHrProfile();
   const next: MemberHrProfile = {
     ...base,
     ...input.patch,
+    departmentId:
+      input.patch.departmentId === undefined ? base.departmentId : input.patch.departmentId,
+    departmentName: null,
     gender: input.patch.gender === undefined ? base.gender : input.patch.gender?.trim() || null,
     phone: input.patch.phone === undefined ? base.phone : input.patch.phone?.trim() || null,
     address: input.patch.address === undefined ? base.address : input.patch.address?.trim() || null,
@@ -495,6 +540,7 @@ export async function upsertMemberHrProfile(
       .update(agencyOpsMemberHrProfile)
       .set({
         status: next.status,
+        departmentId: next.departmentId,
         employmentType: next.employmentType,
         workModel: next.workModel,
         gender: next.gender,
@@ -510,7 +556,8 @@ export async function upsertMemberHrProfile(
       .where(eq(agencyOpsMemberHrProfile.id, existing.id))
       .returning();
     if (!row) throw new ORPCError("INTERNAL_SERVER_ERROR");
-    return mapHrProfile(row);
+    const departmentName = await loadDepartmentName(input.teamId, row.departmentId);
+    return mapHrProfile(row, departmentName);
   }
 
   const [row] = await db
@@ -519,6 +566,7 @@ export async function upsertMemberHrProfile(
       id: createWorkspaceId("agency-hr"),
       teamId: input.teamId,
       userId: input.userId,
+      departmentId: next.departmentId,
       status: next.status,
       employmentType: next.employmentType,
       workModel: next.workModel,
@@ -535,7 +583,8 @@ export async function upsertMemberHrProfile(
     .returning();
 
   if (!row) throw new ORPCError("INTERNAL_SERVER_ERROR");
-  return mapHrProfile(row);
+  const departmentName = await loadDepartmentName(input.teamId, row.departmentId);
+  return mapHrProfile(row, departmentName);
 }
 
 export async function createMemberLeave(

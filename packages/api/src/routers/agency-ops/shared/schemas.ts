@@ -14,6 +14,14 @@ export const agencyTagSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+export const agencyDepartmentSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  name: z.string().min(1),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
 export const agencyClientCategorySchema = z.enum(["internal", "external"]);
 
 export const agencyClientSchema = z.object({

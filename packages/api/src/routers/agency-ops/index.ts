@@ -5,6 +5,7 @@ import { favoritesRouter } from "./favorites/router";
 import { tasksRouter } from "./tasks/router";
 import { timeTrackingRouter } from "./time-tracking/router";
 import { tagsRouter } from "./tags/router";
+import { departmentsRouter } from "./departments/router";
 import { reportsRouter } from "./reports/router";
 import { billingRouter } from "./billing/router";
 import { resourcingRouter } from "./resourcing/router";
@@ -21,6 +22,7 @@ export const agencyOpsRouter = {
   favorites: favoritesRouter.favorites,
   projectTasks: tasksRouter.projectTasks,
   tags: tagsRouter.tags,
+  departments: departmentsRouter.departments,
   timer: timeTrackingRouter.timer,
   timeEntries: timeTrackingRouter.timeEntries,
   summary: timeTrackingRouter.summary,

@@ -128,6 +128,8 @@ export const optionalHttpUrlSchema = z
 
 export const memberHrProfileSchema = z.object({
   status: memberEmploymentStatusSchema,
+  departmentId: z.string().nullable(),
+  departmentName: z.string().nullable(),
   employmentType: memberEmploymentTypeSchema.nullable(),
   workModel: memberWorkModelSchema.nullable(),
   gender: z.string().nullable(),

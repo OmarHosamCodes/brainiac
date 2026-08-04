@@ -1,0 +1,48 @@
+import { z } from "zod";
+
+import { protectedProProcedure } from "../../../procedures";
+import { agencyDepartmentSchema, teamScopedInputSchema } from "../shared/schemas";
+import {
+  createAgencyDepartment,
+  deleteAgencyDepartment,
+  listAgencyDepartments,
+  updateAgencyDepartment,
+} from "./service";
+
+const departmentNameSchema = z.string().trim().min(1).max(50);
+
+export const departmentsRouter = {
+  departments: {
+    list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
+      return z
+        .object({ items: z.array(agencyDepartmentSchema) })
+        .parse(await listAgencyDepartments(context.session.user.id, input));
+    }),
+    create: protectedProProcedure
+      .input(teamScopedInputSchema.extend({ name: departmentNameSchema }))
+      .handler(async ({ context, input }) => {
+        return agencyDepartmentSchema.parse(
+          await createAgencyDepartment(context.session.user.id, input),
+        );
+      }),
+    update: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          departmentId: z.string().min(1),
+          name: departmentNameSchema,
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return agencyDepartmentSchema.parse(
+          await updateAgencyDepartment(context.session.user.id, input),
+        );
+      }),
+    delete: protectedProProcedure
+      .input(teamScopedInputSchema.extend({ departmentId: z.string().min(1) }))
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ departmentId: z.string().min(1), deleted: z.boolean() })
+          .parse(await deleteAgencyDepartment(context.session.user.id, input));
+      }),
+  },
+};

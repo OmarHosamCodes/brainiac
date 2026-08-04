@@ -1,5 +1,7 @@
 import { db } from "@orch/db";
 import {
+  agencyOpsDepartment,
+  agencyOpsMemberHrProfile,
   agencyOpsMemberTenureProfile,
   agencyOpsTenurePolicy,
   agencyOpsTenureQuarterExemption,
@@ -82,6 +84,8 @@ type MemberTenureSummaryRecord = {
   userName: string;
   userEmail: string;
   joinedAt: string;
+  departmentId: string | null;
+  departmentName: string | null;
   internStart: string | null;
   internEnd: string | null;
   internDerived: boolean;
@@ -272,6 +276,41 @@ async function loadLoggedHoursByQuarter(
   return byQuarter;
 }
 
+async function loadMemberDepartments(
+  teamId: string,
+  userIds: string[],
+): Promise<Map<string, { departmentId: string; departmentName: string }>> {
+  const byUserId = new Map<string, { departmentId: string; departmentName: string }>();
+  if (userIds.length === 0) return byUserId;
+
+  const rows = await db
+    .select({
+      userId: agencyOpsMemberHrProfile.userId,
+      departmentId: agencyOpsMemberHrProfile.departmentId,
+      departmentName: agencyOpsDepartment.name,
+    })
+    .from(agencyOpsMemberHrProfile)
+    .innerJoin(
+      agencyOpsDepartment,
+      eq(agencyOpsDepartment.id, agencyOpsMemberHrProfile.departmentId),
+    )
+    .where(
+      and(
+        eq(agencyOpsMemberHrProfile.teamId, teamId),
+        inArray(agencyOpsMemberHrProfile.userId, userIds),
+      ),
+    );
+
+  for (const row of rows) {
+    if (!row.departmentId || !row.departmentName) continue;
+    byUserId.set(row.userId, {
+      departmentId: row.departmentId,
+      departmentName: row.departmentName,
+    });
+  }
+  return byUserId;
+}
+
 async function computeMemberSummary(input: {
   teamId: string;
   member: {
@@ -285,6 +324,8 @@ async function computeMemberSummary(input: {
   exemptions: TenureExemptionInput[];
   firstTrackedAt: Date | null;
   now: Date;
+  departmentId?: string | null;
+  departmentName?: string | null;
 }): Promise<MemberTenureSummaryRecord> {
   const profile = toProfileInput(input.profileRow);
   const loggedHoursByQuarterKey = await loadLoggedHoursByQuarter(
@@ -311,6 +352,8 @@ async function computeMemberSummary(input: {
     userName: input.member.userName ?? "Unknown",
     userEmail: input.member.userEmail,
     joinedAt: input.member.joinedAt.toISOString(),
+    departmentId: input.departmentId ?? null,
+    departmentName: input.departmentName ?? null,
     internStart: result.internStart?.toISOString() ?? null,
     internEnd: result.internEnd?.toISOString() ?? null,
     internDerived: result.internDerived,
@@ -828,13 +871,15 @@ export async function listTenureSummary(
   const userIds = visibleMembers.map((member) => member.userId);
   const profileRows = await loadProfileRows(input.teamId, userIds);
   const profileByUserId = new Map(profileRows.map((row) => [row.userId, row]));
+  const departmentByUserId = await loadMemberDepartments(input.teamId, userIds);
   const exemptionRows = await loadExemptionRows(input.teamId);
   const exemptions = exemptionRows.map(toExemptionInput);
   const firstTracked = await loadFirstTrackedAtByUser(input.teamId, userIds);
 
   const items = await Promise.all(
-    visibleMembers.map((member) =>
-      computeMemberSummary({
+    visibleMembers.map((member) => {
+      const department = departmentByUserId.get(member.userId);
+      return computeMemberSummary({
         teamId: input.teamId,
         member,
         policy,
@@ -842,8 +887,10 @@ export async function listTenureSummary(
         exemptions,
         firstTrackedAt: firstTracked.get(member.userId) ?? null,
         now,
-      }),
-    ),
+        departmentId: department?.departmentId ?? null,
+        departmentName: department?.departmentName ?? null,
+      });
+    }),
   );
 
   return { items, policyEnabled: policy.enabled };
@@ -896,6 +943,7 @@ export async function getTenureMember(
     now,
   });
 
+  const department = (await loadMemberDepartments(input.teamId, [input.userId])).get(input.userId);
   const summary = await computeMemberSummary({
     teamId: input.teamId,
     member,
@@ -904,6 +952,8 @@ export async function getTenureMember(
     exemptions,
     firstTrackedAt: firstTrackedAt ?? null,
     now,
+    departmentId: department?.departmentId ?? null,
+    departmentName: department?.departmentName ?? null,
   });
 
   return {

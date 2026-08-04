@@ -57,6 +57,7 @@ export const memberProfileRouter = {
           teamScopedInputSchema.extend({
             userId: z.string().min(1),
             status: memberEmploymentStatusSchema.optional(),
+            departmentId: z.string().min(1).nullable().optional(),
             employmentType: memberEmploymentTypeSchema.nullable().optional(),
             workModel: memberWorkModelSchema.nullable().optional(),
             gender: z.string().max(64).nullable().optional(),
