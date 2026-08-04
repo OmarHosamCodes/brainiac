@@ -276,6 +276,10 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
               </h1>
               <dl className="mt-4 space-y-2.5 border-t border-border pt-3">
                 <div className="flex justify-between gap-3 text-sm">
+                  <dt className="text-muted-foreground">Department</dt>
+                  <dd className="text-right text-foreground">{profile.hr.departmentName ?? "—"}</dd>
+                </div>
+                <div className="flex justify-between gap-3 text-sm">
                   <dt className="text-muted-foreground">Employment</dt>
                   <dd className="text-right text-foreground">
                     {profile.hr.employmentTypeLabel ?? "—"}
@@ -705,6 +709,27 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className={agencyFormFieldClass}>
+              <Label className={agencyFormLabelClass}>Department</Label>
+              <Select
+                value={viewModel.hrDraft.departmentId || "none"}
+                onValueChange={(value) =>
+                  viewModel.setHrDraft({ departmentId: value === "none" ? "" : value })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {profile.departments.map((department) => (
+                    <SelectItem key={department.id} value={department.id}>
+                      {department.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

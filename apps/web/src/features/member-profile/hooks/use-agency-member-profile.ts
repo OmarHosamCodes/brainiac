@@ -89,6 +89,8 @@ export type AgencyMemberProfileViewModel = {
     hr: {
       status: "active" | "inactive";
       statusLabel: string;
+      departmentId: string | null;
+      departmentName: string | null;
       employmentType: EmploymentType | null;
       employmentTypeLabel: string | null;
       workModel: WorkModel | null;
@@ -103,6 +105,7 @@ export type AgencyMemberProfileViewModel = {
       offAllowanceDays: number;
       leaveAllowancePeriod: "year" | "quarter" | "month";
     };
+    departments: Array<{ id: string; name: string }>;
     leaveGauges: Array<{
       key: "leaves" | "period" | "present" | "waste";
       label: string;
@@ -193,6 +196,7 @@ export type AgencyMemberProfileViewModel = {
   reviewDraft: { reviewDate: string; body: string };
   hrDraft: {
     status: "active" | "inactive";
+    departmentId: string;
     employmentType: EmploymentType | "";
     workModel: WorkModel | "";
     gender: string;
@@ -346,6 +350,7 @@ function genderDisplayLabel(value: string | null): string | null {
 function emptyHrDraft(): AgencyMemberProfileViewModel["hrDraft"] {
   return {
     status: "active",
+    departmentId: "",
     employmentType: "",
     workModel: "",
     gender: "",
@@ -497,11 +502,19 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     placeholderData: keepPreviousData,
   });
 
+  const departmentsQuery = useQuery({
+    ...orpc.agencyOps.departments.list.queryOptions({ input: { teamId } }),
+    enabled: Boolean(teamId && session.data?.user),
+  });
+
   const invalidate = useMutation({
     mutationFn: async () => undefined,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: orpc.agencyOps.memberProfile.get.key(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.departments.list.key({ input: { teamId } }),
       });
     },
   });
@@ -640,6 +653,8 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       hr: {
         status: data.hrProfile.status,
         statusLabel: data.hrProfile.status === "active" ? "Active" : "Inactive",
+        departmentId: data.hrProfile.departmentId,
+        departmentName: data.hrProfile.departmentName,
         employmentType: data.hrProfile.employmentType,
         employmentTypeLabel: employmentTypeLabel(data.hrProfile.employmentType),
         workModel: data.hrProfile.workModel,
@@ -662,6 +677,10 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         offAllowanceDays: data.hrProfile.offAllowanceDays,
         leaveAllowancePeriod: data.hrProfile.leaveAllowancePeriod,
       },
+      departments: (departmentsQuery.data?.items ?? []).map((item) => ({
+        id: item.id,
+        name: item.name,
+      })),
       leaveGauges,
       weekHours: data.weekHours.map((day) => ({
         date: day.date,
@@ -756,6 +775,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     };
   }, [
     calendarMonth,
+    departmentsQuery.data?.items,
     effectiveRangePreset,
     effectiveTenureMonthIndexes,
     expandedDays,
@@ -819,6 +839,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       if (open && profile) {
         setHrDraftState({
           status: profile.hr.status,
+          departmentId: profile.hr.departmentId ?? "",
           employmentType: profile.hr.employmentType ?? "",
           workModel: profile.hr.workModel ?? "",
           gender: normalizeGenderDraft(profile.hr.gender),
@@ -925,6 +946,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
           teamId,
           userId: subjectUserId,
           status: hrDraft.status,
+          departmentId: hrDraft.departmentId || null,
           employmentType: hrDraft.employmentType || null,
           workModel: hrDraft.workModel || null,
           gender: normalizeGenderDraft(hrDraft.gender) || null,

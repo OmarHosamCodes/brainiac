@@ -6,6 +6,7 @@ type LeaveType = "pto" | "sick" | "team_holiday" | "other";
 
 type HrProfilePatch = {
   status?: "active" | "inactive";
+  departmentId?: string | null;
   employmentType?: "full_time" | "part_time" | "contractor" | "intern" | null;
   workModel?: "onsite" | "hybrid" | "remote" | null;
   gender?: string | null;
