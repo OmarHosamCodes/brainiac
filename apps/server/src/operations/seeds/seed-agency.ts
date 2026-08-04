@@ -790,6 +790,7 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
       number: invoiceNumber,
       status,
       amountCents,
+      receivedCents: status === "paid" ? amountCents : 0,
       currency: "USD",
       periodStart: invoicePeriodStart,
       periodEnd: invoicePeriodEnd,
