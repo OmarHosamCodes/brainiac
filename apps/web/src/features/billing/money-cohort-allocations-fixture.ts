@@ -1,4 +1,4 @@
-/** Cohort allocation rules + calculation options for the Money stats grid. */
+/** Seed defaults for Money settings Rules / Formulas panes (live data from API). */
 
 export type MoneyCohortRuleId = "profit-loss-share" | "rent-allowance" | "device-compensation";
 

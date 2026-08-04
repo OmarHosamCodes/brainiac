@@ -56,6 +56,7 @@ import {
   type MoneyStatsMetricSelection,
 } from "./hooks/use-agency-money-surface";
 import { type MoneyExpenseKind, type MoneyExpensePeriod } from "./money-expense-form";
+import { MoneyPayoutRunView } from "./money-payout-run-view";
 import { type MoneyBillsPartyFilter, type MoneyBillsStatusFilter } from "./money-bills-filters";
 import {
   groupMoneyBillRows,
@@ -309,12 +310,16 @@ function MoneySettingsDialog({
                     <button
                       type="button"
                       className={cn(
-                        "group/rule flex w-full items-start gap-3 rounded-2xl border border-default px-3.5 py-3 text-left transition-colors",
-                        "hover:bg-elevated",
+                        "group/rule flex w-full items-start gap-3 rounded-2xl border px-3.5 py-3 text-left transition-colors",
+                        rule.enabled
+                          ? "border-default hover:bg-elevated"
+                          : "border-dashed border-default opacity-70 hover:opacity-100",
                         agencyFocusRingClass,
                       )}
                       onClick={() => settings.onSelect({ kind: "rule", ruleId: rule.id })}
-                      aria-label={`${rule.benefit}: ${rule.cohort}. Open details.`}
+                      aria-pressed={rule.enabled}
+                      aria-label={`${rule.benefit}: ${rule.cohort}. ${rule.enabled ? "Enabled" : "Disabled"}. Toggle.`}
+                      disabled={settings.isSaving}
                     >
                       <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-elevated text-muted">
                         <Users className="size-4" aria-hidden />
@@ -350,13 +355,15 @@ function MoneySettingsDialog({
                       type="button"
                       className={cn(
                         "group/option flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                        "hover:bg-elevated",
+                        option.enabled ? "hover:bg-elevated" : "opacity-60 hover:opacity-100",
                         agencyFocusRingClass,
                       )}
                       onClick={() =>
                         settings.onSelect({ kind: "calc-option", optionId: option.id })
                       }
-                      aria-label={`${option.label}: ${option.summary}. Open details.`}
+                      aria-pressed={option.enabled}
+                      aria-label={`${option.label}: ${option.summary}. ${option.enabled ? "Enabled" : "Disabled"}. Toggle.`}
+                      disabled={settings.isSaving}
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-highlighted">
@@ -447,8 +454,10 @@ function BillListRow({
 }) {
   const hueId = moneyBillHueId(row);
   const isReady = row.kind === "client-activity" || row.kind === "member-activity";
-  const showMemberAvatar = row.kind === "member-activity" || row.kind === "team-payout";
-  const showStatusChip = row.kind === "invoice" || row.kind === "team-payout";
+  const showMemberAvatar =
+    row.kind === "member-activity" || (row.kind === "team-payout" && Boolean(row.userId));
+  const showStatusChip =
+    row.kind === "invoice" || row.kind === "team-payout" || row.kind === "adjustment";
 
   function onOpenParty() {
     switch (row.kind) {
@@ -457,8 +466,12 @@ function BillListRow({
         onOpenClient(row.clientId);
         break;
       case "member-activity":
-      case "team-payout":
         onOpenMember(row.userId);
+        break;
+      case "team-payout":
+        if (row.userId) onOpenMember(row.userId);
+        break;
+      case "adjustment":
         break;
       default: {
         const _exhaustive: never = row;
@@ -490,17 +503,23 @@ function BillListRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-          <button
-            type="button"
-            onClick={onOpenParty}
-            className={cn(
-              "min-w-0 truncate text-left text-sm font-medium text-highlighted hover:underline",
-              agencyFocusRingClass,
-              "rounded-sm",
-            )}
-          >
-            <AgencySearchHighlight text={row.title} query={searchTerm} />
-          </button>
+          {row.kind === "adjustment" ? (
+            <span className="min-w-0 truncate text-sm font-medium text-highlighted">
+              <AgencySearchHighlight text={row.title} query={searchTerm} />
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenParty}
+              className={cn(
+                "min-w-0 truncate text-left text-sm font-medium text-highlighted hover:underline",
+                agencyFocusRingClass,
+                "rounded-sm",
+              )}
+            >
+              <AgencySearchHighlight text={row.title} query={searchTerm} />
+            </button>
+          )}
           {showStatusChip ? (
             <span
               className={cn(
@@ -523,7 +542,9 @@ function BillListRow({
               {row.receivedLabel} in · {row.remainingLabel} left
             </>
           ) : null}
-          {row.kind === "team-payout" && row.paidCents > 0 && row.remainingCents > 0 ? (
+          {(row.kind === "team-payout" || row.kind === "adjustment") &&
+          row.paidCents > 0 &&
+          row.remainingCents > 0 ? (
             <>
               <span aria-hidden> · </span>
               {row.paidLabel} paid · {row.remainingLabel} left
@@ -539,7 +560,9 @@ function BillListRow({
             row.kind === "member-activity" ? "text-muted" : "text-highlighted",
           )}
         >
-          {row.kind === "invoice" || row.kind === "team-payout" ? row.amountLabel : row.metaLabel}
+          {row.kind === "invoice" || row.kind === "team-payout" || row.kind === "adjustment"
+            ? row.amountLabel
+            : row.metaLabel}
         </span>
 
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
@@ -622,6 +645,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
   const billCountLabel = `${bills.billCount} ${bills.billCount === 1 ? "bill" : "bills"}`;
   const hasStatusFilters = bills.statusOptions.length > 0;
   const create = bills.create;
+  const adjustmentCreate = bills.adjustmentCreate;
   const payment = bills.payment;
   const showEmpty = !bills.isLoading && !bills.isError && bills.rows.length === 0;
   const sections = groupMoneyBillRows(bills.rows);
@@ -886,6 +910,86 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
         </DialogContent>
       </Dialog>
 
+      <Dialog open={adjustmentCreate.open} onOpenChange={adjustmentCreate.onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add adjustment</DialogTitle>
+            <DialogDescription>
+              Create a Debt/Discount, Charity, or PBC line for this period.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            id={adjustmentCreate.formId}
+            className="flex flex-col gap-4"
+            onSubmit={adjustmentCreate.onSubmit}
+          >
+            <div className={agencyFormFieldClass}>
+              <Label className={agencyFormLabelClass}>Section</Label>
+              <Select
+                value={adjustmentCreate.sectionKey}
+                onValueChange={(value) =>
+                  adjustmentCreate.onSectionKeyChange(
+                    value as (typeof adjustmentCreate.sectionOptions)[number]["id"],
+                  )
+                }
+              >
+                <SelectTrigger className="h-9 w-full rounded-xl border-default bg-default">
+                  <SelectValue placeholder="Select section" />
+                </SelectTrigger>
+                <SelectContent>
+                  {adjustmentCreate.sectionOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor={`${adjustmentCreate.formId}-label`} className={agencyFormLabelClass}>
+                Label
+              </Label>
+              <Input
+                id={`${adjustmentCreate.formId}-label`}
+                value={adjustmentCreate.label}
+                onChange={(event) => adjustmentCreate.onLabelChange(event.target.value)}
+                placeholder="e.g. Client discount, donation"
+                className="h-9 rounded-xl border-default bg-default text-sm"
+              />
+            </div>
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor={`${adjustmentCreate.formId}-amount`} className={agencyFormLabelClass}>
+                Amount
+              </Label>
+              <Input
+                id={`${adjustmentCreate.formId}-amount`}
+                inputMode="decimal"
+                value={adjustmentCreate.amount}
+                onChange={(event) => adjustmentCreate.onAmountChange(event.target.value)}
+                placeholder="0.00"
+                className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
+              />
+            </div>
+          </form>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => adjustmentCreate.onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form={adjustmentCreate.formId}
+              disabled={!adjustmentCreate.canSubmit}
+            >
+              Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={payment.open} onOpenChange={payment.onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -932,6 +1036,7 @@ type ExpensesGroupViewModel =
 function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["expenses"] }) {
   const create = expenses.create;
   const details = expenses.details;
+  const payment = expenses.payment;
 
   return (
     <section
@@ -1028,7 +1133,26 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                                 <p className="truncate text-sm font-medium text-highlighted">
                                   {item.name}
                                 </p>
-                                <span className="shrink-0 text-[11px] text-muted">{item.meta}</span>
+                                <span className="shrink-0 text-[11px] tabular-nums text-highlighted">
+                                  {item.amountLabel}
+                                </span>
+                              </div>
+                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
+                                <span>{item.meta}</span>
+                                <span aria-hidden>·</span>
+                                <span>{item.statusLabel}</span>
+                                {item.canRecordPayment ? (
+                                  <>
+                                    <span aria-hidden>·</span>
+                                    <button
+                                      type="button"
+                                      className="font-medium text-highlighted underline-offset-2 hover:underline"
+                                      onClick={() => expenses.onOpenPayment(item.id)}
+                                    >
+                                      Record payment
+                                    </button>
+                                  </>
+                                ) : null}
                               </div>
                               {item.note ? (
                                 <p className="mt-0.5 text-xs text-muted text-pretty">{item.note}</p>
@@ -1146,6 +1270,23 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               ) : null}
 
               <div className={agencyFormFieldClass}>
+                <Label htmlFor={`${create.formId}-amount`} className={agencyFormLabelClass}>
+                  Amount
+                </Label>
+                <Input
+                  id={`${create.formId}-amount`}
+                  inputMode="decimal"
+                  value={create.amount}
+                  onChange={(event) => create.onAmountChange(event.target.value)}
+                  placeholder="0.00"
+                  className={cn(
+                    "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
+                    agencyInputPlaceholderClass,
+                  )}
+                />
+              </div>
+
+              <div className={agencyFormFieldClass}>
                 <Label htmlFor={`${create.formId}-note`} className={agencyFormLabelClass}>
                   Note <span className="font-normal text-muted">(optional)</span>
                 </Label>
@@ -1174,6 +1315,55 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               </Button>
               <Button type="submit" size="sm" disabled={!create.canSubmit} form={create.formId}>
                 Add
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={payment.open} onOpenChange={payment.onOpenChange}>
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+          <DialogHeader className="space-y-1 border-b border-default px-5 py-4 text-left">
+            <DialogTitle className="text-base font-bold text-highlighted">
+              Record expense payment
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted">
+              {payment.name}
+              {payment.remainingLabel ? ` · ${payment.remainingLabel} remaining` : null}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            id={payment.formId}
+            onSubmit={(event: FormEvent<HTMLFormElement>) => payment.onSubmit(event)}
+          >
+            <div className="flex flex-col gap-4 px-5 py-4">
+              <div className={agencyFormFieldClass}>
+                <Label htmlFor="money-expense-payment-amount" className={agencyFormLabelClass}>
+                  Amount ({payment.currency})
+                </Label>
+                <Input
+                  id="money-expense-payment-amount"
+                  inputMode="decimal"
+                  value={payment.amount}
+                  onChange={(event) => payment.onAmountChange(event.target.value)}
+                  className={cn(
+                    "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
+                    agencyInputPlaceholderClass,
+                  )}
+                />
+              </div>
+            </div>
+            <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => payment.onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={!payment.canSubmit} form={payment.formId}>
+                Record
               </Button>
             </DialogFooter>
           </form>
@@ -1243,8 +1433,11 @@ function ExpensesGroup({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
                   <p className="truncate text-sm font-medium text-highlighted">{item.name}</p>
-                  <span className="shrink-0 text-[11px] text-muted">{item.meta}</span>
+                  <span className="shrink-0 text-[11px] tabular-nums text-highlighted">
+                    {item.amountLabel}
+                  </span>
                 </div>
+                <p className="mt-0.5 truncate text-[11px] text-muted">{item.meta}</p>
                 {item.note ? (
                   <p className="mt-0.5 truncate text-xs text-muted">{item.note}</p>
                 ) : null}
@@ -1269,8 +1462,17 @@ function ExpensesGroup({
 }
 
 export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProps) {
-  const { title, subtitle, period, statsCards, onSelectMetric, moneySettings, bills, expenses } =
-    viewModel;
+  const {
+    title,
+    subtitle,
+    period,
+    statsCards,
+    onSelectMetric,
+    moneySettings,
+    bills,
+    expenses,
+    payoutRun,
+  } = viewModel;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6">
@@ -1338,6 +1540,8 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
           <StatsCard key={card.id} card={card} onSelectMetric={onSelectMetric} />
         ))}
       </section>
+
+      <MoneyPayoutRunView viewModel={payoutRun} />
 
       <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]">
         <BillsSection bills={bills} />

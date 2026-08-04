@@ -58,6 +58,8 @@ describe("moneyBillRowFromPayoutLine", () => {
   test("draft can record payment and mark paid", () => {
     const row = moneyBillRowFromPayoutLine({
       id: "pay_1",
+      sectionKey: "salaries",
+      sectionTitle: "Salaries",
       userId: "u1",
       userName: "Ada",
       userAvatar: null,
@@ -126,6 +128,8 @@ describe("buildMoneyBillRows", () => {
       payouts: [
         {
           id: "pay_1",
+          sectionKey: "salaries",
+          sectionTitle: "Salaries",
           userId: "u1",
           userName: "Ada",
           userAvatar: null,
@@ -156,6 +160,8 @@ describe("buildMoneyBillRows", () => {
       payouts: [
         {
           id: "pay_1",
+          sectionKey: "salaries",
+          sectionTitle: "Salaries",
           userId: "u2",
           userName: "Bob",
           userAvatar: null,
@@ -203,6 +209,8 @@ describe("groupMoneyBillRows", () => {
       payouts: [
         {
           id: "pay_1",
+          sectionKey: "salaries",
+          sectionTitle: "Salaries",
           userId: "u2",
           userName: "Bob",
           userAvatar: null,
@@ -276,6 +284,8 @@ describe("moneyBillPartyHref", () => {
   test("members open member profile", () => {
     const row = moneyBillRowFromPayoutLine({
       id: "pay_1",
+      sectionKey: "salaries",
+      sectionTitle: "Salaries",
       userId: "u1",
       userName: "Ada",
       userAvatar: null,

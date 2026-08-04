@@ -1,47 +1,48 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  createMoneyExpenseRecord,
   moneyExpenseCanSubmit,
   moneyExpensePeriodLabel,
+  moneyExpenseStatusLabel,
+  parseMoneyExpenseAmountCents,
 } from "./money-expense-form";
 
 describe("moneyExpenseCanSubmit", () => {
-  test("requires name", () => {
-    expect(moneyExpenseCanSubmit("  ", "one_time", null)).toBe(false);
+  test("requires name and amount", () => {
+    expect(moneyExpenseCanSubmit("  ", "one_time", null, "10")).toBe(false);
+    expect(moneyExpenseCanSubmit("Rent", "one_time", null, "")).toBe(false);
   });
 
-  test("one-time needs only name", () => {
-    expect(moneyExpenseCanSubmit("Rent", "one_time", null)).toBe(true);
+  test("one-time needs name + amount", () => {
+    expect(moneyExpenseCanSubmit("Rent", "one_time", null, "120")).toBe(true);
   });
 
   test("subscription needs period", () => {
-    expect(moneyExpenseCanSubmit("Notion", "subscription", null)).toBe(false);
-    expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly")).toBe(true);
+    expect(moneyExpenseCanSubmit("Notion", "subscription", null, "20")).toBe(false);
+    expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly", "20")).toBe(true);
   });
 });
 
-describe("createMoneyExpenseRecord", () => {
-  test("clears period for one-time", () => {
-    const record = createMoneyExpenseRecord({
-      name: "  Desk  ",
-      kind: "one_time",
-      period: "monthly",
-      note: " optional ",
-    });
-    expect(record.name).toBe("Desk");
-    expect(record.period).toBeNull();
-    expect(record.note).toBe("optional");
+describe("parseMoneyExpenseAmountCents", () => {
+  test("parses major units to cents", () => {
+    expect(parseMoneyExpenseAmountCents("12.50")).toBe(1250);
+    expect(parseMoneyExpenseAmountCents("100")).toBe(10_000);
+    expect(parseMoneyExpenseAmountCents("0")).toBeNull();
+    expect(parseMoneyExpenseAmountCents("abc")).toBeNull();
   });
+});
 
-  test("keeps period for subscription", () => {
-    const record = createMoneyExpenseRecord({
-      name: "Figma",
-      kind: "subscription",
-      period: "yearly",
-      note: "",
-    });
-    expect(record.period).toBe("yearly");
-    expect(moneyExpensePeriodLabel(record.period)).toBe("Yearly");
+describe("moneyExpensePeriodLabel", () => {
+  test("labels known periods", () => {
+    expect(moneyExpensePeriodLabel("yearly")).toBe("Yearly");
+    expect(moneyExpensePeriodLabel(null)).toBeNull();
+  });
+});
+
+describe("moneyExpenseStatusLabel", () => {
+  test("labels statuses", () => {
+    expect(moneyExpenseStatusLabel("due")).toBe("Due");
+    expect(moneyExpenseStatusLabel("partial")).toBe("Partial");
+    expect(moneyExpenseStatusLabel("paid")).toBe("Paid");
   });
 });

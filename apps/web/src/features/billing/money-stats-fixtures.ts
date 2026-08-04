@@ -1,4 +1,4 @@
-/** Fixture Fin-Sheet-shaped period stats for Money. Swap for oRPC in a later part. */
+/** Fin-Sheet-shaped metric ids/labels for Money stats. Amounts come from periodScoreboard (fixtures kept for tests). */
 
 export type MoneyStatsCardId = "income-cash" | "deductions" | "profitability" | "allocations";
 

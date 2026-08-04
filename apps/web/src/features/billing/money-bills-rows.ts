@@ -34,9 +34,20 @@ export type MoneyBillMemberActivitySource = {
   durationSeconds: number;
 };
 
+export type MoneyBillPayoutSectionKey =
+  | "salaries"
+  | "team_loss"
+  | "device_comp"
+  | "paid_vacation"
+  | "debt_discount"
+  | "charity"
+  | "pbc";
+
 export type MoneyBillTeamPayoutSource = {
   id: string;
-  userId: string;
+  sectionKey: MoneyBillPayoutSectionKey;
+  sectionTitle: string;
+  userId: string | null;
   userName: string;
   userAvatar: string | null;
   label: string;
@@ -50,6 +61,8 @@ export type MoneyBillTeamPayoutSource = {
   periodStart: string;
   periodEnd: string;
 };
+
+export type MoneyBillAdjustmentSource = MoneyBillTeamPayoutSource;
 
 type MoneyBillRowBase = {
   id: string;
@@ -106,7 +119,7 @@ export type MoneyBillMemberActivityRow = MoneyBillRowBase & {
 export type MoneyBillTeamPayoutRow = MoneyBillRowBase & {
   kind: "team-payout";
   party: "team";
-  userId: string;
+  userId: string | null;
   userName: string;
   userAvatar: string | null;
   label: string;
@@ -125,11 +138,41 @@ export type MoneyBillTeamPayoutRow = MoneyBillRowBase & {
   periodLabel: string;
 };
 
+export type MoneyBillAdjustmentRow = MoneyBillRowBase & {
+  kind: "adjustment";
+  party: "adjustments";
+  sectionKey: MoneyBillPayoutSectionKey;
+  sectionTitle: string;
+  label: string;
+  status: MoneyBillPayoutStatus;
+  billStatus: Exclude<MoneyBillStatus, "refunded">;
+  billStatusLabel: string;
+  amountCents: number;
+  paidCents: number;
+  remainingCents: number;
+  currency: string;
+  amountLabel: string;
+  paidLabel: string;
+  remainingLabel: string;
+  periodLabel: string;
+};
+
 export type MoneyBillRow =
   | MoneyBillInvoiceRow
   | MoneyBillClientActivityRow
   | MoneyBillMemberActivityRow
-  | MoneyBillTeamPayoutRow;
+  | MoneyBillTeamPayoutRow
+  | MoneyBillAdjustmentRow;
+
+const ADJUSTMENT_SECTION_KEYS = new Set<MoneyBillPayoutSectionKey>([
+  "debt_discount",
+  "charity",
+  "pbc",
+]);
+
+export function moneyBillsPartyShowsAdjustments(party: MoneyBillsPartyFilter): boolean {
+  return party === "all" || party === "adjustments";
+}
 
 export function moneyBillStatusLabel(billStatus: MoneyBillStatus): string {
   switch (billStatus) {
@@ -312,6 +355,43 @@ export function moneyBillRowFromPayoutLine(
   };
 }
 
+export function moneyBillRowFromAdjustmentLine(
+  payout: MoneyBillAdjustmentSource,
+): MoneyBillAdjustmentRow {
+  const billStatusLabel = moneyBillStatusLabel(payout.billStatus);
+  const periodLabel = formatMoneyBillPeriod(payout.periodStart, payout.periodEnd);
+  const amountLabel = formatMoneyBillCents(payout.amountCents, payout.currency);
+  return {
+    kind: "adjustment",
+    id: payout.id,
+    party: "adjustments",
+    title: payout.label || payout.userName,
+    subtitle: `${payout.sectionTitle} · ${periodLabel}`,
+    metaLabel: amountLabel,
+    statusLabel: billStatusLabel,
+    sectionKey: payout.sectionKey,
+    sectionTitle: payout.sectionTitle,
+    label: payout.label,
+    status: payout.status,
+    billStatus: payout.billStatus,
+    billStatusLabel,
+    amountCents: payout.amountCents,
+    paidCents: payout.paidCents,
+    remainingCents: payout.remainingCents,
+    currency: payout.currency,
+    amountLabel,
+    paidLabel: formatMoneyBillCents(payout.paidCents, payout.currency),
+    remainingLabel: formatMoneyBillCents(payout.remainingCents, payout.currency),
+    periodLabel,
+    canSend: false,
+    canMarkPaid: payout.status === "draft" || payout.status === "partial",
+    canRecordPayment: payout.status === "draft" || payout.status === "partial",
+    canRefund: false,
+    canCreateInvoice: false,
+    canCreatePayout: false,
+  };
+}
+
 /** Stable id for project-palette hue (client rows / invoices). */
 export function moneyBillHueId(row: MoneyBillRow): string | null {
   switch (row.kind) {
@@ -321,6 +401,7 @@ export function moneyBillHueId(row: MoneyBillRow): string | null {
       return row.clientId;
     case "member-activity":
     case "team-payout":
+    case "adjustment":
       return null;
     default: {
       const _exhaustive: never = row;
@@ -338,14 +419,17 @@ export function moneyBillMemberHref(userId: string): string {
 }
 
 /** Agency deep-link for the bill party name (Clients segment or member profile). */
-export function moneyBillPartyHref(row: MoneyBillRow): string {
+export function moneyBillPartyHref(row: MoneyBillRow): string | null {
   switch (row.kind) {
     case "client-activity":
     case "invoice":
       return moneyBillClientHref(row.clientId);
     case "member-activity":
-    case "team-payout":
       return moneyBillMemberHref(row.userId);
+    case "team-payout":
+      return row.userId ? moneyBillMemberHref(row.userId) : null;
+    case "adjustment":
+      return null;
     default: {
       const _exhaustive: never = row;
       return _exhaustive;
@@ -353,7 +437,7 @@ export function moneyBillPartyHref(row: MoneyBillRow): string {
   }
 }
 
-export type MoneyBillRowSectionId = "ready" | "invoices" | "ready-payout" | "team";
+export type MoneyBillRowSectionId = "ready" | "invoices" | "ready-payout" | "team" | "adjustments";
 
 export type MoneyBillRowSection = {
   id: MoneyBillRowSectionId;
@@ -362,7 +446,13 @@ export type MoneyBillRowSection = {
   rows: MoneyBillRow[];
 };
 
-const SECTION_ORDER: MoneyBillRowSectionId[] = ["ready", "invoices", "ready-payout", "team"];
+const SECTION_ORDER: MoneyBillRowSectionId[] = [
+  "ready",
+  "invoices",
+  "ready-payout",
+  "team",
+  "adjustments",
+];
 
 export function groupMoneyBillRows(rows: MoneyBillRow[]): MoneyBillRowSection[] {
   const buckets: Record<MoneyBillRowSectionId, MoneyBillRow[]> = {
@@ -370,6 +460,7 @@ export function groupMoneyBillRows(rows: MoneyBillRow[]): MoneyBillRowSection[] 
     invoices: [],
     "ready-payout": [],
     team: [],
+    adjustments: [],
   };
   for (const row of rows) {
     switch (row.kind) {
@@ -384,6 +475,9 @@ export function groupMoneyBillRows(rows: MoneyBillRow[]): MoneyBillRowSection[] 
         break;
       case "team-payout":
         buckets.team.push(row);
+        break;
+      case "adjustment":
+        buckets.adjustments.push(row);
         break;
       default: {
         const _exhaustive: never = row;
@@ -425,6 +519,14 @@ export function groupMoneyBillRows(rows: MoneyBillRow[]): MoneyBillRowSection[] 
         sections.push({
           id,
           title: "Payouts",
+          hint: `${sectionRows.length} in this period`,
+          rows: sectionRows,
+        });
+        break;
+      case "adjustments":
+        sections.push({
+          id,
+          title: "Adjustments",
           hint: `${sectionRows.length} in this period`,
           rows: sectionRows,
         });
@@ -473,10 +575,12 @@ export function buildMoneyBillRows(input: {
   clients: MoneyBillClientActivitySource[];
   members: MoneyBillMemberActivitySource[];
   payouts: MoneyBillTeamPayoutSource[];
+  adjustments?: MoneyBillAdjustmentSource[];
 }): MoneyBillRow[] {
   const rows: MoneyBillRow[] = [];
   const showClients = moneyBillsPartyShowsClients(input.party);
   const showMembers = moneyBillsPartyShowsMembers(input.party);
+  const showAdjustments = moneyBillsPartyShowsAdjustments(input.party);
 
   if (showClients) {
     for (const invoice of input.invoices) {
@@ -494,11 +598,16 @@ export function buildMoneyBillRows(input: {
   }
 
   if (showMembers) {
-    for (const payout of input.payouts) {
+    const teamPayouts = input.payouts.filter(
+      (payout) => !ADJUSTMENT_SECTION_KEYS.has(payout.sectionKey),
+    );
+    for (const payout of teamPayouts) {
       rows.push(moneyBillRowFromPayoutLine(payout));
     }
 
-    const paidMemberIds = new Set(input.payouts.map((payout) => payout.userId));
+    const paidMemberIds = new Set(
+      teamPayouts.map((payout) => payout.userId).filter((id): id is string => Boolean(id)),
+    );
     const showReady = input.statusFilter === null || input.statusFilter === "outstanding";
     if (showReady) {
       for (const member of input.members) {
@@ -508,7 +617,35 @@ export function buildMoneyBillRows(input: {
     }
   }
 
+  if (showAdjustments) {
+    const adjustmentLines =
+      input.adjustments ??
+      input.payouts.filter((payout) => ADJUSTMENT_SECTION_KEYS.has(payout.sectionKey));
+    for (const payout of adjustmentLines) {
+      rows.push(moneyBillRowFromAdjustmentLine(payout));
+    }
+  }
+
   return rows;
+}
+
+export const MONEY_ADJUSTMENT_SECTION_OPTIONS: ReadonlyArray<{
+  id: Extract<MoneyBillPayoutSectionKey, "debt_discount" | "charity" | "pbc">;
+  label: string;
+}> = [
+  { id: "debt_discount", label: "Debt / Discount" },
+  { id: "charity", label: "Charity" },
+  { id: "pbc", label: "PBC" },
+];
+
+export function moneyBillsAdjustmentCreateValid(
+  sectionKey: string,
+  label: string,
+  amount: string,
+): boolean {
+  if (!sectionKey || !label.trim()) return false;
+  const parsed = Number(amount.trim());
+  return Number.isFinite(parsed) && parsed > 0;
 }
 
 export function moneyBillsCreateFormValid(

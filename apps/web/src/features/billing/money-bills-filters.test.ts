@@ -8,9 +8,8 @@ import {
 } from "./money-bills-filters";
 
 describe("moneyBillsStatusOptionsForParty", () => {
-  test("all and adjustments have no status chips", () => {
+  test("all has no status chips", () => {
     expect(moneyBillsStatusOptionsForParty("all")).toEqual([]);
-    expect(moneyBillsStatusOptionsForParty("adjustments")).toEqual([]);
   });
 
   test("clients statuses in product order", () => {
@@ -22,8 +21,13 @@ describe("moneyBillsStatusOptionsForParty", () => {
     ]);
   });
 
-  test("team statuses", () => {
+  test("team and adjustments share status chips", () => {
     expect(moneyBillsStatusOptionsForParty("team").map((option) => option.id)).toEqual([
+      "outstanding",
+      "partial",
+      "paid",
+    ]);
+    expect(moneyBillsStatusOptionsForParty("adjustments").map((option) => option.id)).toEqual([
       "outstanding",
       "partial",
       "paid",
@@ -33,6 +37,7 @@ describe("moneyBillsStatusOptionsForParty", () => {
   test("refunded only allowed on clients", () => {
     expect(moneyBillsStatusAllowed("client", "refunded")).toBe(true);
     expect(moneyBillsStatusAllowed("team", "refunded")).toBe(false);
+    expect(moneyBillsStatusAllowed("adjustments", "partial")).toBe(true);
     expect(moneyBillsStatusAllowed("all", "paid")).toBe(false);
   });
 });

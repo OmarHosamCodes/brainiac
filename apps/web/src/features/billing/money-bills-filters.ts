@@ -26,13 +26,18 @@ const MONEY_BILLS_STATUS_LABELS: Record<MoneyBillsStatusFilter, string> = {
   refunded: "Refunded",
 };
 
+const TEAM_STATUS_OPTIONS: ReadonlyArray<MoneyBillsStatusOption> = [
+  { id: "outstanding", label: MONEY_BILLS_STATUS_LABELS.outstanding },
+  { id: "partial", label: MONEY_BILLS_STATUS_LABELS.partial },
+  { id: "paid", label: MONEY_BILLS_STATUS_LABELS.paid },
+];
+
 /** Status chips available for the active party section. */
 export function moneyBillsStatusOptionsForParty(
   party: MoneyBillsPartyFilter,
 ): ReadonlyArray<MoneyBillsStatusOption> {
   switch (party) {
     case "all":
-    case "adjustments":
       return [];
     case "client":
       return [
@@ -42,11 +47,9 @@ export function moneyBillsStatusOptionsForParty(
         { id: "outstanding", label: MONEY_BILLS_STATUS_LABELS.outstanding },
       ];
     case "team":
-      return [
-        { id: "outstanding", label: MONEY_BILLS_STATUS_LABELS.outstanding },
-        { id: "partial", label: MONEY_BILLS_STATUS_LABELS.partial },
-        { id: "paid", label: MONEY_BILLS_STATUS_LABELS.paid },
-      ];
+    case "adjustments":
+      // Adjustments reuse Team status chips (Outstanding / Partial / Paid).
+      return TEAM_STATUS_OPTIONS;
     default: {
       const _exhaustive: never = party;
       return _exhaustive;
