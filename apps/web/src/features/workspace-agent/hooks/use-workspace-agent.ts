@@ -2,6 +2,7 @@ import type {
   AgentScopeRef,
   AgentSurface,
   AgentTextAttachment,
+  AiUiArtifact,
   DashboardAgentToolPreset,
 } from "@orch/agent/types";
 import type { WorkspaceNode } from "@orch/workspace";
@@ -70,11 +71,14 @@ export function useWorkspaceAgent() {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [threadMenuOpen, setThreadMenuOpen] = useState(false);
+  const [historyBillOpen, setHistoryBillOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
   /** How many artifacts the operator has already dismissed from the dock. */
   const [dismissedArtifactCount, setDismissedArtifactCount] = useState(0);
+  /** When set, dock/overlay prefer this artifact (e.g. opened from a message card). */
+  const [focusedArtifactId, setFocusedArtifactId] = useState<string | null>(null);
   const [canvasOpen, setCanvasOpen] = useState(false);
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
 
@@ -436,8 +440,12 @@ export function useWorkspaceAgent() {
   }, [activeConversationId, deleteConversationById]);
 
   const artifacts = useMemo(() => collectArtifactsFromMessages(messages), [messages]);
-  const activeArtifact =
-    artifacts.length > dismissedArtifactCount ? (artifacts.at(-1) ?? null) : null;
+  const activeArtifact = useMemo(() => {
+    if (focusedArtifactId) {
+      return artifacts.find((artifact) => artifact.id === focusedArtifactId) ?? null;
+    }
+    return artifacts.length > dismissedArtifactCount ? (artifacts.at(-1) ?? null) : null;
+  }, [artifacts, dismissedArtifactCount, focusedArtifactId]);
 
   const [proposalBusyId, setProposalBusyId] = useState<string | null>(null);
   const [planConfirmingId, setPlanConfirmingId] = useState<string | null>(null);
@@ -537,6 +545,7 @@ export function useWorkspaceAgent() {
 
   const dismissArtifact = useCallback(() => {
     setCanvasOpen(false);
+    setFocusedArtifactId(null);
     setDismissedArtifactCount(artifacts.length);
   }, [artifacts.length]);
 
@@ -544,6 +553,12 @@ export function useWorkspaceAgent() {
     if (!activeArtifact) return;
     setCanvasOpen(true);
   }, [activeArtifact]);
+
+  const openArtifactCanvas = useCallback((artifact: AiUiArtifact) => {
+    setFocusedArtifactId(artifact.id);
+    setDismissedArtifactCount(0);
+    setCanvasOpen(true);
+  }, []);
 
   const closeCanvas = useCallback(() => {
     setCanvasOpen(false);
@@ -626,7 +641,11 @@ export function useWorkspaceAgent() {
       id: conversation.id,
       label: conversation.title,
       stamp: conversation.lastMessageAt || conversation.updatedAt,
+      costUsd: conversation.usageSummary?.totals.costUsd ?? 0,
     })),
+    activeCostUsd: activeConversation?.usageSummary?.totals.costUsd ?? 0,
+    historyBillOpen,
+    setHistoryBillOpen,
     conversationsLoading: conversationsQuery.isLoading,
     startNewConversation,
     switchConversation,
@@ -652,6 +671,7 @@ export function useWorkspaceAgent() {
     canvasOpen: canvasOverlayActive,
     canvasCloseRef,
     openCanvas,
+    openArtifactCanvas,
     closeCanvas,
     dismissArtifact,
     proposalBusyId,

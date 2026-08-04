@@ -4,8 +4,10 @@ import { History, MoreHorizontal, Paperclip, Plus, Trash2 } from "lucide-react";
 import { AgencyPlanCardView } from "@/features/workspace-agent/agency-plan-card-view";
 import { AgencyProposalCardView } from "@/features/workspace-agent/agency-proposal-card-view";
 import { AgentArtifactPaneView } from "@/features/workspace-agent/agent-artifact-pane-view";
+import { AgentMessageArtifactCardView } from "@/features/workspace-agent/agent-message-artifact-card-view";
 import { WorkspaceAgentAssistantTextView } from "@/features/workspace-agent/assistant-text-view";
 import {
+  getMessageArtifacts,
   getMessageAttachments,
   getMessageText,
   type OrchUIDataParts,
@@ -52,6 +54,8 @@ export type WorkspaceAgentConversationOption = {
   id: string;
   label: string;
   stamp: string;
+  /** Cumulative model spend for the thread (USD). */
+  costUsd: number;
 };
 
 type WorkspaceAgentChatPanelViewProps = {
@@ -85,6 +89,7 @@ type WorkspaceAgentChatPanelViewProps = {
   activeArtifact: AiUiArtifact | null;
   onExpandArtifact: () => void;
   onDismissArtifact: () => void;
+  onOpenArtifactCanvas: (artifact: AiUiArtifact) => void;
   proposalBusyId: string | null;
   planConfirmingId: string | null;
   onConfirmPlan: (plan: OrchUIDataParts["orchPlan"]) => void;
@@ -111,6 +116,7 @@ function WorkspaceAgentMessagePartsView({
   onConfirmPlan,
   onApproveProposal,
   onRejectProposal,
+  onOpenArtifactCanvas,
 }: {
   message: OrchUIMessage;
   isStreamingMessage: boolean;
@@ -119,9 +125,11 @@ function WorkspaceAgentMessagePartsView({
   onConfirmPlan: (plan: OrchUIDataParts["orchPlan"]) => void;
   onApproveProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
+  onOpenArtifactCanvas: (artifact: AiUiArtifact) => void;
 }) {
   const text = getMessageText(message);
   const attachments = getMessageAttachments(message);
+  const messageArtifacts = getMessageArtifacts(message);
   const toolParts = message.parts.filter((part) => part.type === "dynamic-tool");
   const thinkingSteps = toolPartsToThinkingSteps(toolParts);
   const planParts = message.parts.filter(
@@ -197,6 +205,14 @@ function WorkspaceAgentMessagePartsView({
         />
       ))}
 
+      {messageArtifacts.map((artifact) => (
+        <AgentMessageArtifactCardView
+          key={artifact.id}
+          artifact={artifact}
+          onOpen={() => onOpenArtifactCanvas(artifact)}
+        />
+      ))}
+
       {text ? (
         message.role === "user" ? (
           <Bubble variant="secondary" align="end" className="max-w-[min(100%,36rem)]">
@@ -262,6 +278,7 @@ export function WorkspaceAgentChatPanelView({
   activeArtifact,
   onExpandArtifact,
   onDismissArtifact,
+  onOpenArtifactCanvas,
   proposalBusyId,
   planConfirmingId,
   onConfirmPlan,
@@ -420,6 +437,7 @@ export function WorkspaceAgentChatPanelView({
                                 onConfirmPlan={onConfirmPlan}
                                 onApproveProposal={onApproveProposal}
                                 onRejectProposal={onRejectProposal}
+                                onOpenArtifactCanvas={onOpenArtifactCanvas}
                               />
                               {streamStopped && !isStreaming && isLastAssistant ? (
                                 <Marker>

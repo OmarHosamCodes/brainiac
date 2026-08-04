@@ -144,6 +144,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                         activeArtifact={view.activeArtifact}
                         onExpandArtifact={view.openCanvas}
                         onDismissArtifact={view.dismissArtifact}
+                        onOpenArtifactCanvas={view.openArtifactCanvas}
                         proposalBusyId={view.proposalBusyId}
                         planConfirmingId={view.planConfirmingId}
                         onConfirmPlan={view.onConfirmPlan}
@@ -212,6 +213,16 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     onToolsMenuOpenChange={view.setToolsMenuOpen}
                     tools={view.tools}
                     toolsLoading={view.toolsLoading}
+                    historyBillOpen={view.historyBillOpen}
+                    onHistoryBillOpenChange={view.setHistoryBillOpen}
+                    conversationOptions={view.conversationOptions}
+                    conversationsLoading={view.conversationsLoading}
+                    activeConversationId={view.activeConversationId}
+                    activeCostUsd={view.activeCostUsd}
+                    onSelectConversation={view.switchConversation}
+                    onStartNewConversation={view.startNewConversation}
+                    onDeleteConversation={(id) => void view.deleteConversationById(id)}
+                    deletingConversationId={view.deletingConversationId}
                     canSend={view.canSend}
                     isPending={view.isPending}
                     chatStatus={view.chatStatus}

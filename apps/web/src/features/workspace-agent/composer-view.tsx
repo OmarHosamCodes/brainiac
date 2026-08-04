@@ -36,15 +36,18 @@ import {
   AGENT_TEXT_ATTACHMENT_MAX_FILES,
   filePartsToAgentAttachments,
 } from "@/features/workspace-agent/agent-attachments";
+import type { WorkspaceAgentConversationOption } from "@/features/workspace-agent/chat-panel-view";
 import {
   WorkspaceAgentAttachMenuItem,
   WorkspaceAgentComposerSubmitGate,
   workspaceAgentPlusMenuItemClass,
 } from "@/features/workspace-agent/composer-attachment-controls";
+import { WorkspaceAgentComposerHistoryBillView } from "@/features/workspace-agent/composer-history-bill-view";
 import { WorkspaceAgentModelPresetMenuView } from "@/features/workspace-agent/model-preset-menu-view";
 import { WorkspaceAgentScopeChipView } from "@/features/workspace-agent/scope-chip-view";
 import { WorkspaceAgentToolMenuView } from "@/features/workspace-agent/tool-menu-view";
 import type { WorkspaceAgentScopeChip } from "@/features/workspace-agent/hooks/use-workspace-agent";
+import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Separator } from "@/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
@@ -81,6 +84,16 @@ type WorkspaceAgentComposerViewProps = {
   onToolsMenuOpenChange: (open: boolean) => void;
   tools: AgentToolCatalogEntry[];
   toolsLoading: boolean;
+  historyBillOpen: boolean;
+  onHistoryBillOpenChange: (open: boolean) => void;
+  conversationOptions: WorkspaceAgentConversationOption[];
+  conversationsLoading: boolean;
+  activeConversationId: string | null;
+  activeCostUsd: number;
+  onSelectConversation: (id: string) => void;
+  onStartNewConversation: () => void;
+  onDeleteConversation: (id: string) => void;
+  deletingConversationId: string | null;
   canSend: boolean;
   isPending: boolean;
   chatStatus: ChatStatus;
@@ -162,6 +175,16 @@ export function WorkspaceAgentComposerView({
   onToolsMenuOpenChange,
   tools,
   toolsLoading,
+  historyBillOpen,
+  onHistoryBillOpenChange,
+  conversationOptions,
+  conversationsLoading,
+  activeConversationId,
+  activeCostUsd,
+  onSelectConversation,
+  onStartNewConversation,
+  onDeleteConversation,
+  deletingConversationId,
   canSend,
   isPending,
   chatStatus,
@@ -202,10 +225,48 @@ export function WorkspaceAgentComposerView({
               exit={{ opacity: 0, transition: { duration: 0.12 } }}
               className="mb-2 px-1 text-xs text-foreground/70"
             >
-              Click anything to add it to scope.
+              Sniper on — click anything to add it to scope.
             </motion.p>
           ) : null}
         </AnimatePresence>
+
+        <div
+          className={cn(
+            "flex items-center justify-end gap-1.5",
+            nestedInShell ? "border-b border-border px-3 py-1.5" : "mb-2 px-0.5",
+          )}
+        >
+          <WorkspaceAgentComposerHistoryBillView
+            open={historyBillOpen}
+            onOpenChange={onHistoryBillOpenChange}
+            conversationOptions={conversationOptions}
+            conversationsLoading={conversationsLoading}
+            activeConversationId={activeConversationId}
+            activeCostUsd={activeCostUsd}
+            onSelectConversation={onSelectConversation}
+            onStartNewConversation={onStartNewConversation}
+            onDeleteConversation={onDeleteConversation}
+            deletingConversationId={deletingConversationId}
+          />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant={scopeModeActive ? "default" : "secondary"}
+                aria-pressed={scopeModeActive}
+                aria-label={scopeModeActive ? "Exit sniper mode" : "Sniper mode"}
+                className="size-7 rounded-full border border-border shadow-sm"
+                onClick={onToggleScopeMode}
+              >
+                <Crosshair className="size-3.5" aria-hidden />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {scopeModeActive ? "Exit sniper mode" : "Sniper mode — click page items to add scope"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
 
         <motion.div
           layout
@@ -344,7 +405,7 @@ export function WorkspaceAgentComposerView({
                       >
                         <Crosshair className="size-4 text-muted-foreground" aria-hidden />
                         <span className="flex-1">
-                          {scopeModeActive ? "Exit scope mode" : "Scope mode"}
+                          {scopeModeActive ? "Exit sniper mode" : "Sniper mode"}
                         </span>
                         {scopeModeActive ? (
                           <Check className="size-4 text-foreground" aria-hidden />
