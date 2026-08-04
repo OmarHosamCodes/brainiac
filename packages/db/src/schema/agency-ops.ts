@@ -610,6 +610,101 @@ export const agencyOpsInvoiceLineItem = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Payout runs (Team Bills / money out)
+// ---------------------------------------------------------------------------
+
+export type AgencyOpsPayoutRunStatus = "draft" | "paying" | "paid";
+export type AgencyOpsPayoutSectionKey = "salaries";
+export type AgencyOpsPayoutLineStatus = "draft" | "partial" | "paid";
+
+export const agencyOpsPayoutRun = pgTable(
+  "agency_ops_payout_run",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    periodStart: timestamp("period_start").notNull(),
+    periodEnd: timestamp("period_end").notNull(),
+    status: text("status").$type<AgencyOpsPayoutRunStatus>().notNull().default("draft"),
+    currency: text("currency").notNull().default("USD"),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_payout_run_team_idx").on(table.teamId),
+    index("agency_ops_payout_run_team_period_idx").on(
+      table.teamId,
+      table.periodStart,
+      table.periodEnd,
+    ),
+    uniqueIndex("agency_ops_payout_run_team_period_unique").on(
+      table.teamId,
+      table.periodStart,
+      table.periodEnd,
+    ),
+  ],
+);
+
+export const agencyOpsPayoutSection = pgTable(
+  "agency_ops_payout_section",
+  {
+    id: text("id").primaryKey(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => agencyOpsPayoutRun.id, { onDelete: "cascade" }),
+    key: text("key").$type<AgencyOpsPayoutSectionKey>().notNull(),
+    title: text("title").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("agency_ops_payout_section_run_idx").on(table.runId),
+    uniqueIndex("agency_ops_payout_section_run_key_unique").on(table.runId, table.key),
+  ],
+);
+
+export const agencyOpsPayoutLine = pgTable(
+  "agency_ops_payout_line",
+  {
+    id: text("id").primaryKey(),
+    sectionId: text("section_id")
+      .notNull()
+      .references(() => agencyOpsPayoutSection.id, { onDelete: "cascade" }),
+    payeeUserId: text("payee_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    label: text("label").notNull().default(""),
+    amountCents: integer("amount_cents").notNull().default(0),
+    paidCents: integer("paid_cents").notNull().default(0),
+    status: text("status").$type<AgencyOpsPayoutLineStatus>().notNull().default("draft"),
+    /** Snapshot of tracked seconds used to derive amount (hours × cost). */
+    durationSeconds: integer("duration_seconds").notNull().default(0),
+    /** Snapshot of member cost rate (cents/hour) at draft time. */
+    rateCents: integer("rate_cents").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_payout_line_section_idx").on(table.sectionId),
+    index("agency_ops_payout_line_payee_idx").on(table.payeeUserId),
+    uniqueIndex("agency_ops_payout_line_section_payee_unique").on(
+      table.sectionId,
+      table.payeeUserId,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Member tenure (agency time)
 // ---------------------------------------------------------------------------
 
