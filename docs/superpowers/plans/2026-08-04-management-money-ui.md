@@ -79,47 +79,51 @@ Stats cards first (scoreboard + metric jump-offs). Dual Clients | Payroll and de
 
 ---
 
-## Status snapshot (2026-08-04)
+## Status snapshot (2026-08-05)
 
-| Part | Slice                                           | Status   | Notes                                  |
-| ---- | ----------------------------------------------- | -------- | -------------------------------------- |
-| 0    | Export living plan to repo                      | **Done** | Renamed Invoices → Money               |
-| R    | Rename pane/files to Money; strip shell UI      | **Done** | `manage=money`                         |
-| S    | Fin-Sheet stats cards (4 panels, jump-offs)     | **Done** | Fixture + period chooser               |
-| B    | Bills filterable empty section                  | **Done** | Polished instrument panel; no rows yet |
-| E    | Expenses card (upcoming + recent)               | **Done** | Polished companion to Bills            |
-| 1    | Money shell + segments + mount                  | Reset    | Superseded by stats-first IA for now   |
-| 2    | Mount client invoice kanban                     | Pending  | `AgencyBillingSurface` still unmounted |
-| 3    | Period summary strip (Fin-Sheet KPIs)           | **Done** | Delivered as four stats cards          |
-| 4    | Payroll run shell (month, status, section list) | Pending  | Fixture                                |
-| 5    | Section detail: cohorts + payee lines           | Pending  | Metric jump-off / bill row targets     |
-| 6    | Partial payout parts (due/paid/remaining UI)    | Pending  | Fixture mutations                      |
-| 7    | Client partial collections UI                   | Pending  | May need API/schema                    |
-| 8    | Wire payroll schema + API + replace fixtures    | Pending  | Backend phase                          |
-| 9    | Member monthly sheet when provided              | Blocked  | Artifact missing                       |
+| Part | Slice                                           | Status     | Notes                                  |
+| ---- | ----------------------------------------------- | ---------- | -------------------------------------- |
+| 0    | Export living plan to repo                      | **Done**   | Renamed Invoices → Money               |
+| R    | Rename pane/files to Money; strip shell UI      | **Done**   | `manage=money`                         |
+| S    | Fin-Sheet stats cards (4 panels, jump-offs)     | **Done**   | Fixture + period chooser               |
+| B    | Bills filterable empty section                  | **Done**   | Polished instrument panel              |
+| E    | Expenses card (upcoming + recent)               | **Done**   | Local create only (API later)          |
+| 1    | Money shell + segments + mount                  | Reset      | Superseded by stats-first IA for now   |
+| 2    | Mount client invoice kanban                     | Superseded | Bills list (not kanban) wires invoices |
+| 3    | Period summary strip (Fin-Sheet KPIs)           | **Done**   | Delivered as four stats cards          |
+| 4    | Payroll run shell (month, status, section list) | Pending    | Fixture                                |
+| 5    | Section detail: cohorts + payee lines           | Pending    | Metric jump-off / bill row targets     |
+| 6    | Partial payout parts (due/paid/remaining UI)    | Pending    | Fixture mutations                      |
+| 7    | Client partial collections UI                   | **Done**   | `received_cents` + `recordPayment`     |
+| 8a   | Client Bills BE + FE                            | **Done**   | Period list, search, create, status    |
+| 8    | Wire payroll schema + API + replace fixtures    | Pending    | Team bills / expenses / stats next     |
+| 9    | Member monthly sheet when provided              | Blocked    | Artifact missing                       |
 
-**Ship readiness:** Money shows stats cards, period chooser, and polished Bills instrument (segmented party + quiet status + ghost empty).
+**Ship readiness:** Money Bills Clients/All show real invoices for the selected period (create, send, record payment, mark paid, refund). Team/Adjustments still empty. Stats/expenses/cohort settings remain fixture/local.
 
 ---
 
 ## File map (target — grow as parts land)
 
-| File                                                                          | Responsibility                                    |
-| ----------------------------------------------------------------------------- | ------------------------------------------------- |
-| `docs/superpowers/plans/2026-08-04-management-money-ui.md`                    | This living plan                                  |
-| `docs/superpowers/specs/2026-08-04-money-stats-cards-design.md`               | Stats cards design brief                          |
-| `apps/web/src/features/shared/agency-management-sections.ts`                  | Pane id `money`, label + subtitle                 |
-| `apps/web/src/features/settings/agency-management-surface.tsx`                | Mounts `AgencyMoneySurface` for money             |
-| `apps/web/src/features/billing/agency-money-surface.tsx`                      | Public export → container                         |
-| `apps/web/src/features/billing/containers/agency-money-surface-container.tsx` | One hook, one view                                |
-| `apps/web/src/features/billing/hooks/use-agency-money-surface.ts`             | Tenure active month + fixtures + select stub      |
-| `apps/web/src/features/billing/agency-money-surface-view.tsx`                 | Title, period, stats cards, Bills filters + empty |
-| `apps/web/src/features/billing/money-stats-fixtures.ts`                       | Fin-Sheet-shaped fixture amounts                  |
-| `apps/web/src/features/billing/money-bills-filters.ts`                        | Party/status filters + empty copy                 |
-| `apps/web/src/features/billing/money-bills-filters.test.ts`                   | Empty-copy composition checks                     |
-| `docs/superpowers/specs/2026-08-05-money-bills-section-design.md`             | Bills section design brief                        |
-| `apps/web/src/features/billing/agency-billing-surface*.tsx`                   | Existing client kanban (reuse later)              |
-| `packages/db` / `packages/api`                                                | Payroll + partials — **later** (Part 8)           |
+| File                                                                          | Responsibility                                   |
+| ----------------------------------------------------------------------------- | ------------------------------------------------ |
+| `docs/superpowers/plans/2026-08-04-management-money-ui.md`                    | This living plan                                 |
+| `docs/superpowers/specs/2026-08-04-money-stats-cards-design.md`               | Stats cards design brief                         |
+| `apps/web/src/features/shared/agency-management-sections.ts`                  | Pane id `money`, label + subtitle                |
+| `apps/web/src/features/settings/agency-management-surface.tsx`                | Mounts `AgencyMoneySurface` for money            |
+| `apps/web/src/features/billing/agency-money-surface.tsx`                      | Public export → container                        |
+| `apps/web/src/features/billing/containers/agency-money-surface-container.tsx` | One hook, one view                               |
+| `apps/web/src/features/billing/hooks/use-agency-money-surface.ts`             | Period range + invoice query + Bills/expenses VM |
+| `apps/web/src/features/billing/agency-money-surface-view.tsx`                 | Title, period, stats, Bills rows + create/pay UI |
+| `apps/web/src/features/billing/money-stats-fixtures.ts`                       | Fin-Sheet-shaped fixture amounts                 |
+| `apps/web/src/features/billing/money-bills-filters.ts`                        | Party/status filters + empty copy                |
+| `apps/web/src/features/billing/money-bills-filters.test.ts`                   | Empty-copy composition checks                    |
+| `apps/web/src/features/billing/money-bills-rows.ts`                           | Invoice → bill row mapping + payment parse       |
+| `apps/web/src/features/billing/money-bills-rows.test.ts`                      | Row/payment helper checks                        |
+| `packages/api/.../billing/invoice-bill-status.ts`                             | Bill chip mapping + payment status transitions   |
+| `docs/superpowers/specs/2026-08-05-money-bills-section-design.md`             | Bills section design brief                       |
+| `apps/web/src/features/billing/agency-billing-surface*.tsx`                   | Existing client kanban (reuse later)             |
+| `packages/db` / `packages/api`                                                | Payroll + partials — **later** (Part 8)          |
 
 **Folder choice:** `features/billing/` + `agency-money-surface*` (golden `billing` domain).
 
@@ -208,13 +212,19 @@ Superseded for now by stats-first IA.
 
 ### Part 7: Client partial collections UI
 
-**Goal:** Received / Remaining on client invoices. Spike schema first.
+**Done (2026-08-05):** `received_cents` on `agency_ops_invoice`; `recordPayment`; Bills row shows received/remaining; status includes `partial` / `refunded`.
+
+---
+
+### Part 8a: Client Bills FE + BE
+
+**Done (2026-08-05):** Period-scoped `invoices.list` (+ search / billStatus), create dialog on Money Bills, send / mark paid / refund / record payment. Kanban remains unmounted.
 
 ---
 
 ### Part 8: Backend — payroll + replace fixtures
 
-**Goal:** Durable payroll runs/sections/cohorts/parts + optional invoice payments.
+**Goal:** Durable payroll runs/sections/cohorts/parts; expenses CRUD; money settings; derived stats.
 
 ---
 
@@ -226,21 +236,23 @@ Superseded for now by stats-first IA.
 
 ## Changelog
 
-| Date       | Change                                                                                     |
-| ---------- | ------------------------------------------------------------------------------------------ |
-| 2026-08-04 | OD gallery plan abandoned; living product UI plan exported                                 |
-| 2026-08-04 | Part 1–2 Invoices shell built under `features/billing/`                                    |
-| 2026-08-04 | **Rename Invoices → Money**; delete shell UI; title-only reset; plan renamed               |
-| 2026-08-04 | Remove Management Rates pane + `agency-settings-rates-pane*` files; `manage=rates` → Money |
-| 2026-08-04 | Money subtitle: "Client invoices, payroll, and cash in one place."                         |
-| 2026-08-04 | Craft: Fin-Sheet stats cards on Money (fixture, tenure active month, metric jump-offs)     |
-| 2026-08-04 | Polish Money stats: hero metrics, cash composition bar, bento income card, period badge    |
-| 2026-08-04 | Money period: Dashboard `RangePresetChooser` + custom date inputs (replaces static badge)  |
-| 2026-08-05 | Craft: Bills empty section — party rail + status chips + composed empty copy               |
-| 2026-08-05 | Polish Bills: instrument panel, segmented party, quiet status + Clear, ghost list preview  |
-| 2026-08-05 | Craft: Expenses card beside Bills — Upcoming subscriptions + Recent empty groups           |
-| 2026-08-05 | Polish Expenses: differentiated groups, ghost lists, count labels, shared list preview     |
-| 2026-08-05 | Expenses +: add dialog (name, one-time/subscription+period, optional note); local rows     |
-| 2026-08-05 | Replace Additional allocations with Cohort allocations card (rules + calc options)         |
-| 2026-08-05 | Polish Cohort allocations: Rules/Formulas tabs, cohort chips, metric-card hierarchy        |
-| 2026-08-05 | Restore Additional allocations card; cohort/formulas → Money settings tabbed dialog        |
+| Date       | Change                                                                                                                            |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-04 | OD gallery plan abandoned; living product UI plan exported                                                                        |
+| 2026-08-04 | Part 1–2 Invoices shell built under `features/billing/`                                                                           |
+| 2026-08-04 | **Rename Invoices → Money**; delete shell UI; title-only reset; plan renamed                                                      |
+| 2026-08-04 | Remove Management Rates pane + `agency-settings-rates-pane*` files; `manage=rates` → Money                                        |
+| 2026-08-04 | Money subtitle: "Client invoices, payroll, and cash in one place."                                                                |
+| 2026-08-04 | Craft: Fin-Sheet stats cards on Money (fixture, tenure active month, metric jump-offs)                                            |
+| 2026-08-04 | Polish Money stats: hero metrics, cash composition bar, bento income card, period badge                                           |
+| 2026-08-04 | Money period: Dashboard `RangePresetChooser` + custom date inputs (replaces static badge)                                         |
+| 2026-08-05 | Craft: Bills empty section — party rail + status chips + composed empty copy                                                      |
+| 2026-08-05 | Polish Bills: instrument panel, segmented party, quiet status + Clear, ghost list preview                                         |
+| 2026-08-05 | Craft: Expenses card beside Bills — Upcoming subscriptions + Recent empty groups                                                  |
+| 2026-08-05 | Polish Expenses: differentiated groups, ghost lists, count labels, shared list preview                                            |
+| 2026-08-05 | Expenses +: add dialog (name, one-time/subscription+period, optional note); local rows                                            |
+| 2026-08-05 | Replace Additional allocations with Cohort allocations card (rules + calc options)                                                |
+| 2026-08-05 | Polish Cohort allocations: Rules/Formulas tabs, cohort chips, metric-card hierarchy                                               |
+| 2026-08-05 | Restore Additional allocations card; cohort/formulas → Money settings tabbed dialog                                               |
+| 2026-08-05 | **Client Bills real:** invoice `received_cents` + partial/refunded; period list/search; Money Bills rows + create/payment actions |
+| 2026-08-05 | Bills default: period activity — clients with time (uninvoiced) + members who worked; `invoices.periodActivity`                   |
