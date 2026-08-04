@@ -47,6 +47,8 @@ Scan the active month’s money health in one viewport, then click a metric to g
 | **Profitability metrics**  | Team profit · Profit share / Loss share · ROI              |
 | **Additional allocations** | Device compensation · Charity · PBC                        |
 
+Money **settings** (gear in header) opens a team-settings-style dialog: **Rules** (cohorts) · **Formulas** (ROI vars, charity, P/L share, paid vacation, …).
+
 ## 6. Key states
 
 | State          | Behavior                                                                         |

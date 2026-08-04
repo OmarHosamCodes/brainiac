@@ -88,8 +88,8 @@ Choose who/what kind of bill to review, then (later) scan or open a line. Today:
   - Clients: "No client bills"
   - Team: "No team bills"
   - Adjustments: "No adjustments"
-  - + status: "No outstanding client bills" when both set
-  - + search: "No matching bills" (query highlighted via AgencySearchHighlight)
+  - - status: "No outstanding client bills" when both set
+  - - search: "No matching bills" (query highlighted via AgencySearchHighlight)
 - Body: "When invoices, payouts, or expenses land in this range, they'll appear here."
 
 ## 9. Implementation notes

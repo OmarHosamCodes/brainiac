@@ -87,6 +87,7 @@ Stats cards first (scoreboard + metric jump-offs). Dual Clients | Payroll and de
 | R    | Rename pane/files to Money; strip shell UI      | **Done** | `manage=money`                         |
 | S    | Fin-Sheet stats cards (4 panels, jump-offs)     | **Done** | Fixture + period chooser               |
 | B    | Bills filterable empty section                  | **Done** | Polished instrument panel; no rows yet |
+| E    | Expenses card (upcoming + recent)               | **Done** | Polished companion to Bills            |
 | 1    | Money shell + segments + mount                  | Reset    | Superseded by stats-first IA for now   |
 | 2    | Mount client invoice kanban                     | Pending  | `AgencyBillingSurface` still unmounted |
 | 3    | Period summary strip (Fin-Sheet KPIs)           | **Done** | Delivered as four stats cards          |
@@ -237,3 +238,9 @@ Superseded for now by stats-first IA.
 | 2026-08-04 | Money period: Dashboard `RangePresetChooser` + custom date inputs (replaces static badge)  |
 | 2026-08-05 | Craft: Bills empty section — party rail + status chips + composed empty copy               |
 | 2026-08-05 | Polish Bills: instrument panel, segmented party, quiet status + Clear, ghost list preview  |
+| 2026-08-05 | Craft: Expenses card beside Bills — Upcoming subscriptions + Recent empty groups           |
+| 2026-08-05 | Polish Expenses: differentiated groups, ghost lists, count labels, shared list preview     |
+| 2026-08-05 | Expenses +: add dialog (name, one-time/subscription+period, optional note); local rows     |
+| 2026-08-05 | Replace Additional allocations with Cohort allocations card (rules + calc options)         |
+| 2026-08-05 | Polish Cohort allocations: Rules/Formulas tabs, cohort chips, metric-card hierarchy        |
+| 2026-08-05 | Restore Additional allocations card; cohort/formulas → Money settings tabbed dialog        |
