@@ -205,8 +205,9 @@ export const agentAgencyProposal = pgTable(
     }),
     messageId: text("message_id"),
     action: jsonb("action").$type<Record<string, unknown>>().notNull(),
-    beforeState: jsonb("before_state").$type<unknown>().notNull(),
-    afterState: jsonb("after_state").$type<unknown>().notNull(),
+    // null = no prior/resulting entity (creates / deletes)
+    beforeState: jsonb("before_state").$type<unknown>(),
+    afterState: jsonb("after_state").$type<unknown>(),
     label: text("label").notNull(),
     status: text("status").$type<AgentAgencyProposalStatus>().notNull().default("pending"),
     illustrationArtifactId: text("illustration_artifact_id"),
