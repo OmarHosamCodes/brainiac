@@ -1,5 +1,42 @@
-import type { AgencyAgentRuntime, AgentToolCall } from "./types";
+import type { AgencyAgentRuntime, AgentToolCall, DashboardAgentToolPreset } from "./types";
 import type { AiUiArtifact } from "./ui-artifact";
+
+/** Ask-only — Plan/Agent must not get the canned hours canvas (looks like chat leak). */
+export function shouldBootstrapAgencyMonthReports(toolPreset: DashboardAgentToolPreset): boolean {
+  return toolPreset === "ask";
+}
+
+/** Mode-specific nudge when Agency tools were available but unused. */
+export function agencyToolRetryNote(toolPreset: DashboardAgentToolPreset): string {
+  switch (toolPreset) {
+    case "ask":
+      return "You answered without calling Agency tools. Call get_agency_reports_summary or get_agency_time_summary with {from,to} for this month, then ui_present a schema canvas. Do not invent hours or narrate tool calls.";
+    case "plan":
+      return "You answered without calling Agency tools. Use get_agency_* reads if needed, call draft_agency_plan, then ui_present a schema plan overview. Do not invent data or dump a hours canvas.";
+    case "agent":
+      return "You answered without calling Agency tools. Use get_agency_* reads if needed, then propose_agency_action and ui_present before/after. Do not invent data or dump a hours canvas.";
+    default: {
+      const _exhaustive: never = toolPreset;
+      return _exhaustive;
+    }
+  }
+}
+
+/** Nudge when tools ran but the model skipped the canvas. */
+export function agencyUiPresentRetryNote(toolPreset: DashboardAgentToolPreset): string {
+  switch (toolPreset) {
+    case "ask":
+      return "You already called Agency tools but did not call ui_present. Call ui_present now with a schema canvas of the results, then reply with one short line. Do not dump JSON or markdown tables.";
+    case "plan":
+      return "You already called Agency tools but did not call ui_present. Call ui_present now with a schema overview of the plan or findings, then one short line asking the user to Confirm. Do not dump JSON or markdown tables.";
+    case "agent":
+      return "You already called Agency tools but did not call ui_present. Call ui_present now with a before/after schema canvas, then one short line. Do not dump JSON or markdown tables.";
+    default: {
+      const _exhaustive: never = toolPreset;
+      return _exhaustive;
+    }
+  }
+}
 
 function hoursLabel(seconds: number): string {
   return (seconds / 3_600).toFixed(1);

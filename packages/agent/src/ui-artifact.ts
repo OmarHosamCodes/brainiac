@@ -210,8 +210,8 @@ export function cappedArtifacts(artifacts: AiUiArtifact[]): AiUiArtifact[] {
 }
 
 export const UI_PRESENT_TOOL_DESCRIPTION =
-  "Render a live UI artifact in the operator canvas (tables, metrics, comparisons, lists). Prefer kind 'schema' (stack, grid, stat, table, callout, pillRow, imageGrid, markdown, text, divider). Use kind 'react' only when schema cannot express it: sandbox plain JS only (no JSX/imports/fetch); h(type, props, ...children); render(element) once; props global; components Stack, Grid, Stat, Table, Text, Image, Callout. Reply one short line after; never repeat rendered data.";
+  "Preferred way to answer: render a live UI artifact in the operator canvas (tables, metrics, comparisons, plans, before/after). Prefer kind 'schema' (stack, grid, stat, table, callout, pillRow, imageGrid, markdown, text, divider). Use kind 'react' only when schema cannot express it: sandbox plain JS only (no JSX/imports/fetch); h(type, props, ...children); render(element) once; props global; components Stack, Grid, Stat, Table, Text, Image, Callout. Reply one short line after; never repeat rendered data.";
 
 /** One-line system nudge; full rules live on the ui_present tool description. */
 export const UI_PRESENT_SYSTEM_GUIDANCE =
-  "For tables, comparisons, metrics, or multi-item lists, call ui_present instead of dumping markdown; then reply with one short line.";
+  "Prefer ui_present as the primary answer in every mode (Ask/Plan/Agent): paint a schema canvas for data, plans, rankings, or before/after — then reply with one short line. Do not dump markdown tables or long bullet lists when a canvas can show it.";

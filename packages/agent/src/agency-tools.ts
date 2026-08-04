@@ -2,12 +2,7 @@ import { tool } from "@openrouter/sdk/lib/tool";
 import { createWorkspaceId } from "@orch/workspace";
 import { z } from "zod";
 
-import {
-  agencyActionLabel,
-  agencyActionSchema,
-  agencyDraftPlanSchema,
-  agencyPlanStepSchema,
-} from "./agency-actions";
+import { agencyActionLabel, agencyActionSchema, agencyDraftPlanSchema } from "./agency-actions";
 import type { AgencyAgentRuntime, DashboardAgentToolPreset } from "./types";
 import { createUiPresentTool } from "./ui-present-tool";
 
@@ -336,11 +331,20 @@ function buildAgencyPlanTool() {
   return tool({
     name: "draft_agency_plan",
     description:
-      "Draft a multi-step Agency change plan. Does not write data. User must Confirm in the UI to materialize proposals.",
+      "Draft a multi-step Agency change plan. Does not write data. User must Confirm in the UI to materialize proposals. Each step is { label, action } where action is { type, ...fields } and type is one of time_entry.create|update|delete, timer.start|stop|update, project.create|update|archive|restore, task.create|update|delete, tag.create|delete, client.create|update|archive.",
     inputSchema: z.object({
       title: z.string().trim().min(1).max(160),
       summary: z.string().trim().min(1).max(1_000),
-      steps: z.array(agencyPlanStepSchema).min(1).max(20),
+      steps: z
+        .array(
+          z.object({
+            label: z.string().trim().min(1).max(200),
+            // Opaque at schema layer — full action union validated in execute (provider schema limits).
+            action: z.any(),
+          }),
+        )
+        .min(1)
+        .max(20),
     }),
     outputSchema: agencyDraftPlanSchema,
     execute: async ({ title, summary, steps }) =>
@@ -357,9 +361,10 @@ function buildAgencyProposeTool(runtime: AgencyAgentRuntime) {
   return tool({
     name: "propose_agency_action",
     description:
-      "Propose one Agency write with before/after. Does not apply the write. Then call ui_present to illustrate before/after and ask the user to Approve or Reject.",
+      "Propose one Agency write with before/after. Does not apply the write. Then call ui_present to illustrate before/after and ask the user to Approve or Reject. action is { type, ...fields } with type time_entry.*|timer.*|project.*|task.*|tag.*|client.*.",
     inputSchema: z.object({
-      action: agencyActionSchema,
+      // Opaque at schema layer — agencyActionSchema.parse in execute.
+      action: z.any(),
       label: z.string().trim().min(1).max(200).optional(),
     }),
     outputSchema: z.object({
@@ -372,9 +377,10 @@ function buildAgencyProposeTool(runtime: AgencyAgentRuntime) {
       note: z.string(),
     }),
     execute: async ({ action, label }) => {
+      const parsedAction = agencyActionSchema.parse(action);
       const proposal = await runtime.createProposal({
-        action,
-        label: label ?? agencyActionLabel(action),
+        action: parsedAction,
+        label: label ?? agencyActionLabel(parsedAction),
       });
       return {
         ...proposal,

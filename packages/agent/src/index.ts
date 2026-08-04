@@ -6,7 +6,12 @@ import {
   type AgencyDraftPlan,
 } from "./agency-actions";
 import { buildAgencyAgentTools } from "./agency-tools";
-import { bootstrapAgencyMonthReportsCanvas } from "./agency-reports-canvas";
+import {
+  agencyToolRetryNote,
+  agencyUiPresentRetryNote,
+  bootstrapAgencyMonthReportsCanvas,
+  shouldBootstrapAgencyMonthReports,
+} from "./agency-reports-canvas";
 import { createOpenRouterClient } from "./client";
 import { resolveOpenRouterModel } from "./models";
 import {
@@ -223,7 +228,7 @@ function buildAgencyAskInstructions(workspace: DashboardAgentWorkspaceContext) {
     buildAgencyInstructions(workspace),
     "Ask mode is read-only. Do not create, edit, or delete Agency data.",
     "Agency Ask requires tools: before answering any time/report/member/project question, call at least one Agency data tool.",
-    "For visual comparisons, tables, rankings, or multi-item breakdowns: after the data tool, call ui_present with kind 'schema' (use stack/grid/stat/table/pillRow). Then reply with one short line only — do not repeat the numbers as a bullet list.",
+    "Default response shape: after the data tool, call ui_present with kind 'schema' (stack/grid/stat/table/pillRow). Then reply with one short line only — do not repeat the numbers as a bullet list.",
     "If a requested breakdown is missing from tool output, say what the tool returned instead of inventing fields.",
   ].join("\n");
 }
@@ -232,8 +237,8 @@ function buildAgencyPlanInstructions(workspace: DashboardAgentWorkspaceContext) 
   return [
     buildAgencyInstructions(workspace),
     "Plan mode: research with read tools, then call draft_agency_plan with concrete steps. Do not claim changes were applied.",
-    "After drafting, tell the user to Confirm the plan in the UI. Never invent ids — use tool results.",
-    "You may ui_present a visual overview of the plan; do not call propose_agency_action in Plan mode.",
+    "After draft_agency_plan, call ui_present with a schema overview of the plan (steps, targets, impact). Then tell the user to Confirm in the UI.",
+    "Never invent ids — use tool results. Do not call propose_agency_action in Plan mode.",
   ].join("\n");
 }
 
@@ -241,7 +246,7 @@ function buildAgencyAgentModeInstructions(workspace: DashboardAgentWorkspaceCont
   return [
     buildAgencyInstructions(workspace),
     "Agent mode: never write Agency data directly. Call propose_agency_action for each intended write.",
-    "After each propose_agency_action, call ui_present with a clear before/after illustration, then tell the user to Approve or Reject.",
+    "Required: after each propose_agency_action, call ui_present with a clear before/after illustration, then tell the user to Approve or Reject.",
     "Never claim a write succeeded until the user Approves. Prefer one proposal at a time unless the user asks for a batch.",
   ].join("\n");
 }
@@ -328,6 +333,7 @@ function buildAskInstructions(
     toolingUnavailable
       ? "The selected model cannot call tools in this pass, so answer directly from the provided context and say when deeper inspection would require a tools-capable model."
       : "Start from the provided workspace context. If you need inspection, prefer one compact list, search, or summary detail tool before answering.",
+    "Prefer ui_present for structured answers (tables, rankings, multi-item lists); keep the chat reply to one short line.",
     "Ask mode is read-only. Do not create, rename, update, or delete nodes, tabs, or blocks.",
     "Avoid full raw node, tab, block, or marketplace payloads unless the answer is blocked.",
     "If you inspect a block, use get_block_details and rely on its summary instead of guessing field names.",
@@ -350,6 +356,7 @@ function buildAgentOnlyInstructions(
     toolingUnavailable
       ? "The selected model cannot call tools in this pass, so explain that deep inspection is limited and answer from the provided context only."
       : "Inspect the workspace before concluding. Start with list, search, or summary detail tools to verify specifics before you answer.",
+    "Prefer ui_present for structured results or before/after change summaries; keep the chat reply to one short line.",
     "When the user asks you to create, rename, update, or delete nodes, tabs, or blocks, use the workspace mutation tools instead of only describing the change.",
     "Escalate to full raw node, tab, block, or marketplace payloads only when mutation prep or exact structural verification requires it.",
     'For block edits, search or inspect first, call get_block_details, use its editGuide with patch_block when possible, and only escalate to detailLevel: "full" plus replace_block when patch_block is not enough.',
@@ -412,7 +419,8 @@ function resolveAgentExecutionConfig(
           instructions: supportsTools ? buildAgencyPlanInstructions(workspace) : agencyFallback,
           fallbackInstructions: agencyFallback,
           maxSteps: 8,
-          maxOutputTokens: undefined,
+          // Cap completion — omitting max_tokens lets OpenRouter request ~50k and fail low-credit keys.
+          maxOutputTokens: 1_200,
           shouldRetryForInspection: supportsTools,
         };
       case "ask":
@@ -421,7 +429,7 @@ function resolveAgentExecutionConfig(
           instructions: supportsTools ? buildAgencyAskInstructions(workspace) : agencyFallback,
           fallbackInstructions: agencyFallback,
           maxSteps: 8,
-          maxOutputTokens: undefined,
+          maxOutputTokens: 1_200,
           shouldRetryForInspection: supportsTools,
         };
       default: {
@@ -456,7 +464,7 @@ function resolveAgentExecutionConfig(
         instructions: supportsTools ? buildAskInstructions(workspace) : canvasToolingFallback,
         fallbackInstructions: canvasToolingFallback,
         maxSteps: 6,
-        maxOutputTokens: undefined,
+        maxOutputTokens: 1_200,
         shouldRetryForInspection: supportsTools && workspace.nodes.length > 0,
       };
     case "ask":
@@ -465,7 +473,7 @@ function resolveAgentExecutionConfig(
         instructions: supportsTools ? buildAskInstructions(workspace) : canvasToolingFallback,
         fallbackInstructions: canvasToolingFallback,
         maxSteps: 6,
-        maxOutputTokens: undefined,
+        maxOutputTokens: 1_200,
         shouldRetryForInspection: supportsTools && workspace.nodes.length > 0,
       };
     default: {
@@ -513,7 +521,27 @@ type ToolPassResult = {
   artifacts: AiUiArtifact[];
   usage: DashboardConversationUsageLatest | null;
   stopped: boolean;
+  providerError: string | null;
 };
+
+function isHardProviderLimitError(errorMessage: string): boolean {
+  return /credits|max_tokens|afford|weekly limit/i.test(errorMessage);
+}
+
+function isProviderTimeoutError(errorMessage: string): boolean {
+  return /timed out|timeout/i.test(errorMessage);
+}
+
+function providerErrorUserMessage(errorMessage: string): string {
+  if (isHardProviderLimitError(errorMessage)) {
+    return "The model request hit an OpenRouter credit or max-token limit. Pick a cheaper/faster model, or raise the key limit on OpenRouter.";
+  }
+  if (isProviderTimeoutError(errorMessage)) {
+    return "The model provider timed out before Agency tools could run. Retry, or switch off Free / pick Balanced or Pro for Plan.";
+  }
+  const detail = errorMessage.trim().slice(0, 160) || "unknown error";
+  return `The model provider failed (${detail}). Try another model tier, or retry in a moment.`;
+}
 
 async function* streamToolEnabledPass(
   args: ToolPassArgs,
@@ -646,11 +674,13 @@ async function* streamToolEnabledPass(
   await pumps;
 
   let usage: DashboardConversationUsageLatest | null = null;
+  let providerError: string | null = null;
   try {
     const [responseText, response] = await Promise.all([result.getText(), result.getResponse()]);
     accumulated = responseText || accumulated;
     usage = normalizeUsage(response.usage, args.model, args.contextLength);
-  } catch {
+  } catch (error) {
+    providerError = error instanceof Error ? error.message : String(error);
     // cancelled mid-stream: keep accumulated tokens
   } finally {
     args.signal?.removeEventListener("abort", cancelOnAbort);
@@ -662,6 +692,7 @@ async function* streamToolEnabledPass(
     artifacts: cappedArtifacts(artifacts),
     usage,
     stopped: stopped || Boolean(args.signal?.aborted),
+    providerError,
   };
 }
 
@@ -705,12 +736,13 @@ async function* streamTextOnlyPass(args: {
   }
 
   let usage: DashboardConversationUsageLatest | null = null;
+  let providerError: string | null = null;
   try {
     const [responseText, response] = await Promise.all([result.getText(), result.getResponse()]);
     accumulated = responseText || accumulated;
     usage = normalizeUsage(response.usage, args.model, args.contextLength);
-  } catch {
-    // keep accumulated
+  } catch (error) {
+    providerError = error instanceof Error ? error.message : String(error);
   } finally {
     args.signal?.removeEventListener("abort", cancelOnAbort);
   }
@@ -721,6 +753,7 @@ async function* streamTextOnlyPass(args: {
     artifacts: [],
     usage,
     stopped: stopped || Boolean(args.signal?.aborted),
+    providerError,
   };
 }
 
@@ -802,6 +835,7 @@ export async function* streamDashboardAgent(
   let usage: DashboardConversationUsageLatest | null = null;
   let responseText = "";
   let stopped = Boolean(config.signal?.aborted);
+  let providerError: string | null = null;
   const artifacts: AiUiArtifact[] = [];
 
   if (executionConfig.shouldUseTools && !stopped) {
@@ -828,13 +862,20 @@ export async function* streamDashboardAgent(
       responseText = initialNext.value.responseText;
       usage = initialNext.value.usage;
       stopped = stopped || initialNext.value.stopped;
+      providerError = initialNext.value.providerError;
       toolCalls.push(...initialNext.value.toolCalls);
       artifacts.push(...initialNext.value.artifacts);
 
-      if (!stopped && executionConfig.shouldRetryForInspection && toolCalls.length === 0) {
+      const shouldRetry =
+        !stopped &&
+        !providerError &&
+        executionConfig.shouldRetryForInspection &&
+        toolCalls.length === 0;
+
+      if (shouldRetry) {
         const retryNote =
           surface === "agency"
-            ? "You answered without calling Agency tools. Call get_agency_reports_summary or get_agency_time_summary with {from,to} for this month, then ui_present a schema canvas. Do not invent hours or narrate tool calls."
+            ? agencyToolRetryNote(toolPreset)
             : workspace.nodes.length > 0
               ? "You have not inspected the workspace yet. Call a relevant tool before answering."
               : null;
@@ -864,17 +905,64 @@ export async function* streamDashboardAgent(
           if (retryNext.value.usage) {
             usage = retryNext.value.usage;
           }
+          if (retryNext.value.providerError) {
+            providerError = retryNext.value.providerError;
+          }
           stopped = stopped || retryNext.value.stopped;
           toolCalls.push(...retryNext.value.toolCalls);
           artifacts.push(...retryNext.value.artifacts);
         }
       }
 
-      // Mixtral and similar models often advertise tools but never call them on Agency.
-      // Fall back to a deterministic reports → canvas bootstrap so the operator still gets UI.
+      // Tools ran but skipped the canvas — text-only soft fallback cannot call ui_present.
+      const shouldRetryForUiPresent =
+        !stopped &&
+        !providerError &&
+        surface === "agency" &&
+        executionConfig.shouldUseTools &&
+        toolCalls.length > 0 &&
+        artifacts.length === 0;
+      if (shouldRetryForUiPresent) {
+        const uiRetryIterator = streamToolEnabledPass({
+          model,
+          workspace: { ...workspace, surface },
+          workspaceRuntime,
+          toolPreset,
+          agencyRuntime: config.agencyRuntime,
+          normalizedMessages,
+          instructions: `${executionConfig.instructions}\n${agencyUiPresentRetryNote(toolPreset)}`,
+          maxSteps: Math.min(4, executionConfig.maxSteps),
+          temperature: config.temperature,
+          maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
+          contextLength: selectedModel?.contextLength ?? null,
+          signal: config.signal,
+        });
+        let uiRetryNext = await uiRetryIterator.next();
+        while (!uiRetryNext.done) {
+          yield uiRetryNext.value;
+          uiRetryNext = await uiRetryIterator.next();
+        }
+        if (uiRetryNext.value.responseText) {
+          responseText = uiRetryNext.value.responseText;
+        }
+        if (uiRetryNext.value.usage) {
+          usage = uiRetryNext.value.usage;
+        }
+        if (uiRetryNext.value.providerError) {
+          providerError = uiRetryNext.value.providerError;
+        }
+        stopped = stopped || uiRetryNext.value.stopped;
+        toolCalls.push(...uiRetryNext.value.toolCalls);
+        artifacts.push(...uiRetryNext.value.artifacts);
+      }
+
+      // Ask-only: Mixtral and similar often skip tools — paint this month's hours so Ask
+      // still returns UI. Never bootstrap Plan/Agent (that reuses the same hours canvas and
+      // looks like the previous Ask thread leaked into a new chat).
       if (
         !stopped &&
         surface === "agency" &&
+        shouldBootstrapAgencyMonthReports(toolPreset) &&
         config.agencyRuntime &&
         artifacts.length === 0 &&
         !toolCalls.some((tool) => tool.name.startsWith("get_agency_"))
@@ -890,15 +978,21 @@ export async function* streamDashboardAgent(
         }
       }
     } catch {
-      responseText = "";
-      toolCalls.length = 0;
-      artifacts.length = 0;
+      // Keep any tools/artifacts already streamed; only clear empty text.
+      if (!responseText.trim()) {
+        responseText = "";
+      }
     }
   }
 
   let finalResponse = responseText.trim();
 
-  if (!finalResponse && !stopped) {
+  // Empty completion with no provider error: optional text-only pass.
+  // Never soft-fallback after a provider error, and never when a canvas already exists
+  // (text-only cannot call ui_present and previously dumped JSON over a successful tool pass).
+  const willSoftFallback =
+    !finalResponse && !stopped && !providerError && artifacts.length === 0;
+  if (willSoftFallback) {
     const toolsWereCalled = toolCalls.length > 0;
     const runtimeHasChanges = workspaceRuntime.hasChanges();
     const fallbackMaxOutputTokens = executionConfig.maxOutputTokens ?? config.maxOutputTokens;
@@ -907,8 +1001,8 @@ export async function* streamDashboardAgent(
       ? [
           buildAgentInstructions(workspace),
           runtimeHasChanges
-            ? "You already called tools and applied mutations to the workspace. Summarize the completed actions for the user. Do not say that tools are unavailable — you already used them successfully."
-            : "You called tools but the mutations did not complete. Explain what you attempted and what went wrong. Do not say that tools are unavailable — you did call tools but encountered errors.",
+            ? "You already called tools and applied mutations to the workspace. Reply with one short plain-language line. Do not dump JSON. Do not say that tools are unavailable."
+            : "You called tools but could not paint a canvas. Reply with one short plain-language line about what you found. Do not dump JSON or markdown tables. Do not say that tools are unavailable.",
         ].join("\n")
       : executionConfig.fallbackInstructions;
 
@@ -929,6 +1023,33 @@ export async function* streamDashboardAgent(
     finalResponse = fallbackNext.value.responseText;
     usage = fallbackNext.value.usage;
     stopped = stopped || fallbackNext.value.stopped;
+    if (!finalResponse.trim() && fallbackNext.value.providerError) {
+      providerError = fallbackNext.value.providerError;
+    }
+  }
+
+  if (!finalResponse.trim() && providerError) {
+    finalResponse = providerErrorUserMessage(providerError);
+  }
+
+  if (!finalResponse.trim() && !stopped && surface === "agency") {
+    if (
+      toolCalls.some((tool) => tool.name === "draft_agency_plan" && tool.status === "completed")
+    ) {
+      finalResponse = "Drafted a plan — review the card and Confirm when ready.";
+    } else if (
+      toolCalls.some((tool) => tool.name === "propose_agency_action" && tool.status === "completed")
+    ) {
+      finalResponse = "Proposed a change — review before/after, then Approve or Reject.";
+    } else if (artifacts.length > 0) {
+      finalResponse = "Opened a canvas with the results.";
+    } else if (toolPreset === "plan") {
+      finalResponse =
+        "I couldn't draft a plan from that request. Try naming the entries or projects to change, or switch to Ask to inspect time first.";
+    } else if (toolPreset === "agent") {
+      finalResponse =
+        "I couldn't propose a change from that request. Try being more specific, or switch to Ask to inspect time first.";
+    }
   }
 
   yield {
