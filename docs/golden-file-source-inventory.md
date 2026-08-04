@@ -19,9 +19,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 559 |
+| golden-feature | 564 |
 | server-operation | 12 |
-| shared-infrastructure | 271 |
+| shared-infrastructure | 272 |
 | static-presentation | 15 |
 
 ## Counts by domain
@@ -33,12 +33,12 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 11 |
-| billing | 34 |
+| billing | 39 |
 | ci | 2 |
 | clients | 4 |
 | configuration | 3 |
 | dashboard | 8 |
-| database-platform | 27 |
+| database-platform | 28 |
 | deployment | 5 |
 | environment | 5 |
 | integrations | 2 |
@@ -711,6 +711,11 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/procedures.ts` | api-platform | domain-service | shared-infrastructure | api-platform | Cross-cutting api-platform domain-service support rather than a feature-owned business workflow. | content: oRPC procedures or clients, exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/billing/invoice-bill-status.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/invoice-bill-status.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
+| `packages/api/src/routers/agency-ops/billing/payout-amount-from-activity.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/billing/payout-amount-from-activity.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/agency-ops/billing/payout-bill-status.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/billing/payout-bill-status.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
+| `packages/api/src/routers/agency-ops/billing/payout-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/period-bill-activity.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/period-bill-activity.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/billing/router.ts` | billing | api-router | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-router layer. | content: Zod contracts, oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
@@ -864,6 +869,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/db/src/migrations/0035_agency_proposal_nullable_states.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0036_agency_departments.sql` | resourcing | persistence-migration | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0037_agency_invoice_partial_received.sql` | billing | persistence-migration | golden-feature | billing-domain | Feature-owned billing artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
+| `packages/db/src/migrations/0038_agency_payout_runs.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/meta/0000_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0001_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0002_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |

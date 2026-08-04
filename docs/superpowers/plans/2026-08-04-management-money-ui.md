@@ -91,39 +91,42 @@ Stats cards first (scoreboard + metric jump-offs). Dual Clients | Payroll and de
 | 1    | Money shell + segments + mount                  | Reset      | Superseded by stats-first IA for now   |
 | 2    | Mount client invoice kanban                     | Superseded | Bills list (not kanban) wires invoices |
 | 3    | Period summary strip (Fin-Sheet KPIs)           | **Done**   | Delivered as four stats cards          |
-| 4    | Payroll run shell (month, status, section list) | Pending    | Fixture                                |
-| 5    | Section detail: cohorts + payee lines           | Pending    | Metric jump-off / bill row targets     |
-| 6    | Partial payout parts (due/paid/remaining UI)    | Pending    | Fixture mutations                      |
+| 4    | Payroll run shell (month, status, section list) | Pending    | Multi-section UI still open            |
+| 5    | Section detail: cohorts + payee lines           | Partial    | Salaries lines on Team Bills           |
+| 6    | Partial payout parts (due/paid/remaining UI)    | Partial    | Line paidCents (no installment table)  |
 | 7    | Client partial collections UI                   | **Done**   | `received_cents` + `recordPayment`     |
 | 8a   | Client Bills BE + FE                            | **Done**   | Period list, search, create, status    |
-| 8    | Wire payroll schema + API + replace fixtures    | Pending    | Team bills / expenses / stats next     |
-| 9    | Member monthly sheet when provided              | Blocked    | Artifact missing                       |
+| 8b   | Team Bills BE + FE (salaries)                   | **Done**   | payout_run/section/line + Money wire   |
+| 8    | Wire payroll schema + API + replace fixtures    | Partial    | Team done; expenses / stats next       |
+| 9    | Member monthly sheet when provided              | Blocked    | Amounts = hours × costRate until then  |
 
-**Ship readiness:** Money Bills Clients/All show real invoices for the selected period (create, send, record payment, mark paid, refund). Team/Adjustments still empty. Stats/expenses/cohort settings remain fixture/local.
+**Ship readiness:** Money Bills Clients + Team show real period rows (invoices / payout lines). Ready-to-invoice clients and ready-to-pay members appear until drafted. Adjustments empty. Stats/expenses/cohort settings remain fixture/local. Team payout amounts are stand-in `hours × costRateCents` until Part 9.
 
 ---
 
 ## File map (target — grow as parts land)
 
-| File                                                                          | Responsibility                                   |
-| ----------------------------------------------------------------------------- | ------------------------------------------------ |
-| `docs/superpowers/plans/2026-08-04-management-money-ui.md`                    | This living plan                                 |
-| `docs/superpowers/specs/2026-08-04-money-stats-cards-design.md`               | Stats cards design brief                         |
-| `apps/web/src/features/shared/agency-management-sections.ts`                  | Pane id `money`, label + subtitle                |
-| `apps/web/src/features/settings/agency-management-surface.tsx`                | Mounts `AgencyMoneySurface` for money            |
-| `apps/web/src/features/billing/agency-money-surface.tsx`                      | Public export → container                        |
-| `apps/web/src/features/billing/containers/agency-money-surface-container.tsx` | One hook, one view                               |
-| `apps/web/src/features/billing/hooks/use-agency-money-surface.ts`             | Period range + invoice query + Bills/expenses VM |
-| `apps/web/src/features/billing/agency-money-surface-view.tsx`                 | Title, period, stats, Bills rows + create/pay UI |
-| `apps/web/src/features/billing/money-stats-fixtures.ts`                       | Fin-Sheet-shaped fixture amounts                 |
-| `apps/web/src/features/billing/money-bills-filters.ts`                        | Party/status filters + empty copy                |
-| `apps/web/src/features/billing/money-bills-filters.test.ts`                   | Empty-copy composition checks                    |
-| `apps/web/src/features/billing/money-bills-rows.ts`                           | Invoice → bill row mapping + payment parse       |
-| `apps/web/src/features/billing/money-bills-rows.test.ts`                      | Row/payment helper checks                        |
-| `packages/api/.../billing/invoice-bill-status.ts`                             | Bill chip mapping + payment status transitions   |
-| `docs/superpowers/specs/2026-08-05-money-bills-section-design.md`             | Bills section design brief                       |
-| `apps/web/src/features/billing/agency-billing-surface*.tsx`                   | Existing client kanban (reuse later)             |
-| `packages/db` / `packages/api`                                                | Payroll + partials — **later** (Part 8)          |
+| File                                                                          | Responsibility                                    |
+| ----------------------------------------------------------------------------- | ------------------------------------------------- |
+| `docs/superpowers/plans/2026-08-04-management-money-ui.md`                    | This living plan                                  |
+| `docs/superpowers/specs/2026-08-04-money-stats-cards-design.md`               | Stats cards design brief                          |
+| `apps/web/src/features/shared/agency-management-sections.ts`                  | Pane id `money`, label + subtitle                 |
+| `apps/web/src/features/settings/agency-management-surface.tsx`                | Mounts `AgencyMoneySurface` for money             |
+| `apps/web/src/features/billing/agency-money-surface.tsx`                      | Public export → container                         |
+| `apps/web/src/features/billing/containers/agency-money-surface-container.tsx` | One hook, one view                                |
+| `apps/web/src/features/billing/hooks/use-agency-money-surface.ts`             | Period + invoices/payouts queries + Bills VM      |
+| `apps/web/src/features/billing/agency-money-surface-view.tsx`                 | Title, period, stats, Bills rows + create/pay UI  |
+| `apps/web/src/features/billing/money-stats-fixtures.ts`                       | Fin-Sheet-shaped fixture amounts                  |
+| `apps/web/src/features/billing/money-bills-filters.ts`                        | Party/status filters + empty copy                 |
+| `apps/web/src/features/billing/money-bills-filters.test.ts`                   | Empty-copy composition checks                     |
+| `apps/web/src/features/billing/money-bills-rows.ts`                           | Invoice/payout → bill row mapping + payment parse |
+| `apps/web/src/features/billing/money-bills-rows.test.ts`                      | Row/payment helper checks                         |
+| `packages/api/.../billing/invoice-bill-status.ts`                             | Client bill chip mapping + payment transitions    |
+| `packages/api/.../billing/payout-bill-status.ts`                              | Team bill chip mapping + paid transitions         |
+| `packages/api/.../billing/payout-service.ts`                                  | ensure/list/createFromMember/recordPayment        |
+| `packages/db` `agency_ops_payout_*`                                           | Run / salaries section / line schema              |
+| `docs/superpowers/specs/2026-08-05-money-bills-section-design.md`             | Bills section design brief                        |
+| `apps/web/src/features/billing/agency-billing-surface*.tsx`                   | Existing client kanban (reuse later)              |
 
 **Folder choice:** `features/billing/` + `agency-money-surface*` (golden `billing` domain).
 
@@ -222,15 +225,21 @@ Superseded for now by stats-first IA.
 
 ---
 
+### Part 8b: Team Bills BE + FE — DONE
+
+**Done (2026-08-05):** `agency_ops_payout_run` / `section` / `line`; `agencyOps.payouts.*`; Money Team/All rows with ready-to-pay members, Draft payout, Payment, Mark paid. Amount = hours × costRate (until Part 9).
+
+---
+
 ### Part 8: Backend — payroll + replace fixtures
 
-**Goal:** Durable payroll runs/sections/cohorts/parts; expenses CRUD; money settings; derived stats.
+**Goal:** Durable payroll runs/sections/cohorts/parts; expenses CRUD; money settings; derived stats. Team salaries slice landed as 8b; remaining: multi-section run UI, expenses, stats.
 
 ---
 
 ### Part 9: Member monthly payment sheet
 
-**Blocked** until artifact is provided.
+**Blocked** until artifact is provided. Until then Team Bills use hours × cost rate.
 
 ---
 
@@ -256,3 +265,4 @@ Superseded for now by stats-first IA.
 | 2026-08-05 | Restore Additional allocations card; cohort/formulas → Money settings tabbed dialog                                               |
 | 2026-08-05 | **Client Bills real:** invoice `received_cents` + partial/refunded; period list/search; Money Bills rows + create/payment actions |
 | 2026-08-05 | Bills default: period activity — clients with time (uninvoiced) + members who worked; `invoices.periodActivity`                   |
+| 2026-08-05 | **Team Bills real:** payout_run/section/line; createFromMember; Payment/Mark paid; Ready to pay section                           |
