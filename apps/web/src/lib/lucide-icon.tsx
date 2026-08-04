@@ -20,6 +20,7 @@ import {
   Target,
   Timer,
   Users,
+  Wallet,
   type LucideIcon as LucideIconComponent,
 } from "lucide-react";
 
@@ -45,6 +46,7 @@ const ICON_BY_SLUG: Record<string, LucideIconComponent> = {
   target: Target,
   timer: Timer,
   users: Users,
+  wallet: Wallet,
 };
 
 function toIconSlug(iconName: string) {

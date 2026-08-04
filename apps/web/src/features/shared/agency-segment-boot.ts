@@ -119,7 +119,7 @@ async function ensureManagementBootQueries(
       ]);
       break;
     }
-    case "invoices":
+    case "money":
     case "rates":
       break;
     default: {

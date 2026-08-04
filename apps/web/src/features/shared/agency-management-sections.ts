@@ -1,12 +1,14 @@
 /** Agency management panes — Operations + Commercial hubs under Management. */
 
-export type AgencyManagementPaneId = "resourcing" | "tenure" | "invoices" | "rates";
+export type AgencyManagementPaneId = "resourcing" | "tenure" | "money" | "rates";
 
 export type AgencyManagementHubId = "operations" | "commercial";
 
 export type AgencyManagementPane = {
   id: AgencyManagementPaneId;
   label: string;
+  /** Optional page subtitle under the pane title (sentence case). */
+  subtitle?: string;
   icon: string;
   hub: AgencyManagementHubId;
 };
@@ -20,7 +22,13 @@ export type AgencyManagementHub = {
 export const AGENCY_MANAGEMENT_PANES: readonly AgencyManagementPane[] = [
   { id: "resourcing", label: "Resourcing", icon: "i-lucide-users", hub: "operations" },
   { id: "tenure", label: "People", icon: "i-lucide-contact", hub: "operations" },
-  { id: "invoices", label: "Invoices", icon: "i-lucide-receipt", hub: "commercial" },
+  {
+    id: "money",
+    label: "Money",
+    subtitle: "Client invoices, payroll, and cash in one place.",
+    icon: "i-lucide-wallet",
+    hub: "commercial",
+  },
   { id: "rates", label: "Rates", icon: "i-lucide-dollar-sign", hub: "commercial" },
 ] as const;
 
@@ -45,6 +53,10 @@ export function agencyManagementPaneLabel(paneId: AgencyManagementPaneId): strin
   return AGENCY_MANAGEMENT_PANES.find((pane) => pane.id === paneId)?.label ?? paneId;
 }
 
+export function agencyManagementPaneSubtitle(paneId: AgencyManagementPaneId): string | undefined {
+  return AGENCY_MANAGEMENT_PANES.find((pane) => pane.id === paneId)?.subtitle;
+}
+
 /** Canonical href for a Management pane under Agency. */
 export function agencyManagementHref(paneId: AgencyManagementPaneId): string {
   return `/agency?section=management&manage=${paneId}`;
@@ -63,6 +75,6 @@ export function managementPaneForLegacySection(
   value: string | null,
 ): AgencyManagementPaneId | null {
   if (value === "resourcing") return "resourcing";
-  if (value === "billing") return "invoices";
+  if (value === "billing" || value === "invoices") return "money";
   return null;
 }

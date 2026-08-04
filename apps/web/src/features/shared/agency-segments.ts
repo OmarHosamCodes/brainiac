@@ -65,7 +65,7 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
     label: "Management",
     icon: "i-lucide-sliders-horizontal",
     shortcutKey: "m",
-    subtitle: "Capacity, invoices, rates, and tenure policy.",
+    subtitle: "Capacity, money, and tenure policy.",
   },
 ] as const;
 

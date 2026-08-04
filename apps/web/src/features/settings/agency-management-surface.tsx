@@ -1,14 +1,16 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { AgencyMoneySurface } from "@/features/billing/agency-money-surface";
 import { AgencyResourcingSurface } from "@/features/resourcing/agency-resourcing-surface";
 import { AgencySettingsTenurePane } from "@/features/resourcing/tenure/agency-settings-tenure-pane";
 import {
   agencyManagementPaneLabel,
+  agencyManagementPaneSubtitle,
   isAgencyManagementPaneId,
   type AgencyManagementPaneId,
 } from "@/features/shared/agency-management-sections";
-import { agencySectionTitleClass } from "@/features/shared/agency-ui";
+import { agencyLabelClass, agencySectionTitleClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyManagementSurfaceProps = {
@@ -24,13 +26,20 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
 
   useEffect(() => {
     const section = searchParams.get("section");
-    if (section === "management" && !isAgencyManagementPaneId(searchParams.get("manage"))) {
+    const manage = searchParams.get("manage");
+    if (section === "management" && (manage === "invoices" || manage === "billing")) {
+      const next = new URLSearchParams(searchParams);
+      next.set("manage", "money");
+      setSearchParams(next, { replace: true });
+      return;
+    }
+    if (section === "management" && !isAgencyManagementPaneId(manage)) {
       const next = new URLSearchParams(searchParams);
       next.set("manage", "resourcing");
       setSearchParams(next, { replace: true });
       return;
     }
-    if (section !== "management" && searchParams.get("manage")) {
+    if (section !== "management" && manage) {
       const next = new URLSearchParams(searchParams);
       next.delete("manage");
       setSearchParams(next, { replace: true });
@@ -38,6 +47,7 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
   }, [searchParams, setSearchParams]);
 
   const activeLabel = agencyManagementPaneLabel(activePane);
+  const activeSubtitle = agencyManagementPaneSubtitle(activePane);
 
   return (
     <main
@@ -48,8 +58,17 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
         <AgencyResourcingSurface teamId={teamId} />
       ) : activePane === "tenure" ? (
         <AgencySettingsTenurePane teamId={teamId} active />
+      ) : activePane === "money" ? (
+        <AgencyMoneySurface teamId={teamId} />
       ) : (
-        <h1 className={cn(agencySectionTitleClass, "text-balance")}>{activeLabel}</h1>
+        <header className="flex flex-col gap-1">
+          <h1 className={cn(agencySectionTitleClass, "text-balance")}>{activeLabel}</h1>
+          {activeSubtitle ? (
+            <p className={cn(agencyLabelClass, "text-muted-foreground text-balance")}>
+              {activeSubtitle}
+            </p>
+          ) : null}
+        </header>
       )}
     </main>
   );

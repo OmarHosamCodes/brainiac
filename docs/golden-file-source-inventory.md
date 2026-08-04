@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 546 |
+| golden-feature | 547 |
 | server-operation | 12 |
 | shared-infrastructure | 271 |
 | static-presentation | 15 |
@@ -33,7 +33,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 11 |
-| billing | 21 |
+| billing | 22 |
 | ci | 2 |
 | clients | 4 |
 | configuration | 3 |
@@ -165,14 +165,15 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/auth/protected-route.tsx` | auth | presentational-view | golden-feature | identity-domain | Feature-owned auth artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/billing/agency-billing-surface-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/billing/agency-billing-surface.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/billing/agency-money-surface-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/billing/agency-money-surface.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/billing/agency-pro-upsell.tsx` | billing | web-query | golden-feature | billing-domain | Feature-owned billing artifact in the canonical web-query layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
-| `apps/web/src/features/billing/agency-settings-rates-pane-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
-| `apps/web/src/features/billing/agency-settings-rates-pane.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/billing/billing-queries.ts` | billing | web-query | golden-feature | billing-domain | Feature-owned billing artifact in the canonical web-query layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: source role and exported behavior |
 | `apps/web/src/features/billing/containers/agency-billing-surface-container.tsx` | billing | container | golden-feature | billing-domain | Feature-owned billing artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
-| `apps/web/src/features/billing/containers/agency-settings-rates-pane-container.tsx` | billing | container | golden-feature | billing-domain | Feature-owned billing artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
+| `apps/web/src/features/billing/containers/agency-money-surface-container.tsx` | billing | container | golden-feature | billing-domain | Feature-owned billing artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/billing/hooks/use-agency-billing-surface.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
-| `apps/web/src/features/billing/hooks/use-agency-settings-rates-pane.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, exported declarations; structure: hook naming |
+| `apps/web/src/features/billing/hooks/use-agency-money-surface.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
+| `apps/web/src/features/billing/money-stats-fixtures.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/clients/agency-clients-surface.tsx` | clients | web-query | golden-feature | clients-domain | Feature-owned clients artifact in the canonical web-query layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/dashboard/agency-dashboard-command-bar.test.ts` | dashboard | test | golden-feature | agency-dashboard-domain | Feature-owned dashboard artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/dashboard/agency-dashboard-command-bar.tsx` | dashboard | presentational-view | golden-feature | agency-dashboard-domain | Feature-owned dashboard artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -277,7 +278,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/resourcing/resourcing-workload-heat.ts` | resourcing | domain-logic | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/resourcing/tenure-utils.test.ts` | resourcing | test | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/resourcing/tenure-utils.ts` | resourcing | domain-logic | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
-| `apps/web/src/features/resourcing/tenure/agency-departments.ts` | resourcing | web-query | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical web-query layer. | content: oRPC procedures or clients, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/resourcing/tenure/agency-departments.ts` | resourcing | web-query | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical web-query layer. | content: oRPC procedures or clients, TanStack Query orchestration, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/resourcing/tenure/agency-people-departments.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/resourcing/tenure/agency-people-directory.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/resourcing/tenure/agency-people-exemptions.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
