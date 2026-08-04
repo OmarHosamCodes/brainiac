@@ -902,7 +902,7 @@ export async function* streamDashboardConversationTurn(
         yield agentChatTurnStreamEventSchema.parse(event);
         continue;
       }
-      if (event.type === "plan" || event.type === "proposal") {
+      if (event.type === "plan" || event.type === "proposal" || event.type === "question") {
         yield agentChatTurnStreamEventSchema.parse(event);
         continue;
       }
