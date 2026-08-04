@@ -1615,16 +1615,19 @@ function createAgencyOpsActions(
 
       await Promise.all([
         getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.invoices.list.key({ input: { teamId: payload.teamId } }),
+          queryKey: orpc.agencyOps.invoices.list.key(),
         }),
         getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.invoices.summary.key({ input: { teamId: payload.teamId } }),
+          queryKey: orpc.agencyOps.invoices.summary.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.invoices.periodActivity.key(),
         }),
       ]);
 
       callbacks?.onSuccess?.();
       toast.success("Invoice draft created", {
-        description: `${payload.clientName} — draft added to Billing.`,
+        description: `${payload.clientName} — draft added to Bills.`,
       });
     } catch (error) {
       toast.error("Couldn't create invoice", { description: getErrorMessage(error, "Try again.") });
@@ -1637,7 +1640,7 @@ function createAgencyOpsActions(
   }
 
   async function updateInvoiceStatus(
-    payload: { teamId: string; invoiceId: string; status: "sent" | "paid" },
+    payload: { teamId: string; invoiceId: string; status: "sent" | "paid" | "refunded" },
     callbacks?: { onSuccess?: () => void },
   ) {
     set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
@@ -1647,18 +1650,55 @@ function createAgencyOpsActions(
 
       await Promise.all([
         getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.invoices.list.key({ input: { teamId: payload.teamId } }),
+          queryKey: orpc.agencyOps.invoices.list.key(),
         }),
         getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.invoices.summary.key({ input: { teamId: payload.teamId } }),
+          queryKey: orpc.agencyOps.invoices.summary.key(),
         }),
       ]);
 
       callbacks?.onSuccess?.();
-      const label = payload.status === "sent" ? "Invoice sent" : "Invoice marked paid";
+      const label =
+        payload.status === "sent"
+          ? "Invoice sent"
+          : payload.status === "paid"
+            ? "Invoice marked paid"
+            : "Invoice refunded";
       toast.success(label);
     } catch (error) {
       toast.error("Couldn't update invoice", { description: getErrorMessage(error, "Try again.") });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function recordInvoicePayment(
+    payload: { teamId: string; invoiceId: string; amountCents: number },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.invoices.recordPayment(payload);
+
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.invoices.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.invoices.summary.key(),
+        }),
+      ]);
+
+      callbacks?.onSuccess?.();
+      toast.success("Payment recorded");
+    } catch (error) {
+      toast.error("Couldn't record payment", {
+        description: getErrorMessage(error, "Try again."),
+      });
     } finally {
       set((state) => ({
         ...state,
@@ -1697,6 +1737,7 @@ function createAgencyOpsActions(
     setCapacity,
     createInvoice,
     updateInvoiceStatus,
+    recordInvoicePayment,
   };
 }
 
