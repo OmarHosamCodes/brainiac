@@ -17,6 +17,16 @@ import {
 import { orpc } from "@/lib/orpc";
 
 import {
+  createMoneyExpenseRecord,
+  moneyExpenseCanSubmit,
+  moneyExpensePeriodLabel,
+  MONEY_EXPENSE_KIND_OPTIONS,
+  MONEY_EXPENSE_PERIOD_OPTIONS,
+  type MoneyExpenseKind,
+  type MoneyExpensePeriod,
+  type MoneyExpenseRecord,
+} from "../money-expense-form";
+import {
   moneyBillsActiveFilterSummary,
   moneyBillsEmptyCopy,
   moneyBillsStatusAllowed,
@@ -26,6 +36,14 @@ import {
   type MoneyBillsStatusFilter,
 } from "../money-bills-filters";
 import {
+  MONEY_CALC_OPTIONS_FIXTURE,
+  MONEY_COHORT_PANE_OPTIONS,
+  MONEY_COHORT_RULES_FIXTURE,
+  type MoneyCalcOptionId,
+  type MoneyCohortPane,
+  type MoneyCohortRuleId,
+} from "../money-cohort-allocations-fixture";
+import {
   MONEY_STATS_CARDS_FIXTURE,
   MONEY_STATS_FIXTURE_CURRENCY,
   type MoneyStatsCardFixture,
@@ -33,6 +51,28 @@ import {
   type MoneyStatsMetricFixture,
   type MoneyStatsMetricId,
 } from "../money-stats-fixtures";
+
+export type MoneyCohortAllocationsSelection =
+  | { kind: "rule"; ruleId: MoneyCohortRuleId }
+  | { kind: "calc-option"; optionId: MoneyCalcOptionId };
+
+const EXPENSE_CREATE_FORM_ID = "agency-money-expense-create";
+
+function expenseCountLabel(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function toExpenseRow(record: MoneyExpenseRecord) {
+  return {
+    id: record.id,
+    name: record.name,
+    meta:
+      record.kind === "subscription"
+        ? (moneyExpensePeriodLabel(record.period) ?? "Subscription")
+        : "One-time",
+    note: record.note || null,
+  };
+}
 
 export type AgencyMoneySurfaceViewModel = ReturnType<typeof useAgencyMoneySurface>;
 
@@ -113,6 +153,15 @@ export function useAgencyMoneySurface(teamId: string) {
   const [partyFilter, setPartyFilter] = useState<MoneyBillsPartyFilter>("all");
   const [statusFilter, setStatusFilter] = useState<MoneyBillsStatusFilter | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expenseRecords, setExpenseRecords] = useState<MoneyExpenseRecord[]>([]);
+  const [expenseCreateOpen, setExpenseCreateOpen] = useState(false);
+  const [expenseDetailsOpen, setExpenseDetailsOpen] = useState(false);
+  const [expenseName, setExpenseName] = useState("");
+  const [expenseKind, setExpenseKind] = useState<MoneyExpenseKind>("one_time");
+  const [expensePeriod, setExpensePeriod] = useState<MoneyExpensePeriod | null>(null);
+  const [expenseNote, setExpenseNote] = useState("");
+  const [moneySettingsOpen, setMoneySettingsOpen] = useState(false);
+  const [cohortPane, setCohortPane] = useState<MoneyCohortPane>("rules");
 
   const tenurePeriodLabel = useMemo(
     () =>
@@ -143,8 +192,23 @@ export function useAgencyMoneySurface(teamId: string) {
     [partyFilter, statusFilter],
   );
 
+  const upcomingExpenses = useMemo(
+    () => expenseRecords.filter((record) => record.kind === "subscription").map(toExpenseRow),
+    [expenseRecords],
+  );
+  const recentExpenses = useMemo(
+    () => expenseRecords.filter((record) => record.kind === "one_time").map(toExpenseRow),
+    [expenseRecords],
+  );
+
+  const canSubmitExpense = moneyExpenseCanSubmit(expenseName, expenseKind, expensePeriod);
+
   function onSelectMetric(_selection: MoneyStatsMetricSelection) {
     // ponytail: jump-off wired for a11y; detail surface lands in a later part
+  }
+
+  function onSelectCohortAllocation(_selection: MoneyCohortAllocationsSelection) {
+    // ponytail: cohort/calc detail surface lands in a later part
   }
 
   function onPartyFilterChange(next: MoneyBillsPartyFilter) {
@@ -160,6 +224,38 @@ export function useAgencyMoneySurface(teamId: string) {
 
   function onClearStatusFilter() {
     setStatusFilter(null);
+  }
+
+  function resetExpenseCreateForm() {
+    setExpenseName("");
+    setExpenseKind("one_time");
+    setExpensePeriod(null);
+    setExpenseNote("");
+  }
+
+  function onExpenseCreateOpenChange(open: boolean) {
+    setExpenseCreateOpen(open);
+    if (!open) resetExpenseCreateForm();
+  }
+
+  function onExpenseKindChange(next: MoneyExpenseKind) {
+    setExpenseKind(next);
+    if (next === "one_time") setExpensePeriod(null);
+  }
+
+  function onExpenseCreateSubmit(event: { preventDefault: () => void }) {
+    event.preventDefault();
+    if (!moneyExpenseCanSubmit(expenseName, expenseKind, expensePeriod)) return;
+    setExpenseRecords((current) => [
+      createMoneyExpenseRecord({
+        name: expenseName,
+        kind: expenseKind,
+        period: expensePeriod,
+        note: expenseNote,
+      }),
+      ...current,
+    ]);
+    onExpenseCreateOpenChange(false);
   }
 
   return {
@@ -183,6 +279,19 @@ export function useAgencyMoneySurface(teamId: string) {
     },
     statsCards,
     onSelectMetric,
+    moneySettings: {
+      open: moneySettingsOpen,
+      onOpenChange: setMoneySettingsOpen,
+      onOpen: () => setMoneySettingsOpen(true),
+      title: "Money settings",
+      description: "Cohort rules and calculation options for this team’s Money surface.",
+      pane: cohortPane,
+      paneOptions: MONEY_COHORT_PANE_OPTIONS,
+      onPaneChange: setCohortPane,
+      rules: MONEY_COHORT_RULES_FIXTURE,
+      calcOptions: MONEY_CALC_OPTIONS_FIXTURE,
+      onSelect: onSelectCohortAllocation,
+    },
     bills: {
       partyFilter,
       partyOptions: MONEY_BILLS_PARTY_OPTIONS,
@@ -196,6 +305,69 @@ export function useAgencyMoneySurface(teamId: string) {
       activeFilterSummary: billsActiveFilterSummary,
       emptyCopy: billsEmptyCopy,
       billCount: 0,
+    },
+    expenses: {
+      title: "Expenses",
+      subtitle: "Subscriptions and ops spend",
+      onOpenCreate: () => onExpenseCreateOpenChange(true),
+      onOpenDetails: () => setExpenseDetailsOpen(true),
+      details: {
+        open: expenseDetailsOpen,
+        onOpenChange: setExpenseDetailsOpen,
+        title: "All expenses",
+        emptyTitle: "No expenses yet",
+        emptyBody: "Add a one-time expense or subscription to see it here.",
+        sections: [
+          {
+            id: "upcoming" as const,
+            title: "Upcoming subscriptions",
+            items: upcomingExpenses,
+          },
+          {
+            id: "recent" as const,
+            title: "Recent",
+            items: recentExpenses,
+          },
+        ],
+        totalCount: expenseRecords.length,
+      },
+      create: {
+        open: expenseCreateOpen,
+        onOpenChange: onExpenseCreateOpenChange,
+        formId: EXPENSE_CREATE_FORM_ID,
+        name: expenseName,
+        onNameChange: setExpenseName,
+        kind: expenseKind,
+        kindOptions: MONEY_EXPENSE_KIND_OPTIONS,
+        onKindChange: onExpenseKindChange,
+        period: expensePeriod,
+        periodOptions: MONEY_EXPENSE_PERIOD_OPTIONS,
+        onPeriodChange: setExpensePeriod,
+        note: expenseNote,
+        onNoteChange: setExpenseNote,
+        canSubmit: canSubmitExpense,
+        onSubmit: onExpenseCreateSubmit,
+      },
+      upcoming: {
+        id: "upcoming" as const,
+        title: "Upcoming subscriptions",
+        hint: "Next due",
+        emptyTitle: "Nothing due soon",
+        emptyBody: "Recurring charges will appear here before they hit.",
+        count: upcomingExpenses.length,
+        countLabel: expenseCountLabel(upcomingExpenses.length, "due", "due"),
+        items: upcomingExpenses,
+      },
+      recent: {
+        id: "recent" as const,
+        title: "Recent",
+        hint: "This period",
+        emptyTitle: "No recent spend",
+        emptyBody: "One-off and paid expenses in this range will land here.",
+        count: recentExpenses.length,
+        countLabel: expenseCountLabel(recentExpenses.length, "this period", "this period"),
+        items: recentExpenses,
+      },
     },
   };
 }
