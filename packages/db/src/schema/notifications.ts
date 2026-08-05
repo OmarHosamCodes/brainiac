@@ -11,6 +11,8 @@ export type NotificationType =
   | "team.digest"
   | "member.alert";
 
+export type NotificationDeliveryClass = "interrupt" | "breakpoint" | "center" | "digest";
+
 export type NotificationPayload = {
   projectId?: string;
   projectName?: string;
@@ -43,6 +45,7 @@ export const notification = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
     type: text("type").$type<NotificationType>().notNull(),
+    deliveryClass: text("delivery_class").$type<NotificationDeliveryClass>(),
     payload: jsonb("payload").$type<NotificationPayload>().notNull(),
     readAt: timestamp("read_at"),
     seenAt: timestamp("seen_at"),
@@ -83,6 +86,78 @@ export const notificationPreference = pgTable(
       table.userId,
       table.teamId,
       table.type,
+    ),
+  ],
+);
+
+export const notificationDeliverySettings = pgTable(
+  "notification_delivery_settings",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    timezone: text("timezone").notNull().default("UTC"),
+    quietHoursStart: text("quiet_hours_start"),
+    quietHoursEnd: text("quiet_hours_end"),
+    focusUntil: timestamp("focus_until"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("notification_delivery_settings_user_team_unique").on(table.userId, table.teamId),
+  ],
+);
+
+export const notificationDeferredPush = pgTable(
+  "notification_deferred_push",
+  {
+    id: text("id").primaryKey(),
+    notificationId: text("notification_id")
+      .notNull()
+      .references(() => notification.id, { onDelete: "cascade" }),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    recipientUserId: text("recipient_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    deliverAfter: timestamp("deliver_after").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("notification_deferred_push_notification_unique").on(table.notificationId),
+    index("notification_deferred_push_recipient_deliver_idx").on(
+      table.recipientUserId,
+      table.deliverAfter,
+    ),
+  ],
+);
+
+export const notificationDigestSent = pgTable(
+  "notification_digest_sent",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    recipientUserId: text("recipient_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    digestDate: text("digest_date").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("notification_digest_sent_team_recipient_date_unique").on(
+      table.teamId,
+      table.recipientUserId,
+      table.digestDate,
     ),
   ],
 );

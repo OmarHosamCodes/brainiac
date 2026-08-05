@@ -316,6 +316,13 @@
       "when": 1787900000021,
       "tag": "0044_agency_member_profile_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1787900000022,
+      "tag": "0045_notification_productivity",
+      "breakpoints": true
     }
   ]
 }

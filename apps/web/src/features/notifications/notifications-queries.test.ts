@@ -19,6 +19,7 @@ function notification(id: string, seenAt: string | null = null): NotificationRec
     actorName: "Actor",
     actorAvatar: null,
     type: "task.assigned",
+    deliveryClass: "interrupt",
     payload: { taskId: "task-1", taskTitle: "Task" },
     readAt: null,
     seenAt,
@@ -38,7 +39,7 @@ describe("applyNotificationCreatedToCache", () => {
     const incoming = notification("notification-incoming");
 
     queryClient.setQueryData(listKey, { items: [existing, incoming], nextCursor: null });
-    queryClient.setQueryData(unreadKey, { count: 2 });
+    queryClient.setQueryData(unreadKey, { count: 2, actionCount: 1 });
 
     applyNotificationCreatedToCache(queryClient, teamId, incoming);
 
@@ -46,13 +47,13 @@ describe("applyNotificationCreatedToCache", () => {
       items: [incoming, existing],
       nextCursor: null,
     });
-    expect(queryClient.getQueryData(unreadKey)).toEqual({ count: 3 });
+    expect(queryClient.getQueryData(unreadKey)).toEqual({ count: 3, actionCount: 2 });
   });
 
   test("does not increment unread count for an already-seen notification", () => {
     const queryClient = new QueryClient();
     const unreadKey = orpc.notifications.unreadCount.queryKey({ input: { teamId } });
-    queryClient.setQueryData(unreadKey, { count: 2 });
+    queryClient.setQueryData(unreadKey, { count: 2, actionCount: 1 });
 
     applyNotificationCreatedToCache(
       queryClient,
@@ -60,6 +61,7 @@ describe("applyNotificationCreatedToCache", () => {
       notification("seen", "2026-07-10T00:00:00.000Z"),
     );
 
-    expect(queryClient.getQueryData(unreadKey)).toEqual({ count: 2 });
+    // Seen clears the unseen badge, but an unread action item still counts for Needs action.
+    expect(queryClient.getQueryData(unreadKey)).toEqual({ count: 2, actionCount: 2 });
   });
 });

@@ -28,9 +28,9 @@ type NavItem = {
 const NOTIFICATION_TYPE_LABELS: Record<NotificationPreferenceType, string> = {
   "task.assigned": "Task assignments",
   "task.message": "Task messages",
-  "journey.milestone": "Journey milestones",
+  "journey.milestone": "Milestones",
   "timer.activity": "Timer activity",
-  "team.digest": "Team digest",
+  "team.digest": "Daily digest",
   "member.alert": "Profile alerts",
 };
 

@@ -8,7 +8,10 @@ import { useBilling } from "@/features/billing/billing-queries";
 import {
   useAgencyNotificationPreferencesQuery,
   useSetNotificationPreferencesMutation,
+  type NotificationPreferenceItem,
+  type NotificationPreferenceType,
 } from "@/features/notifications/notifications-queries";
+import { notificationPreferenceLabel } from "@/features/notifications/notification-presentation";
 import { useTeamStore } from "@/features/team/team-store";
 import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
@@ -18,19 +21,8 @@ import { useTheme } from "@/stores/theme";
 
 import { useUserSettingsModalState, type UserSettingsPane } from "./use-user-settings-modal-state";
 
-export type NotificationPreferenceType =
-  | "task.assigned"
-  | "task.message"
-  | "journey.milestone"
-  | "timer.activity"
-  | "team.digest"
-  | "member.alert";
-
-export type NotificationPreferenceItem = {
-  type: NotificationPreferenceType;
-  inApp: boolean;
-  push: boolean;
-};
+export type { NotificationPreferenceItem, NotificationPreferenceType };
+export { notificationPreferenceLabel };
 
 export type UserSettingsModalInput = {
   open: boolean;

@@ -17,6 +17,7 @@ import {
 import { eq, and, or, asc, isNull, desc, sql, gte, lte, inArray } from "drizzle-orm";
 import { createWorkspaceId } from "@orch/workspace";
 import { notifyTimerActivity } from "../../notifications/fanout";
+import { flushDeferredNotificationPushes } from "../../notifications/service";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { getProjectByIdForTeam } from "../shared/lookup-helpers";
 import { parseIsoDateTime } from "../shared/date-helpers";
@@ -654,6 +655,7 @@ export async function stopAgencyTimer(
     await db.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
 
     await publishAgencyTimerUpdated(active.teamId, actorUserId, null);
+    await flushDeferredNotificationPushes(actorUserId, {});
 
     return {
       timer: null,
@@ -739,6 +741,8 @@ export async function stopAgencyTimer(
     taskId,
     taskTitle: createdEntry?.taskTitle ?? null,
   });
+  // Breakpoint delivery: release pushes held while this timer was running.
+  await flushDeferredNotificationPushes(actorUserId, {});
 
   return {
     timer: null,

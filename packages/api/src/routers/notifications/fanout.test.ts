@@ -14,8 +14,11 @@ describe("notification fanout helpers", () => {
     expect(messageCoalesceTaskId("task.message", undefined)).toBeNull();
   });
 
-  test("timer activity defaults to off for in-app and push", () => {
+  test("retunes defaults for balanced productivity policy", () => {
     expect(defaultNotificationChannels("timer.activity")).toEqual({ inApp: false, push: false });
     expect(defaultNotificationChannels("task.assigned")).toEqual({ inApp: true, push: true });
+    expect(defaultNotificationChannels("task.message")).toEqual({ inApp: true, push: true });
+    expect(defaultNotificationChannels("journey.milestone")).toEqual({ inApp: true, push: false });
+    expect(defaultNotificationChannels("team.digest")).toEqual({ inApp: true, push: false });
   });
 });

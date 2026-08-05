@@ -7,6 +7,28 @@ import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-optio
 
 export const NOTIFICATION_LIST_LIMIT = 40;
 
+export type NotificationPreferenceType =
+  | "task.assigned"
+  | "task.message"
+  | "journey.milestone"
+  | "timer.activity"
+  | "team.digest"
+  | "member.alert";
+
+export type NotificationPreferenceItem = {
+  type: NotificationPreferenceType;
+  inApp: boolean;
+  push: boolean;
+};
+
+export type NotificationDeliverySettings = {
+  timezone: string;
+  quietHoursStart: string | null;
+  quietHoursEnd: string | null;
+  focusUntil: string | null;
+  focusMode: boolean;
+};
+
 function notificationListQueryKey(teamId: string) {
   return orpc.notifications.list.queryKey({
     input: { teamId, limit: NOTIFICATION_LIST_LIMIT },
@@ -35,6 +57,17 @@ function patchNotificationList(
   );
 }
 
+function isActionItem(notification: NotificationRecord) {
+  if (notification.deliveryClass === "interrupt" || notification.deliveryClass === "breakpoint") {
+    return true;
+  }
+  return (
+    notification.type === "task.assigned" ||
+    notification.type === "task.message" ||
+    notification.type === "member.alert"
+  );
+}
+
 export function applyNotificationCreatedToCache(
   queryClient: QueryClient,
   teamId: string,
@@ -54,9 +87,13 @@ export function applyNotificationCreatedToCache(
 
   queryClient.setQueryData(
     notificationUnreadCountQueryKey(teamId),
-    (current: { count: number } | undefined) => {
+    (current: { count: number; actionCount?: number } | undefined) => {
       const base = current?.count ?? 0;
-      return notification.seenAt ? { count: base } : { count: base + 1 };
+      const actionBase = current?.actionCount ?? 0;
+      const nextCount = notification.seenAt ? base : base + 1;
+      const nextAction =
+        !notification.readAt && isActionItem(notification) ? actionBase + 1 : actionBase;
+      return { count: nextCount, actionCount: nextAction };
     },
   );
 }
@@ -68,15 +105,31 @@ function markAllReadInCache(queryClient: QueryClient, teamId: string) {
       item.readAt ? item : { ...item, readAt: now, seenAt: item.seenAt ?? now },
     ),
   );
+  queryClient.setQueryData(notificationUnreadCountQueryKey(teamId), {
+    count: 0,
+    actionCount: 0,
+  });
 }
 
 function markOneReadInCache(queryClient: QueryClient, teamId: string, notificationId: string) {
   const now = new Date().toISOString();
+  let wasUnreadAction = false;
   patchNotificationList(queryClient, teamId, (items) =>
-    items.map((item) =>
-      item.id === notificationId ? { ...item, readAt: now, seenAt: item.seenAt ?? now } : item,
-    ),
+    items.map((item) => {
+      if (item.id !== notificationId) return item;
+      if (!item.readAt && isActionItem(item)) wasUnreadAction = true;
+      return { ...item, readAt: now, seenAt: item.seenAt ?? now };
+    }),
   );
+  if (wasUnreadAction) {
+    queryClient.setQueryData(
+      notificationUnreadCountQueryKey(teamId),
+      (current: { count: number; actionCount?: number } | undefined) => ({
+        count: current?.count ?? 0,
+        actionCount: Math.max(0, (current?.actionCount ?? 0) - 1),
+      }),
+    );
+  }
 }
 
 function markSeenInCache(queryClient: QueryClient, teamId: string) {
@@ -84,7 +137,13 @@ function markSeenInCache(queryClient: QueryClient, teamId: string) {
   patchNotificationList(queryClient, teamId, (items) =>
     items.map((item) => (item.seenAt ? item : { ...item, seenAt: now })),
   );
-  queryClient.setQueryData(notificationUnreadCountQueryKey(teamId), { count: 0 });
+  queryClient.setQueryData(
+    notificationUnreadCountQueryKey(teamId),
+    (current: { count: number; actionCount?: number } | undefined) => ({
+      count: 0,
+      actionCount: current?.actionCount ?? 0,
+    }),
+  );
 }
 
 async function invalidateNotificationQueries(queryClient: QueryClient, teamId: string) {
@@ -184,19 +243,27 @@ export function useSetNotificationPreferencesMutation(teamId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (
-      preferences: Array<{
-        type:
-          | "task.assigned"
-          | "task.message"
-          | "journey.milestone"
-          | "timer.activity"
-          | "team.digest"
-          | "member.alert";
-        inApp: boolean;
-        push: boolean;
-      }>,
-    ) => orpc.notifications.preferences.set.call({ teamId, preferences }),
+    mutationFn: (preferences: NotificationPreferenceItem[]) =>
+      orpc.notifications.preferences.set.call({ teamId, preferences }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: notificationPreferencesQueryKey(teamId),
+      });
+    },
+  });
+}
+
+export function useSetNotificationDeliverySettingsMutation(teamId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: {
+      timezone?: string;
+      quietHoursStart?: string | null;
+      quietHoursEnd?: string | null;
+      focusMode?: boolean;
+      focusUntil?: string | null;
+    }) => orpc.notifications.preferences.setDelivery.call({ teamId, ...input }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: notificationPreferencesQueryKey(teamId),

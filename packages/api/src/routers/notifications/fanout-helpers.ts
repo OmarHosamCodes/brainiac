@@ -17,10 +17,11 @@ export function defaultNotificationChannels(type: NotificationType): {
   switch (type) {
     case "timer.activity":
       return { inApp: false, push: false };
-    case "task.assigned":
-    case "task.message":
     case "journey.milestone":
     case "team.digest":
+      return { inApp: true, push: false };
+    case "task.assigned":
+    case "task.message":
     case "member.alert":
       return { inApp: true, push: true };
     default: {

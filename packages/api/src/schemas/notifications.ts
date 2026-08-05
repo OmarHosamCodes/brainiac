@@ -9,6 +9,13 @@ export const notificationTypeSchema = z.enum([
   "member.alert",
 ]);
 
+export const notificationDeliveryClassSchema = z.enum([
+  "interrupt",
+  "breakpoint",
+  "center",
+  "digest",
+]);
+
 export const notificationPayloadSchema = z.object({
   projectId: z.string().min(1).optional(),
   projectName: z.string().min(1).optional(),
@@ -37,6 +44,7 @@ export const notificationRecordSchema = z.object({
   actorName: z.string().nullable(),
   actorAvatar: z.string().nullable(),
   type: notificationTypeSchema,
+  deliveryClass: notificationDeliveryClassSchema.nullable(),
   payload: notificationPayloadSchema,
   readAt: z.string().datetime().nullable(),
   seenAt: z.string().datetime().nullable(),
@@ -50,6 +58,28 @@ export const notificationPreferenceSchema = z.object({
   type: notificationTypeSchema,
   inApp: z.boolean(),
   push: z.boolean(),
+});
+
+const clockTimeSchema = z
+  .string()
+  .regex(/^([01]?\d|2[0-3]):([0-5]\d)$/, "Expected HH:mm")
+  .nullable();
+
+export const notificationDeliverySettingsSchema = z.object({
+  timezone: z.string().min(1),
+  quietHoursStart: clockTimeSchema,
+  quietHoursEnd: clockTimeSchema,
+  focusUntil: z.string().datetime().nullable(),
+  focusMode: z.boolean(),
+});
+
+export const notificationDeliverySettingsSetInputSchema = z.object({
+  teamId: z.string().min(1),
+  timezone: z.string().min(1).optional(),
+  quietHoursStart: clockTimeSchema.optional(),
+  quietHoursEnd: clockTimeSchema.optional(),
+  focusMode: z.boolean().optional(),
+  focusUntil: z.string().datetime().nullable().optional(),
 });
 
 export const teamScopedNotificationInputSchema = z.object({
