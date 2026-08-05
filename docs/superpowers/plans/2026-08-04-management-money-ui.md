@@ -100,9 +100,10 @@ Stats cards first (scoreboard + metric jump-offs). Dual Clients | Payroll and de
 | 8c   | Adjustments Bills + multi-section keys          | **Done**   | debt/charity/pbc; nullable payee                     |
 | 8    | Wire payroll schema + API + replace fixtures    | **Done**   | Expenses + stats + settings landed                   |
 | Ms   | Money settings persistence                      | **Done**   | `agency_ops_money_settings` get/upsert               |
+| Mf   | Dynamic chip formulas (scoreboard + payouts)    | **Done**   | Templates + custom; preview; syncFormulaLines        |
 | 9    | Member monthly sheet when provided              | Blocked    | Needs `artifacts/` sheet; stand-in hours × cost rate |
 
-**Ship readiness:** Money surface is period-live end-to-end: Expenses CRUD, Bills (Clients / Team / Adjustments), Period run shell, Money settings persist, and scoreboard metrics with jump-offs. Expenses stay on the Expenses card only (not Bills rows). **Part 9 blocked** until member monthly payment sheet artifact exists — salaries remain `hours × costRateCents` (“Estimated from hours × cost rate”).
+**Ship readiness:** Money surface is period-live end-to-end: Expenses CRUD, Bills (Clients / Team / Adjustments), Period run shell, Money settings persist, chip Formulas (Fin-Sheet templates + custom) driving scoreboard + draft payout lines, and scoreboard metrics with jump-offs. Expenses stay on the Expenses card only (not Bills rows). **Part 9 blocked** until member monthly payment sheet artifact exists — salaries remain `hours × costRateCents` (“Estimated from hours × cost rate”). Spec: [`docs/superpowers/specs/2026-08-05-money-dynamic-formulas-design.md`](../specs/2026-08-05-money-dynamic-formulas-design.md).
 
 ---
 
@@ -268,3 +269,4 @@ Superseded for now by stats-first IA.
 | 2026-08-05 | **Client Bills real:** invoice `received_cents` + partial/refunded; period list/search; Money Bills rows + create/payment actions |
 | 2026-08-05 | Bills default: period activity — clients with time (uninvoiced) + members who worked; `invoices.periodActivity`                   |
 | 2026-08-05 | **Team Bills real:** payout_run/section/line; createFromMember; Payment/Mark paid; Ready to pay section                           |
+| 2026-08-05 | **Dynamic Formulas:** chip/token builder; system templates; safe eval → scoreboard + `syncFormulaLines`; run formula snapshot     |
