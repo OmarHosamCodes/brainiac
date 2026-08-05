@@ -71,36 +71,59 @@ describe("peopleConfigStepDone", () => {
 });
 
 describe("peopleDirectoryAttentionCount", () => {
-  test("counts incomplete and override cards", () => {
+  test("counts incomplete only, not override", () => {
     expect(
       peopleDirectoryAttentionCount([
         complete,
         { ...complete, hasRate: false },
         { ...complete, hasActiveExemption: true },
       ]),
-    ).toBe(2);
+    ).toBe(1);
   });
 });
 
 describe("peopleDirectoryListSignals", () => {
-  test("does not mark incomplete for unknown HR fields", () => {
+  test("marks incomplete when HR fields are missing", () => {
     const signals = peopleDirectoryListSignals({
+      hasEmploymentType: false,
+      hasWorkModel: false,
+      hasContact: false,
       hasRate: true,
       tenureAwaitingFirstEntry: false,
       hasTenureOverride: false,
       hasActiveExemption: false,
+      employmentStatus: null,
     });
-    expect(peopleConfigBadge(signals)).toBe(null);
-    expect(peopleConfigCompletionPercent(signals)).toBe(100);
+    expect(peopleConfigBadge(signals)).toBe("Incomplete");
+    expect(peopleConfigCompletionPercent(signals)).toBe(67);
   });
 
   test("marks incomplete when rate is missing", () => {
     const signals = peopleDirectoryListSignals({
+      hasEmploymentType: true,
+      hasWorkModel: true,
+      hasContact: true,
       hasRate: false,
       tenureAwaitingFirstEntry: false,
       hasTenureOverride: false,
       hasActiveExemption: false,
+      employmentStatus: null,
     });
     expect(peopleConfigBadge(signals)).toBe("Incomplete");
+  });
+
+  test("does not treat member exemption alone as incomplete", () => {
+    const signals = peopleDirectoryListSignals({
+      hasEmploymentType: true,
+      hasWorkModel: true,
+      hasContact: true,
+      hasRate: true,
+      tenureAwaitingFirstEntry: false,
+      hasTenureOverride: false,
+      hasActiveExemption: true,
+      employmentStatus: "active",
+    });
+    expect(peopleConfigBadge(signals)).toBe("Override");
+    expect(peopleConfigCompletionPercent(signals)).toBe(100);
   });
 });

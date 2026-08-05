@@ -14,7 +14,7 @@ export type PeopleConfigBadge = "Incomplete" | "Override" | "Inactive" | null;
 export const PEOPLE_CONFIG_STEPS = [
   { id: "identity", label: "Identity" },
   { id: "employment", label: "Employment" },
-  { id: "leave", label: "Leave allowances" },
+  { id: "leave", label: "Off days" },
   { id: "rates", label: "Rates" },
   { id: "tenure", label: "Intern & tenure" },
   { id: "access", label: "Access" },
@@ -58,28 +58,30 @@ export function peopleConfigBadge(signals: PeopleConfigSignals): PeopleConfigBad
   return null;
 }
 
+/** Attention = Incomplete only; Override stays informational on the card. */
 export function peopleDirectoryAttentionCount(items: readonly PeopleConfigSignals[]): number {
-  return items.filter((item) => {
-    const badge = peopleConfigBadge(item);
-    return badge === "Incomplete" || badge === "Override";
-  }).length;
+  return items.filter((item) => peopleConfigBadge(item) === "Incomplete").length;
 }
 
-/** List surfaces only know rates + tenure summary — treat HR steps as ready. */
+/** Map list-summary fields into the shared completion signals shape. */
 export function peopleDirectoryListSignals(input: {
+  hasEmploymentType: boolean;
+  hasWorkModel: boolean;
+  hasContact: boolean;
   hasRate: boolean;
   tenureAwaitingFirstEntry: boolean;
   hasTenureOverride: boolean;
   hasActiveExemption: boolean;
+  employmentStatus: "active" | "inactive" | null;
 }): PeopleConfigSignals {
   return {
-    hasEmploymentType: true,
-    hasWorkModel: true,
-    hasContact: true,
+    hasEmploymentType: input.hasEmploymentType,
+    hasWorkModel: input.hasWorkModel,
+    hasContact: input.hasContact,
     hasRate: input.hasRate,
     tenureAwaitingFirstEntry: input.tenureAwaitingFirstEntry,
     hasTenureOverride: input.hasTenureOverride,
     hasActiveExemption: input.hasActiveExemption,
-    employmentStatus: null,
+    employmentStatus: input.employmentStatus,
   };
 }

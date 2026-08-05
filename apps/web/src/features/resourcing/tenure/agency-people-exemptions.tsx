@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import type { FiscalMonth } from "@/features/resourcing/tenure-utils";
+import { FISCAL_MONTHS, type FiscalMonth } from "@/features/resourcing/tenure-utils";
 import {
   agencyFormFieldClass,
   agencyFormLabelClass,
@@ -38,9 +38,23 @@ type AgencyPeopleExemptionsProps = {
   onDraftChange: (draft: PeopleExemptionDraft) => void;
   canEdit: boolean;
   saving: boolean;
-  onAdd: () => void;
+  onAdd: () => Promise<void>;
   onRemove: (exemptionId: string) => void;
 };
+
+const EXEMPTION_TYPE_LABELS: Record<PeopleExemptionDraft["type"], string> = {
+  team_holiday: "Team holiday quarter",
+  member_waiver: "Member waiver",
+  member_reduced_min: "Reduced minimum",
+  member_frozen_month: "Frozen month",
+};
+
+function exemptionTypeLabel(type: string): string {
+  if (type in EXEMPTION_TYPE_LABELS) {
+    return EXEMPTION_TYPE_LABELS[type as PeopleExemptionDraft["type"]];
+  }
+  return type.replaceAll("_", " ");
+}
 
 export function AgencyPeopleExemptions({
   exemptions,
@@ -52,11 +66,6 @@ export function AgencyPeopleExemptions({
   onRemove,
 }: AgencyPeopleExemptionsProps) {
   const [formOpen, setFormOpen] = useState(false);
-
-  useEffect(() => {
-    if (saving) return;
-    setFormOpen(false);
-  }, [saving]);
 
   return (
     <div className="space-y-3 border-border border-t pt-4">
@@ -71,7 +80,7 @@ export function AgencyPeopleExemptions({
           <Popover open={formOpen} onOpenChange={setFormOpen}>
             <PopoverTrigger asChild>
               <Button size="sm" type="button">
-                <Plus className="size-4" />
+                <Plus className="size-4" aria-hidden />
                 Add exemption
               </Button>
             </PopoverTrigger>
@@ -80,7 +89,13 @@ export function AgencyPeopleExemptions({
                 className="space-y-4"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  onAdd();
+                  void onAdd()
+                    .then(() => {
+                      setFormOpen(false);
+                    })
+                    .catch(() => {
+                      // Keep open with error toast from the hook.
+                    });
                 }}
               >
                 <p className="text-sm font-bold text-highlighted">New exemption</p>
@@ -105,6 +120,12 @@ export function AgencyPeopleExemptions({
                       <SelectItem value="member_frozen_month">Frozen month</SelectItem>
                     </SelectContent>
                   </Select>
+                  {draft.type === "team_holiday" ? (
+                    <p className={agencyWorkMetaClass}>
+                      Applies to everyone on the team for that quarter. It does not mark individual
+                      members as Override.
+                    </p>
+                  ) : null}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className={agencyFormFieldClass}>
@@ -169,14 +190,11 @@ export function AgencyPeopleExemptions({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {Array.from({ length: 12 }, (_, index) => {
-                          const month = (index + 1) as FiscalMonth;
-                          return (
-                            <SelectItem key={month} value={String(month)}>
-                              {month}
-                            </SelectItem>
-                          );
-                        })}
+                        {FISCAL_MONTHS.map((month) => (
+                          <SelectItem key={month.value} value={String(month.value)}>
+                            {month.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -207,7 +225,7 @@ export function AgencyPeopleExemptions({
               <div>
                 <p className="text-sm font-medium text-highlighted">
                   FY{String(exemption.fiscalYear).slice(-2)} Q{exemption.fiscalQuarter} ·{" "}
-                  {exemption.type.replaceAll("_", " ")}
+                  {exemptionTypeLabel(exemption.type)}
                 </p>
                 {exemption.type === "team_holiday" ? (
                   <p className={agencyWorkMetaClass}>Team-wide</p>
@@ -221,7 +239,7 @@ export function AgencyPeopleExemptions({
                   aria-label="Remove exemption"
                   onClick={() => onRemove(exemption.id)}
                 >
-                  <Trash2 className="size-4" />
+                  <Trash2 className="size-4" aria-hidden />
                 </Button>
               ) : null}
             </li>

@@ -180,6 +180,12 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
   const policy = policyQuery.data?.policy ?? null;
   const members = summaryQuery.data?.items ?? [];
   const policyEnabled = summaryQuery.data?.policyEnabled ?? false;
+  const isSummaryError = summaryQuery.isError && !summaryQuery.data;
+  const isSummaryStaleError = summaryQuery.isError && Boolean(summaryQuery.data);
+  const summaryErrorMessage = getErrorMessage(
+    summaryQuery.error,
+    "People directory could not be loaded.",
+  );
   const exemptions = exemptionsQuery.data?.items ?? [];
   const rates = ratesQuery.data?.items ?? [];
   const teamMembers = teamQuery.data?.members ?? [];
@@ -357,10 +363,13 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     return ids;
   }, [exemptions]);
 
-  const hasTeamHolidayExemption = useMemo(
-    () => exemptions.some((exemption) => exemption.type === "team_holiday"),
-    [exemptions],
-  );
+  const assignedDepartmentIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const member of members) {
+      if (member.departmentId) ids.add(member.departmentId);
+    }
+    return ids;
+  }, [members]);
 
   const memberExemptions = useMemo(() => {
     if (!selectedUserId) return [];
@@ -373,13 +382,18 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     const signalsList: PeopleConfigSignals[] = [];
     const cards: PeopleDirectoryCard[] = members.map((member) => {
       const rate = rateByUserId.get(member.userId);
-      const hasActiveExemption = exemptionUserIds.has(member.userId) || hasTeamHolidayExemption;
-      const hasOverride = Boolean(member.internStart || member.internEnd) || hasActiveExemption;
+      const hasActiveExemption = exemptionUserIds.has(member.userId);
+      const hasExplicitInternOverride =
+        !member.internDerived && Boolean(member.internStart || member.internEnd);
       const signals = peopleDirectoryListSignals({
+        hasEmploymentType: Boolean(member.employmentType),
+        hasWorkModel: Boolean(member.workModel),
+        hasContact: member.hasContact,
         hasRate: rate?.billableRateCents != null || rate?.costRateCents != null,
         tenureAwaitingFirstEntry: member.awaitingFirstEntry,
-        hasTenureOverride: hasOverride,
+        hasTenureOverride: hasExplicitInternOverride,
         hasActiveExemption,
+        employmentStatus: member.status,
       });
       signalsList.push(signals);
       const rateLabel =
@@ -403,41 +417,35 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       directoryCards: cards,
       attentionCount: peopleDirectoryAttentionCount(signalsList),
     };
-  }, [avatarByUserId, exemptionUserIds, hasTeamHolidayExemption, members, rateByUserId]);
+  }, [avatarByUserId, exemptionUserIds, members, rateByUserId]);
 
   const selectedSignals: PeopleConfigSignals = useMemo(() => {
     const summary = members.find((member) => member.userId === selectedUserId);
     const hr = memberProfile?.hrProfile;
+    // Prefer live detail when loaded so opening a card matches list math for the same fields.
+    const hasEmploymentType = hr ? Boolean(hr.employmentType) : Boolean(summary?.employmentType);
+    const hasWorkModel = hr ? Boolean(hr.workModel) : Boolean(summary?.workModel);
+    const hasContact = hr
+      ? Boolean(hr.phone?.trim() || hr.address?.trim())
+      : Boolean(summary?.hasContact);
+    const hasExplicitInternOverride = memberDetail
+      ? !memberDetail.internDerived && Boolean(memberDetail.internStart || memberDetail.internEnd)
+      : Boolean(summary && !summary.internDerived && (summary.internStart || summary.internEnd));
     return {
-      hasEmploymentType: Boolean(hr?.employmentType),
-      hasWorkModel: Boolean(hr?.workModel),
-      hasContact: Boolean(hr?.phone?.trim() || hr?.address?.trim()),
+      hasEmploymentType,
+      hasWorkModel,
+      hasContact,
       hasRate: (() => {
         if (!selectedUserId) return false;
         const rate = rateByUserId.get(selectedUserId);
         return rate?.billableRateCents != null || rate?.costRateCents != null;
       })(),
       tenureAwaitingFirstEntry: summary?.awaitingFirstEntry ?? false,
-      hasTenureOverride: Boolean(
-        memberDetail?.internStart ||
-        memberDetail?.internEnd ||
-        memberDetail?.internExemptFromQuarterMin ||
-        (selectedUserId && (exemptionUserIds.has(selectedUserId) || hasTeamHolidayExemption)),
-      ),
-      hasActiveExemption: Boolean(
-        selectedUserId && (exemptionUserIds.has(selectedUserId) || hasTeamHolidayExemption),
-      ),
-      employmentStatus: hr?.status ?? null,
+      hasTenureOverride: hasExplicitInternOverride,
+      hasActiveExemption: Boolean(selectedUserId && exemptionUserIds.has(selectedUserId)),
+      employmentStatus: hr?.status ?? summary?.status ?? null,
     };
-  }, [
-    exemptionUserIds,
-    hasTeamHolidayExemption,
-    memberDetail,
-    memberProfile,
-    members,
-    rateByUserId,
-    selectedUserId,
-  ]);
+  }, [exemptionUserIds, memberDetail, memberProfile, members, rateByUserId, selectedUserId]);
 
   const guidedSteps = useMemo(() => {
     const done = peopleConfigStepDone(selectedSignals);
@@ -622,8 +630,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     const cost = Number.parseFloat(rateDraft.costRate);
     const billable = Number.parseFloat(rateDraft.billableRate);
     if (!Number.isFinite(cost) || !Number.isFinite(billable)) {
-      toast.error("Enter valid rates");
-      return;
+      throw new Error("Enter valid rates");
     }
     setSavingRate(true);
     try {
@@ -636,6 +643,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
         effectiveFrom: dateKeyToUtcIso(rateDraft.effectiveFrom),
       });
       await invalidatePeopleQueries();
+      toast.success("Rates saved");
     } finally {
       setSavingRate(false);
     }
@@ -662,6 +670,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     try {
       await updateMemberRole(teamId, selectedUserId, roleDraft);
       await invalidatePeopleQueries();
+      toast.success("Access saved");
     } finally {
       setSavingRole(false);
     }
@@ -690,6 +699,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       toast.error("Couldn't save exemption", {
         description: getErrorMessage(error, "Try again."),
       });
+      throw error;
     }
   }
 
@@ -706,7 +716,71 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     }
   }
 
-  async function saveActiveStep() {
+  function canEditActiveStep(stepId: PeopleConfigStepId): boolean {
+    if (stepId === "identity" || stepId === "employment" || stepId === "leave") return canEditHr;
+    if (stepId === "rates") return Boolean(isOwner);
+    if (stepId === "tenure") return Boolean(isOwner);
+    return Boolean(isOwner);
+  }
+
+  function isActiveStepDirty(): boolean {
+    switch (activeStepId) {
+      case "identity":
+      case "employment":
+      case "leave": {
+        if (!memberProfile) return false;
+        const hr = memberProfile.hrProfile;
+        return (
+          hrDraft.status !== hr.status ||
+          (hrDraft.departmentId || "") !== (hr.departmentId ?? "") ||
+          (hrDraft.employmentType || "") !== (hr.employmentType ?? "") ||
+          (hrDraft.workModel || "") !== (hr.workModel ?? "") ||
+          hrDraft.gender !== normalizeGenderDraft(hr.gender) ||
+          (hrDraft.dateOfBirth || "") !== (hr.dateOfBirth ?? "") ||
+          hrDraft.phone.trim() !== (hr.phone ?? "").trim() ||
+          hrDraft.address.trim() !== (hr.address ?? "").trim() ||
+          hrDraft.linkedinUrl.trim() !== (hr.linkedinUrl ?? "").trim() ||
+          hrDraft.offAllowanceDays !== String(hr.offAllowanceDays) ||
+          hrDraft.leaveAllowancePeriod !== (hr.leaveAllowancePeriod ?? "year")
+        );
+      }
+      case "rates": {
+        if (!selectedUserId) return false;
+        const rate = rateByUserId.get(selectedUserId);
+        const empty = emptyRateDraft();
+        const cost =
+          rate?.costRateCents != null ? (rate.costRateCents / 100).toFixed(2) : empty.costRate;
+        const billable =
+          rate?.billableRateCents != null
+            ? (rate.billableRateCents / 100).toFixed(2)
+            : empty.billableRate;
+        return (
+          rateDraft.costRate !== cost ||
+          rateDraft.billableRate !== billable ||
+          rateDraft.currency !== (rate?.currency || empty.currency) ||
+          rateDraft.effectiveFrom !== (rate?.effectiveFrom?.slice(0, 10) ?? empty.effectiveFrom)
+        );
+      }
+      case "tenure": {
+        if (!memberDetail) return false;
+        return (
+          tenureDraft.internStart !== (memberDetail.internStart?.slice(0, 10) ?? "") ||
+          tenureDraft.internEnd !== (memberDetail.internEnd?.slice(0, 10) ?? "") ||
+          tenureDraft.internCountsTowardTenure !== memberDetail.internCountsTowardTenure ||
+          tenureDraft.internExemptFromQuarterMin !== memberDetail.internExemptFromQuarterMin ||
+          tenureDraft.notes.trim() !== (memberDetail.notes ?? "").trim()
+        );
+      }
+      case "access":
+        return Boolean(memberProfile && roleDraft !== memberProfile.role);
+      default: {
+        const _exhaustive: never = activeStepId;
+        return _exhaustive;
+      }
+    }
+  }
+
+  async function saveActiveStep(): Promise<boolean> {
     try {
       switch (activeStepId) {
         case "identity":
@@ -728,10 +802,12 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
           return _exhaustive;
         }
       }
+      return true;
     } catch (error) {
       toast.error("Couldn't save step", {
         description: getErrorMessage(error, "Try again."),
       });
+      return false;
     }
   }
 
@@ -750,7 +826,11 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     setActiveStepId(PEOPLE_CONFIG_STEP_IDS[stepIndex - 1]!);
   }
 
-  function goNextStep() {
+  async function goNextStep() {
+    if (canEditActiveStep(activeStepId) && isActiveStepDirty()) {
+      const saved = await saveActiveStep();
+      if (!saved) return;
+    }
     if (stepIndex >= PEOPLE_CONFIG_STEP_IDS.length - 1) {
       clearSelectedMember();
       return;
@@ -791,11 +871,27 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       })
     : "—";
 
-  const isLoading = policyQuery.isPending || summaryQuery.isPending || teamQuery.isPending;
+  const isLoading =
+    (policyQuery.isPending || summaryQuery.isPending || teamQuery.isPending) && !isSummaryError;
   const savingStep = hrPending || savingRate || savingRole || saveProfileMutation.isPending;
+
+  const weekStartLabel = (() => {
+    const day = policy?.weekStartsOn;
+    if (day == null) return null;
+    const labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    return labels[day] ?? null;
+  })();
 
   return {
     isLoading,
+    isSummaryError,
+    isSummaryStaleError,
+    summaryErrorMessage,
+    retrySummary: () => {
+      void summaryQuery.refetch();
+      void policyQuery.refetch();
+      void teamQuery.refetch();
+    },
     isOwner,
     canEditHr,
     policyDraft,
@@ -809,8 +905,11 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     policyEffectiveLabel,
     quarterlyMinHours: policy?.quarterlyMinHours ?? null,
     internDurationMonths: policy?.internDurationMonths ?? null,
+    requiredDailyHours: policy?.requiredDailyHours ?? null,
+    weekStartLabel,
     departmentCount: departments.length,
     departments,
+    assignedDepartmentIds,
     addDepartment,
     renameDepartment,
     removeDepartment,

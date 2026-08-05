@@ -15,6 +15,7 @@ import type { AgencyDepartmentOption } from "./agency-departments";
 
 type AgencyPeopleDepartmentsProps = {
   departments: readonly AgencyDepartmentOption[];
+  assignedDepartmentIds?: ReadonlySet<string>;
   canEdit: boolean;
   onCreate: (name: string) => Promise<void>;
   onRename: (departmentId: string, name: string) => Promise<void>;
@@ -23,6 +24,7 @@ type AgencyPeopleDepartmentsProps = {
 
 export function AgencyPeopleDepartments({
   departments,
+  assignedDepartmentIds,
   canEdit,
   onCreate,
   onRename,
@@ -64,6 +66,7 @@ export function AgencyPeopleDepartments({
         <ul className="space-y-2">
           {departments.map((department) => {
             const editing = editingId === department.id;
+            const assigned = assignedDepartmentIds?.has(department.id) ?? false;
             return (
               <li
                 key={department.id}
@@ -119,7 +122,17 @@ export function AgencyPeopleDepartments({
                       type="button"
                       size="icon-sm"
                       variant="ghost"
-                      aria-label={`Delete ${department.name}`}
+                      aria-label={
+                        assigned
+                          ? `Delete ${department.name} (reassign members first)`
+                          : `Delete ${department.name}`
+                      }
+                      disabled={assigned}
+                      title={
+                        assigned
+                          ? "Reassign or clear members before deleting this department."
+                          : undefined
+                      }
                       onClick={() => void onDelete(department.id)}
                     >
                       <Trash2 className="size-3.5" aria-hidden />

@@ -51,6 +51,11 @@ type AgencySettingsTenurePolicyProps = {
   embedded?: boolean;
 };
 
+function weekStartLabel(value: string): string {
+  const day = Number.parseInt(value, 10);
+  return WEEK_START_OPTIONS.find((option) => option.value === day)?.label ?? "—";
+}
+
 export function AgencySettingsTenurePolicy({
   policyDraft,
   onPolicyDraftChange,
@@ -74,7 +79,57 @@ export function AgencySettingsTenurePolicy({
   const weekendDaysId = `${idPrefix}-weekend-days`;
 
   if (!isOwner) {
-    return null;
+    const monthLabel =
+      FISCAL_MONTHS.find((month) => month.value === policyDraft.fiscalYearStartMonth)?.label ?? "—";
+    return (
+      <section className={cn(!embedded && agencyPanelClass, !embedded && "p-5 sm:p-6")}>
+        {embedded ? null : <h3 className="text-sm font-bold text-highlighted">Team policy</h3>}
+        <p className={cn("text-muted text-sm", !embedded && "mt-1")}>
+          Read-only team defaults. Ask an owner to change policy or departments.
+        </p>
+        <dl className={cn("grid gap-3 text-sm", embedded ? "mt-4" : "mt-5")}>
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">Fiscal year starts</dt>
+            <dd className="text-highlighted">
+              {monthLabel} {policyDraft.fiscalYearStartDay}
+            </dd>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">Min hours per quarter</dt>
+            <dd className="text-highlighted font-mono tabular-nums">
+              {policyDraft.quarterlyMinHours}h
+            </dd>
+          </div>
+          <div className="border-border space-y-2 border-t pt-3">
+            <dt className="text-highlighted text-xs font-semibold tracking-wide uppercase">
+              Work schedule
+            </dt>
+            <div className="flex flex-wrap justify-between gap-2">
+              <dt className="text-muted">Required daily hours</dt>
+              <dd className="text-highlighted font-mono tabular-nums">
+                {policyDraft.requiredDailyHours}h
+              </dd>
+            </div>
+            <div className="flex flex-wrap justify-between gap-2">
+              <dt className="text-muted">Week start</dt>
+              <dd className="text-highlighted">{weekStartLabel(policyDraft.weekStartsOn)}</dd>
+            </div>
+            <div className="flex flex-wrap justify-between gap-2">
+              <dt className="text-muted">Weekend duration</dt>
+              <dd className="text-highlighted font-mono tabular-nums">
+                {policyDraft.weekendDurationDays}{" "}
+                {policyDraft.weekendDurationDays === "1" ? "day" : "days"}
+              </dd>
+            </div>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">Tenure tracking</dt>
+            <dd className="text-highlighted">{policyDraft.enabled ? "On" : "Off"}</dd>
+          </div>
+          <p className="text-muted text-sm">{fiscalYearPreview}</p>
+        </dl>
+      </section>
+    );
   }
 
   return (
@@ -165,66 +220,73 @@ export function AgencySettingsTenurePolicy({
               }
             />
           </div>
+        </div>
 
-          <div className={agencyFormFieldClass}>
-            <Label htmlFor={dailyHoursId} className={agencyFormLabelClass}>
-              Required daily hours
-            </Label>
-            <Input
-              id={dailyHoursId}
-              type="number"
-              min={1}
-              max={24}
-              value={policyDraft.requiredDailyHours}
-              className="w-full max-w-[10rem]"
-              onChange={(event) =>
-                onPolicyDraftChange({ ...policyDraft, requiredDailyHours: event.target.value })
-              }
-            />
-          </div>
+        <div className="border-border space-y-4 border-t pt-4">
+          <h4 className="text-highlighted text-xs font-semibold tracking-wide uppercase">
+            Work schedule
+          </h4>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor={dailyHoursId} className={agencyFormLabelClass}>
+                Required daily hours
+              </Label>
+              <Input
+                id={dailyHoursId}
+                type="number"
+                min={1}
+                max={24}
+                value={policyDraft.requiredDailyHours}
+                className="w-full max-w-[10rem]"
+                onChange={(event) =>
+                  onPolicyDraftChange({ ...policyDraft, requiredDailyHours: event.target.value })
+                }
+              />
+            </div>
 
-          <div className={agencyFormFieldClass}>
-            <Label htmlFor={weekStartsId} className={agencyFormLabelClass}>
-              Start week
-            </Label>
-            <Select
-              value={policyDraft.weekStartsOn}
-              onValueChange={(value) =>
-                onPolicyDraftChange({ ...policyDraft, weekStartsOn: value })
-              }
-            >
-              <SelectTrigger id={weekStartsId} className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {WEEK_START_OPTIONS.map((day) => (
-                  <SelectItem key={day.value} value={String(day.value)}>
-                    {day.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor={weekStartsId} className={agencyFormLabelClass}>
+                Week start
+              </Label>
+              <Select
+                value={policyDraft.weekStartsOn}
+                onValueChange={(value) =>
+                  onPolicyDraftChange({ ...policyDraft, weekStartsOn: value })
+                }
+              >
+                <SelectTrigger id={weekStartsId} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WEEK_START_OPTIONS.map((day) => (
+                    <SelectItem key={day.value} value={String(day.value)}>
+                      {day.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className={agencyFormFieldClass}>
-            <Label htmlFor={weekendDaysId} className={agencyFormLabelClass}>
-              Weekend duration
-            </Label>
-            <Select
-              value={policyDraft.weekendDurationDays}
-              onValueChange={(value) =>
-                onPolicyDraftChange({ ...policyDraft, weekendDurationDays: value })
-              }
-            >
-              <SelectTrigger id={weekendDaysId} className="w-full max-w-[10rem]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 day</SelectItem>
-                <SelectItem value="2">2 days</SelectItem>
-                <SelectItem value="3">3 days</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor={weekendDaysId} className={agencyFormLabelClass}>
+                Weekend duration
+              </Label>
+              <Select
+                value={policyDraft.weekendDurationDays}
+                onValueChange={(value) =>
+                  onPolicyDraftChange({ ...policyDraft, weekendDurationDays: value })
+                }
+              >
+                <SelectTrigger id={weekendDaysId} className="w-full max-w-[10rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 day</SelectItem>
+                  <SelectItem value="2">2 days</SelectItem>
+                  <SelectItem value="3">3 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 

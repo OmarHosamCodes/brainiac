@@ -62,12 +62,12 @@ export function AgencySettingsTenurePaneView({
           exemptionDraft={viewModel.exemptionDraft}
           onExemptionDraftChange={viewModel.setExemptionDraft}
           savingExemption={viewModel.savingExemption}
-          onAddExemption={() => void viewModel.addExemption()}
+          onAddExemption={() => viewModel.addExemption()}
           onRemoveExemption={(exemptionId) => void viewModel.removeExemption(exemptionId)}
           saving={viewModel.savingStep}
           onSaveStep={() => void viewModel.saveActiveStep()}
           onPrevious={viewModel.goPreviousStep}
-          onNext={viewModel.goNextStep}
+          onNext={() => void viewModel.goNextStep()}
           stepIndex={viewModel.stepIndex}
           stepCount={viewModel.stepCount}
           isLoading={viewModel.loadingSelected}
@@ -77,14 +77,19 @@ export function AgencySettingsTenurePaneView({
           policyEnabled={viewModel.policyEnabled}
           policyEffectiveLabel={viewModel.policyEffectiveLabel}
           quarterlyMinHours={viewModel.quarterlyMinHours}
-          internDurationMonths={viewModel.internDurationMonths}
+          requiredDailyHours={viewModel.requiredDailyHours}
+          weekStartLabel={viewModel.weekStartLabel}
           departmentCount={viewModel.departmentCount}
           memberCount={viewModel.memberCount}
           attentionCount={viewModel.attentionCount}
           cards={viewModel.directoryCards}
-          canEditPolicy={viewModel.isOwner}
+          canReviewDefaults
           onReviewDefaults={() => viewModel.setDefaultsOpen(true)}
           onSelectMember={viewModel.selectMember}
+          isLoadError={viewModel.isSummaryError}
+          isStaleLoadError={viewModel.isSummaryStaleError}
+          loadErrorMessage={viewModel.summaryErrorMessage}
+          onRetryLoad={viewModel.retrySummary}
         />
       )}
 
@@ -93,12 +98,13 @@ export function AgencySettingsTenurePaneView({
           <DialogHeader className="border-border border-b px-6 py-4">
             <DialogTitle>Team defaults</DialogTitle>
             <DialogDescription>
-              Tenure policy and department catalog for the team.
+              Work schedule, tenure policy, and department catalog for the team.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[min(70vh,36rem)] space-y-8 overflow-y-auto px-6 py-5">
             <AgencyPeopleDepartments
               departments={viewModel.departments}
+              assignedDepartmentIds={viewModel.assignedDepartmentIds}
               canEdit={viewModel.isOwner}
               onCreate={viewModel.addDepartment}
               onRename={viewModel.renameDepartment}

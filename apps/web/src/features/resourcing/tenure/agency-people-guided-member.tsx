@@ -95,7 +95,7 @@ type AgencyPeopleGuidedMemberProps = {
   exemptionDraft: PeopleExemptionDraft;
   onExemptionDraftChange: (draft: PeopleExemptionDraft) => void;
   savingExemption: boolean;
-  onAddExemption: () => void;
+  onAddExemption: () => Promise<void>;
   onRemoveExemption: (exemptionId: string) => void;
   saving: boolean;
   onSaveStep: () => void;
@@ -312,7 +312,9 @@ export function AgencyPeopleGuidedMember({
                       />
                     </div>
                     <div className={agencyFormFieldClass}>
-                      <Label className={agencyFormLabelClass}>Gender</Label>
+                      <Label className={agencyFormLabelClass} htmlFor="people-hr-gender">
+                        Gender
+                      </Label>
                       <Select
                         value={hrDraft.gender || "none"}
                         disabled={!canEditHr}
@@ -323,7 +325,7 @@ export function AgencyPeopleGuidedMember({
                           })
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger id="people-hr-gender" className="w-full">
                           <SelectValue placeholder="—" />
                         </SelectTrigger>
                         <SelectContent>
@@ -363,7 +365,9 @@ export function AgencyPeopleGuidedMember({
                   </div>
                   <FieldGrid>
                     <div className={agencyFormFieldClass}>
-                      <Label className={agencyFormLabelClass}>Status</Label>
+                      <Label className={agencyFormLabelClass} htmlFor="people-hr-status">
+                        Status
+                      </Label>
                       <Select
                         value={hrDraft.status}
                         disabled={!canEditHr}
@@ -374,7 +378,7 @@ export function AgencyPeopleGuidedMember({
                           })
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger id="people-hr-status" className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -384,7 +388,9 @@ export function AgencyPeopleGuidedMember({
                       </Select>
                     </div>
                     <div className={agencyFormFieldClass}>
-                      <Label className={agencyFormLabelClass}>Department</Label>
+                      <Label className={agencyFormLabelClass} htmlFor="people-hr-department">
+                        Department
+                      </Label>
                       <Select
                         value={hrDraft.departmentId || "none"}
                         disabled={!canEditHr}
@@ -395,7 +401,7 @@ export function AgencyPeopleGuidedMember({
                           })
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger id="people-hr-department" className="w-full">
                           <SelectValue placeholder="None" />
                         </SelectTrigger>
                         <SelectContent>
@@ -409,7 +415,9 @@ export function AgencyPeopleGuidedMember({
                       </Select>
                     </div>
                     <div className={agencyFormFieldClass}>
-                      <Label className={agencyFormLabelClass}>Employment type</Label>
+                      <Label className={agencyFormLabelClass} htmlFor="people-hr-employment-type">
+                        Employment type
+                      </Label>
                       <Select
                         value={hrDraft.employmentType || "none"}
                         disabled={!canEditHr}
@@ -426,7 +434,7 @@ export function AgencyPeopleGuidedMember({
                           })
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger id="people-hr-employment-type" className="w-full">
                           <SelectValue placeholder="—" />
                         </SelectTrigger>
                         <SelectContent>
@@ -439,7 +447,9 @@ export function AgencyPeopleGuidedMember({
                       </Select>
                     </div>
                     <div className={agencyFormFieldClass}>
-                      <Label className={agencyFormLabelClass}>Work model</Label>
+                      <Label className={agencyFormLabelClass} htmlFor="people-hr-work-model">
+                        Work model
+                      </Label>
                       <Select
                         value={hrDraft.workModel || "none"}
                         disabled={!canEditHr}
@@ -453,7 +463,7 @@ export function AgencyPeopleGuidedMember({
                           })
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger id="people-hr-work-model" className="w-full">
                           <SelectValue placeholder="—" />
                         </SelectTrigger>
                         <SelectContent>
@@ -471,13 +481,13 @@ export function AgencyPeopleGuidedMember({
               {activeStepId === "leave" ? (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-highlighted">Leave allowances</h3>
+                    <h3 className="text-sm font-semibold text-highlighted">Off days</h3>
                     <p className="text-muted text-sm">Off days allowed per period.</p>
                   </div>
                   <FieldGrid>
                     <div className={agencyFormFieldClass}>
                       <Label className={agencyFormLabelClass} htmlFor="people-hr-off-days">
-                        Off days
+                        Allowance
                       </Label>
                       <Input
                         id="people-hr-off-days"
@@ -491,7 +501,9 @@ export function AgencyPeopleGuidedMember({
                       />
                     </div>
                     <div className={agencyFormFieldClass}>
-                      <Label className={agencyFormLabelClass}>Period</Label>
+                      <Label className={agencyFormLabelClass} htmlFor="people-hr-off-period">
+                        Period
+                      </Label>
                       <Select
                         value={hrDraft.leaveAllowancePeriod}
                         disabled={!canEditHr}
@@ -503,7 +515,7 @@ export function AgencyPeopleGuidedMember({
                           })
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger id="people-hr-off-period" className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -559,7 +571,9 @@ export function AgencyPeopleGuidedMember({
                       />
                     </div>
                     <div className={agencyFormFieldClass}>
-                      <Label className={agencyFormLabelClass}>Currency</Label>
+                      <Label className={agencyFormLabelClass} htmlFor="people-rate-currency">
+                        Currency
+                      </Label>
                       <Select
                         value={rateDraft.currency}
                         disabled={!canEditRates}
@@ -567,7 +581,7 @@ export function AgencyPeopleGuidedMember({
                           onRateDraftChange({ ...rateDraft, currency: value })
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger id="people-rate-currency" className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -694,7 +708,9 @@ export function AgencyPeopleGuidedMember({
                     <p className="text-muted text-sm">Team role for Agency management surfaces.</p>
                   </div>
                   <div className={agencyFormFieldClass}>
-                    <Label className={agencyFormLabelClass}>Team role</Label>
+                    <Label className={agencyFormLabelClass} htmlFor="people-access-role">
+                      Team role
+                    </Label>
                     <Select
                       value={role}
                       disabled={!canEditRole}
@@ -706,7 +722,7 @@ export function AgencyPeopleGuidedMember({
                         )
                       }
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger id="people-access-role" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
