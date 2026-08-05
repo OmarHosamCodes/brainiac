@@ -1,4 +1,9 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import {
+  DEFAULT_WORK_SCHEDULE,
+  monthGridPad,
+  rotateWeekdayLabels,
+} from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 
 import {
   STRIP_WEEK_COL_PX,
@@ -33,7 +38,7 @@ export const HEAT_INTENSITY: Record<number, string> = {
   4: "bg-chart-2",
 };
 
-const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+const WEEKDAY_LABELS_MON_FIRST = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 function leaveTypeLabel(type: string) {
   if (type === "pto") return "PTO";
@@ -102,10 +107,14 @@ function emptyHeatDay(key: string): MemberProfileHeatDay {
   };
 }
 
-function buildHeatWeeks(days: MemberProfileHeatDay[], startDate: string): MemberProfileHeatDay[][] {
+function buildHeatWeeks(
+  days: MemberProfileHeatDay[],
+  startDate: string,
+  weekStartsOn: number = DEFAULT_WORK_SCHEDULE.weekStartsOn,
+): MemberProfileHeatDay[][] {
   const padded: MemberProfileHeatDay[] = [...days];
   const first = new Date(`${padded[0]?.date ?? startDate}T00:00:00Z`);
-  const pad = (first.getUTCDay() + 6) % 7;
+  const pad = monthGridPad(first.getUTCDay(), weekStartsOn);
   for (let i = 0; i < pad; i++) {
     padded.unshift(emptyHeatDay(`pad-start-${i}`));
   }
@@ -177,14 +186,17 @@ export function MemberProfileHeatMap({
   layout,
   onFocusDay,
   fillToWidth = true,
+  weekStartsOn = DEFAULT_WORK_SCHEDULE.weekStartsOn,
 }: {
   heatMap: MemberProfileHeatMapData;
   layout: "compact" | "strip";
   onFocusDay: (date: string) => void;
   /** When false, skip empty week padding (avoids width feedback loops in nested layouts). */
   fillToWidth?: boolean;
+  weekStartsOn?: number;
 }) {
-  const weeks = buildHeatWeeks(heatMap.days, heatMap.startDate);
+  const weekdayLabels = rotateWeekdayLabels(WEEKDAY_LABELS_MON_FIRST, weekStartsOn);
+  const weeks = buildHeatWeeks(heatMap.days, heatMap.startDate, weekStartsOn);
   const monthLabels = monthLabelsForWeeks(weeks);
   const stripRef = useRef<HTMLDivElement>(null);
   const [stripFillWeeks, setStripFillWeeks] = useState(0);
@@ -219,7 +231,7 @@ export function MemberProfileHeatMap({
           aria-label={`Contribution ${heatMap.startDate} to ${heatMap.endDate}`}
         >
           <span className="size-8" aria-hidden />
-          {WEEKDAY_LABELS.map((label) => (
+          {weekdayLabels.map((label) => (
             <span
               key={label}
               className="flex size-8 items-center justify-center text-[10px] font-medium text-muted-foreground"
@@ -266,7 +278,7 @@ export function MemberProfileHeatMap({
       <div ref={stripRef} className="w-full min-w-0 overflow-hidden">
         <div className="flex w-full min-w-0 gap-1">
           <div className="flex w-7 shrink-0 flex-col gap-1 pt-5">
-            {WEEKDAY_LABELS.map((label, index) => (
+            {weekdayLabels.map((label, index) => (
               <span
                 key={label}
                 className={cn(

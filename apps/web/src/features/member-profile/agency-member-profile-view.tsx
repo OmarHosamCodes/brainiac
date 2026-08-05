@@ -19,6 +19,7 @@ import {
   MemberProfileOffDayRangePanel,
 } from "@/features/member-profile/member-profile-leave-range-picker";
 import type { AgencyMemberProfileViewModel } from "@/features/member-profile/hooks/use-agency-member-profile";
+import { MemberProfileAlertsPanel } from "@/features/member-profile/member-profile-alerts-view";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import {
   agencyEmptyPanelClass,
@@ -27,11 +28,11 @@ import {
   agencyFormFieldClass,
   agencyFormLabelClass,
   agencyMetricClass,
+  agencyWorkMetaClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import { agencyCommandBarShellClass } from "@/features/shared/command-bar/agency-command-bar-ui";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import {
@@ -152,7 +153,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
 
   if (viewModel.loading && !profile) {
     return (
-      <div className="mx-auto grid max-w-7xl gap-4 p-6 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+      <div className="mx-auto grid max-w-7xl gap-4 p-6 lg:grid-cols-[240px_minmax(0,1fr)_minmax(17.5rem,20rem)]">
         <Skeleton className="h-80 w-full" />
         <Skeleton className="h-[28rem] w-full" />
         <Skeleton className="h-80 w-full" />
@@ -217,7 +218,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
           ) : null}
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)_280px] lg:items-start">
+        <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)_minmax(17.5rem,20rem)] lg:items-start">
           <aside
             className={cn("space-y-4", shellStaggerItemClass)}
             style={{ "--stagger-i": 1 } as CSSProperties}
@@ -475,7 +476,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                 </Button>
               </div>
               <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
-                {["M", "T", "W", "T", "F", "S", "S"].map((label, index) => (
+                {profile.calendar.weekdayLabels.map((label, index) => (
                   <span key={`${label}-${index}`}>{label}</span>
                 ))}
               </div>
@@ -552,18 +553,17 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
               </div>
             </section>
 
+            <MemberProfileAlertsPanel alerts={viewModel.alerts} />
+
             <section
               className={cn(profilePanelClass, "p-4")}
               aria-labelledby="member-profile-ai-overview"
             >
-              <div className="flex items-center justify-between gap-2">
-                <h2 id="member-profile-ai-overview" className={agencyWorkTitleClass}>
-                  AI overview
-                </h2>
-                <Badge variant="secondary">Coming soon</Badge>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Period insights on hours, attendance, and waste.
+              <h2 id="member-profile-ai-overview" className={agencyWorkTitleClass}>
+                AI overview
+              </h2>
+              <p className={cn(agencyWorkMetaClass, "mt-2 text-pretty")}>
+                Period insights on hours, attendance, and waste will land here.
               </p>
             </section>
           </aside>

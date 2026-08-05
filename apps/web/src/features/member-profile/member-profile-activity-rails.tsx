@@ -5,6 +5,7 @@ import {
   mergeTimelineItems,
   type MemberProfileTimelineItem,
   type MergedTimelineActivity,
+  type MergedTimelineItem,
 } from "@/features/member-profile/member-profile-activity-merge";
 import { AgencyReportEntryDetailsDialog } from "@/features/reports/agency-report-entry-details-dialog";
 import type { AgencyReportEntry } from "@/features/reports/agency-report-grouping";
@@ -25,6 +26,22 @@ export type MemberProfileActivityRailsDay = {
   countLabel: string;
   items: MemberProfileTimelineItem[];
 };
+
+/** Compact day total for the sticky rail (matches profile week bars). */
+function shortHours(totalSeconds: number) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  if (hours <= 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
+}
+
+function dayTotalSeconds(items: readonly MergedTimelineItem[]): number {
+  let total = 0;
+  for (const item of items) {
+    if (item.kind === "activity") total += item.durationSeconds;
+  }
+  return total;
+}
 
 type Props = {
   teamId: string;
@@ -273,6 +290,7 @@ export function MemberProfileActivityRails({ teamId, days, totalEventsLabel }: P
           {daysWithMerged.map((day) => {
             const parts = dayRailParts(day.date);
             const isCurrent = day.date === currentDate;
+            const totalSeconds = dayTotalSeconds(day.items);
             return (
               <section
                 key={day.date}
@@ -294,6 +312,14 @@ export function MemberProfileActivityRails({ teamId, days, totalEventsLabel }: P
                     )}
                   >
                     {`${day.items.length} event${day.items.length === 1 ? "" : "s"}`}
+                  </span>
+                  <span
+                    className={cn(
+                      "mt-1 block font-normal tracking-normal normal-case tabular-nums",
+                      isCurrent ? "text-muted-foreground" : "text-muted-foreground/80",
+                    )}
+                  >
+                    {shortHours(totalSeconds)}
                   </span>
                 </h3>
 

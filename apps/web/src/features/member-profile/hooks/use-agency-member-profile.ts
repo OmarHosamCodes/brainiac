@@ -1,8 +1,13 @@
+import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
+import {
+  useMemberProfileAlerts,
+  type MemberProfileAlertsViewModel,
+} from "@/features/member-profile/hooks/use-member-profile-alerts";
 import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/agency-member-profile";
 import {
   resolveMemberProfileHeatLayout,
@@ -123,6 +128,7 @@ export type AgencyMemberProfileViewModel = {
     }>;
     calendar: {
       label: string;
+      weekdayLabels: string[];
       days: Array<{
         date: string;
         dayOfMonth: number;
@@ -204,6 +210,7 @@ export type AgencyMemberProfileViewModel = {
     phone: string;
     address: string;
   };
+  alerts: MemberProfileAlertsViewModel;
   setLeaveDialogOpen: (open: boolean) => void;
   setReviewDialogOpen: (open: boolean) => void;
   setHrDialogOpen: (open: boolean) => void;
@@ -417,7 +424,10 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
 
   const [rangePreset, setRangePreset] = useState<RangePreset | null>(null);
   const effectiveRangePreset = rangePreset ?? defaultRangePreset;
-  const [customFromDate, setCustomFromDate] = useState(toDateInputValue(startOfWeekUtc()));
+  const weekStartsOn = tenurePolicy?.weekStartsOn ?? DEFAULT_WORK_SCHEDULE.weekStartsOn;
+  const [customFromDate, setCustomFromDate] = useState(
+    toDateInputValue(startOfWeekUtc(weekStartsOn)),
+  );
   const [customToDate, setCustomToDate] = useState(toDateInputValue(now));
   const [tenureMonthIndexes, setTenureMonthIndexes] = useState<number[] | null>(null);
   const effectiveTenureMonthIndexes = tenureMonthIndexes ?? defaultTenureMonthIndexes;
@@ -442,6 +452,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         tenurePolicy,
         now,
         effectiveTenureMonthIndexes,
+        weekStartsOn,
       ),
     [
       customFromDate,
@@ -450,6 +461,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       effectiveTenureMonthIndexes,
       now,
       tenurePolicy,
+      weekStartsOn,
     ],
   );
 
@@ -507,6 +519,12 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     enabled: Boolean(teamId && session.data?.user),
   });
 
+  const alerts = useMemberProfileAlerts({
+    teamId,
+    subjectUserId,
+    utcOffsetMinutes,
+  });
+
   const invalidate = useMutation({
     mutationFn: async () => undefined,
     onSuccess: async () => {
@@ -516,6 +534,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       await queryClient.invalidateQueries({
         queryKey: orpc.agencyOps.departments.list.key({ input: { teamId } }),
       });
+      alerts.refetch();
     },
   });
 
@@ -691,6 +710,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       })),
       calendar: {
         label: data.calendarMonth.label,
+        weekdayLabels: data.calendarMonth.weekdayLabels,
         days: data.calendarMonth.days,
         legend: [
           { status: "present" as const, label: "Present", count: calendarLegendCounts.present },
@@ -826,6 +846,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     leaveDraft,
     reviewDraft,
     hrDraft,
+    alerts,
     setLeaveDialogOpen(open) {
       setLeaveDialogOpen(open);
     },
@@ -900,6 +921,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     },
     retry() {
       void profileQuery.refetch();
+      alerts.refetch();
     },
     async submitLeave() {
       if (!teamId || !profile) return;
