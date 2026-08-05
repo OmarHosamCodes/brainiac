@@ -74,7 +74,7 @@ export function AppShellRail() {
       </div>
 
       <div className={shellRailFooterClass}>
-        <AppShellNotifications variant="sidebar" />
+        <AppShellNotifications variant="featured" />
         <AppShellAccountMenu variant="sidebar" />
       </div>
     </nav>
@@ -149,7 +149,7 @@ export function AppShellRailOverlays() {
             )}
           </nav>
           <div className="flex flex-col gap-1 pt-2">
-            <AppShellNotifications variant="sidebar" />
+            <AppShellNotifications variant="featured" forceExpanded />
             <AppShellAccountMenu variant="sidebar" />
             {showUpgrade ? (
               <Button
