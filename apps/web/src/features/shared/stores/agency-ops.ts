@@ -1996,22 +1996,97 @@ function createAgencyOpsActions(
   async function upsertMoneySettings(
     payload: {
       teamId: string;
-      rules: { enabledRuleIds: string[]; notesByRuleId?: Record<string, string> };
-      calcOptions: { enabledOptionIds: string[]; notesByOptionId?: Record<string, string> };
+      rules: {
+        enabledRuleIds: string[];
+        notesByRuleId?: Record<string, string>;
+        labelByRuleId?: Record<string, string>;
+        cohortByRuleId?: Record<string, string>;
+        memberIdsByRuleId?: Record<string, string[]>;
+      };
+      calcOptions: {
+        enabledOptionIds: string[];
+        notesByOptionId?: Record<string, string>;
+        summaryByOptionId?: Record<string, string>;
+        valueByOptionId?: Record<string, number>;
+        formulas?: Array<{
+          id: string;
+          key: string;
+          label: string;
+          locked: boolean;
+          enabled: boolean;
+          tokens: Array<
+            | { kind: "var"; id: string }
+            | { kind: "number"; value: number }
+            | { kind: "op"; op: "+" | "-" | "*" | "/" }
+            | { kind: "paren"; value: "(" | ")" }
+          >;
+          output: "cents" | "ratio" | "hours";
+          metricId: string | null;
+          sectionKey: string | null;
+        }>;
+      };
     },
     callbacks?: { onSuccess?: () => void },
   ) {
     set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
 
     try {
-      await orpcClient.agencyOps.moneySettings.upsert(payload);
-      await getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.moneySettings.get.key(),
+      const saved = await orpcClient.agencyOps.moneySettings.upsert(payload);
+      // queryKey includes `{ type: "query" }`; plain `.key({ input })` does not match.
+      const moneySettingsQueryKey = orpc.agencyOps.moneySettings.get.queryKey({
+        input: { teamId: payload.teamId },
       });
+      getQueryClient().setQueryData(moneySettingsQueryKey, saved);
+      await Promise.all([
+        getQueryClient().invalidateQueries({ queryKey: moneySettingsQueryKey }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+      ]);
       callbacks?.onSuccess?.();
       toast.success("Money settings saved");
     } catch (error) {
       toast.error("Couldn't save Money settings", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function syncFormulaPayoutLines(
+    payload: {
+      teamId: string;
+      periodStart: string;
+      periodEnd: string;
+      refreshSnapshot?: boolean;
+    },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      const result = await orpcClient.agencyOps.payouts.syncFormulaLines(payload);
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.getRun.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+      ]);
+      callbacks?.onSuccess?.();
+      toast.success("Formula lines synced", {
+        description: `${result.upserted} updated · ${result.skipped} skipped`,
+      });
+    } catch (error) {
+      toast.error("Couldn't sync formula lines", {
         description: getErrorMessage(error, "Try again."),
       });
     } finally {
@@ -2061,6 +2136,7 @@ function createAgencyOpsActions(
     recordExpensePayment,
     removeExpense,
     upsertMoneySettings,
+    syncFormulaPayoutLines,
   };
 }
 
