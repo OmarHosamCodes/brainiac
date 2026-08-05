@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 614 |
+| golden-feature | 619 |
 | server-operation | 12 |
 | shared-infrastructure | 278 |
 | static-presentation | 15 |
@@ -44,7 +44,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | integrations | 2 |
 | marketing | 16 |
 | member-profile | 30 |
-| notifications | 28 |
+| notifications | 33 |
 | performance | 8 |
 | projects | 24 |
 | reports | 54 |
@@ -219,11 +219,16 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/notifications/agency-notifications-view.tsx` | notifications | presentational-view | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/notifications/agency-notifications.tsx` | notifications | presentational-view | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/notifications/containers/agency-notifications-container.tsx` | notifications | container | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
+| `apps/web/src/features/notifications/containers/featured-rail-notification-container.tsx` | notifications | container | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
+| `apps/web/src/features/notifications/featured-rail-notification-view.tsx` | notifications | presentational-view | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/notifications/featured-rail-notification.tsx` | notifications | presentational-view | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/notifications/hooks/use-agency-notifications.ts` | notifications | feature-hook | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical feature-hook layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/notifications/hooks/use-featured-rail-notification.ts` | notifications | feature-hook | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical feature-hook layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/notifications/notification-presentation.test.ts` | notifications | test | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/notifications/notification-presentation.ts` | notifications | domain-logic | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/notifications/notifications-queries.test.ts` | notifications | test | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical test layer. | content: Bun test declarations, oRPC procedures or clients, TanStack Query orchestration; structure: test filename |
 | `apps/web/src/features/notifications/notifications-queries.ts` | notifications | web-query | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical web-query layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: source role and exported behavior |
+| `apps/web/src/features/notifications/stores/notifications-inbox-ui.ts` | notifications | client-state | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical client-state layer. | content: Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/projects/agency-project-create-dialog-view.tsx` | projects | presentational-view | golden-feature | projects-domain | Feature-owned projects artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/projects/agency-project-create-dialog.tsx` | projects | presentational-view | golden-feature | projects-domain | Feature-owned projects artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/projects/agency-project-detail-view.tsx` | projects | presentational-view | golden-feature | projects-domain | Feature-owned projects artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |

@@ -1,7 +1,13 @@
-import { Bell, Settings2 } from "lucide-react";
+import { ArrowRight, Bell, Loader2, Settings2, X } from "lucide-react";
+import type { NotificationRecord } from "@orch/api/schemas/notifications";
 
 import type { AgencyNotificationsViewModel } from "@/features/notifications/hooks/use-agency-notifications";
-import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
+import {
+  featuredNotificationBody,
+  featuredNotificationCta,
+  featuredNotificationTitle,
+  isNeedsActionNotification,
+} from "@/features/notifications/notification-presentation";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
@@ -95,9 +101,120 @@ function NotificationSentence({
   }
 }
 
+function InboxNotificationRow({
+  notification,
+  view,
+}: {
+  notification: NotificationRecord;
+  view: AgencyNotificationsViewModel;
+}) {
+  const unread = !notification.readAt;
+  const needsAction = isNeedsActionNotification(notification);
+  const title = featuredNotificationTitle(notification);
+  const body = featuredNotificationBody(notification);
+  const cta = featuredNotificationCta(notification);
+  const pending = view.pendingActionId === notification.id;
+  const parts = view.notificationSentenceParts(notification);
+
+  return (
+    <li>
+      <article
+        className={cn(
+          "rounded-xl border border-transparent px-2.5 py-2.5 transition-colors",
+          needsAction && unread && "border-border/60 bg-card",
+          !needsAction && unread && "bg-muted/40",
+          !unread && "opacity-70",
+        )}
+      >
+        <div className="flex items-start gap-2">
+          <AgencyMemberAvatar
+            name={notification.actorName ?? "Team"}
+            avatarUrl={notification.actorAvatar}
+            size="sm"
+            className="mt-0.5"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-1">
+              <div className="min-w-0 flex-1">
+                {needsAction ? (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      {unread ? (
+                        <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                      ) : null}
+                      <p className="truncate text-sm font-semibold leading-snug text-foreground">
+                        {title}
+                      </p>
+                    </div>
+                    <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted-foreground">
+                      {body}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm leading-snug text-foreground">
+                    <NotificationSentence parts={parts} />
+                  </p>
+                )}
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {view.formatRelativeTime(notification.createdAt)}
+                </p>
+              </div>
+              {needsAction && unread ? (
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
+                    "hover:bg-muted hover:text-foreground",
+                    "disabled:pointer-events-none disabled:opacity-50",
+                  )}
+                  aria-label="Dismiss notification"
+                  disabled={pending}
+                  onClick={() => view.onDismissNotification(notification)}
+                >
+                  <X className="size-3.5" aria-hidden />
+                </button>
+              ) : null}
+            </div>
+
+            {needsAction ? (
+              <Button
+                type="button"
+                size="sm"
+                className="mt-2.5 h-8 w-full rounded-full text-xs font-semibold"
+                disabled={pending}
+                onClick={() => view.onPrimaryAction(notification)}
+              >
+                {pending ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <>
+                    {cta.label}
+                    <ArrowRight className="size-3.5" aria-hidden />
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="mt-2 h-7 rounded-full px-2.5 text-xs"
+                disabled={pending}
+                onClick={() => view.onPrimaryAction(notification)}
+              >
+                Open
+                <ArrowRight className="size-3.5" aria-hidden />
+              </Button>
+            )}
+          </div>
+        </div>
+      </article>
+    </li>
+  );
+}
+
 export function AgencyNotificationsView({ view }: AgencyNotificationsViewProps) {
   if (!view.teamId) return null;
-  if (view.variant === "sidebar" && view.badgeCount === 0 && !view.open) return null;
 
   return (
     <Popover
@@ -108,61 +225,42 @@ export function AgencyNotificationsView({ view }: AgencyNotificationsViewProps) 
       }}
     >
       <PopoverTrigger asChild>
-        {view.variant === "sidebar" ? (
-          <button
-            type="button"
-            className={cn(
-              "app-shell__rail-link text-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              shellFocusRingClass,
-            )}
-            aria-label={`${view.sidebarUnread} unread notification${view.sidebarUnread === 1 ? "" : "s"}`}
-            title={`${view.sidebarUnread} unread notification${view.sidebarUnread === 1 ? "" : "s"}`}
-          >
-            <span className="relative shrink-0" aria-hidden>
-              <Bell className="size-4" />
-              <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-bold leading-3.5 text-primary-foreground">
-                {view.sidebarUnread > 9 ? "9+" : view.sidebarUnread}
-              </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="relative size-8 rounded-full text-muted hover:text-highlighted"
+          aria-label={
+            view.badgeCount > 0
+              ? `Notifications, ${view.badgeCount} needing attention`
+              : "Notifications"
+          }
+        >
+          <Bell className="size-4" aria-hidden />
+          {view.badgeCount > 0 ? (
+            <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
+              {view.badgeLabel}
             </span>
-            <span className="rail-label min-w-0 flex-1 truncate text-left">
-              {view.sidebarUnread} unread notification{view.sidebarUnread === 1 ? "" : "s"}
-            </span>
-          </button>
-        ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="relative size-8 rounded-full text-muted hover:text-highlighted"
-            aria-label={
-              view.badgeCount > 0
-                ? `Notifications, ${view.badgeCount} needing attention`
-                : "Notifications"
-            }
-          >
-            <Bell className="size-4" aria-hidden />
-            {view.badgeCount > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
-                {view.badgeLabel}
-              </span>
-            ) : null}
-          </Button>
-        )}
+          ) : null}
+        </Button>
       </PopoverTrigger>
 
-      <PopoverContent
-        align="end"
-        side={view.variant === "sidebar" ? "right" : "bottom"}
-        className="w-[380px] p-0"
-      >
+      <PopoverContent align="end" side="bottom" className="w-[380px] p-0">
         <div className="flex items-center justify-between border-b border-border/60 px-3 py-2.5">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-foreground">Notifications</p>
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">Inbox</p>
+              {view.actionCount > 0 && !view.showSettings ? (
+                <p className="text-[11px] text-muted-foreground">
+                  {view.actionCount} needing action
+                </p>
+              ) : null}
+            </div>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="size-8 rounded-full"
+              className="size-8 shrink-0 rounded-full"
               aria-label="Notification settings"
               aria-pressed={view.showSettings}
               onClick={() => view.setShowSettings(!view.showSettings)}
@@ -175,7 +273,7 @@ export function AgencyNotificationsView({ view }: AgencyNotificationsViewProps) 
               type="button"
               variant="ghost"
               size="sm"
-              className="h-8 rounded-full px-2 text-xs"
+              className="h-8 shrink-0 rounded-full px-2 text-xs"
               disabled={!view.hasUnread || view.markAllReadPending}
               onClick={view.onMarkAllRead}
             >
@@ -321,75 +419,17 @@ export function AgencyNotificationsView({ view }: AgencyNotificationsViewProps) 
           <div className="max-h-[420px] overflow-y-auto">
             {view.sections.map((section) => (
               <div key={section.label}>
-                <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                <p className="px-3 pb-1.5 pt-3 text-[11px] font-medium text-muted-foreground">
                   {section.label}
                 </p>
-                <ul className="divide-y divide-border/50">
-                  {section.items.map((notification) => {
-                    const unread = !notification.readAt;
-                    const quickAction =
-                      notification.type === "task.assigned" &&
-                      notification.payload.taskId &&
-                      notification.payload.projectId
-                        ? "start-timer"
-                        : notification.type === "task.message" && notification.payload.taskId
-                          ? "reply"
-                          : null;
-                    const parts = view.notificationSentenceParts(notification);
-
-                    return (
-                      <li key={notification.id}>
-                        <div className={cn("flex gap-2 px-3 py-2.5", unread && "bg-primary/5")}>
-                          <AgencyMemberAvatar
-                            name={notification.actorName ?? "Team"}
-                            avatarUrl={notification.actorAvatar}
-                            size="md"
-                            className="mt-0.5"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <button
-                              type="button"
-                              className="w-full text-left"
-                              onClick={() => view.onOpenNotification(notification)}
-                            >
-                              <p className="text-sm leading-snug text-foreground">
-                                <NotificationSentence parts={parts} />
-                              </p>
-                              <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                                {view.formatRelativeTime(notification.createdAt)}
-                              </p>
-                            </button>
-                            {quickAction ? (
-                              <div className="mt-2">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-7 rounded-full px-2.5 text-xs"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    if (quickAction === "start-timer") {
-                                      view.onStartTimer(notification);
-                                      return;
-                                    }
-                                    view.onOpenNotification(notification);
-                                  }}
-                                >
-                                  {quickAction === "start-timer" ? "Start timer" : "Reply"}
-                                </Button>
-                              </div>
-                            ) : null}
-                          </div>
-                          {unread ? (
-                            <span
-                              className="mt-2 size-2 shrink-0 rounded-full bg-primary"
-                              aria-hidden
-                            />
-                          ) : null}
-                        </div>
-                      </li>
-                    );
-                  })}
+                <ul className="space-y-1 px-2 pb-2">
+                  {section.items.map((notification) => (
+                    <InboxNotificationRow
+                      key={notification.id}
+                      notification={notification}
+                      view={view}
+                    />
+                  ))}
                 </ul>
               </div>
             ))}

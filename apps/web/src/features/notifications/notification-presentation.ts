@@ -113,3 +113,116 @@ export function notificationPreferenceLabel(type: NotificationRecord["type"]) {
     }
   }
 }
+
+export type FeaturedNotificationCta = {
+  kind: "start-timer" | "open";
+  label: string;
+};
+
+/** Newest unread Needs-action item first; count is the full Needs-action queue size. */
+export function pickFeaturedNeedsAction(items: NotificationRecord[]): {
+  featured: NotificationRecord | null;
+  count: number;
+} {
+  const needsAction = items
+    .filter(isNeedsActionNotification)
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return {
+    featured: needsAction[0] ?? null,
+    count: needsAction.length,
+  };
+}
+
+export function featuredNotificationTitle(notification: NotificationRecord) {
+  switch (notification.type) {
+    case "task.assigned":
+      return "Assigned task";
+    case "task.message":
+      return "New reply";
+    case "member.alert":
+      return "Profile alert";
+    case "journey.milestone":
+      return "Milestone";
+    case "timer.activity":
+      return "Timer activity";
+    case "team.digest":
+      return "Daily digest";
+    default: {
+      const _exhaustive: never = notification.type;
+      return _exhaustive;
+    }
+  }
+}
+
+export function featuredNotificationCta(notification: NotificationRecord): FeaturedNotificationCta {
+  const payload = notification.payload;
+  if (
+    notification.type === "task.assigned" &&
+    payload.taskId &&
+    payload.projectId &&
+    payload.taskTitle &&
+    payload.projectName
+  ) {
+    return { kind: "start-timer", label: "Start timer" };
+  }
+  if (notification.type === "task.message" && payload.taskId) {
+    return { kind: "open", label: "Open task" };
+  }
+  if (notification.type === "member.alert") {
+    return { kind: "open", label: "Review alert" };
+  }
+  return { kind: "open", label: "Open" };
+}
+
+/** Plain one-line body for the featured rail card. */
+export function featuredNotificationBody(notification: NotificationRecord) {
+  const actor = notification.actorName ?? "Someone";
+  const payload = notification.payload;
+
+  switch (notification.type) {
+    case "task.assigned":
+      return `${actor} assigned you ${payload.taskTitle ?? "a task"}`;
+    case "task.message": {
+      const count = payload.messageCount ?? 1;
+      if (count > 1) {
+        return `${actor} sent ${count} messages in ${payload.taskTitle ?? "a task"}`;
+      }
+      return `${actor} replied in ${payload.taskTitle ?? "a task"}`;
+    }
+    case "member.alert": {
+      const title = payload.alertTitle ?? "a profile alert";
+      const note = payload.notePreview?.trim();
+      return note ? `${actor} sent ${title}: ${note}` : `${actor} sent ${title}`;
+    }
+    case "journey.milestone":
+      return `${payload.journeyStepLabel ?? "Milestone"} completed on ${payload.projectName ?? "a project"}`;
+    case "timer.activity":
+      return payload.timerAction === "stopped"
+        ? `${actor} stopped tracking on ${payload.projectName ?? "a project"}`
+        : `${actor} started tracking on ${payload.taskTitle ?? payload.projectName ?? "a project"}`;
+    case "team.digest":
+      return `Your team logged ${formatDigestHours(payload.digestHoursSeconds ?? 0)} yesterday`;
+    default: {
+      const _exhaustive: never = notification.type;
+      return _exhaustive;
+    }
+  }
+}
+
+/** Inbox row quick-action kind (shared with featured CTA where applicable). */
+export function notificationQuickAction(
+  notification: NotificationRecord,
+): "start-timer" | "reply" | null {
+  if (
+    notification.type === "task.assigned" &&
+    notification.payload.taskId &&
+    notification.payload.projectId
+  ) {
+    return "start-timer";
+  }
+  if (notification.type === "task.message" && notification.payload.taskId) {
+    return "reply";
+  }
+  return null;
+}

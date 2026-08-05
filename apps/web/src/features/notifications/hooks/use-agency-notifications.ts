@@ -1,5 +1,5 @@
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
@@ -15,12 +15,14 @@ import {
 } from "@/features/notifications/notifications-queries";
 import {
   buildNotificationSearchParams,
+  featuredNotificationCta,
   formatDigestHours,
   formatRelativeTime,
   groupNotificationSections,
   notificationHref,
   notificationPreferenceLabel,
 } from "@/features/notifications/notification-presentation";
+import { useNotificationsInboxUiStore } from "@/features/notifications/stores/notifications-inbox-ui";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
 import {
   canUsePushNotifications,
@@ -30,11 +32,8 @@ import {
   subscribeToPushNotifications,
 } from "@/lib/push";
 
-export type AgencyNotificationsVariant = "icon" | "sidebar";
-
 export type AgencyNotificationsInput = {
   teamId: string;
-  variant?: AgencyNotificationsVariant;
 };
 
 export function notificationSentenceParts(notification: NotificationRecord) {
@@ -94,7 +93,6 @@ export function notificationSentenceParts(notification: NotificationRecord) {
 
 export function useAgencyNotifications(input: AgencyNotificationsInput) {
   const teamId = input.teamId;
-  const variant = input.variant ?? "icon";
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -104,11 +102,17 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
   const [timezoneDraft, setTimezoneDraft] = useState(
     Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
   );
+  const [pendingActionId, setPendingActionId] = useState<string | null>(null);
+  const openRequested = useNotificationsInboxUiStore((s) => s.openRequested);
+  const consumeOpen = useNotificationsInboxUiStore((s) => s.consumeOpen);
 
   const notificationsQuery = useAgencyNotificationsQuery(teamId, open);
   const unreadQuery = useAgencyNotificationUnreadCountQuery(teamId);
   const preferencesQuery = useAgencyNotificationPreferencesQuery(teamId, open);
   const { mutate: markSeen } = useMarkNotificationsSeenMutation(teamId);
+  const markSeenRef = useRef(markSeen);
+  markSeenRef.current = markSeen;
+  const markedSeenForOpenRef = useRef(false);
   const markReadMutation = useMarkNotificationReadMutation(teamId);
   const markAllReadMutation = useMarkAllNotificationsReadMutation(teamId);
   const setPreferencesMutation = useSetNotificationPreferencesMutation(teamId);
@@ -120,25 +124,34 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
   const badgeCount = actionCount > 0 ? actionCount : unreadCount;
   const badgeLabel = badgeCount > 9 ? "9+" : String(badgeCount);
 
-  const [sidebarUnread, setSidebarUnread] = useState(badgeCount);
-  useEffect(() => {
-    if (badgeCount > 0) setSidebarUnread(badgeCount);
-  }, [badgeCount]);
-
   const items = notificationsQuery.data?.items ?? [];
   const hasUnread = items.some((item) => !item.readAt);
   const sections = useMemo(() => groupNotificationSections(items), [items]);
+  const deliveryTimezone = preferencesQuery.data?.delivery?.timezone;
 
   useEffect(() => {
-    if (!open || !teamId) return;
-    markSeen();
-  }, [open, teamId, markSeen]);
+    if (!openRequested) return;
+    setOpen(true);
+    consumeOpen();
+  }, [openRequested, consumeOpen]);
 
+  // Once per open: mutate identity churn + cache invalidation must not re-fire markSeen
+  // (that loops into max update depth and unmounts #root with no useful console error).
   useEffect(() => {
-    if (preferencesQuery.data?.delivery.timezone) {
-      setTimezoneDraft(preferencesQuery.data.delivery.timezone);
+    if (!open) {
+      markedSeenForOpenRef.current = false;
+      return;
     }
-  }, [preferencesQuery.data?.delivery.timezone]);
+    if (!teamId || markedSeenForOpenRef.current) return;
+    markedSeenForOpenRef.current = true;
+    markSeenRef.current();
+  }, [open, teamId]);
+
+  useEffect(() => {
+    if (deliveryTimezone) {
+      setTimezoneDraft(deliveryTimezone);
+    }
+  }, [deliveryTimezone]);
 
   const showPushPrompt =
     Boolean(teamId) &&
@@ -147,8 +160,8 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
     pushPermissionState() === "default" &&
     !showSettings;
 
-  function openNotification(notification: NotificationRecord) {
-    void markReadMutation.mutateAsync(notification.id);
+  async function openNotification(notification: NotificationRecord) {
+    await markReadMutation.mutateAsync(notification.id);
     setOpen(false);
     const href = notificationHref(notification);
     if (href) {
@@ -160,7 +173,10 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
 
   async function handleStartTimer(notification: NotificationRecord) {
     const payload = notification.payload;
-    if (!payload.projectId || !payload.taskId || !payload.taskTitle || !payload.projectName) return;
+    if (!payload.projectId || !payload.taskId || !payload.taskTitle || !payload.projectName) {
+      await openNotification(notification);
+      return;
+    }
 
     await startTimer({
       teamId,
@@ -169,9 +185,29 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
       description: payload.taskTitle,
       successDescription: "Timer started from notification.",
     });
-    void markReadMutation.mutateAsync(notification.id);
+    await markReadMutation.mutateAsync(notification.id);
     setOpen(false);
     setSearchParams(new URLSearchParams({ section: "work", task: payload.taskId }));
+  }
+
+  async function handlePrimaryAction(notification: NotificationRecord) {
+    if (pendingActionId) return;
+    setPendingActionId(notification.id);
+    try {
+      const cta = featuredNotificationCta(notification);
+      if (cta.kind === "start-timer") {
+        await handleStartTimer(notification);
+        return;
+      }
+      await openNotification(notification);
+    } finally {
+      setPendingActionId(null);
+    }
+  }
+
+  async function handleDismissNotification(notification: NotificationRecord) {
+    if (pendingActionId) return;
+    await markReadMutation.mutateAsync(notification.id);
   }
 
   async function handleEnablePush() {
@@ -206,7 +242,7 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
 
   function commitTimezone() {
     const next = timezoneDraft.trim();
-    if (!next || next === preferencesQuery.data?.delivery.timezone) return;
+    if (!next || next === preferencesQuery.data?.delivery?.timezone) return;
     void setDeliveryMutation.mutateAsync({ timezone: next });
   }
 
@@ -220,7 +256,6 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
 
   return {
     teamId,
-    variant,
     open,
     setOpen,
     showSettings,
@@ -231,7 +266,6 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
     actionCount,
     badgeCount,
     badgeLabel,
-    sidebarUnread,
     items,
     sections,
     hasUnread,
@@ -242,11 +276,15 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
     timezoneDraft,
     preferencesSaving: setPreferencesMutation.isPending || setDeliveryMutation.isPending,
     markAllReadPending: markAllReadMutation.isPending,
+    pendingActionId,
     formatRelativeTime,
     notificationSentenceParts,
     notificationPreferenceLabel,
     onMarkAllRead: () => void markAllReadMutation.mutateAsync(),
-    onOpenNotification: openNotification,
+    onOpenNotification: (notification: NotificationRecord) => void openNotification(notification),
+    onPrimaryAction: (notification: NotificationRecord) => void handlePrimaryAction(notification),
+    onDismissNotification: (notification: NotificationRecord) =>
+      void handleDismissNotification(notification),
     onStartTimer: (notification: NotificationRecord) => void handleStartTimer(notification),
     onEnablePush: () => void handleEnablePush(),
     onDismissPushPrompt: () => {

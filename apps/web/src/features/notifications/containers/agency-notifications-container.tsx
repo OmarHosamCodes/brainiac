@@ -3,8 +3,6 @@ import { AgencyNotificationsView } from "@/features/notifications/agency-notific
 
 type AgencyNotificationsContainerProps = {
   teamId: string;
-  /** `icon` toolbar bell, or a full-width `sidebar` row shown only while unread. */
-  variant?: "icon" | "sidebar";
 };
 
 export function AgencyNotificationsContainer(props: AgencyNotificationsContainerProps) {
