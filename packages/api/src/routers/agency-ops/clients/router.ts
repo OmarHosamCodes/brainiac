@@ -7,6 +7,8 @@ import {
 } from "../shared/schemas";
 import {
   listAgencyClients,
+  getAgencyClient,
+  getAgencyClientCommercialSummary,
   createAgencyClient,
   updateAgencyClient,
   archiveAgencyClient,
@@ -14,6 +16,41 @@ import {
   getClientContact,
   upsertClientContact,
 } from "./service";
+
+const clientCommercialSummarySchema = z.object({
+  client: agencyClientSchema,
+  contact: z
+    .object({
+      id: z.string().min(1),
+      name: z.string(),
+      email: z.string(),
+      phone: z.string(),
+    })
+    .nullable(),
+  activeProjectCount: z.number().int().nonnegative(),
+  trashedProjectCount: z.number().int().nonnegative(),
+  weekDurationSeconds: z.number().int().nonnegative(),
+  monthDurationSeconds: z.number().int().nonnegative(),
+  monthUninvoicedDurationSeconds: z.number().int().nonnegative(),
+  billing: z.object({
+    canView: z.boolean(),
+    openInvoiceCount: z.number().int().nonnegative(),
+    outstandingCents: z.number().int().nonnegative(),
+    currency: z.string().min(1),
+    recentInvoices: z.array(
+      z.object({
+        id: z.string().min(1),
+        number: z.string().min(1),
+        status: z.string().min(1),
+        amountCents: z.number().int().nonnegative(),
+        remainingCents: z.number().int().nonnegative(),
+        currency: z.string().min(1),
+        periodStart: z.string().datetime(),
+        periodEnd: z.string().datetime(),
+      }),
+    ),
+  }),
+});
 
 export const clientsRouter = {
   clients: {
@@ -28,6 +65,18 @@ export const clientsRouter = {
         return z
           .object({ items: z.array(agencyClientSchema) })
           .parse(await listAgencyClients(context.session.user.id, input));
+      }),
+    get: protectedProProcedure
+      .input(teamScopedInputSchema.extend({ clientId: z.string().min(1) }))
+      .handler(async ({ context, input }) => {
+        return agencyClientSchema.parse(await getAgencyClient(context.session.user.id, input));
+      }),
+    commercialSummary: protectedProProcedure
+      .input(teamScopedInputSchema.extend({ clientId: z.string().min(1) }))
+      .handler(async ({ context, input }) => {
+        return clientCommercialSummarySchema.parse(
+          await getAgencyClientCommercialSummary(context.session.user.id, input),
+        );
       }),
     create: protectedProProcedure
       .input(

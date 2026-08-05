@@ -1,5 +1,11 @@
-import { eq, isNotNull, isNull, and, asc, sql } from "drizzle-orm";
-import { agencyOpsClient, agencyOpsClientContact } from "@orch/db/schema";
+import { eq, isNotNull, isNull, and, asc, sql, gte, lte, desc, inArray } from "drizzle-orm";
+import {
+  agencyOpsClient,
+  agencyOpsClientContact,
+  agencyOpsInvoice,
+  agencyOpsProject,
+  agencyOpsTimeEntry,
+} from "@orch/db/schema";
 import { db } from "@orch/db";
 import { createWorkspaceId } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
@@ -14,6 +20,7 @@ type AgencyClientRecord = {
   category: "internal" | "external";
   billableRateCents: number | null;
   currency: string;
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -25,6 +32,7 @@ function mapClientRow(row: {
   category: "internal" | "external";
   billableRateCents: number | null;
   currency: string;
+  archivedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }): AgencyClientRecord {
@@ -35,10 +43,23 @@ function mapClientRow(row: {
     category: row.category,
     billableRateCents: row.billableRateCents,
     currency: row.currency,
+    archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
+
+const clientSelect = {
+  id: agencyOpsClient.id,
+  teamId: agencyOpsClient.teamId,
+  name: agencyOpsClient.name,
+  category: agencyOpsClient.category,
+  billableRateCents: agencyOpsClient.billableRateCents,
+  currency: agencyOpsClient.currency,
+  archivedAt: agencyOpsClient.archivedAt,
+  createdAt: agencyOpsClient.createdAt,
+  updatedAt: agencyOpsClient.updatedAt,
+};
 
 export async function listAgencyClients(
   actorUserId: string,
@@ -60,26 +81,244 @@ export async function listAgencyClients(
   }
 
   const rows = await db
-    .select({
-      id: agencyOpsClient.id,
-      teamId: agencyOpsClient.teamId,
-      name: agencyOpsClient.name,
-      category: agencyOpsClient.category,
-      billableRateCents: agencyOpsClient.billableRateCents,
-      currency: agencyOpsClient.currency,
-      archivedAt: agencyOpsClient.archivedAt,
-      createdAt: agencyOpsClient.createdAt,
-      updatedAt: agencyOpsClient.updatedAt,
-    })
+    .select(clientSelect)
     .from(agencyOpsClient)
     .where(and(...filters))
     .orderBy(asc(agencyOpsClient.name));
 
   return {
-    items: rows.map((row) => ({
-      ...mapClientRow(row),
-      archivedAt: row.archivedAt?.toISOString() ?? null,
-    })),
+    items: rows.map((row) => mapClientRow(row)),
+  };
+}
+
+export async function getAgencyClient(
+  actorUserId: string,
+  input: { teamId: string; clientId: string },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const [row] = await db
+    .select(clientSelect)
+    .from(agencyOpsClient)
+    .where(and(eq(agencyOpsClient.teamId, input.teamId), eq(agencyOpsClient.id, input.clientId)))
+    .limit(1);
+
+  if (!row) {
+    throw new ORPCError("NOT_FOUND", { message: "Client was not found." });
+  }
+
+  return mapClientRow(row);
+}
+
+export type AgencyClientCommercialSummary = {
+  client: AgencyClientRecord;
+  contact: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+  } | null;
+  activeProjectCount: number;
+  trashedProjectCount: number;
+  weekDurationSeconds: number;
+  monthDurationSeconds: number;
+  monthUninvoicedDurationSeconds: number;
+  billing: {
+    canView: boolean;
+    openInvoiceCount: number;
+    outstandingCents: number;
+    currency: string;
+    recentInvoices: Array<{
+      id: string;
+      number: string;
+      status: string;
+      amountCents: number;
+      remainingCents: number;
+      currency: string;
+      periodStart: string;
+      periodEnd: string;
+    }>;
+  };
+};
+
+function utcWeekStart(now = new Date()): Date {
+  const day = now.getUTCDay();
+  const diff = (day + 6) % 7; // Monday start (matches common agency default)
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - diff));
+}
+
+function utcMonthBounds(now = new Date()): { start: Date; end: Date } {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+  return { start, end };
+}
+
+export async function getAgencyClientCommercialSummary(
+  actorUserId: string,
+  input: { teamId: string; clientId: string },
+): Promise<AgencyClientCommercialSummary> {
+  const role = await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  const client = await getAgencyClient(actorUserId, input);
+
+  const [contactRow] = await db
+    .select({
+      id: agencyOpsClientContact.id,
+      name: agencyOpsClientContact.name,
+      email: agencyOpsClientContact.email,
+      phone: agencyOpsClientContact.phone,
+    })
+    .from(agencyOpsClientContact)
+    .where(
+      and(
+        eq(agencyOpsClientContact.teamId, input.teamId),
+        eq(agencyOpsClientContact.clientId, input.clientId),
+      ),
+    )
+    .limit(1);
+
+  const projectRows = await db
+    .select({
+      id: agencyOpsProject.id,
+      deletedAt: agencyOpsProject.deletedAt,
+    })
+    .from(agencyOpsProject)
+    .where(
+      and(eq(agencyOpsProject.teamId, input.teamId), eq(agencyOpsProject.clientId, input.clientId)),
+    );
+
+  const activeProjectCount = projectRows.filter((p) => !p.deletedAt).length;
+  const trashedProjectCount = projectRows.filter((p) => p.deletedAt).length;
+  const projectIds = projectRows.map((p) => p.id);
+
+  const weekStart = utcWeekStart();
+  const { start: monthStart, end: monthEnd } = utcMonthBounds();
+
+  let weekDurationSeconds = 0;
+  let monthDurationSeconds = 0;
+
+  if (projectIds.length > 0) {
+    const [weekAgg] = await db
+      .select({
+        total: sql<number>`coalesce(sum(${agencyOpsTimeEntry.durationSeconds}), 0)`.mapWith(Number),
+      })
+      .from(agencyOpsTimeEntry)
+      .where(
+        and(
+          eq(agencyOpsTimeEntry.teamId, input.teamId),
+          isNull(agencyOpsTimeEntry.deletedAt),
+          inArray(agencyOpsTimeEntry.projectId, projectIds),
+          gte(agencyOpsTimeEntry.startedAt, weekStart),
+        ),
+      );
+
+    const [monthAgg] = await db
+      .select({
+        total: sql<number>`coalesce(sum(${agencyOpsTimeEntry.durationSeconds}), 0)`.mapWith(Number),
+      })
+      .from(agencyOpsTimeEntry)
+      .where(
+        and(
+          eq(agencyOpsTimeEntry.teamId, input.teamId),
+          isNull(agencyOpsTimeEntry.deletedAt),
+          inArray(agencyOpsTimeEntry.projectId, projectIds),
+          gte(agencyOpsTimeEntry.startedAt, monthStart),
+          lte(agencyOpsTimeEntry.startedAt, monthEnd),
+        ),
+      );
+
+    weekDurationSeconds = weekAgg?.total ?? 0;
+    monthDurationSeconds = monthAgg?.total ?? 0;
+  }
+
+  let monthUninvoicedDurationSeconds = monthDurationSeconds;
+  const canViewBilling = role === "owner";
+  let openInvoiceCount = 0;
+  let outstandingCents = 0;
+  let billingCurrency = client.currency;
+  const recentInvoices: AgencyClientCommercialSummary["billing"]["recentInvoices"] = [];
+
+  if (canViewBilling) {
+    const invoiceRows = await db
+      .select({
+        id: agencyOpsInvoice.id,
+        number: agencyOpsInvoice.number,
+        status: agencyOpsInvoice.status,
+        amountCents: agencyOpsInvoice.amountCents,
+        receivedCents: agencyOpsInvoice.receivedCents,
+        currency: agencyOpsInvoice.currency,
+        periodStart: agencyOpsInvoice.periodStart,
+        periodEnd: agencyOpsInvoice.periodEnd,
+      })
+      .from(agencyOpsInvoice)
+      .where(
+        and(
+          eq(agencyOpsInvoice.teamId, input.teamId),
+          eq(agencyOpsInvoice.clientId, input.clientId),
+        ),
+      )
+      .orderBy(desc(agencyOpsInvoice.createdAt))
+      .limit(8);
+
+    const openStatuses = new Set(["draft", "sent", "partial"]);
+    for (const inv of invoiceRows) {
+      const remaining = Math.max(0, inv.amountCents - inv.receivedCents);
+      if (openStatuses.has(inv.status)) {
+        openInvoiceCount += 1;
+        outstandingCents += remaining;
+        billingCurrency = inv.currency || billingCurrency;
+      }
+      recentInvoices.push({
+        id: inv.id,
+        number: inv.number,
+        status: inv.status,
+        amountCents: inv.amountCents,
+        remainingCents: remaining,
+        currency: inv.currency,
+        periodStart: inv.periodStart.toISOString(),
+        periodEnd: inv.periodEnd.toISOString(),
+      });
+    }
+
+    const [overlappingInvoice] = await db
+      .select({ id: agencyOpsInvoice.id })
+      .from(agencyOpsInvoice)
+      .where(
+        and(
+          eq(agencyOpsInvoice.teamId, input.teamId),
+          eq(agencyOpsInvoice.clientId, input.clientId),
+          lte(agencyOpsInvoice.periodStart, monthEnd),
+          gte(agencyOpsInvoice.periodEnd, monthStart),
+        ),
+      )
+      .limit(1);
+
+    if (overlappingInvoice) {
+      monthUninvoicedDurationSeconds = 0;
+    }
+  }
+
+  return {
+    client,
+    contact: contactRow
+      ? {
+          id: contactRow.id,
+          name: contactRow.name,
+          email: contactRow.email,
+          phone: contactRow.phone,
+        }
+      : null,
+    activeProjectCount,
+    trashedProjectCount,
+    weekDurationSeconds,
+    monthDurationSeconds,
+    monthUninvoicedDurationSeconds,
+    billing: {
+      canView: canViewBilling,
+      openInvoiceCount,
+      outstandingCents,
+      currency: billingCurrency,
+      recentInvoices: canViewBilling ? recentInvoices : [],
+    },
   };
 }
 
@@ -109,23 +348,13 @@ export async function createAgencyClient(
       createdAt: now,
       updatedAt: now,
     })
-    .returning({
-      id: agencyOpsClient.id,
-      teamId: agencyOpsClient.teamId,
-      name: agencyOpsClient.name,
-      category: agencyOpsClient.category,
-      billableRateCents: agencyOpsClient.billableRateCents,
-      currency: agencyOpsClient.currency,
-      archivedAt: agencyOpsClient.archivedAt,
-      createdAt: agencyOpsClient.createdAt,
-      updatedAt: agencyOpsClient.updatedAt,
-    });
+    .returning(clientSelect);
 
   if (!created) {
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
-  return { ...mapClientRow(created), archivedAt: created.archivedAt?.toISOString() ?? null };
+  return mapClientRow(created);
 }
 
 export async function updateAgencyClient(
@@ -189,23 +418,13 @@ export async function updateAgencyClient(
     .update(agencyOpsClient)
     .set(patch)
     .where(and(eq(agencyOpsClient.teamId, input.teamId), eq(agencyOpsClient.id, input.clientId)))
-    .returning({
-      id: agencyOpsClient.id,
-      teamId: agencyOpsClient.teamId,
-      name: agencyOpsClient.name,
-      category: agencyOpsClient.category,
-      billableRateCents: agencyOpsClient.billableRateCents,
-      currency: agencyOpsClient.currency,
-      archivedAt: agencyOpsClient.archivedAt,
-      createdAt: agencyOpsClient.createdAt,
-      updatedAt: agencyOpsClient.updatedAt,
-    });
+    .returning(clientSelect);
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
   }
 
-  return { ...mapClientRow(updated), archivedAt: updated.archivedAt?.toISOString() ?? null };
+  return mapClientRow(updated);
 }
 
 export async function archiveAgencyClient(
