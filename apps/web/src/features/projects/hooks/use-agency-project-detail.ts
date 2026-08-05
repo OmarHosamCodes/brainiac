@@ -9,6 +9,7 @@ import {
 } from "@/features/shared/stores/agency-ops";
 import { startOfWeekUtc } from "@/features/shared/use-agency-time-range-filters";
 import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
+import { teamDetailQueryOptions } from "@/features/team/team-queries";
 
 export type ActivitySort = "newest" | "oldest" | "longest";
 
@@ -18,15 +19,33 @@ export type AgencyProjectDetailViewModel = {
   isLoading: boolean;
   isError: boolean;
   errorMessage: string;
-  project: any;
-  projectBudget: any;
+  project: {
+    id: string;
+    name: string;
+    clientId: string;
+    clientName: string;
+    deletedAt: string | null;
+  } | null;
+  projectBudget: {
+    projectId: string;
+    hoursBudget: number | null;
+    hoursLogged: number;
+    costBudgetCents: number | null;
+    costLoggedCents: number;
+  } | null;
   budgetPct: number;
   budgetTone: string;
   totalsThisWeek: number;
   totalsLast30: number;
   hoursByMemberThisWeek: Array<{ userId: string; name: string; seconds: number }>;
   memberSecondsMax: number;
-  sortedRecentEntries: any[];
+  sortedRecentEntries: Array<{
+    id: string;
+    startedAt: string;
+    userName: string;
+    description: string;
+    durationSeconds: number;
+  }>;
   activitySort: ActivitySort;
   setActivitySort: (sort: ActivitySort) => void;
   journeyExpandedMobile: boolean;
@@ -34,8 +53,13 @@ export type AgencyProjectDetailViewModel = {
   journeyState: ReturnType<typeof useAgencyProjectJourney>;
   retryLoad: () => void;
   isTrashed: boolean;
+  isOwner: boolean;
   isProjectMutationPending: boolean;
   restoreProject: () => void;
+  requestMoveToTrash: () => void;
+  pendingTrashConfirm: boolean;
+  cancelTrashConfirm: () => void;
+  confirmMoveToTrash: () => void;
 };
 
 type UseAgencyProjectDetailOptions = {
@@ -62,10 +86,17 @@ export function useAgencyProjectDetail({
 
   const [activitySort, setActivitySort] = useState<ActivitySort>("newest");
   const [journeyExpandedMobile, setJourneyExpandedMobile] = useState(true);
+  const [pendingTrashConfirm, setPendingTrashConfirm] = useState(false);
 
   const journeyState = useAgencyProjectJourney(teamId, projectId, {
     enabled: Boolean(teamId && projectId),
   });
+
+  const teamQuery = useQuery({
+    ...teamDetailQueryOptions(teamId),
+    enabled: Boolean(teamId),
+  });
+  const isOwner = teamQuery.data?.role === "owner";
 
   const projectsQuery = useQuery({
     ...orpc.agencyOps.projects.list.queryOptions({
@@ -189,13 +220,40 @@ export function useAgencyProjectDetail({
     });
   }
 
+  function requestMoveToTrash() {
+    setPendingTrashConfirm(true);
+  }
+
+  function cancelTrashConfirm() {
+    if (isProjectMutationPending) return;
+    setPendingTrashConfirm(false);
+  }
+
+  function confirmMoveToTrash() {
+    if (!project || !teamId) return;
+    setPendingTrashConfirm(false);
+    void agencyOps.deleteProject({
+      teamId,
+      projectId: project.id,
+      projectName: project.name,
+    });
+  }
+
   return {
     teamId,
     projectId,
     isLoading,
     isError,
     errorMessage,
-    project,
+    project: project
+      ? {
+          id: project.id,
+          name: project.name,
+          clientId: project.clientId,
+          clientName: project.clientName,
+          deletedAt: project.deletedAt ?? null,
+        }
+      : null,
     projectBudget,
     budgetPct,
     budgetTone,
@@ -211,7 +269,12 @@ export function useAgencyProjectDetail({
     journeyState,
     retryLoad,
     isTrashed: Boolean(project?.deletedAt),
+    isOwner,
     isProjectMutationPending,
     restoreProject,
+    requestMoveToTrash,
+    pendingTrashConfirm,
+    cancelTrashConfirm,
+    confirmMoveToTrash,
   };
 }

@@ -27,6 +27,7 @@ export function AgencyProjectsTableView({
 }: AgencyProjectsTableViewProps) {
   const {
     openNewProject,
+    isOwner,
     filteredProjects,
     hoursThisWeekByProject,
     budgetsByProject,
@@ -116,6 +117,7 @@ export function AgencyProjectsTableView({
             budgetToneFor={budgetToneFor}
             searchQuery={searchQuery}
             onSelect={onSelect}
+            isOwner={isOwner}
             isProjectMutationPending={isProjectMutationPending}
             onRequestDelete={requestDeleteProject}
             onRestore={restoreProject}

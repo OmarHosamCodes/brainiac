@@ -18,6 +18,7 @@ import { orpc } from "@/lib/orpc";
 import { getTaskGroupKey } from "@/features/task-management/agency-task-utils";
 import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { teamDetailQueryOptions } from "@/features/team/team-queries";
 
 export type AgencyProjectsTableProject = {
   id: string;
@@ -29,15 +30,25 @@ export type AgencyProjectsTableProject = {
 
 export type AgencyProjectsTableViewModel = {
   openNewProject: () => void;
+  isOwner: boolean;
   filteredProjects: AgencyProjectsTableProject[];
   hoursThisWeekByProject: Map<string, number>;
-  budgetsByProject: Map<string, any>;
+  budgetsByProject: Map<
+    string,
+    {
+      projectId: string;
+      hoursBudget: number | null;
+      hoursLogged: number;
+      costBudgetCents: number | null;
+      costLoggedCents: number;
+    }
+  >;
   budgetPctFor: (projectId: string) => number;
   budgetToneFor: (projectId: string) => string;
   isLoading: boolean;
   isError: boolean;
   errorMessage: string;
-  clients: any[];
+  clients: Array<{ id: string; name: string }>;
   projects: AgencyProjectsTableProject[];
   refetchProjects: () => void;
   isProjectMutationPending: boolean;
@@ -63,6 +74,12 @@ export function useAgencyProjectsTable({
   const workSchedule = useTeamWorkSchedule(teamId);
   const [pendingDeleteProject, setPendingDeleteProject] =
     useState<AgencyProjectsTableProject | null>(null);
+
+  const teamQuery = useQuery({
+    ...teamDetailQueryOptions(teamId),
+    enabled: Boolean(teamId),
+  });
+  const isOwner = teamQuery.data?.role === "owner";
 
   const projectsQuery = useAgencyProjectsQuery(teamId, {
     archiveFilter: filters.archiveFilter,
@@ -193,6 +210,7 @@ export function useAgencyProjectsTable({
 
   return {
     openNewProject,
+    isOwner,
     filteredProjects,
     hoursThisWeekByProject,
     budgetsByProject,

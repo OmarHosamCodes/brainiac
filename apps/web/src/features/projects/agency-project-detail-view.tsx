@@ -5,10 +5,20 @@ import {
   ChevronDown,
   Clock,
   FolderX,
+  Loader2,
+  Trash2,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/dialog";
 import { Skeleton } from "@/ui/skeleton";
 import {
   agencyEmptyPanelClass,
@@ -25,6 +35,7 @@ import { type AgencyProjectDetailViewModel } from "./hooks/use-agency-project-de
 type AgencyProjectDetailViewProps = {
   viewModel: AgencyProjectDetailViewModel;
   onBack: () => void;
+  onSelectClient?: (clientId: string) => void;
   journeyStepper: ReactNode;
   projectTasks: ReactNode;
 };
@@ -46,6 +57,7 @@ function formatEntryTime(iso: string): string {
 export function AgencyProjectDetailView({
   viewModel,
   onBack,
+  onSelectClient,
   journeyStepper,
   projectTasks,
 }: AgencyProjectDetailViewProps) {
@@ -69,8 +81,13 @@ export function AgencyProjectDetailView({
     journeyState,
     retryLoad,
     isTrashed,
+    isOwner,
     isProjectMutationPending,
     restoreProject,
+    requestMoveToTrash,
+    pendingTrashConfirm,
+    cancelTrashConfirm,
+    confirmMoveToTrash,
   } = viewModel;
 
   return (
@@ -128,9 +145,27 @@ export function AgencyProjectDetailView({
           <header className={cn(agencyPanelClass, "p-5")}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                  {project.clientName}
-                </p>
+                {onSelectClient ? (
+                  <button
+                    type="button"
+                    className={cn(
+                      "text-[11px] font-bold uppercase tracking-[0.16em] text-muted transition-colors hover:text-highlighted",
+                      agencyFocusRingClass,
+                      "rounded-sm",
+                    )}
+                    onClick={() => onSelectClient(project.clientId)}
+                    aria-label={`Open client ${project.clientName}`}
+                  >
+                    {project.clientName}
+                    <span className="ml-1.5 normal-case tracking-normal text-dimmed">
+                      View client
+                    </span>
+                  </button>
+                ) : (
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                    {project.clientName}
+                  </p>
+                )}
                 <h2 className="mt-1 flex min-w-0 items-center gap-2.5">
                   <span
                     className="inline-block size-2.5 shrink-0 rounded-full"
@@ -140,15 +175,25 @@ export function AgencyProjectDetailView({
                   <span className="truncate text-lg font-bold text-highlighted">
                     {project.name}
                   </span>
+                  <span
+                    className={cn(
+                      "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold",
+                      isTrashed
+                        ? "border border-default bg-default text-muted"
+                        : "bg-elevated text-highlighted",
+                    )}
+                  >
+                    {isTrashed ? "In trash" : "Active"}
+                  </span>
                 </h2>
               </div>
 
-              <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-xs">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
                 <div>
                   <span className={agencyLabelClass}>This week</span>
                   <span
                     className={cn(
-                      "ml-2 font-mono tabular-nums font-bold",
+                      "ml-2 font-mono font-bold tabular-nums",
                       totalsThisWeek > 0 ? "text-highlighted" : "text-dimmed",
                     )}
                   >
@@ -159,13 +204,25 @@ export function AgencyProjectDetailView({
                   <span className={agencyLabelClass}>Last 30 days</span>
                   <span
                     className={cn(
-                      "ml-2 font-mono tabular-nums font-bold",
+                      "ml-2 font-mono font-bold tabular-nums",
                       totalsLast30 > 0 ? "text-highlighted" : "text-dimmed",
                     )}
                   >
                     {formatDuration(totalsLast30, "short")}
                   </span>
                 </div>
+                {isOwner && !isTrashed ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-error hover:text-error"
+                    disabled={isProjectMutationPending}
+                    onClick={requestMoveToTrash}
+                  >
+                    <Trash2 className="size-3.5" />
+                    Move to trash
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -173,13 +230,13 @@ export function AgencyProjectDetailView({
               <div className="flex items-center justify-between">
                 <p className={agencyLabelClass}>Budget burn</p>
                 <p className={cn("text-[11px]", projectBudget ? "text-muted" : "text-dimmed")}>
-                  {projectBudget ? `${budgetPct}% used` : "Not set · configure rates in Settings"}
+                  {projectBudget ? `${budgetPct}% used` : "No budget configured"}
                 </p>
               </div>
               <div className="mt-2 h-1.5 rounded-full bg-elevated">
                 <div
                   className={cn(
-                    "h-full rounded-full transition-[width] duration-200 ease-out",
+                    "h-full rounded-full transition-[width] duration-200 ease-out motion-reduce:transition-none",
                     projectBudget ? budgetTone : "bg-muted",
                   )}
                   style={{ width: `${projectBudget ? budgetPct : 0}%` }}
@@ -224,6 +281,8 @@ export function AgencyProjectDetailView({
                   </div>
                 </section>
               ) : null}
+
+              {projectTasks}
 
               <section className={cn(agencyPanelClass, "flex flex-col")}>
                 <header className="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3">
@@ -278,8 +337,6 @@ export function AgencyProjectDetailView({
                   </div>
                 )}
               </section>
-
-              {projectTasks}
             </div>
 
             <aside className="flex flex-col gap-4">
@@ -322,6 +379,46 @@ export function AgencyProjectDetailView({
               </article>
             </aside>
           </div>
+
+          <Dialog
+            open={pendingTrashConfirm}
+            onOpenChange={(open) => {
+              if (!open) cancelTrashConfirm();
+            }}
+          >
+            <DialogContent className="max-w-md" showCloseButton={!isProjectMutationPending}>
+              <DialogHeader>
+                <DialogTitle>Delete &quot;{project.name}&quot;?</DialogTitle>
+                <DialogDescription>
+                  Moves the project to trash for 30 days. It disappears from Agency listings and
+                  choosers. Time entries stay; you can restore anytime until permanent delete.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button
+                  variant="ghost"
+                  disabled={isProjectMutationPending}
+                  onClick={cancelTrashConfirm}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={isProjectMutationPending}
+                  onClick={confirmMoveToTrash}
+                >
+                  {isProjectMutationPending ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+                      Moving…
+                    </>
+                  ) : (
+                    "Move to trash"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>

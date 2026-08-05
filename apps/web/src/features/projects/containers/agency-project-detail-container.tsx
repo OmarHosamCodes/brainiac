@@ -7,12 +7,14 @@ type AgencyProjectDetailContainerProps = {
   teamId: string;
   projectId: string;
   onBack: () => void;
+  onSelectClient?: (clientId: string) => void;
 };
 
 export function AgencyProjectDetailContainer({
   teamId,
   projectId,
   onBack,
+  onSelectClient,
 }: AgencyProjectDetailContainerProps) {
   const viewModel = useAgencyProjectDetail({ teamId, projectId });
   const journeyStepper = <AgencyProjectJourneyStepper teamId={teamId} projectId={projectId} />;
@@ -28,6 +30,7 @@ export function AgencyProjectDetailContainer({
     <AgencyProjectDetailView
       viewModel={viewModel}
       onBack={onBack}
+      onSelectClient={onSelectClient}
       journeyStepper={journeyStepper}
       projectTasks={projectTasks}
     />
