@@ -52,6 +52,7 @@ import {
 import {
   buildMoneyBillRows,
   filterMoneyBillRowsByClientCategory,
+  formatMoneyBillCents,
   moneyBillClientHref,
   moneyBillMemberHref,
   MONEY_ADJUSTMENT_SECTION_OPTIONS,
@@ -81,8 +82,6 @@ import {
   createNewCustomFormulaDraft,
   createNewCustomRuleDraft,
   createRuleDraft,
-  defaultCalcState,
-  defaultRulesState,
   listCustomMoneyRuleIds,
   resolveRuleCohort,
   resolveRuleLabel,
@@ -150,6 +149,16 @@ export type MoneyStatsCardViewModel = {
   secondary: Array<MoneyStatsMetricFixture & { source: "live" | "fixture" }>;
   collectedRatio: number | null;
   collectedLabel: string | null;
+};
+
+type MoneyPaymentTarget = {
+  kind: "invoice" | "payout" | "adjustment";
+  id: string;
+  partyName: string;
+  referenceLabel: string;
+  remainingCents: number;
+  remainingLabel: string;
+  currency: string;
 };
 
 function buildCardViewModel(card: MoneyStatsCardWithSource): MoneyStatsCardViewModel {
@@ -232,7 +241,10 @@ export function useAgencyMoneySurface(teamId: string) {
     );
   const [adjustmentLabel, setAdjustmentLabel] = useState("");
   const [adjustmentAmount, setAdjustmentAmount] = useState("");
-  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
+  const [paymentTarget, setPaymentTarget] = useState<{
+    kind: "invoice" | "payout" | "adjustment";
+    id: string;
+  } | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [pendingActionInvoiceId, setPendingActionInvoiceId] = useState<string | null>(null);
   const [expenseCreateOpen, setExpenseCreateOpen] = useState(false);
@@ -294,6 +306,14 @@ export function useAgencyMoneySurface(teamId: string) {
     ],
   );
 
+  const teamQuery = useQuery({
+    ...orpc.team.get.queryOptions({ input: { teamId } }),
+    enabled: Boolean(teamId),
+  });
+  const isOwner = teamQuery.data?.role === "owner";
+  const isRolePending = teamQuery.isPending;
+  const canManageMoney = isOwner;
+
   const showsClientBills = moneyBillsPartyShowsClients(partyFilter);
   const showsMemberBills = moneyBillsPartyShowsMembers(partyFilter);
   const showsAdjustmentBills = moneyBillsPartyShowsAdjustments(partyFilter);
@@ -322,7 +342,7 @@ export function useAgencyMoneySurface(teamId: string) {
         search: searchTerm.trim() || undefined,
       },
     }),
-    enabled: Boolean(teamId) && showsClientBills,
+    enabled: Boolean(teamId) && isOwner && showsClientBills,
   });
 
   const payoutsQuery = useQuery({
@@ -336,7 +356,7 @@ export function useAgencyMoneySurface(teamId: string) {
         billsParty: payoutBillsParty,
       },
     }),
-    enabled: Boolean(teamId) && loadsPayoutLines,
+    enabled: Boolean(teamId) && isOwner && loadsPayoutLines,
   });
 
   const periodActivityQuery = useQuery({
@@ -348,7 +368,7 @@ export function useAgencyMoneySurface(teamId: string) {
         search: searchTerm.trim() || undefined,
       },
     }),
-    enabled: Boolean(teamId) && (showsClientBills || showsMemberBills),
+    enabled: Boolean(teamId) && isOwner && (showsClientBills || showsMemberBills),
   });
 
   const clientsQuery = useQuery({
@@ -366,19 +386,19 @@ export function useAgencyMoneySurface(teamId: string) {
         periodEnd: periodRange.to,
       },
     }),
-    enabled: Boolean(teamId),
+    enabled: Boolean(teamId) && isOwner,
   });
 
   const moneySettingsQuery = useQuery({
     ...orpc.agencyOps.moneySettings.get.queryOptions({
       input: { teamId },
     }),
-    enabled: Boolean(teamId),
+    enabled: Boolean(teamId) && isOwner,
   });
 
   const teamMembersQuery = useQuery({
     ...orpc.team.members.list.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId) && moneySettingsOpen,
+    enabled: Boolean(teamId) && isOwner && moneySettingsOpen,
   });
 
   const periodScoreboardQuery = useQuery({
@@ -389,7 +409,7 @@ export function useAgencyMoneySurface(teamId: string) {
         periodEnd: periodRange.to,
       },
     }),
-    enabled: Boolean(teamId),
+    enabled: Boolean(teamId) && isOwner,
   });
 
   useEffect(() => {
@@ -459,7 +479,7 @@ export function useAgencyMoneySurface(teamId: string) {
         periodEnd: periodRange.to,
       },
     }),
-    enabled: Boolean(teamId),
+    enabled: Boolean(teamId) && isOwner,
   });
 
   const selectedRunSection = payoutRunQuery.data?.sections.find(
@@ -475,48 +495,46 @@ export function useAgencyMoneySurface(teamId: string) {
         sectionKey: selectedRunSection?.key,
       },
     }),
-    enabled: Boolean(teamId) && Boolean(selectedRunSection?.key),
+    enabled: Boolean(teamId) && isOwner && Boolean(selectedRunSection?.key),
   });
 
   const expenseRecords = (expensesQuery.data?.items ?? []) as MoneyExpenseRecord[];
+  const expensesStatus = expensesQuery.isPending
+    ? "loading"
+    : expensesQuery.isError
+      ? "error"
+      : expensesQuery.isSuccess
+        ? "ready"
+        : "loading";
+  const expensesErrorMessage = getErrorMessage(expensesQuery.error, "Try refreshing expenses.");
+  const moneySettingsStatus = moneySettingsQuery.isPending
+    ? "loading"
+    : moneySettingsQuery.isError
+      ? "error"
+      : moneySettingsQuery.isSuccess && moneySettingsQuery.data
+        ? "ready"
+        : "loading";
+  const moneySettingsErrorMessage = getErrorMessage(
+    moneySettingsQuery.error,
+    "Try refreshing Money settings.",
+  );
+
+  const scoreboardStatus =
+    isRolePending || periodScoreboardQuery.isPending
+      ? "loading"
+      : periodScoreboardQuery.isError
+        ? "error"
+        : periodScoreboardQuery.isSuccess && periodScoreboardQuery.data
+          ? "ready"
+          : "loading";
+  const scoreboardErrorMessage = getErrorMessage(
+    periodScoreboardQuery.error,
+    "Try refreshing the period scoreboard.",
+  );
 
   const statsCards = useMemo(() => {
     const board = periodScoreboardQuery.data;
-    if (!board) {
-      return buildMoneyStatsCards({
-        currency: "USD",
-        metrics: {
-          "total-income": 0,
-          received: 0,
-          remaining: 0,
-          salaries: 0,
-          expenses: 0,
-          "debt-discount": 0,
-          "paid-vacation": 0,
-          "team-profit": 0,
-          "profit-loss-share": 0,
-          roi: 0,
-          "device-compensation": 0,
-          charity: 0,
-          pbc: 0,
-        },
-        sources: {
-          "total-income": "live",
-          received: "live",
-          remaining: "live",
-          salaries: "live",
-          expenses: "live",
-          "debt-discount": "live",
-          "paid-vacation": "live",
-          "team-profit": "live",
-          "profit-loss-share": "live",
-          roi: "live",
-          "device-compensation": "live",
-          charity: "live",
-          pbc: "live",
-        },
-      }).map((card) => buildCardViewModel(card));
-    }
+    if (!board || scoreboardStatus !== "ready") return [];
 
     const liveMetrics: Partial<Record<MoneyStatsMetricId, number>> = {
       "total-income": centsToMajor(board.totalIncomeCents),
@@ -542,17 +560,17 @@ export function useAgencyMoneySurface(teamId: string) {
       metrics: liveMetrics,
       sources,
     }).map((card) => buildCardViewModel(card));
-  }, [periodScoreboardQuery.data]);
+  }, [periodScoreboardQuery.data, scoreboardStatus]);
 
   const statusOptions = useMemo(() => moneyBillsStatusOptionsForParty(partyFilter), [partyFilter]);
 
-  const billsEmptyCopy = useMemo(
-    () => moneyBillsEmptyCopy(partyFilter, statusFilter, searchTerm),
-    [partyFilter, searchTerm, statusFilter],
-  );
   const billsClientCategoryFilterActive =
     partyFilter === "all" || partyFilter === "client" ? clientCategoryFilter : null;
-
+  const billsEmptyCopy = useMemo(
+    () =>
+      moneyBillsEmptyCopy(partyFilter, statusFilter, searchTerm, billsClientCategoryFilterActive),
+    [billsClientCategoryFilterActive, partyFilter, searchTerm, statusFilter],
+  );
   const billsActiveFilterSummary = useMemo(
     () => moneyBillsActiveFilterSummary(partyFilter, statusFilter, billsClientCategoryFilterActive),
     [billsClientCategoryFilterActive, partyFilter, statusFilter],
@@ -621,13 +639,91 @@ export function useAgencyMoneySurface(teamId: string) {
     statusFilter,
   ]);
 
-  const paymentRow = useMemo(() => {
-    const row = billRows.find((item) => item.id === paymentInvoiceId);
-    if (row?.kind === "invoice" || row?.kind === "team-payout" || row?.kind === "adjustment") {
-      return row;
-    }
-    return null;
-  }, [billRows, paymentInvoiceId]);
+  const resolvePaymentTarget = useMemo(
+    () =>
+      (rowId: string): MoneyPaymentTarget | null => {
+        const payoutLine = [
+          ...(runSectionLinesQuery.data?.items ?? []),
+          ...(payoutsQuery.data?.items ?? []),
+        ].find((line) => line.id === rowId);
+        if (payoutLine) {
+          const kind =
+            payoutLine.sectionKey === "debt_discount" ||
+            payoutLine.sectionKey === "charity" ||
+            payoutLine.sectionKey === "pbc"
+              ? "adjustment"
+              : "payout";
+          return {
+            kind,
+            id: payoutLine.id,
+            partyName:
+              kind === "adjustment"
+                ? payoutLine.label || payoutLine.sectionTitle
+                : payoutLine.userName,
+            referenceLabel: kind === "adjustment" ? payoutLine.sectionTitle : payoutLine.label,
+            remainingCents: payoutLine.remainingCents,
+            remainingLabel: formatMoneyBillCents(payoutLine.remainingCents, payoutLine.currency),
+            currency: payoutLine.currency,
+          };
+        }
+
+        const invoice = (invoicesQuery.data?.items ?? []).find((item) => item.id === rowId);
+        if (invoice) {
+          return {
+            kind: "invoice",
+            id: invoice.id,
+            partyName: invoice.clientName,
+            referenceLabel: invoice.number,
+            remainingCents: invoice.remainingCents,
+            remainingLabel: formatMoneyBillCents(invoice.remainingCents, invoice.currency),
+            currency: invoice.currency,
+          };
+        }
+
+        const row = billRows.find((item) => item.id === rowId);
+        if (
+          !row ||
+          (row.kind !== "invoice" && row.kind !== "team-payout" && row.kind !== "adjustment")
+        ) {
+          return null;
+        }
+        return {
+          kind:
+            row.kind === "invoice"
+              ? "invoice"
+              : row.kind === "adjustment"
+                ? "adjustment"
+                : "payout",
+          id: row.id,
+          partyName:
+            row.kind === "invoice"
+              ? row.clientName
+              : row.kind === "adjustment"
+                ? row.title
+                : row.userName,
+          referenceLabel:
+            row.kind === "invoice"
+              ? row.number
+              : row.kind === "adjustment"
+                ? row.sectionTitle
+                : row.label,
+          remainingCents: row.remainingCents,
+          remainingLabel: row.remainingLabel,
+          currency: row.currency,
+        };
+      },
+    [
+      billRows,
+      invoicesQuery.data?.items,
+      payoutsQuery.data?.items,
+      runSectionLinesQuery.data?.items,
+    ],
+  );
+
+  const paymentRow = useMemo(
+    () => (paymentTarget ? resolvePaymentTarget(paymentTarget.id) : null),
+    [paymentTarget, resolvePaymentTarget],
+  );
 
   const adjustmentCreateValid = moneyBillsAdjustmentCreateValid(
     adjustmentSectionKey,
@@ -655,6 +751,10 @@ export function useAgencyMoneySurface(teamId: string) {
   const paymentCanSubmit = paymentRow
     ? moneyBillsPaymentCanSubmit(paymentAmount, paymentRow.remainingCents)
     : false;
+  const paymentValidationMessage =
+    paymentAmount.trim().length > 0 && paymentRow && !paymentCanSubmit
+      ? `Enter an amount greater than zero and no more than ${paymentRow.remainingLabel}.`
+      : null;
 
   const billsIsLoading =
     loadsPeriodBills &&
@@ -672,12 +772,18 @@ export function useAgencyMoneySurface(teamId: string) {
   );
 
   const upcomingExpenses = useMemo(
-    () => expenseRecords.filter((record) => record.kind === "subscription").map(toExpenseRow),
-    [expenseRecords],
+    () =>
+      expensesStatus === "ready"
+        ? expenseRecords.filter((record) => record.kind === "subscription").map(toExpenseRow)
+        : [],
+    [expenseRecords, expensesStatus],
   );
   const recentExpenses = useMemo(
-    () => expenseRecords.filter((record) => record.kind === "one_time").map(toExpenseRow),
-    [expenseRecords],
+    () =>
+      expensesStatus === "ready"
+        ? expenseRecords.filter((record) => record.kind === "one_time").map(toExpenseRow)
+        : [],
+    [expenseRecords, expensesStatus],
   );
 
   const canSubmitExpense = moneyExpenseCanSubmit(
@@ -759,13 +865,12 @@ export function useAgencyMoneySurface(teamId: string) {
 
   function onSelectCohortAllocation(selection: MoneyCohortAllocationsSelection) {
     const current = moneySettingsQuery.data;
+    if (!current || moneySettingsStatus !== "ready") return;
     if (selection.kind === "rule") {
-      setMoneySettingsDraft(
-        createRuleDraft(current?.rules ?? defaultRulesState(), selection.ruleId),
-      );
+      setMoneySettingsDraft(createRuleDraft(current.rules, selection.ruleId));
       return;
     }
-    const formula = (current?.calcOptions.formulas ?? []).find(
+    const formula = (current.calcOptions.formulas ?? []).find(
       (item) => item.id === selection.formulaId,
     );
     if (!formula) return;
@@ -791,10 +896,10 @@ export function useAgencyMoneySurface(teamId: string) {
   }
 
   function onMoneySettingsEditorSave() {
-    if (!moneySettingsDraft) return;
+    if (!moneySettingsDraft || !moneySettingsQuery.isSuccess || !moneySettingsQuery.data) return;
     const current = moneySettingsQuery.data;
-    const rules = current?.rules ?? defaultRulesState();
-    const calcOptions = current?.calcOptions ?? defaultCalcState();
+    const rules = current.rules;
+    const calcOptions = current.calcOptions;
 
     if (moneySettingsDraft.kind === "rule") {
       void agencyOps.upsertMoneySettings(
@@ -825,6 +930,13 @@ export function useAgencyMoneySurface(teamId: string) {
   }
 
   function onSyncFormulaLines() {
+    if (
+      !window.confirm(
+        "Sync enabled formula amounts to unpaid draft lines? Paid lines will remain unchanged.",
+      )
+    ) {
+      return;
+    }
     void agencyOps.syncFormulaPayoutLines({
       teamId,
       periodStart: periodRange.from,
@@ -852,6 +964,12 @@ export function useAgencyMoneySurface(teamId: string) {
   }
 
   function onClearClientCategoryFilter() {
+    setClientCategoryFilter(null);
+  }
+
+  function onClearAllFilters() {
+    setPartyFilter("all");
+    setStatusFilter(null);
     setClientCategoryFilter(null);
   }
 
@@ -919,16 +1037,17 @@ export function useAgencyMoneySurface(teamId: string) {
 
   function onPaymentOpenChange(open: boolean) {
     if (!open) {
-      setPaymentInvoiceId(null);
+      setPaymentTarget(null);
       setPaymentAmount("");
     }
   }
 
   function onOpenPayment(rowId: string) {
-    const row = billRows.find((item) => item.id === rowId);
-    setPaymentInvoiceId(rowId);
-    if (row?.kind === "invoice" || row?.kind === "team-payout" || row?.kind === "adjustment") {
-      setPaymentAmount((row.remainingCents / 100).toFixed(2));
+    const target = resolvePaymentTarget(rowId);
+    if (!target) return;
+    setPaymentTarget({ kind: target.kind, id: target.id });
+    if (target) {
+      setPaymentAmount((target.remainingCents / 100).toFixed(2));
       return;
     }
     setPaymentAmount("");
@@ -1001,9 +1120,13 @@ export function useAgencyMoneySurface(teamId: string) {
   }
 
   async function onMarkBillPaid(rowId: string) {
+    const target = resolvePaymentTarget(rowId);
+    if (!target) return;
+    if (!window.confirm(`Mark ${target.remainingLabel} for ${target.partyName} as fully paid?`)) {
+      return;
+    }
     setPendingActionInvoiceId(rowId);
-    const row = billRows.find((item) => item.id === rowId);
-    if (row?.kind === "team-payout" || row?.kind === "adjustment") {
+    if (target.kind === "payout" || target.kind === "adjustment") {
       await agencyOps.updatePayoutLineStatus(
         { teamId, lineId: rowId, status: "paid" },
         { onSuccess: () => setPendingActionInvoiceId(null) },
@@ -1018,6 +1141,7 @@ export function useAgencyMoneySurface(teamId: string) {
   }
 
   async function onRefundBill(invoiceId: string) {
+    if (!window.confirm("Refund this invoice? This changes its bill status.")) return;
     setPendingActionInvoiceId(invoiceId);
     await agencyOps.updateInvoiceStatus(
       { teamId, invoiceId, status: "refunded" },
@@ -1107,9 +1231,21 @@ export function useAgencyMoneySurface(teamId: string) {
       })),
     [runSectionLinesQuery.data?.items],
   );
+  const payoutLinesStatus: "loading" | "error" | "ready" | "idle" = !selectedRunSection
+    ? "idle"
+    : runSectionLinesQuery.isPending
+      ? "loading"
+      : runSectionLinesQuery.isError
+        ? "error"
+        : runSectionLinesQuery.isSuccess
+          ? "ready"
+          : "idle";
 
   return {
     teamId,
+    isOwner,
+    isRolePending,
+    canManageMoney,
     title: agencyManagementPaneLabel("money"),
     subtitle: agencyManagementPaneSubtitle("money"),
     period: {
@@ -1128,10 +1264,13 @@ export function useAgencyMoneySurface(teamId: string) {
       label: periodLabel,
     },
     statsCards,
+    scoreboardStatus,
+    scoreboardErrorMessage,
+    onRetryScoreboard: () => void periodScoreboardQuery.refetch(),
     onSelectMetric,
     payoutRun: {
-      title: "Period run",
-      subtitle: "Payroll sections for this Money period",
+      title: periodLabel ? `Payout run for ${periodLabel}` : "Payout run",
+      subtitle: "Team and adjustment lines for this period",
       status: payoutRunQuery.data?.status ?? "draft",
       currency: payoutRunQuery.data?.currency ?? "USD",
       periodLabel,
@@ -1140,9 +1279,17 @@ export function useAgencyMoneySurface(teamId: string) {
       onSelectSection: setSelectedRunSectionId,
       selectedSectionLines: selectedRunSectionLines,
       isLoading: payoutRunQuery.isPending,
-      onOpenPayment,
-      onMarkPaid: onMarkBillPaid,
+      isError: payoutRunQuery.isError,
+      errorMessage: getErrorMessage(payoutRunQuery.error, "Try refreshing the payout run."),
+      onRetry: () => {
+        void payoutRunQuery.refetch();
+        if (selectedRunSection) void runSectionLinesQuery.refetch();
+      },
+      linesStatus: payoutLinesStatus,
+      onOpenPayment: isOwner ? onOpenPayment : null,
+      onMarkPaid: isOwner ? onMarkBillPaid : null,
       onAddLine: (() => {
+        if (!isOwner) return null;
         const sectionKey = selectedRunSection?.key;
         if (sectionKey !== "debt_discount" && sectionKey !== "charity" && sectionKey !== "pbc") {
           return null;
@@ -1155,7 +1302,7 @@ export function useAgencyMoneySurface(teamId: string) {
       })(),
       onOpenTeamBills: () => setPartyFilter("team"),
       onSyncFormulaLines:
-        payoutRunQuery.data?.status === "draft" || payoutRunQuery.data == null
+        isOwner && (payoutRunQuery.data?.status === "draft" || payoutRunQuery.data == null)
           ? onSyncFormulaLines
           : null,
       isMutationPending: isInvoiceMutationPending,
@@ -1163,17 +1310,24 @@ export function useAgencyMoneySurface(teamId: string) {
     moneySettings: {
       open: moneySettingsOpen,
       onOpenChange: onMoneySettingsOpenChange,
-      onOpen: () => {
-        setMoneySettingsDraft(null);
-        setCohortPane("rules");
-        setMoneySettingsOpen(true);
-      },
+      onOpen: isOwner
+        ? () => {
+            setMoneySettingsDraft(null);
+            setCohortPane("rules");
+            setMoneySettingsOpen(true);
+          }
+        : null,
       title: "Money settings",
       description: "Who qualifies and how much they get. Open a rule or formula, edit, then save.",
       pane: cohortPane,
       paneOptions: MONEY_COHORT_PANE_OPTIONS,
       onPaneChange: onMoneySettingsPaneChange,
+      status: moneySettingsStatus,
+      errorMessage: moneySettingsErrorMessage,
+      onRetry: () => void moneySettingsQuery.refetch(),
+      canEdit: moneySettingsStatus === "ready" && isOwner,
       rules: (() => {
+        if (moneySettingsStatus !== "ready") return [];
         const rules = moneySettingsQuery.data?.rules;
         const systemRows = MONEY_COHORT_RULES_FIXTURE.map((rule) => ({
           id: rule.id,
@@ -1195,19 +1349,22 @@ export function useAgencyMoneySurface(teamId: string) {
         }));
         return [...systemRows, ...customRows];
       })(),
-      formulas: ((moneySettingsQuery.data?.calcOptions.formulas ?? []) as MoneyFormulaDef[]).map(
-        (formula) => ({
-          id: formula.id,
-          key: formula.key,
-          label: formula.label,
-          locked: formula.locked,
-          enabled: formula.enabled,
-          tokens: formula.tokens,
-          output: formula.output,
-          metricId: formula.metricId,
-          sectionKey: formula.sectionKey,
-        }),
-      ),
+      formulas:
+        moneySettingsStatus === "ready"
+          ? ((moneySettingsQuery.data?.calcOptions.formulas ?? []) as MoneyFormulaDef[]).map(
+              (formula) => ({
+                id: formula.id,
+                key: formula.key,
+                label: formula.label,
+                locked: formula.locked,
+                enabled: formula.enabled,
+                tokens: formula.tokens,
+                output: formula.output,
+                metricId: formula.metricId,
+                sectionKey: formula.sectionKey,
+              }),
+            )
+          : [],
       memberOptions: (teamMembersQuery.data?.items ?? []).map((member) => ({
         value: member.userId,
         label: member.userName,
@@ -1220,6 +1377,8 @@ export function useAgencyMoneySurface(teamId: string) {
       onEditorCancel: onMoneySettingsEditorCancel,
       onEditorSave: onMoneySettingsEditorSave,
       canSaveEditor:
+        moneySettingsStatus === "ready" &&
+        moneySettingsQuery.data != null &&
         moneySettingsDraft != null &&
         (moneySettingsDraft.kind === "rule"
           ? moneySettingsDraft.cohort.trim().length > 0 &&
@@ -1240,6 +1399,7 @@ export function useAgencyMoneySurface(teamId: string) {
       onClearStatusFilter,
       clientCategoryFilter,
       onClearClientCategoryFilter,
+      onClearAllFilters,
       searchTerm,
       onSearchTermChange: setSearchTerm,
       activeFilterSummary: billsActiveFilterSummary,
@@ -1298,26 +1458,13 @@ export function useAgencyMoneySurface(teamId: string) {
         open: Boolean(paymentRow),
         onOpenChange: onPaymentOpenChange,
         formId: BILL_PAYMENT_FORM_ID,
-        partyName:
-          paymentRow?.kind === "invoice"
-            ? paymentRow.clientName
-            : paymentRow?.kind === "team-payout"
-              ? paymentRow.userName
-              : paymentRow?.kind === "adjustment"
-                ? paymentRow.title
-                : "",
-        referenceLabel:
-          paymentRow?.kind === "invoice"
-            ? paymentRow.number
-            : paymentRow?.kind === "team-payout"
-              ? paymentRow.label
-              : paymentRow?.kind === "adjustment"
-                ? paymentRow.sectionTitle
-                : "",
+        partyName: paymentRow?.partyName ?? "",
+        referenceLabel: paymentRow?.referenceLabel ?? "",
         remainingLabel: paymentRow?.remainingLabel ?? "",
         currency: paymentRow?.currency ?? "USD",
         amount: paymentAmount,
         onAmountChange: setPaymentAmount,
+        validationMessage: paymentValidationMessage,
         canSubmit: paymentCanSubmit && !isInvoiceMutationPending,
         onSubmit: onPaymentSubmit,
       },
@@ -1325,6 +1472,9 @@ export function useAgencyMoneySurface(teamId: string) {
     expenses: {
       title: "Expenses",
       subtitle: "Subscriptions and ops spend",
+      status: expensesStatus,
+      errorMessage: expensesErrorMessage,
+      onRetry: () => void expensesQuery.refetch(),
       onOpenCreate: () => onExpenseCreateOpenChange(true),
       onOpenDetails: () => setExpenseDetailsOpen(true),
       details: {
@@ -1341,11 +1491,11 @@ export function useAgencyMoneySurface(teamId: string) {
           },
           {
             id: "recent" as const,
-            title: "Recent",
+            title: "One-time expenses",
             items: recentExpenses,
           },
         ],
-        totalCount: expenseRecords.length,
+        totalCount: expensesStatus === "ready" ? expenseRecords.length : 0,
       },
       create: {
         open: expenseCreateOpen,
@@ -1391,10 +1541,10 @@ export function useAgencyMoneySurface(teamId: string) {
       },
       recent: {
         id: "recent" as const,
-        title: "Recent",
+        title: "One-time expenses",
         hint: "This period",
         emptyTitle: "No recent spend",
-        emptyBody: "One-off and paid expenses in this range will land here.",
+        emptyBody: "One-time expenses this period will appear here.",
         count: recentExpenses.length,
         countLabel: expenseCountLabel(recentExpenses.length, "this period", "this period"),
         items: recentExpenses,

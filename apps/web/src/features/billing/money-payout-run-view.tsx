@@ -31,8 +31,12 @@ export type MoneyPayoutRunViewModel = {
   onSelectSection: (sectionId: string | null) => void;
   selectedSectionLines: MoneyPayoutRunLine[];
   isLoading: boolean;
-  onOpenPayment: (lineId: string) => void;
-  onMarkPaid: (lineId: string) => void;
+  isError: boolean;
+  errorMessage: string;
+  onRetry: () => void;
+  linesStatus: "loading" | "error" | "ready" | "idle";
+  onOpenPayment: ((lineId: string) => void) | null;
+  onMarkPaid: ((lineId: string) => void) | null;
   onAddLine: (() => void) | null;
   onOpenTeamBills: (() => void) | null;
   onSyncFormulaLines: (() => void) | null;
@@ -46,7 +50,7 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
   return (
     <section
       className={cn(agencyPanelClass, "flex min-h-0 flex-col overflow-hidden")}
-      aria-label="Period run"
+      aria-label="Payout run"
       id="money-period-run"
     >
       <div className="flex items-start justify-between gap-3 border-b border-default p-5 pb-4">
@@ -88,6 +92,19 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
       <div className="flex flex-col gap-1 p-3">
         {viewModel.isLoading ? (
           <p className="px-2 py-4 text-xs text-muted">Loading run…</p>
+        ) : viewModel.isError ? (
+          <div className="px-2 py-4" role="alert">
+            <p className="text-xs text-muted">{viewModel.errorMessage}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={viewModel.onRetry}
+            >
+              Retry
+            </Button>
+          </div>
         ) : viewModel.sections.length === 0 ? (
           <p className="px-2 py-4 text-xs text-muted">No payout sections yet.</p>
         ) : (
@@ -152,7 +169,16 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
                       </div>
                     </div>
 
-                    {cohortGroups.length === 0 ? (
+                    {viewModel.linesStatus === "loading" ? (
+                      <p className="text-xs text-muted">Loading lines…</p>
+                    ) : viewModel.linesStatus === "error" ? (
+                      <div className="text-xs text-muted" role="alert">
+                        Couldn’t load this section.{" "}
+                        <button type="button" className="underline" onClick={viewModel.onRetry}>
+                          Retry
+                        </button>
+                      </div>
+                    ) : cohortGroups.length === 0 ? (
                       <p className="text-xs text-muted">No lines in this section.</p>
                     ) : (
                       <div className="flex flex-col gap-3">
@@ -180,28 +206,28 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
                                   <span className="shrink-0 font-mono text-xs tabular-nums text-highlighted">
                                     {formatMoneyBillCents(line.amountCents, line.currency)}
                                   </span>
-                                  {line.canRecordPayment ? (
+                                  {line.canRecordPayment && viewModel.onOpenPayment ? (
                                     <Button
                                       type="button"
                                       size="sm"
                                       variant="ghost"
                                       className="h-7 rounded-lg px-2 text-xs"
                                       disabled={viewModel.isMutationPending}
-                                      onClick={() => viewModel.onOpenPayment(line.id)}
+                                      onClick={() => viewModel.onOpenPayment?.(line.id)}
                                     >
-                                      Pay
+                                      Record payment
                                     </Button>
                                   ) : null}
-                                  {line.canMarkPaid ? (
+                                  {line.canMarkPaid && viewModel.onMarkPaid ? (
                                     <Button
                                       type="button"
                                       size="sm"
                                       variant="ghost"
                                       className="h-7 rounded-lg px-2 text-xs"
                                       disabled={viewModel.isMutationPending}
-                                      onClick={() => viewModel.onMarkPaid(line.id)}
+                                      onClick={() => viewModel.onMarkPaid?.(line.id)}
                                     >
-                                      Mark paid
+                                      Mark fully paid
                                     </Button>
                                   ) : null}
                                 </li>

@@ -89,7 +89,7 @@ export function moneyBillsActiveFilterSummary(
   return parts.join(" · ");
 }
 
-const EMPTY_BODY = "When invoices, payouts, or expenses land in this range, they'll appear here.";
+const EMPTY_BODY = "When invoices or payouts land in this range, they'll appear here.";
 
 function partyNoun(party: MoneyBillsPartyFilter): string | null {
   switch (party) {
@@ -131,6 +131,7 @@ export function moneyBillsEmptyCopy(
   party: MoneyBillsPartyFilter,
   status: MoneyBillsStatusFilter | null,
   searchTerm = "",
+  clientCategory: MoneyBillsClientCategoryFilter = null,
 ): MoneyBillsEmptyCopy {
   const normalizedSearch = searchTerm.trim();
   if (normalizedSearch) {
@@ -142,6 +143,16 @@ export function moneyBillsEmptyCopy(
 
   const partyPart = partyNoun(party);
   const statusPart = statusAdjective(status);
+  const isExternal = clientCategory === "external" && (party === "all" || party === "client");
+
+  if (isExternal) {
+    return {
+      title: statusPart
+        ? `No ${statusPart} external ${party === "all" ? "" : "client "}bills`.replace("  ", " ")
+        : `No external ${party === "all" ? "" : "client "}bills`.replace("  ", " "),
+      body: "Dismiss External to include internal clients.",
+    };
+  }
 
   if (party === "adjustments") {
     return { title: "No adjustments", body: EMPTY_BODY };

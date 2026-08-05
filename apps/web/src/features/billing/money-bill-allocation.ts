@@ -21,6 +21,7 @@ export type MoneyBillAllocationSegment = {
 
 export type MoneyBillAllocationView = MoneyBillAllocationCents & {
   party: MoneyBillAllocationParty;
+  presentation: "document" | "activity";
   receivedTitle: string;
   remainingTitle: string;
   uninvoicedTitle: string;
@@ -29,6 +30,7 @@ export type MoneyBillAllocationView = MoneyBillAllocationCents & {
   uninvoicedLabel: string;
   totalLabel: string;
   wasteLabel: string;
+  showWaste: boolean;
   segments: MoneyBillAllocationSegment[];
   ariaLabel: string;
 };
@@ -70,7 +72,10 @@ function titlesForParty(party: MoneyBillAllocationParty): {
   }
 }
 
-export function buildMoneyBillAllocation(input: MoneyBillAllocationCents): MoneyBillAllocationView {
+export function buildMoneyBillAllocation(
+  input: MoneyBillAllocationCents,
+  presentation: "document" | "activity" = "document",
+): MoneyBillAllocationView {
   const party = input.party ?? "client";
   const titles = titlesForParty(party);
   const totalCents = Math.max(0, input.totalCents);
@@ -102,6 +107,11 @@ export function buildMoneyBillAllocation(input: MoneyBillAllocationCents): Money
   const totalLabel = formatCents(totalCents, currency);
   const wasteLabel = formatCents(wasteCents, currency);
 
+  const activityTitle = titles.uninvoicedTitle;
+  const activityAria = `${activityTitle} ${uninvoicedLabel}${
+    wasteCents > 0 ? `, excluded waste ${wasteLabel}` : ""
+  }`;
+
   return {
     totalCents,
     receivedCents,
@@ -110,14 +120,21 @@ export function buildMoneyBillAllocation(input: MoneyBillAllocationCents): Money
     wasteCents,
     currency,
     party,
+    presentation,
     ...titles,
     receivedLabel,
     remainingLabel,
     uninvoicedLabel,
     totalLabel,
     wasteLabel,
+    showWaste: wasteCents > 0,
     segments,
-    ariaLabel: `Total ${totalLabel}: ${titles.receivedTitle.toLowerCase()} ${receivedLabel}, remaining ${remainingLabel}, ${titles.uninvoicedTitle.toLowerCase()} ${uninvoicedLabel}, waste ${wasteLabel}`,
+    ariaLabel:
+      presentation === "activity"
+        ? activityAria
+        : `Total ${totalLabel}: ${titles.receivedTitle.toLowerCase()} ${receivedLabel}, remaining ${remainingLabel}, ${titles.uninvoicedTitle.toLowerCase()} ${uninvoicedLabel}${
+            wasteCents > 0 ? `, excluded waste ${wasteLabel}` : ""
+          }`,
   };
 }
 
@@ -126,15 +143,25 @@ export function allocationFromReadyClient(input: {
   wasteCents: number;
   currency: string;
 }): MoneyBillAllocationView {
-  return buildMoneyBillAllocation({
-    totalCents: input.billableCents,
-    receivedCents: 0,
-    remainingCents: 0,
-    uninvoicedCents: input.billableCents,
-    wasteCents: input.wasteCents,
-    currency: input.currency,
-    party: "client",
-  });
+  const allocation = buildMoneyBillAllocation(
+    {
+      totalCents: input.billableCents,
+      receivedCents: 0,
+      remainingCents: 0,
+      uninvoicedCents: input.billableCents,
+      wasteCents: input.wasteCents,
+      currency: input.currency,
+      party: "client",
+    },
+    "activity",
+  );
+  return {
+    ...allocation,
+    uninvoicedTitle: "Billable",
+    ariaLabel: `Billable ${allocation.uninvoicedLabel}${
+      allocation.showWaste ? `, excluded waste ${allocation.wasteLabel}` : ""
+    }`,
+  };
 }
 
 export function allocationFromInvoice(input: {
@@ -160,15 +187,25 @@ export function allocationFromReadyMember(input: {
   wasteCents: number;
   currency: string;
 }): MoneyBillAllocationView {
-  return buildMoneyBillAllocation({
-    totalCents: input.payableCents,
-    receivedCents: 0,
-    remainingCents: 0,
-    uninvoicedCents: input.payableCents,
-    wasteCents: input.wasteCents,
-    currency: input.currency,
-    party: "team",
-  });
+  const allocation = buildMoneyBillAllocation(
+    {
+      totalCents: input.payableCents,
+      receivedCents: 0,
+      remainingCents: 0,
+      uninvoicedCents: input.payableCents,
+      wasteCents: input.wasteCents,
+      currency: input.currency,
+      party: "team",
+    },
+    "activity",
+  );
+  return {
+    ...allocation,
+    uninvoicedTitle: "Payable",
+    ariaLabel: `Payable ${allocation.uninvoicedLabel}${
+      allocation.showWaste ? `, excluded waste ${allocation.wasteLabel}` : ""
+    }`,
+  };
 }
 
 export function allocationFromPayout(input: {

@@ -58,7 +58,7 @@ function Chip({
       {moneyFormulaTokenLabel(token)}
       <button
         type="button"
-        className="rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+        className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
         onClick={onRemove}
         disabled={disabled}
         aria-label={`Remove ${moneyFormulaTokenLabel(token)}`}
@@ -232,7 +232,7 @@ export function MoneyFormulaChipEditorView({
                     />
                     <button
                       type="button"
-                      className="rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() => removeTokenAt(index)}
                       disabled={isSaving}
                       aria-label={`Remove number ${token.value}`}
@@ -333,7 +333,7 @@ export function MoneyFormulaChipEditorView({
         {formula.locked ? null : (
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="flex flex-col gap-1.5">
-              <Label>Output</Label>
+              <Label htmlFor="money-formula-output">Output</Label>
               <Select
                 value={formula.output}
                 onValueChange={(value) =>
@@ -341,7 +341,7 @@ export function MoneyFormulaChipEditorView({
                 }
                 disabled={isSaving}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger id="money-formula-output" className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -352,7 +352,7 @@ export function MoneyFormulaChipEditorView({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Scoreboard metric</Label>
+              <Label htmlFor="money-formula-metric">Scoreboard metric</Label>
               <Select
                 value={formula.metricId ?? "__none"}
                 onValueChange={(value) =>
@@ -363,7 +363,7 @@ export function MoneyFormulaChipEditorView({
                 }
                 disabled={isSaving}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger id="money-formula-metric" className="h-9">
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
@@ -377,7 +377,7 @@ export function MoneyFormulaChipEditorView({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Payout section</Label>
+              <Label htmlFor="money-formula-section">Payout section</Label>
               <Select
                 value={formula.sectionKey ?? "__none"}
                 onValueChange={(value) =>
@@ -388,7 +388,7 @@ export function MoneyFormulaChipEditorView({
                 }
                 disabled={isSaving}
               >
-                <SelectTrigger className="h-9">
+                <SelectTrigger id="money-formula-section" className="h-9">
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>

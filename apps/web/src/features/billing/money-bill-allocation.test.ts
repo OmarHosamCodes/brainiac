@@ -18,7 +18,10 @@ describe("buildMoneyBillAllocation", () => {
     expect(view.uninvoicedCents).toBe(64_500_00);
     expect(view.segments).toEqual([{ id: "uninvoiced", percent: 100 }]);
     expect(view.wasteCents).toBe(8_100_00);
-    expect(view.receivedTitle).toBe("Received");
+    expect(view.presentation).toBe("activity");
+    expect(view.uninvoicedTitle).toBe("Billable");
+    expect(view.showWaste).toBe(true);
+    expect(view.ariaLabel).toContain("Billable");
   });
 
   test("invoice splits received and remaining", () => {
@@ -36,14 +39,14 @@ describe("buildMoneyBillAllocation", () => {
     ]);
   });
 
-  test("ready member uses Paid/Ready vocabulary", () => {
+  test("ready member uses payable activity vocabulary", () => {
     const view = allocationFromReadyMember({
       payableCents: 12_000_00,
       wasteCents: 1_000_00,
       currency: "EGP",
     });
-    expect(view.receivedTitle).toBe("Paid");
-    expect(view.uninvoicedTitle).toBe("Ready");
+    expect(view.presentation).toBe("activity");
+    expect(view.uninvoicedTitle).toBe("Payable");
     expect(view.segments).toEqual([{ id: "uninvoiced", percent: 100 }]);
   });
 
@@ -72,5 +75,18 @@ describe("buildMoneyBillAllocation", () => {
         currency: "USD",
       }).segments,
     ).toEqual([]);
+  });
+
+  test("document allocation hides an empty waste label", () => {
+    const view = allocationFromInvoice({
+      amountCents: 10_000,
+      receivedCents: 0,
+      remainingCents: 10_000,
+      wasteCents: 0,
+      currency: "USD",
+    });
+    expect(view.presentation).toBe("document");
+    expect(view.showWaste).toBe(false);
+    expect(view.ariaLabel).not.toContain("waste");
   });
 });

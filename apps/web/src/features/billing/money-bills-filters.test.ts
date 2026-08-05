@@ -62,6 +62,18 @@ describe("moneyBillsEmptyCopy", () => {
     expect(moneyBillsEmptyCopy("client", "paid", "acme").title).toBe("No matching bills");
     expect(moneyBillsEmptyCopy("client", "paid", "acme").body).toContain("acme");
   });
+
+  test("external client filter explains how to include internal clients", () => {
+    const copy = moneyBillsEmptyCopy("all", null, "", "external");
+    expect(copy.title).toContain("external");
+    expect(copy.body).toBe("Dismiss External to include internal clients.");
+  });
+
+  test("default copy does not mention expenses", () => {
+    expect(moneyBillsEmptyCopy("all", null).body).toBe(
+      "When invoices or payouts land in this range, they'll appear here.",
+    );
+  });
 });
 
 describe("moneyBillsActiveFilterSummary", () => {

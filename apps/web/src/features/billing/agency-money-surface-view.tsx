@@ -36,6 +36,7 @@ import { projectHueStyle } from "@/features/shared/project-palette";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -236,24 +237,33 @@ function StatsCard({
       ) : null}
 
       {card.secondary.length > 0 ? (
-        <ul
-          className={cn(
-            "flex flex-col gap-0.5 border-t border-default pt-3",
-            card.featured && "sm:grid sm:grid-cols-2 sm:gap-x-2 sm:gap-y-0.5",
-          )}
-        >
-          {card.secondary.map((metric) => (
-            <li key={metric.id}>
-              <MetricRowButton
-                card={card}
-                metric={metric}
-                value={formatMetricValue(metric.kind, metric.amount, card.currency)}
-                onSelect={onSelectMetric}
-                dense
-              />
-            </li>
-          ))}
-        </ul>
+        <Collapsible className="border-t border-default pt-3">
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="ghost" size="sm" className="-ml-2 h-8 px-2 text-xs">
+              Details
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <ul
+              className={cn(
+                "flex flex-col gap-0.5 pt-1",
+                card.featured && "sm:grid sm:grid-cols-2 sm:gap-x-2 sm:gap-y-0.5",
+              )}
+            >
+              {card.secondary.map((metric) => (
+                <li key={metric.id}>
+                  <MetricRowButton
+                    card={card}
+                    metric={metric}
+                    value={formatMetricValue(metric.kind, metric.amount, card.currency)}
+                    onSelect={onSelectMetric}
+                    dense
+                  />
+                </li>
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
     </article>
   );
@@ -320,7 +330,27 @@ function MoneySettingsDialog({
               editor?.kind === "formula" ? "overflow-hidden" : "overflow-y-auto overscroll-contain",
             )}
           >
-            {editor?.kind === "formula" ? (
+            {settings.status === "loading" ? (
+              <div className="flex flex-1 flex-col gap-3 py-4" aria-busy="true">
+                <Skeleton className="h-7 w-36" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            ) : settings.status === "error" ? (
+              <div className={cn(agencyErrorPanelClass, "my-auto")} role="alert">
+                <p className="text-sm font-medium text-highlighted">Couldn’t load Money settings</p>
+                <p className="mt-1 text-xs text-muted">{settings.errorMessage}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={settings.onRetry}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : editor?.kind === "formula" ? (
               <MoneyFormulaChipEditorView
                 formula={editor.formula}
                 validationError={settings.formulaValidationError}
@@ -398,7 +428,7 @@ function MoneySettingsDialog({
                         settings.onEditorChange({ ...editor, cohort: event.target.value })
                       }
                       placeholder="e.g. All members except interns"
-                      disabled={settings.isSaving}
+                      disabled={settings.isSaving || !settings.canEdit}
                     />
                   </div>
                   {editor.supportsMemberPick ? (
@@ -457,7 +487,7 @@ function MoneySettingsDialog({
                       variant="outline"
                       className="shrink-0 gap-1.5"
                       onClick={settings.onAddCustomFormula}
-                      disabled={settings.isSaving}
+                      disabled={settings.isSaving || !settings.canEdit}
                     >
                       <Plus className="size-3.5" aria-hidden />
                       Add formula
@@ -511,7 +541,7 @@ function MoneySettingsDialog({
                           )}
                           onClick={() => settings.onSelect({ kind: "rule", ruleId: rule.id })}
                           aria-label={`Edit ${rule.benefit}`}
-                          disabled={settings.isSaving}
+                          disabled={settings.isSaving || !settings.canEdit}
                         >
                           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-elevated text-muted">
                             <Users className="size-4" aria-hidden />
@@ -580,7 +610,7 @@ function MoneySettingsDialog({
                             settings.onSelect({ kind: "formula", formulaId: formula.id })
                           }
                           aria-label={`Edit ${formula.label}`}
-                          disabled={settings.isSaving}
+                          disabled={settings.isSaving || !settings.canEdit}
                         >
                           <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-elevated text-muted">
                             {formula.locked ? (
@@ -679,25 +709,30 @@ function allocationSegmentClass(id: MoneyBillAllocationSegmentId): string {
 }
 
 function MoneyBillAllocationBar({ allocation }: { allocation: MoneyBillAllocationView }) {
+  const isActivity = allocation.presentation === "activity";
   return (
     <div className="mt-1.5 min-w-0 space-y-1.5" aria-label={allocation.ariaLabel} role="img">
-      <div className="grid grid-cols-3 gap-2">
-        <div className="min-w-0">
-          <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
-            {allocation.receivedTitle}
-          </div>
-          <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-success">
-            {allocation.receivedLabel}
-          </div>
-        </div>
-        <div className="min-w-0">
-          <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
-            {allocation.remainingTitle}
-          </div>
-          <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-warning">
-            {allocation.remainingLabel}
-          </div>
-        </div>
+      <div className={cn("grid gap-2", isActivity ? "grid-cols-1" : "grid-cols-3")}>
+        {!isActivity ? (
+          <>
+            <div className="min-w-0">
+              <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                {allocation.receivedTitle}
+              </div>
+              <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-success">
+                {allocation.receivedLabel}
+              </div>
+            </div>
+            <div className="min-w-0">
+              <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
+                {allocation.remainingTitle}
+              </div>
+              <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-warning">
+                {allocation.remainingLabel}
+              </div>
+            </div>
+          </>
+        ) : null}
         <div className="min-w-0">
           <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
             {allocation.uninvoicedTitle}
@@ -720,9 +755,18 @@ function MoneyBillAllocationBar({ allocation }: { allocation: MoneyBillAllocatio
         <span className="truncate font-mono text-[0.625rem] text-muted-foreground">
           Total {allocation.totalLabel}
         </span>
-        <span className="inline-flex shrink-0 items-center rounded-full bg-destructive/10 px-1.5 py-0.5 font-mono text-[0.625rem] text-destructive ring-1 ring-destructive/25">
-          Waste {allocation.wasteLabel}
-        </span>
+        {allocation.showWaste ? (
+          <TooltipProvider delayDuration={120}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex shrink-0 items-center rounded-full bg-destructive/10 px-1.5 py-0.5 font-mono text-[0.625rem] text-destructive ring-1 ring-destructive/25">
+                  Excluded waste {allocation.wasteLabel}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Waste is excluded from billable and payable totals.</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
       </div>
     </div>
   );
@@ -908,7 +952,7 @@ function BillListRow({
               disabled={pending || isMutationPending}
               onClick={() => onOpenPayment(row.id)}
             >
-              Payment
+              Record payment
             </Button>
           ) : null}
           {row.canMarkPaid ? (
@@ -919,7 +963,7 @@ function BillListRow({
               disabled={pending || isMutationPending}
               onClick={() => void onMarkPaid(row.id)}
             >
-              Mark paid
+              Mark fully paid
             </Button>
           ) : null}
           {row.canRefund ? (
@@ -1018,28 +1062,72 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
           </TabsList>
         </Tabs>
 
-        {(bills.partyFilter === "all" || bills.partyFilter === "client") &&
-        bills.clientCategoryFilter === "external" ? (
+        {bills.activeFilterSummary ? (
           <div
             className="flex flex-wrap items-center gap-1.5"
             role="group"
-            aria-label="Client category"
+            aria-label="Active bill filters"
           >
-            <span className="inline-flex h-7 items-center gap-1 rounded-full bg-elevated px-2.5 text-xs font-medium text-highlighted ring-1 ring-border">
-              External
-              <button
-                type="button"
-                className={cn(
-                  "inline-flex size-5 items-center justify-center rounded-full text-muted transition-colors",
-                  "hover:bg-default hover:text-highlighted",
-                  agencyFocusRingClass,
-                )}
-                onClick={bills.onClearClientCategoryFilter}
-                aria-label="Show internal clients too"
-              >
-                <X className="size-3" aria-hidden />
-              </button>
-            </span>
+            {bills.partyFilter !== "all" ? (
+              <span className="inline-flex min-h-9 items-center gap-1 rounded-full bg-elevated px-2.5 text-xs font-medium text-highlighted ring-1 ring-border">
+                {bills.partyOptions.find((option) => option.id === bills.partyFilter)?.label}
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex min-h-9 min-w-9 items-center justify-center rounded-full p-2 text-muted transition-colors",
+                    "hover:bg-default hover:text-highlighted",
+                    agencyFocusRingClass,
+                  )}
+                  onClick={() => bills.onPartyFilterChange("all")}
+                  aria-label="Clear party filter"
+                >
+                  <X className="size-3" aria-hidden />
+                </button>
+              </span>
+            ) : null}
+            {bills.statusFilter ? (
+              <span className="inline-flex min-h-9 items-center gap-1 rounded-full bg-elevated px-2.5 text-xs font-medium text-highlighted ring-1 ring-border">
+                {bills.statusFilter}
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex min-h-9 min-w-9 items-center justify-center rounded-full p-2 text-muted transition-colors",
+                    "hover:bg-default hover:text-highlighted",
+                    agencyFocusRingClass,
+                  )}
+                  onClick={bills.onClearStatusFilter}
+                  aria-label="Clear status filter"
+                >
+                  <X className="size-3" aria-hidden />
+                </button>
+              </span>
+            ) : null}
+            {bills.clientCategoryFilter === "external" ? (
+              <span className="inline-flex min-h-9 items-center gap-1 rounded-full bg-elevated px-2.5 text-xs font-medium text-highlighted ring-1 ring-border">
+                External
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex min-h-9 min-w-9 items-center justify-center rounded-full p-2 text-muted transition-colors",
+                    "hover:bg-default hover:text-highlighted",
+                    agencyFocusRingClass,
+                  )}
+                  onClick={bills.onClearClientCategoryFilter}
+                  aria-label="Show internal clients too"
+                >
+                  <X className="size-3" aria-hidden />
+                </button>
+              </span>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 px-2 text-xs text-muted"
+              onClick={bills.onClearAllFilters}
+            >
+              Clear all
+            </Button>
           </div>
         ) : null}
 
@@ -1168,7 +1256,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
               <MoneyListGhostPreview />
             </div>
             <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-default to-transparent" />
-            <div className="relative z-10 mx-4 mt-1 flex flex-col items-center gap-2 rounded-2xl border border-default bg-default/95 px-5 py-8 text-center shadow-sm backdrop-blur-sm supports-backdrop-filter:bg-default/90">
+            <div className="relative z-10 mx-4 mt-1 flex flex-col items-center gap-2 rounded-2xl border border-default bg-default px-5 py-8 text-center">
               <Receipt className="size-6 text-muted" aria-hidden />
               <p className="text-sm font-semibold text-highlighted">
                 <AgencySearchHighlight text={bills.emptyCopy.title} query={bills.searchTerm} />
@@ -1248,7 +1336,12 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             onSubmit={adjustmentCreate.onSubmit}
           >
             <div className={agencyFormFieldClass}>
-              <Label className={agencyFormLabelClass}>Section</Label>
+              <Label
+                htmlFor={`${adjustmentCreate.formId}-section`}
+                className={agencyFormLabelClass}
+              >
+                Section
+              </Label>
               <Select
                 value={adjustmentCreate.sectionKey}
                 onValueChange={(value) =>
@@ -1257,7 +1350,10 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                   )
                 }
               >
-                <SelectTrigger className="h-9 w-full rounded-xl border-default bg-default">
+                <SelectTrigger
+                  id={`${adjustmentCreate.formId}-section`}
+                  className="h-9 w-full rounded-xl border-default bg-default"
+                >
                   <SelectValue placeholder="Select section" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1336,7 +1432,20 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                 value={payment.amount}
                 onChange={(event) => payment.onAmountChange(event.target.value)}
                 className={agencyFormFieldClass}
+                aria-invalid={Boolean(payment.validationMessage)}
+                aria-describedby={
+                  payment.validationMessage ? "money-bill-payment-amount-error" : undefined
+                }
               />
+              {payment.validationMessage ? (
+                <p
+                  id="money-bill-payment-amount-error"
+                  className="text-xs text-destructive"
+                  role="alert"
+                >
+                  {payment.validationMessage}
+                </p>
+              ) : null}
             </div>
           </form>
           <DialogFooter>
@@ -1392,20 +1501,43 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
       </div>
 
       <div className="flex flex-1 flex-col">
-        <ExpensesGroup
-          group={expenses.upcoming}
-          icon={<CalendarClock className="size-4 text-muted" aria-hidden />}
-          ghostRows={2}
-          onOpenDetails={expenses.onOpenDetails}
-        />
-        <div className="mx-5 border-t border-default" />
-        <ExpensesGroup
-          group={expenses.recent}
-          icon={<History className="size-4 text-muted" aria-hidden />}
-          ghostRows={2}
-          grow
-          onOpenDetails={expenses.onOpenDetails}
-        />
+        {expenses.status === "loading" ? (
+          <div className="flex flex-col gap-3 p-5" aria-busy="true">
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+          </div>
+        ) : expenses.status === "error" ? (
+          <div className={cn(agencyErrorPanelClass, "m-5")} role="alert">
+            <p className="text-sm font-medium text-highlighted">Couldn’t load expenses</p>
+            <p className="mt-1 text-xs text-muted">{expenses.errorMessage}</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={expenses.onRetry}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : (
+          <>
+            <ExpensesGroup
+              group={expenses.upcoming}
+              icon={<CalendarClock className="size-4 text-muted" aria-hidden />}
+              ghostRows={2}
+              onOpenDetails={expenses.onOpenDetails}
+            />
+            <div className="mx-5 border-t border-default" />
+            <ExpensesGroup
+              group={expenses.recent}
+              icon={<History className="size-4 text-muted" aria-hidden />}
+              ghostRows={2}
+              grow
+              onOpenDetails={expenses.onOpenDetails}
+            />
+          </>
+        )}
       </div>
 
       <Dialog open={details.open} onOpenChange={details.onOpenChange}>
@@ -1773,7 +1905,7 @@ function ExpensesGroup({
         <div className="relative flex flex-col">
           <MoneyListGhostPreview rows={ghostRows} />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-linear-to-b from-default to-transparent" />
-          <div className="relative z-10 -mt-1 flex items-start gap-3 rounded-2xl border border-default bg-default/95 px-3.5 py-3 shadow-sm backdrop-blur-sm supports-backdrop-filter:bg-default/90">
+          <div className="relative z-10 -mt-1 flex items-start gap-3 rounded-2xl border border-default bg-default px-3.5 py-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-highlighted">{group.emptyTitle}</p>
               <p className="mt-0.5 text-xs text-muted text-balance">{group.emptyBody}</p>
@@ -1796,7 +1928,25 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
     bills,
     expenses,
     payoutRun,
+    isOwner,
+    isRolePending,
+    scoreboardStatus,
+    scoreboardErrorMessage,
+    onRetryScoreboard,
   } = viewModel;
+
+  if (isRolePending) {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6" aria-busy="true">
+        <Skeleton className="h-8 w-36" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((item) => (
+            <Skeleton key={item} className="h-48 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6">
@@ -1810,23 +1960,25 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <TooltipProvider delayDuration={120}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  className="rounded-xl"
-                  onClick={moneySettings.onOpen}
-                  aria-label="Money settings"
-                >
-                  <Settings className="size-4" aria-hidden />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Money settings</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {isOwner && moneySettings.onOpen ? (
+            <TooltipProvider delayDuration={120}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-sm"
+                    className="rounded-xl"
+                    onClick={moneySettings.onOpen}
+                    aria-label="Money settings"
+                  >
+                    <Settings className="size-4" aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Money settings</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
           <RangePresetChooser
             value={period.rangePreset}
             onChange={period.onRangePresetChange}
@@ -1854,20 +2006,61 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
         </div>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Money period stats">
-        {statsCards.map((card) => (
-          <StatsCard key={card.id} card={card} onSelectMetric={onSelectMetric} />
-        ))}
-      </section>
+      {!isOwner ? (
+        <section
+          className={cn(agencyPanelClass, "flex flex-col gap-1 p-6")}
+          aria-label="Money access"
+        >
+          <h2 className="text-base font-semibold text-highlighted">Owners manage Money</h2>
+          <p className="text-sm text-muted">
+            Ask a team owner to review bills, payouts, expenses, and Money settings.
+          </p>
+        </section>
+      ) : (
+        <>
+          {scoreboardStatus === "loading" ? (
+            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+              {[1, 2, 3].map((item) => (
+                <Skeleton key={item} className="h-48 rounded-2xl" />
+              ))}
+            </section>
+          ) : scoreboardStatus === "error" ? (
+            <section className={agencyErrorPanelClass} role="alert">
+              <p className="text-sm font-medium text-highlighted">
+                Couldn’t load the period scoreboard
+              </p>
+              <p className="mt-1 text-xs text-muted">{scoreboardErrorMessage}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={onRetryScoreboard}
+              >
+                Retry
+              </Button>
+            </section>
+          ) : (
+            <section
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              aria-label="Money period stats"
+            >
+              {statsCards.map((card) => (
+                <StatsCard key={card.id} card={card} onSelectMetric={onSelectMetric} />
+              ))}
+            </section>
+          )}
 
-      <MoneyPayoutRunView viewModel={payoutRun} />
+          <MoneyPayoutRunView viewModel={payoutRun} />
 
-      <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]">
-        <BillsSection bills={bills} />
-        <ExpensesSection expenses={expenses} />
-      </div>
+          <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]">
+            <BillsSection bills={bills} />
+            <ExpensesSection expenses={expenses} />
+          </div>
 
-      <MoneySettingsDialog settings={moneySettings} />
+          <MoneySettingsDialog settings={moneySettings} />
+        </>
+      )}
     </div>
   );
 }

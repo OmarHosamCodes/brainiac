@@ -65,7 +65,7 @@ export const MONEY_STATS_CARDS_FIXTURE: MoneyStatsCardFixture[] = [
       { id: "salaries", label: "Salaries", kind: "currency", amount: 84_000 },
       { id: "expenses", label: "Expenses", kind: "currency", amount: 18_500 },
       { id: "debt-discount", label: "Debt / Discount", kind: "currency", amount: 4_200 },
-      { id: "paid-vacation", label: "200H paid vacation", kind: "currency", amount: 6_800 },
+      { id: "paid-vacation", label: "Paid off days", kind: "currency", amount: 6_800 },
     ],
   },
   {
