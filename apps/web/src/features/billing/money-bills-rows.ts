@@ -1,6 +1,13 @@
 import { formatDuration } from "@/lib/utils/format-duration";
 
 import type { MoneyBillsPartyFilter, MoneyBillsStatusFilter } from "./money-bills-filters";
+import {
+  allocationFromInvoice,
+  allocationFromPayout,
+  allocationFromReadyClient,
+  allocationFromReadyMember,
+  type MoneyBillAllocationView,
+} from "./money-bill-allocation";
 
 export type MoneyBillInvoiceStatus = "draft" | "sent" | "partial" | "paid" | "refunded";
 export type MoneyBillPayoutStatus = "draft" | "partial" | "paid";
@@ -25,6 +32,9 @@ export type MoneyBillClientActivitySource = {
   clientId: string;
   clientName: string;
   durationSeconds: number;
+  billableCents: number;
+  wasteCents: number;
+  currency: string;
 };
 
 export type MoneyBillMemberActivitySource = {
@@ -32,6 +42,9 @@ export type MoneyBillMemberActivitySource = {
   userName: string;
   userAvatar: string | null;
   durationSeconds: number;
+  payableCents: number;
+  wasteCents: number;
+  currency: string;
 };
 
 export type MoneyBillPayoutSectionKey =
@@ -95,6 +108,7 @@ export type MoneyBillInvoiceRow = MoneyBillRowBase & {
   receivedLabel: string;
   remainingLabel: string;
   periodLabel: string;
+  allocation: MoneyBillAllocationView;
 };
 
 export type MoneyBillClientActivityRow = MoneyBillRowBase & {
@@ -104,6 +118,11 @@ export type MoneyBillClientActivityRow = MoneyBillRowBase & {
   clientName: string;
   durationSeconds: number;
   durationLabel: string;
+  billableCents: number;
+  wasteCents: number;
+  currency: string;
+  amountLabel: string;
+  allocation: MoneyBillAllocationView;
 };
 
 export type MoneyBillMemberActivityRow = MoneyBillRowBase & {
@@ -114,6 +133,11 @@ export type MoneyBillMemberActivityRow = MoneyBillRowBase & {
   userAvatar: string | null;
   durationSeconds: number;
   durationLabel: string;
+  payableCents: number;
+  wasteCents: number;
+  currency: string;
+  amountLabel: string;
+  allocation: MoneyBillAllocationView;
 };
 
 export type MoneyBillTeamPayoutRow = MoneyBillRowBase & {
@@ -136,6 +160,7 @@ export type MoneyBillTeamPayoutRow = MoneyBillRowBase & {
   durationSeconds: number;
   durationLabel: string;
   periodLabel: string;
+  allocation: MoneyBillAllocationView;
 };
 
 export type MoneyBillAdjustmentRow = MoneyBillRowBase & {
@@ -227,7 +252,10 @@ export function moneyBillsPartyShowsMembers(party: MoneyBillsPartyFilter): boole
   return party === "all" || party === "team";
 }
 
-export function moneyBillRowFromInvoice(invoice: MoneyBillInvoiceSource): MoneyBillInvoiceRow {
+export function moneyBillRowFromInvoice(
+  invoice: MoneyBillInvoiceSource,
+  wasteCents = 0,
+): MoneyBillInvoiceRow {
   const billStatusLabel = moneyBillStatusLabel(invoice.billStatus);
   const periodLabel = formatMoneyBillPeriod(invoice.periodStart, invoice.periodEnd);
   const amountLabel = formatMoneyBillCents(invoice.amountCents, invoice.currency);
@@ -253,6 +281,13 @@ export function moneyBillRowFromInvoice(invoice: MoneyBillInvoiceSource): MoneyB
     receivedLabel: formatMoneyBillCents(invoice.receivedCents, invoice.currency),
     remainingLabel: formatMoneyBillCents(invoice.remainingCents, invoice.currency),
     periodLabel,
+    allocation: allocationFromInvoice({
+      amountCents: invoice.amountCents,
+      receivedCents: invoice.receivedCents,
+      remainingCents: invoice.remainingCents,
+      wasteCents,
+      currency: invoice.currency,
+    }),
     canSend: invoice.status === "draft",
     canMarkPaid: invoice.status === "sent" || invoice.status === "partial",
     canRecordPayment: invoice.status === "sent" || invoice.status === "partial",
@@ -267,18 +302,28 @@ export function moneyBillRowFromClientActivity(
   client: MoneyBillClientActivitySource,
 ): MoneyBillClientActivityRow {
   const durationLabel = formatDuration(client.durationSeconds, "short");
+  const amountLabel = formatMoneyBillCents(client.billableCents, client.currency);
   return {
     kind: "client-activity",
     id: `client-activity:${client.clientId}`,
     party: "client",
     title: client.clientName,
-    subtitle: "Ready to bill from tracked time",
-    metaLabel: durationLabel,
+    subtitle: durationLabel,
+    metaLabel: amountLabel,
     statusLabel: "Ready",
     clientId: client.clientId,
     clientName: client.clientName,
     durationSeconds: client.durationSeconds,
     durationLabel,
+    billableCents: client.billableCents,
+    wasteCents: client.wasteCents,
+    currency: client.currency,
+    amountLabel,
+    allocation: allocationFromReadyClient({
+      billableCents: client.billableCents,
+      wasteCents: client.wasteCents,
+      currency: client.currency,
+    }),
     canSend: false,
     canMarkPaid: false,
     canRecordPayment: false,
@@ -292,19 +337,29 @@ export function moneyBillRowFromMemberActivity(
   member: MoneyBillMemberActivitySource,
 ): MoneyBillMemberActivityRow {
   const durationLabel = formatDuration(member.durationSeconds, "short");
+  const amountLabel = formatMoneyBillCents(member.payableCents, member.currency);
   return {
     kind: "member-activity",
     id: `member-activity:${member.userId}`,
     party: "team",
     title: member.userName,
-    subtitle: "Ready to pay from tracked time",
-    metaLabel: durationLabel,
+    subtitle: durationLabel,
+    metaLabel: amountLabel,
     statusLabel: "Ready",
     userId: member.userId,
     userName: member.userName,
     userAvatar: member.userAvatar,
     durationSeconds: member.durationSeconds,
     durationLabel,
+    payableCents: member.payableCents,
+    wasteCents: member.wasteCents,
+    currency: member.currency,
+    amountLabel,
+    allocation: allocationFromReadyMember({
+      payableCents: member.payableCents,
+      wasteCents: member.wasteCents,
+      currency: member.currency,
+    }),
     canSend: false,
     canMarkPaid: false,
     canRecordPayment: false,
@@ -316,6 +371,7 @@ export function moneyBillRowFromMemberActivity(
 
 export function moneyBillRowFromPayoutLine(
   payout: MoneyBillTeamPayoutSource,
+  wasteCents = 0,
 ): MoneyBillTeamPayoutRow {
   const billStatusLabel = moneyBillStatusLabel(payout.billStatus);
   const periodLabel = formatMoneyBillPeriod(payout.periodStart, payout.periodEnd);
@@ -346,6 +402,13 @@ export function moneyBillRowFromPayoutLine(
     durationSeconds: payout.durationSeconds,
     durationLabel,
     periodLabel,
+    allocation: allocationFromPayout({
+      amountCents: payout.amountCents,
+      paidCents: payout.paidCents,
+      remainingCents: payout.remainingCents,
+      wasteCents,
+      currency: payout.currency,
+    }),
     canSend: false,
     canMarkPaid: payout.status === "draft" || payout.status === "partial",
     canRecordPayment: payout.status === "draft" || payout.status === "partial",
@@ -576,6 +639,10 @@ export function buildMoneyBillRows(input: {
   members: MoneyBillMemberActivitySource[];
   payouts: MoneyBillTeamPayoutSource[];
   adjustments?: MoneyBillAdjustmentSource[];
+  /** Period waste cents keyed by client id (for invoice row chips). */
+  wasteByClientId?: ReadonlyMap<string, number>;
+  /** Period waste cents keyed by member user id (for payout row chips). */
+  wasteByUserId?: ReadonlyMap<string, number>;
 }): MoneyBillRow[] {
   const rows: MoneyBillRow[] = [];
   const showClients = moneyBillsPartyShowsClients(input.party);
@@ -584,7 +651,9 @@ export function buildMoneyBillRows(input: {
 
   if (showClients) {
     for (const invoice of input.invoices) {
-      rows.push(moneyBillRowFromInvoice(invoice));
+      rows.push(
+        moneyBillRowFromInvoice(invoice, input.wasteByClientId?.get(invoice.clientId) ?? 0),
+      );
     }
 
     const invoicedClientIds = new Set(input.invoices.map((invoice) => invoice.clientId));
@@ -602,7 +671,12 @@ export function buildMoneyBillRows(input: {
       (payout) => !ADJUSTMENT_SECTION_KEYS.has(payout.sectionKey),
     );
     for (const payout of teamPayouts) {
-      rows.push(moneyBillRowFromPayoutLine(payout));
+      rows.push(
+        moneyBillRowFromPayoutLine(
+          payout,
+          payout.userId ? (input.wasteByUserId?.get(payout.userId) ?? 0) : 0,
+        ),
+      );
     }
 
     const paidMemberIds = new Set(
@@ -627,6 +701,19 @@ export function buildMoneyBillRows(input: {
   }
 
   return rows;
+}
+
+/** All + Clients tabs default to external-only until the badge is dismissed. */
+export function filterMoneyBillRowsByClientCategory(
+  rows: MoneyBillRow[],
+  category: "external" | null,
+  clientCategoryById: ReadonlyMap<string, "internal" | "external">,
+): MoneyBillRow[] {
+  if (!category) return rows;
+  return rows.filter((row) => {
+    if (row.kind !== "invoice" && row.kind !== "client-activity") return true;
+    return (clientCategoryById.get(row.clientId) ?? "external") === category;
+  });
 }
 
 export const MONEY_ADJUSTMENT_SECTION_OPTIONS: ReadonlyArray<{

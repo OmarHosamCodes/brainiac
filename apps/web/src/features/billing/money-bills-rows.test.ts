@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   buildMoneyBillRows,
+  filterMoneyBillRowsByClientCategory,
   groupMoneyBillRows,
   moneyBillInitials,
   moneyBillListInsight,
@@ -103,10 +104,34 @@ describe("buildMoneyBillRows", () => {
         },
       ],
       clients: [
-        { clientId: "c1", clientName: "Acme", durationSeconds: 3600 },
-        { clientId: "c2", clientName: "Beta", durationSeconds: 1800 },
+        {
+          clientId: "c1",
+          clientName: "Acme",
+          durationSeconds: 3600,
+          billableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
+        {
+          clientId: "c2",
+          clientName: "Beta",
+          durationSeconds: 1800,
+          billableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
       ],
-      members: [{ userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 7200 }],
+      members: [
+        {
+          userId: "u1",
+          userName: "Ada",
+          userAvatar: null,
+          durationSeconds: 7200,
+          payableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
+      ],
       payouts: [],
     });
     expect(rows.map((row) => row.kind)).toEqual(["invoice", "client-activity", "member-activity"]);
@@ -122,8 +147,24 @@ describe("buildMoneyBillRows", () => {
       invoices: [],
       clients: [],
       members: [
-        { userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 7200 },
-        { userId: "u2", userName: "Bob", userAvatar: null, durationSeconds: 3600 },
+        {
+          userId: "u1",
+          userName: "Ada",
+          userAvatar: null,
+          durationSeconds: 7200,
+          payableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
+        {
+          userId: "u2",
+          userName: "Bob",
+          userAvatar: null,
+          durationSeconds: 3600,
+          payableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
       ],
       payouts: [
         {
@@ -156,7 +197,17 @@ describe("buildMoneyBillRows", () => {
       statusFilter: "paid",
       invoices: [],
       clients: [],
-      members: [{ userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 100 }],
+      members: [
+        {
+          userId: "u1",
+          userName: "Ada",
+          userAvatar: null,
+          durationSeconds: 100,
+          payableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
+      ],
       payouts: [
         {
           id: "pay_1",
@@ -204,8 +255,27 @@ describe("groupMoneyBillRows", () => {
           periodEnd: "2026-08-31T23:59:59.999Z",
         },
       ],
-      clients: [{ clientId: "c2", clientName: "Beta", durationSeconds: 1800 }],
-      members: [{ userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 7200 }],
+      clients: [
+        {
+          clientId: "c2",
+          clientName: "Beta",
+          durationSeconds: 1800,
+          billableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
+      ],
+      members: [
+        {
+          userId: "u1",
+          userName: "Ada",
+          userAvatar: null,
+          durationSeconds: 7200,
+          payableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
+      ],
       payouts: [
         {
           id: "pay_1",
@@ -243,10 +313,34 @@ describe("moneyBillListInsight", () => {
       statusFilter: null,
       invoices: [],
       clients: [
-        { clientId: "c1", clientName: "Acme", durationSeconds: 3600 },
-        { clientId: "c2", clientName: "Beta", durationSeconds: 1800 },
+        {
+          clientId: "c1",
+          clientName: "Acme",
+          durationSeconds: 3600,
+          billableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
+        {
+          clientId: "c2",
+          clientName: "Beta",
+          durationSeconds: 1800,
+          billableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
       ],
-      members: [{ userId: "u1", userName: "Ada", userAvatar: null, durationSeconds: 100 }],
+      members: [
+        {
+          userId: "u1",
+          userName: "Ada",
+          userAvatar: null,
+          durationSeconds: 100,
+          payableCents: 1000,
+          wasteCents: 0,
+          currency: "USD",
+        },
+      ],
       payouts: [],
     });
     expect(moneyBillListInsight(rows)).toBe(
@@ -317,5 +411,56 @@ describe("moneyBillsCreateFormValid", () => {
     expect(moneyBillsCreateFormValid("c1", "2026-08-01", "2026-08-31")).toBe(true);
     expect(moneyBillsCreateFormValid("", "2026-08-01", "2026-08-31")).toBe(false);
     expect(moneyBillsCreateFormValid("c1", "2026-08-31", "2026-08-01")).toBe(false);
+  });
+});
+
+describe("filterMoneyBillRowsByClientCategory", () => {
+  test("keeps only external client rows when filter is external", () => {
+    const rows = buildMoneyBillRows({
+      party: "client",
+      statusFilter: null,
+      invoices: [
+        {
+          id: "inv_ext",
+          clientId: "cli_ext",
+          clientName: "Acme",
+          number: "001",
+          status: "draft",
+          billStatus: "outstanding",
+          amountCents: 1000,
+          receivedCents: 0,
+          remainingCents: 1000,
+          currency: "USD",
+          periodStart: "2026-08-01T00:00:00.000Z",
+          periodEnd: "2026-08-31T23:59:59.999Z",
+        },
+        {
+          id: "inv_int",
+          clientId: "cli_int",
+          clientName: "Internal Co",
+          number: "002",
+          status: "draft",
+          billStatus: "outstanding",
+          amountCents: 2000,
+          receivedCents: 0,
+          remainingCents: 2000,
+          currency: "USD",
+          periodStart: "2026-08-01T00:00:00.000Z",
+          periodEnd: "2026-08-31T23:59:59.999Z",
+        },
+      ],
+      clients: [],
+      members: [],
+      payouts: [],
+    });
+    const categories = new Map<string, "internal" | "external">([
+      ["cli_ext", "external"],
+      ["cli_int", "internal"],
+    ]);
+    expect(filterMoneyBillRowsByClientCategory(rows, "external", categories)).toHaveLength(1);
+    expect(filterMoneyBillRowsByClientCategory(rows, "external", categories)[0]?.clientId).toBe(
+      "cli_ext",
+    );
+    expect(filterMoneyBillRowsByClientCategory(rows, null, categories)).toHaveLength(2);
   });
 });

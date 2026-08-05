@@ -1,5 +1,7 @@
 /** Bills list filters + empty-state copy for Money. */
 
+export type MoneyBillsClientCategoryFilter = "external" | null;
+
 export type MoneyBillsPartyFilter = "all" | "client" | "team" | "adjustments";
 
 export type MoneyBillsStatusFilter = "outstanding" | "partial" | "paid" | "refunded";
@@ -73,14 +75,18 @@ export type MoneyBillsEmptyCopy = {
 export function moneyBillsActiveFilterSummary(
   party: MoneyBillsPartyFilter,
   status: MoneyBillsStatusFilter | null,
+  clientCategory: MoneyBillsClientCategoryFilter = null,
 ): string | null {
   const partyLabel = MONEY_BILLS_PARTY_OPTIONS.find((option) => option.id === party)?.label;
   const statusLabel = status ? MONEY_BILLS_STATUS_LABELS[status] : null;
+  const categoryLabel = clientCategory === "external" ? "External" : null;
 
-  if (party === "all" && !statusLabel) return null;
-  if (party === "all" && statusLabel) return statusLabel;
-  if (partyLabel && !statusLabel) return partyLabel;
-  return `${partyLabel} · ${statusLabel}`;
+  const parts = [party === "all" ? null : partyLabel, statusLabel, categoryLabel].filter(
+    Boolean,
+  ) as string[];
+
+  if (parts.length === 0) return null;
+  return parts.join(" · ");
 }
 
 const EMPTY_BODY = "When invoices, payouts, or expenses land in this range, they'll appear here.";

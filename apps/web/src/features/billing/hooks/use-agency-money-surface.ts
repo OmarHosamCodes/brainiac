@@ -45,11 +45,13 @@ import {
   moneyBillsStatusAllowed,
   moneyBillsStatusOptionsForParty,
   MONEY_BILLS_PARTY_OPTIONS,
+  type MoneyBillsClientCategoryFilter,
   type MoneyBillsPartyFilter,
   type MoneyBillsStatusFilter,
 } from "../money-bills-filters";
 import {
   buildMoneyBillRows,
+  filterMoneyBillRowsByClientCategory,
   moneyBillClientHref,
   moneyBillMemberHref,
   MONEY_ADJUSTMENT_SECTION_OPTIONS,
@@ -216,6 +218,8 @@ export function useAgencyMoneySurface(teamId: string) {
 
   const [partyFilter, setPartyFilter] = useState<MoneyBillsPartyFilter>("all");
   const [statusFilter, setStatusFilter] = useState<MoneyBillsStatusFilter | null>(null);
+  const [clientCategoryFilter, setClientCategoryFilter] =
+    useState<MoneyBillsClientCategoryFilter>("external");
   const [searchTerm, setSearchTerm] = useState("");
   const [billCreateOpen, setBillCreateOpen] = useState(false);
   const [billCreateClientId, setBillCreateClientId] = useState("");
@@ -546,32 +550,76 @@ export function useAgencyMoneySurface(teamId: string) {
     () => moneyBillsEmptyCopy(partyFilter, statusFilter, searchTerm),
     [partyFilter, searchTerm, statusFilter],
   );
+  const billsClientCategoryFilterActive =
+    partyFilter === "all" || partyFilter === "client" ? clientCategoryFilter : null;
+
   const billsActiveFilterSummary = useMemo(
-    () => moneyBillsActiveFilterSummary(partyFilter, statusFilter),
-    [partyFilter, statusFilter],
+    () => moneyBillsActiveFilterSummary(partyFilter, statusFilter, billsClientCategoryFilterActive),
+    [billsClientCategoryFilterActive, partyFilter, statusFilter],
   );
 
-  const billRows = useMemo(
-    () =>
-      buildMoneyBillRows({
-        party: partyFilter,
-        statusFilter,
-        invoices: showsClientBills ? (invoicesQuery.data?.items ?? []) : [],
-        clients: periodActivityQuery.data?.clients ?? [],
-        members: showsMemberBills ? (periodActivityQuery.data?.members ?? []) : [],
-        payouts: showsMemberBills ? (payoutsQuery.data?.items ?? []) : [],
-      }),
-    [
-      invoicesQuery.data?.items,
-      partyFilter,
-      periodActivityQuery.data?.clients,
-      periodActivityQuery.data?.members,
-      payoutsQuery.data?.items,
-      showsClientBills,
-      showsMemberBills,
+  const clientCategoryById = useMemo(() => {
+    const map = new Map<string, "internal" | "external">();
+    for (const client of clientsQuery.data?.items ?? []) {
+      map.set(client.id, client.category);
+    }
+    return map;
+  }, [clientsQuery.data?.items]);
+
+  const billRows = useMemo(() => {
+    const currency = periodScoreboardQuery.data?.currency ?? "USD";
+    const activityClients = (periodActivityQuery.data?.clients ?? []).map((client) => ({
+      clientId: client.clientId,
+      clientName: client.clientName,
+      durationSeconds: client.durationSeconds,
+      billableCents: client.billableCents,
+      wasteCents: client.wasteCents,
+      currency,
+    }));
+    const activityMembers = (periodActivityQuery.data?.members ?? []).map((member) => ({
+      userId: member.userId,
+      userName: member.userName,
+      userAvatar: member.userAvatar,
+      durationSeconds: member.durationSeconds,
+      payableCents: member.payableCents,
+      wasteCents: member.wasteCents,
+      currency,
+    }));
+    const wasteByClientId = new Map(
+      activityClients.map((client) => [client.clientId, client.wasteCents] as const),
+    );
+    const wasteByUserId = new Map(
+      activityMembers.map((member) => [member.userId, member.wasteCents] as const),
+    );
+    const rows = buildMoneyBillRows({
+      party: partyFilter,
       statusFilter,
-    ],
-  );
+      invoices: showsClientBills ? (invoicesQuery.data?.items ?? []) : [],
+      clients: activityClients,
+      members: showsMemberBills ? activityMembers : [],
+      payouts: showsMemberBills ? (payoutsQuery.data?.items ?? []) : [],
+      wasteByClientId,
+      wasteByUserId,
+    });
+    if (billsClientCategoryFilterActive === null) return rows;
+    return filterMoneyBillRowsByClientCategory(
+      rows,
+      billsClientCategoryFilterActive,
+      clientCategoryById,
+    );
+  }, [
+    clientCategoryById,
+    billsClientCategoryFilterActive,
+    invoicesQuery.data?.items,
+    partyFilter,
+    periodActivityQuery.data?.clients,
+    periodActivityQuery.data?.members,
+    periodScoreboardQuery.data?.currency,
+    payoutsQuery.data?.items,
+    showsClientBills,
+    showsMemberBills,
+    statusFilter,
+  ]);
 
   const paymentRow = useMemo(() => {
     const row = billRows.find((item) => item.id === paymentInvoiceId);
@@ -790,6 +838,9 @@ export function useAgencyMoneySurface(teamId: string) {
     setStatusFilter((current) =>
       current && moneyBillsStatusAllowed(next, current) ? current : null,
     );
+    if (next === "all" || next === "client") {
+      setClientCategoryFilter("external");
+    }
   }
 
   function onStatusFilterChange(next: MoneyBillsStatusFilter) {
@@ -798,6 +849,10 @@ export function useAgencyMoneySurface(teamId: string) {
 
   function onClearStatusFilter() {
     setStatusFilter(null);
+  }
+
+  function onClearClientCategoryFilter() {
+    setClientCategoryFilter(null);
   }
 
   function resetBillCreateForm() {
@@ -1183,6 +1238,8 @@ export function useAgencyMoneySurface(teamId: string) {
       statusOptions,
       onStatusFilterChange,
       onClearStatusFilter,
+      clientCategoryFilter,
+      onClearClientCategoryFilter,
       searchTerm,
       onSearchTermChange: setSearchTerm,
       activeFilterSummary: billsActiveFilterSummary,

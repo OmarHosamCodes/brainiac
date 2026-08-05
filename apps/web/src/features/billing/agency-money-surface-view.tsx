@@ -62,6 +62,10 @@ import { type MoneyExpenseKind, type MoneyExpensePeriod } from "./money-expense-
 import { MoneyPayoutRunView } from "./money-payout-run-view";
 import { type MoneyBillsPartyFilter, type MoneyBillsStatusFilter } from "./money-bills-filters";
 import {
+  type MoneyBillAllocationSegmentId,
+  type MoneyBillAllocationView,
+} from "./money-bill-allocation";
+import {
   groupMoneyBillRows,
   moneyBillHueId,
   moneyBillInitials,
@@ -659,6 +663,71 @@ function BillClientMark({ title, hueId }: { title: string; hueId: string }) {
   );
 }
 
+function allocationSegmentClass(id: MoneyBillAllocationSegmentId): string {
+  switch (id) {
+    case "received":
+      return "bg-success/80";
+    case "remaining":
+      return "bg-warning/80";
+    case "uninvoiced":
+      return "bg-muted-foreground/45";
+    default: {
+      const _exhaustive: never = id;
+      return _exhaustive;
+    }
+  }
+}
+
+function MoneyBillAllocationBar({ allocation }: { allocation: MoneyBillAllocationView }) {
+  return (
+    <div className="mt-1.5 min-w-0 space-y-1.5" aria-label={allocation.ariaLabel} role="img">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="min-w-0">
+          <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
+            {allocation.receivedTitle}
+          </div>
+          <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-success">
+            {allocation.receivedLabel}
+          </div>
+        </div>
+        <div className="min-w-0">
+          <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
+            {allocation.remainingTitle}
+          </div>
+          <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-warning">
+            {allocation.remainingLabel}
+          </div>
+        </div>
+        <div className="min-w-0">
+          <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
+            {allocation.uninvoicedTitle}
+          </div>
+          <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-foreground/85">
+            {allocation.uninvoicedLabel}
+          </div>
+        </div>
+      </div>
+      <div className="flex h-1.5 overflow-hidden rounded-full bg-elevated">
+        {allocation.segments.map((segment) => (
+          <span
+            key={segment.id}
+            className={cn("h-full", allocationSegmentClass(segment.id))}
+            style={{ width: `${segment.percent}%` }}
+          />
+        ))}
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate font-mono text-[0.625rem] text-muted-foreground">
+          Total {allocation.totalLabel}
+        </span>
+        <span className="inline-flex shrink-0 items-center rounded-full bg-destructive/10 px-1.5 py-0.5 font-mono text-[0.625rem] text-destructive ring-1 ring-destructive/25">
+          Waste {allocation.wasteLabel}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function BillListRow({
   row,
   searchTerm,
@@ -770,33 +839,29 @@ function BillListRow({
         </div>
         <p className="mt-0.5 truncate text-xs text-muted">
           <AgencySearchHighlight text={row.subtitle} query={searchTerm} />
-          {row.kind === "invoice" && row.receivedCents > 0 && row.remainingCents > 0 ? (
-            <>
-              <span aria-hidden> · </span>
-              {row.receivedLabel} in · {row.remainingLabel} left
-            </>
-          ) : null}
-          {(row.kind === "team-payout" || row.kind === "adjustment") &&
-          row.paidCents > 0 &&
-          row.remainingCents > 0 ? (
+          {row.kind === "adjustment" && row.paidCents > 0 && row.remainingCents > 0 ? (
             <>
               <span aria-hidden> · </span>
               {row.paidLabel} paid · {row.remainingLabel} left
             </>
           ) : null}
         </p>
+        {row.kind === "invoice" ||
+        row.kind === "client-activity" ||
+        row.kind === "member-activity" ||
+        row.kind === "team-payout" ? (
+          <MoneyBillAllocationBar allocation={row.allocation} />
+        ) : null}
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <span
           className={cn(
             "font-mono text-sm tabular-nums",
-            row.kind === "member-activity" ? "text-muted" : "text-highlighted",
+            row.kind === "adjustment" ? "text-muted" : "text-highlighted",
           )}
         >
-          {row.kind === "invoice" || row.kind === "team-payout" || row.kind === "adjustment"
-            ? row.amountLabel
-            : row.metaLabel}
+          {row.metaLabel}
         </span>
 
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
@@ -952,6 +1017,31 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             ))}
           </TabsList>
         </Tabs>
+
+        {(bills.partyFilter === "all" || bills.partyFilter === "client") &&
+        bills.clientCategoryFilter === "external" ? (
+          <div
+            className="flex flex-wrap items-center gap-1.5"
+            role="group"
+            aria-label="Client category"
+          >
+            <span className="inline-flex h-7 items-center gap-1 rounded-full bg-elevated px-2.5 text-xs font-medium text-highlighted ring-1 ring-border">
+              External
+              <button
+                type="button"
+                className={cn(
+                  "inline-flex size-5 items-center justify-center rounded-full text-muted transition-colors",
+                  "hover:bg-default hover:text-highlighted",
+                  agencyFocusRingClass,
+                )}
+                onClick={bills.onClearClientCategoryFilter}
+                aria-label="Show internal clients too"
+              >
+                <X className="size-3" aria-hidden />
+              </button>
+            </span>
+          </div>
+        ) : null}
 
         {hasStatusFilters ? (
           <div

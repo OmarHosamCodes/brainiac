@@ -67,11 +67,16 @@ describe("moneyBillsEmptyCopy", () => {
 describe("moneyBillsActiveFilterSummary", () => {
   test("hides when all and no status", () => {
     expect(moneyBillsActiveFilterSummary("all", null)).toBeNull();
+    expect(moneyBillsActiveFilterSummary("all", null, "external")).toBe("External");
   });
 
   test("composes party and status", () => {
     expect(moneyBillsActiveFilterSummary("client", null)).toBe("Clients");
+    expect(moneyBillsActiveFilterSummary("client", null, "external")).toBe("Clients · External");
     expect(moneyBillsActiveFilterSummary("client", "refunded")).toBe("Clients · Refunded");
+    expect(moneyBillsActiveFilterSummary("client", "refunded", "external")).toBe(
+      "Clients · Refunded · External",
+    );
     expect(moneyBillsActiveFilterSummary("team", "partial")).toBe("Team · Partial");
   });
 });
