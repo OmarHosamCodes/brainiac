@@ -23,7 +23,7 @@ export function FeaturedRailNotificationView({ view }: FeaturedRailNotificationV
         </div>
         <Skeleton className="mt-3 h-4 w-3/4" />
         <Skeleton className="mt-2 h-3 w-full" />
-        <Skeleton className="mt-3 h-8 w-full rounded-full" />
+        <Skeleton className="mt-4 h-8 w-full rounded-full" />
       </div>
     ) : (
       <Skeleton className="mx-auto size-8 rounded-full" />
@@ -100,9 +100,11 @@ export function FeaturedRailNotificationView({ view }: FeaturedRailNotificationV
       <h2 className="mt-2.5 text-balance text-sm font-semibold leading-snug tracking-tight text-sidebar-foreground">
         {view.title}
       </h2>
-      <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">{view.body}</p>
+      <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+        {view.body}
+      </p>
 
-      <div className="mt-3 flex flex-col gap-1.5">
+      <div className="mt-4 flex flex-col gap-2">
         <Button
           type="button"
           size="sm"
