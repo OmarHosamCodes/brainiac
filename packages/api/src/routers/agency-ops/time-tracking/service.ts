@@ -23,6 +23,7 @@ import { parseIsoDateTime } from "../shared/date-helpers";
 import { type ReportEntityFilterInput, applyReportEntityFilters } from "../shared/report-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import { groupTimeEntryTagRows } from "./group-time-entry-tag-rows";
+import { loadTeamWorkSchedule } from "../resourcing/load-team-work-schedule";
 import {
   addDaysToDateKey,
   getLocalWeekBounds,
@@ -990,12 +991,16 @@ export async function listMyAgencyTimeEntries(
   // Compute complete totals for the anchor week and every week represented on this page.
   const anchor = input.anchorDate ? parseIsoDateTime(input.anchorDate, "anchorDate") : new Date();
   const utcOffsetMinutes = input.utcOffsetMinutes ?? 0;
-  const anchorWeek = getLocalWeekBounds(anchor, utcOffsetMinutes);
+  const { weekStartsOn } = await loadTeamWorkSchedule(input.teamId);
+  const anchorWeek = getLocalWeekBounds(anchor, utcOffsetMinutes, weekStartsOn);
   const summaryWeekStartKeys = [
     ...new Set([
       anchorWeek.weekStartKey,
       ...rows.map((row) =>
-        getLocalWeekStartKeyFromDateKey(localDateKeyFromInstant(row.startedAt, utcOffsetMinutes)),
+        getLocalWeekStartKeyFromDateKey(
+          localDateKeyFromInstant(row.startedAt, utcOffsetMinutes),
+          weekStartsOn,
+        ),
       ),
     ]),
   ];
@@ -1037,7 +1042,7 @@ export async function listMyAgencyTimeEntries(
 
   for (const weekRow of weekRows) {
     const dateKey = localDateKeyFromInstant(weekRow.startedAt, utcOffsetMinutes);
-    const summary = summaryWeeks.get(getLocalWeekStartKeyFromDateKey(dateKey));
+    const summary = summaryWeeks.get(getLocalWeekStartKeyFromDateKey(dateKey, weekStartsOn));
     if (!summary) continue;
     summary.daily.set(dateKey, (summary.daily.get(dateKey) ?? 0) + weekRow.durationSeconds);
     summary.totalSeconds += weekRow.durationSeconds;

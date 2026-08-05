@@ -102,6 +102,14 @@ describe("buildWeekHours", () => {
     expect(week[2]?.totalSeconds).toBe(7200);
     expect(week[6]?.date).toBe("2026-07-26");
   });
+
+  test("returns Sun–Sat when weekStartsOn is Sunday", () => {
+    const week = buildWeekHours("2026-07-23", new Map(), 0);
+    expect(week).toHaveLength(7);
+    expect(week[0]?.date).toBe("2026-07-19");
+    expect(week[0]?.weekdayLabel).toBe("S");
+    expect(week[6]?.date).toBe("2026-07-25");
+  });
 });
 
 describe("buildCalendarMonth", () => {
@@ -122,10 +130,22 @@ describe("buildCalendarMonth", () => {
 
     expect(month.year).toBe(2026);
     expect(month.month).toBe(6);
+    expect(month.weekdayLabels).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
     const present = month.days.find((d) => d.date === "2026-06-02");
     const leave = month.days.find((d) => d.date === "2026-06-03");
     expect(present?.status).toBe("present");
     expect(leave?.status).toBe("leave");
     expect(month.days[0]!.date <= "2026-06-01").toBe(true);
+  });
+
+  test("weekday labels follow weekStartsOn", () => {
+    const month = buildCalendarMonth({
+      monthDate: "2026-06-15",
+      secondsByDate: new Map(),
+      leave: [],
+      weekStartsOn: 0,
+    });
+    expect(month.weekdayLabels[0]).toBe("S");
+    expect(month.weekdayLabels[1]).toBe("M");
   });
 });

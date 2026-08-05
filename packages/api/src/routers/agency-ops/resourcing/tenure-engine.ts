@@ -38,6 +38,9 @@ export type TenurePolicyInput = {
   penaltyMonths: number;
   internDurationMonths: number;
   internDurationWeeks: number;
+  requiredDailyHours: number;
+  weekStartsOn: number;
+  weekendDurationDays: number;
   policyEffectiveFrom: Date;
   enabled: boolean;
 };

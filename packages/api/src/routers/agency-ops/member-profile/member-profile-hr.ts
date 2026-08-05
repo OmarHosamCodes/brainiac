@@ -1,3 +1,4 @@
+import { DEFAULT_WORK_SCHEDULE, rotateWeekdayLabels } from "../resourcing/work-schedule";
 import {
   addDaysToDateKey,
   getLocalWeekStartKeyFromDateKey,
@@ -148,13 +149,15 @@ export function buildLeaveBalances(input: {
   };
 }
 
-/** Seven Mon–Sun days for the week containing `anchorDate`, with seconds from the map. */
+/** Seven days for the week containing `anchorDate`, with seconds from the map. */
 export function buildWeekHours(
   anchorDate: string,
   secondsByDate: Map<string, number>,
+  weekStartsOn: number = DEFAULT_WORK_SCHEDULE.weekStartsOn,
 ): WeekHourDay[] {
-  const weekStart = getLocalWeekStartKeyFromDateKey(anchorDate);
-  return WEEKDAY_LABELS.map((weekdayLabel, index) => {
+  const weekStart = getLocalWeekStartKeyFromDateKey(anchorDate, weekStartsOn);
+  const labels = rotateWeekdayLabels(WEEKDAY_LABELS, weekStartsOn);
+  return labels.map((weekdayLabel, index) => {
     const date = addDaysToDateKey(weekStart, index);
     return {
       date,
@@ -164,17 +167,21 @@ export function buildWeekHours(
   });
 }
 
-/** Month grid (Mon-start) for the month of `monthDate`, with derived present/leave/empty. */
+/** Month grid aligned to team week start, with derived present/leave/empty. */
 export function buildCalendarMonth(input: {
   monthDate: string;
   secondsByDate: Map<string, number>;
   leave: LeaveRangeInput[];
+  weekStartsOn?: number;
 }): {
   year: number;
   month: number;
   label: string;
+  weekdayLabels: string[];
   days: CalendarMonthDay[];
 } {
+  const weekStartsOn = input.weekStartsOn ?? DEFAULT_WORK_SCHEDULE.weekStartsOn;
+  const weekdayLabels = [...rotateWeekdayLabels(WEEKDAY_LABELS, weekStartsOn)];
   const [yearStr, monthStr] = input.monthDate.split("-");
   const year = Number(yearStr);
   const month = Number(monthStr);
@@ -184,8 +191,8 @@ export function buildCalendarMonth(input: {
   const monthEnd = addDaysToDateKey(nextMonthStart, -1);
 
   const leaveByDate = expandLeaveDays(input.leave, monthStart, monthEnd);
-  const gridStart = getLocalWeekStartKeyFromDateKey(monthStart);
-  const monthEndWeekStart = getLocalWeekStartKeyFromDateKey(monthEnd);
+  const gridStart = getLocalWeekStartKeyFromDateKey(monthStart, weekStartsOn);
+  const monthEndWeekStart = getLocalWeekStartKeyFromDateKey(monthEnd, weekStartsOn);
   const gridEnd = addDaysToDateKey(monthEndWeekStart, 6);
 
   const days: CalendarMonthDay[] = [];
@@ -213,5 +220,5 @@ export function buildCalendarMonth(input: {
     timeZone: "UTC",
   });
 
-  return { year, month, label, days };
+  return { year, month, label, weekdayLabels, days };
 }

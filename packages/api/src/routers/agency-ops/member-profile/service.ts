@@ -16,6 +16,7 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import type { z } from "zod";
 
+import { loadTeamWorkSchedule } from "../resourcing/load-team-work-schedule";
 import { requireTeamMembership } from "../shared/membership";
 import {
   addDaysToDateKey,
@@ -190,7 +191,8 @@ export async function getMemberProfile(
   }
   const yearStart = `${Math.min(periodYear, calYear)}-01-01`;
   const yearEnd = `${Math.max(periodYear, calYear)}-12-31`;
-  const weekBounds = getLocalWeekBounds(rangeEnd, input.utcOffsetMinutes);
+  const { weekStartsOn } = await loadTeamWorkSchedule(input.teamId);
+  const weekBounds = getLocalWeekBounds(rangeEnd, input.utcOffsetMinutes, weekStartsOn);
   const monthStart = `${calendarMonthKey}-01`;
   const nextMonthStart =
     calMonth === 12
@@ -439,10 +441,11 @@ export async function getMemberProfile(
     offAllowanceDays: hrProfile.offAllowanceDays,
   });
 
-  const weekHours = buildWeekHours(endDate, secondsByDate);
+  const weekHours = buildWeekHours(endDate, secondsByDate, weekStartsOn);
   const calendarMonth = buildCalendarMonth({
     monthDate: monthStart,
     secondsByDate,
+    weekStartsOn,
     leave: allLeave.map((row) => ({
       id: row.id,
       startDate: row.startDate,

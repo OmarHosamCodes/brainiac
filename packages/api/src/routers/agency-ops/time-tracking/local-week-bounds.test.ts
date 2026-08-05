@@ -15,9 +15,13 @@ describe("local-week-bounds", () => {
     expect(localDateKeyFromInstant(new Date("2026-07-25T02:00:00.000Z"), 300)).toBe("2026-07-24");
   });
 
-  test("week starts Monday", () => {
+  test("week starts Monday by default", () => {
     expect(getLocalWeekStartKeyFromDateKey("2026-07-25")).toBe("2026-07-20");
     expect(addDaysToDateKey("2026-07-20", 6)).toBe("2026-07-26");
+  });
+
+  test("week starts Sunday when weekStartsOn is 0", () => {
+    expect(getLocalWeekStartKeyFromDateKey("2026-07-25", 0)).toBe("2026-07-19");
   });
 
   test("getLocalWeekBounds returns Mon–Sun window", () => {
@@ -25,5 +29,11 @@ describe("local-week-bounds", () => {
     expect(bounds.weekStartKey).toBe("2026-07-20");
     expect(bounds.weekStart.toISOString()).toBe("2026-07-20T00:00:00.000Z");
     expect(bounds.weekEnd.toISOString()).toBe("2026-07-26T23:59:59.999Z");
+  });
+
+  test("getLocalWeekBounds respects Sunday week start", () => {
+    const bounds = getLocalWeekBounds(new Date("2026-07-25T12:00:00.000Z"), 0, 0);
+    expect(bounds.weekStartKey).toBe("2026-07-19");
+    expect(bounds.weekEnd.toISOString()).toBe("2026-07-25T23:59:59.999Z");
   });
 });

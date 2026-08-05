@@ -37,6 +37,9 @@ type TenurePolicyRecord = {
   penaltyMonths: number;
   internDurationMonths: number;
   internDurationWeeks: number;
+  requiredDailyHours: number;
+  weekStartsOn: number;
+  weekendDurationDays: number;
   policyEffectiveFrom: string;
   enabled: boolean;
 };
@@ -106,6 +109,22 @@ type MemberTenureDetailRecord = MemberTenureSummaryRecord & {
   quarters: QuarterSummaryRecord[];
 };
 
+function toPolicyRecord(row: typeof agencyOpsTenurePolicy.$inferSelect): TenurePolicyRecord {
+  return {
+    fiscalYearStartMonth: row.fiscalYearStartMonth,
+    fiscalYearStartDay: row.fiscalYearStartDay,
+    quarterlyMinHours: row.quarterlyMinHours,
+    penaltyMonths: row.penaltyMonths,
+    internDurationMonths: row.internDurationMonths,
+    internDurationWeeks: row.internDurationWeeks,
+    requiredDailyHours: row.requiredDailyHours,
+    weekStartsOn: row.weekStartsOn,
+    weekendDurationDays: row.weekendDurationDays,
+    policyEffectiveFrom: row.policyEffectiveFrom.toISOString(),
+    enabled: row.enabled,
+  };
+}
+
 function toPolicyInput(row: typeof agencyOpsTenurePolicy.$inferSelect): TenurePolicyInput {
   return {
     fiscalYearStartMonth: row.fiscalYearStartMonth,
@@ -114,6 +133,9 @@ function toPolicyInput(row: typeof agencyOpsTenurePolicy.$inferSelect): TenurePo
     penaltyMonths: row.penaltyMonths,
     internDurationMonths: row.internDurationMonths,
     internDurationWeeks: row.internDurationWeeks,
+    requiredDailyHours: row.requiredDailyHours,
+    weekStartsOn: row.weekStartsOn,
+    weekendDurationDays: row.weekendDurationDays,
     policyEffectiveFrom: row.policyEffectiveFrom,
     enabled: row.enabled,
   };
@@ -127,6 +149,9 @@ function defaultPolicyInput(): TenurePolicyInput {
     penaltyMonths: 6,
     internDurationMonths: 4,
     internDurationWeeks: 0,
+    requiredDailyHours: 8,
+    weekStartsOn: 1,
+    weekendDurationDays: 2,
     policyEffectiveFrom: new Date(),
     enabled: false,
   };
@@ -380,16 +405,7 @@ export async function getTenurePolicy(
   }
 
   return {
-    policy: {
-      fiscalYearStartMonth: row.fiscalYearStartMonth,
-      fiscalYearStartDay: row.fiscalYearStartDay,
-      quarterlyMinHours: row.quarterlyMinHours,
-      penaltyMonths: row.penaltyMonths,
-      internDurationMonths: row.internDurationMonths,
-      internDurationWeeks: row.internDurationWeeks,
-      policyEffectiveFrom: row.policyEffectiveFrom.toISOString(),
-      enabled: row.enabled,
-    },
+    policy: toPolicyRecord(row),
   };
 }
 
@@ -403,6 +419,9 @@ export async function upsertTenurePolicy(
     penaltyMonths: number;
     internDurationMonths: number;
     internDurationWeeks: number;
+    requiredDailyHours: number;
+    weekStartsOn: number;
+    weekendDurationDays: number;
     policyEffectiveFrom: string;
     enabled: boolean;
   },
@@ -415,6 +434,18 @@ export async function upsertTenurePolicy(
 
   if (input.fiscalYearStartDay < 1 || input.fiscalYearStartDay > 31) {
     throw new ORPCError("BAD_REQUEST", { message: "fiscalYearStartDay must be 1–31." });
+  }
+
+  if (input.requiredDailyHours < 1 || input.requiredDailyHours > 24) {
+    throw new ORPCError("BAD_REQUEST", { message: "requiredDailyHours must be 1–24." });
+  }
+
+  if (input.weekStartsOn < 0 || input.weekStartsOn > 6) {
+    throw new ORPCError("BAD_REQUEST", { message: "weekStartsOn must be 0–6." });
+  }
+
+  if (input.weekendDurationDays < 1 || input.weekendDurationDays > 3) {
+    throw new ORPCError("BAD_REQUEST", { message: "weekendDurationDays must be 1–3." });
   }
 
   const policyEffectiveFrom = new Date(input.policyEffectiveFrom);
@@ -436,6 +467,9 @@ export async function upsertTenurePolicy(
       penaltyMonths: input.penaltyMonths,
       internDurationMonths: input.internDurationMonths,
       internDurationWeeks: input.internDurationWeeks,
+      requiredDailyHours: input.requiredDailyHours,
+      weekStartsOn: input.weekStartsOn,
+      weekendDurationDays: input.weekendDurationDays,
       policyEffectiveFrom,
       enabled: input.enabled,
       createdAt: existing?.createdAt ?? now,
@@ -450,6 +484,9 @@ export async function upsertTenurePolicy(
         penaltyMonths: input.penaltyMonths,
         internDurationMonths: input.internDurationMonths,
         internDurationWeeks: input.internDurationWeeks,
+        requiredDailyHours: input.requiredDailyHours,
+        weekStartsOn: input.weekStartsOn,
+        weekendDurationDays: input.weekendDurationDays,
         policyEffectiveFrom,
         enabled: input.enabled,
         updatedAt: now,
@@ -462,16 +499,7 @@ export async function upsertTenurePolicy(
   }
 
   return {
-    policy: {
-      fiscalYearStartMonth: upserted.fiscalYearStartMonth,
-      fiscalYearStartDay: upserted.fiscalYearStartDay,
-      quarterlyMinHours: upserted.quarterlyMinHours,
-      penaltyMonths: upserted.penaltyMonths,
-      internDurationMonths: upserted.internDurationMonths,
-      internDurationWeeks: upserted.internDurationWeeks,
-      policyEffectiveFrom: upserted.policyEffectiveFrom.toISOString(),
-      enabled: upserted.enabled,
-    },
+    policy: toPolicyRecord(upserted),
   };
 }
 
@@ -964,17 +992,6 @@ export async function getTenureMember(
       notes: profileRow?.notes ?? null,
       quarters: result.quarters.map(quarterToRecord),
     },
-    policy: policyRow
-      ? {
-          fiscalYearStartMonth: policyRow.fiscalYearStartMonth,
-          fiscalYearStartDay: policyRow.fiscalYearStartDay,
-          quarterlyMinHours: policyRow.quarterlyMinHours,
-          penaltyMonths: policyRow.penaltyMonths,
-          internDurationMonths: policyRow.internDurationMonths,
-          internDurationWeeks: policyRow.internDurationWeeks,
-          policyEffectiveFrom: policyRow.policyEffectiveFrom.toISOString(),
-          enabled: policyRow.enabled,
-        }
-      : null,
+    policy: policyRow ? toPolicyRecord(policyRow) : null,
   };
 }

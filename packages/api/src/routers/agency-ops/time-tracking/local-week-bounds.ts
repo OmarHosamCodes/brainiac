@@ -1,3 +1,5 @@
+import { DEFAULT_WORK_SCHEDULE, getWeekStartKey } from "../resourcing/work-schedule";
+
 /** Local calendar date (YYYY-MM-DD) for an instant using JS getTimezoneOffset() semantics. */
 export function localDateKeyFromInstant(instant: Date, utcOffsetMinutes: number): string {
   const localMs = instant.getTime() - utcOffsetMinutes * 60_000;
@@ -17,16 +19,11 @@ export function addDaysToDateKey(dateKey: string, days: number): string {
   return `${nextYear}-${nextMonth}-${nextDay}`;
 }
 
-export function getLocalWeekStartKeyFromDateKey(dateKey: string): string {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const date = new Date(Date.UTC(year!, month! - 1, day!));
-  const dayOfWeek = date.getUTCDay();
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  date.setUTCDate(date.getUTCDate() + diff);
-  const weekYear = date.getUTCFullYear();
-  const weekMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const weekDay = String(date.getUTCDate()).padStart(2, "0");
-  return `${weekYear}-${weekMonth}-${weekDay}`;
+export function getLocalWeekStartKeyFromDateKey(
+  dateKey: string,
+  weekStartsOn: number = DEFAULT_WORK_SCHEDULE.weekStartsOn,
+): string {
+  return getWeekStartKey(dateKey, weekStartsOn);
 }
 
 export function localInstantFromDateKey(
@@ -49,9 +46,13 @@ export function localInstantFromDateKey(
   return new Date(ms);
 }
 
-export function getLocalWeekBounds(anchor: Date, utcOffsetMinutes: number) {
+export function getLocalWeekBounds(
+  anchor: Date,
+  utcOffsetMinutes: number,
+  weekStartsOn: number = DEFAULT_WORK_SCHEDULE.weekStartsOn,
+) {
   const anchorDateKey = localDateKeyFromInstant(anchor, utcOffsetMinutes);
-  const weekStartKey = getLocalWeekStartKeyFromDateKey(anchorDateKey);
+  const weekStartKey = getLocalWeekStartKeyFromDateKey(anchorDateKey, weekStartsOn);
   const weekEndKey = addDaysToDateKey(weekStartKey, 6);
   return {
     weekStartKey,

@@ -20,6 +20,20 @@ import {
   getTenureMember,
 } from "./tenure-service";
 
+const tenurePolicySchema = z.object({
+  fiscalYearStartMonth: z.number().int().min(1).max(12),
+  fiscalYearStartDay: z.number().int().min(1).max(31),
+  quarterlyMinHours: z.number().int().positive(),
+  penaltyMonths: z.number().int().positive(),
+  internDurationMonths: z.number().int().nonnegative(),
+  internDurationWeeks: z.number().int().nonnegative(),
+  requiredDailyHours: z.number().int().min(1).max(24),
+  weekStartsOn: z.number().int().min(0).max(6),
+  weekendDurationDays: z.number().int().min(1).max(3),
+  policyEffectiveFrom: z.string().datetime(),
+  enabled: z.boolean(),
+});
+
 export const resourcingRouter = {
   leave: {
     list: protectedProProcedure
@@ -115,46 +129,16 @@ export const resourcingRouter = {
         .handler(async ({ context, input }) => {
           return z
             .object({
-              policy: z
-                .object({
-                  fiscalYearStartMonth: z.number().int().min(1).max(12),
-                  fiscalYearStartDay: z.number().int().min(1).max(31),
-                  quarterlyMinHours: z.number().int().positive(),
-                  penaltyMonths: z.number().int().positive(),
-                  internDurationMonths: z.number().int().nonnegative(),
-                  internDurationWeeks: z.number().int().nonnegative(),
-                  policyEffectiveFrom: z.string().datetime(),
-                  enabled: z.boolean(),
-                })
-                .nullable(),
+              policy: tenurePolicySchema.nullable(),
             })
             .parse(await getTenurePolicy(context.session.user.id, input));
         }),
       upsert: protectedProProcedure
-        .input(
-          teamScopedInputSchema.extend({
-            fiscalYearStartMonth: z.number().int().min(1).max(12),
-            fiscalYearStartDay: z.number().int().min(1).max(31),
-            quarterlyMinHours: z.number().int().positive(),
-            penaltyMonths: z.number().int().positive(),
-            internDurationMonths: z.number().int().nonnegative(),
-            internDurationWeeks: z.number().int().nonnegative(),
-            policyEffectiveFrom: z.string().datetime(),
-            enabled: z.boolean(),
-          }),
-        )
+        .input(teamScopedInputSchema.extend(tenurePolicySchema.shape))
         .handler(async ({ context, input }) => {
           return z
             .object({
-              policy: z.object({
-                fiscalYearStartMonth: z.number().int().min(1).max(12),
-                quarterlyMinHours: z.number().int().positive(),
-                penaltyMonths: z.number().int().positive(),
-                internDurationMonths: z.number().int().nonnegative(),
-                internDurationWeeks: z.number().int().nonnegative(),
-                policyEffectiveFrom: z.string().datetime(),
-                enabled: z.boolean(),
-              }),
+              policy: tenurePolicySchema,
             })
             .parse(await upsertTenurePolicy(context.session.user.id, input));
         }),
@@ -362,18 +346,7 @@ export const resourcingRouter = {
         .handler(async ({ context, input }) => {
           return z
             .object({
-              policy: z
-                .object({
-                  fiscalYearStartMonth: z.number().int().min(1).max(12),
-                  fiscalYearStartDay: z.number().int().min(1).max(31),
-                  quarterlyMinHours: z.number().int().positive(),
-                  penaltyMonths: z.number().int().positive(),
-                  internDurationMonths: z.number().int().nonnegative(),
-                  internDurationWeeks: z.number().int().nonnegative(),
-                  policyEffectiveFrom: z.string().datetime(),
-                  enabled: z.boolean(),
-                })
-                .nullable(),
+              policy: tenurePolicySchema.nullable(),
               member: z.object({
                 userId: z.string().min(1),
                 userName: z.string().min(1),

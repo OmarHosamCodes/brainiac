@@ -18,6 +18,7 @@ import {
 } from "../time-tracking/local-week-bounds";
 import type { memberLeaveSchema, memberProfileHeatDaySchema } from "../member-profile/schemas";
 import type { z } from "zod";
+import { loadTeamWorkSchedule } from "./load-team-work-schedule";
 
 type MemberLeave = z.infer<typeof memberLeaveSchema>;
 type HeatDay = z.infer<typeof memberProfileHeatDaySchema>;
@@ -144,9 +145,12 @@ export async function setMemberCapacity(
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const weekStartDate = parseIsoDateTime(input.weekStart, "weekStart");
+  const { weekStartsOn } = await loadTeamWorkSchedule(input.teamId);
 
-  if (weekStartDate.getUTCDay() !== 1) {
-    throw new ORPCError("BAD_REQUEST", { message: "weekStart must be a Monday (UTC)." });
+  if (weekStartDate.getUTCDay() !== weekStartsOn) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: `weekStart must match the team week start day (${weekStartsOn}, UTC).`,
+    });
   }
 
   // Require exact midnight so keys join correctly with listing functions.
