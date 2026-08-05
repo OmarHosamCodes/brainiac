@@ -8,7 +8,8 @@ export type NotificationType =
   | "task.message"
   | "journey.milestone"
   | "timer.activity"
-  | "team.digest";
+  | "team.digest"
+  | "member.alert";
 
 export type NotificationPayload = {
   projectId?: string;
@@ -24,6 +25,10 @@ export type NotificationPayload = {
   digestHoursSeconds?: number;
   digestTasksCompleted?: number;
   digestDate?: string;
+  subjectUserId?: string;
+  alertId?: string;
+  alertTitle?: string;
+  notePreview?: string;
 };
 
 export const notification = pgTable(

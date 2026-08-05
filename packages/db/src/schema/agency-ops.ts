@@ -517,9 +517,9 @@ export const agencyOpsMemberCapacity = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    /** ISO Monday of the week this capacity applies to (UTC midnight). */
+    /** Team week-start date for this capacity cell (UTC midnight; day from tenure weekStartsOn). */
     weekStart: timestamp("week_start").notNull(),
-    /** Capacity in seconds (e.g. 8h * 5d = 144000). */
+    /** Capacity in seconds (e.g. requiredDailyHours × workdays × 3600). */
     capacitySeconds: integer("capacity_seconds").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -848,6 +848,12 @@ export const agencyOpsTenurePolicy = pgTable(
     penaltyMonths: integer("penalty_months").notNull().default(6),
     internDurationMonths: integer("intern_duration_months").notNull().default(4),
     internDurationWeeks: integer("intern_duration_weeks").notNull().default(0),
+    /** Required hours per working day for the team baseline. */
+    requiredDailyHours: integer("required_daily_hours").notNull().default(8),
+    /** JS getDay() week start: 0=Sunday … 6=Saturday. */
+    weekStartsOn: integer("week_starts_on").notNull().default(1),
+    /** Trailing weekend length within the team week (1–3). */
+    weekendDurationDays: integer("weekend_duration_days").notNull().default(2),
     policyEffectiveFrom: timestamp("policy_effective_from").notNull(),
     enabled: boolean("enabled").notNull().default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -1066,6 +1072,74 @@ export const agencyOpsMemberReview = pgTable(
       table.teamId,
       table.subjectUserId,
       table.reviewDate,
+    ),
+  ],
+);
+
+export type AgencyOpsMemberProfileAlertKind =
+  | "abnormal_day"
+  | "month_pace"
+  | "quarter_pace"
+  | "waste_spike"
+  | "custom";
+export type AgencyOpsMemberProfileAlertSource = "system" | "custom";
+export type AgencyOpsMemberProfileAlertStatus = "open" | "snoozed" | "removed";
+
+export type AgencyOpsMemberProfileAlertContext = {
+  dateKey?: string;
+  hours?: number;
+  requiredHours?: number;
+  loggedHours?: number;
+  projectedHours?: number;
+  wasteRatio?: number;
+  periodKey?: string;
+  defaultSnoozeUntil?: string;
+};
+
+export const agencyOpsMemberProfileAlert = pgTable(
+  "agency_ops_member_profile_alert",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    subjectUserId: text("subject_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),
+    kind: text("kind").$type<AgencyOpsMemberProfileAlertKind>().notNull(),
+    source: text("source").$type<AgencyOpsMemberProfileAlertSource>().notNull(),
+    status: text("status").$type<AgencyOpsMemberProfileAlertStatus>().notNull().default("open"),
+    fingerprint: text("fingerprint").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    note: text("note"),
+    contextJson: jsonb("context_json")
+      .$type<AgencyOpsMemberProfileAlertContext>()
+      .notNull()
+      .default({}),
+    sentAt: timestamp("sent_at"),
+    snoozedUntil: timestamp("snoozed_until"),
+    removedAt: timestamp("removed_at"),
+    removedByUserId: text("removed_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agency_ops_member_profile_alert_fingerprint_uidx").on(
+      table.teamId,
+      table.subjectUserId,
+      table.fingerprint,
+    ),
+    index("agency_ops_member_profile_alert_team_subject_idx").on(
+      table.teamId,
+      table.subjectUserId,
+      table.status,
     ),
   ],
 );

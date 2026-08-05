@@ -302,6 +302,20 @@
       "when": 1787900000019,
       "tag": "0042_agency_payout_formula_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1787900000020,
+      "tag": "0043_agency_tenure_work_schedule",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1787900000021,
+      "tag": "0044_agency_member_profile_alerts",
+      "breakpoints": true
     }
   ]
 }
