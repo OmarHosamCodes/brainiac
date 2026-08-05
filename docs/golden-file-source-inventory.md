@@ -19,8 +19,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 619 |
-| server-operation | 12 |
+| golden-feature | 636 |
+| server-operation | 13 |
 | shared-infrastructure | 278 |
 | static-presentation | 15 |
 
@@ -33,9 +33,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 11 |
-| billing | 71 |
+| billing | 77 |
 | ci | 2 |
-| clients | 4 |
+| clients | 13 |
 | configuration | 3 |
 | dashboard | 8 |
 | database-platform | 33 |
@@ -43,14 +43,14 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | environment | 5 |
 | integrations | 2 |
 | marketing | 16 |
-| member-profile | 30 |
+| member-profile | 32 |
 | notifications | 33 |
 | performance | 8 |
 | projects | 24 |
 | reports | 54 |
 | repository | 13 |
 | resourcing | 38 |
-| server-platform | 21 |
+| server-platform | 22 |
 | settings | 1 |
 | task-management | 41 |
 | team | 19 |
@@ -91,6 +91,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/server/src/operations/backfills/verify-clockify-backfill.ts` | time-tracking | server-operation | server-operation | time-tracking-domain | Deliberate time-tracking operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/imports/import-clockify.ts` | time-tracking | server-operation | server-operation | time-tracking-domain | Deliberate time-tracking operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/local-reset-team-passwords.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: database access, process or filesystem tooling, environment contract; structure: source role and exported behavior |
+| `apps/server/src/operations/local-seed-visual-notifications.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/local-timer-smoke.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: database access, process or filesystem tooling, environment contract; structure: source role and exported behavior |
 | `apps/server/src/operations/maintenance/cleanup-agency-operator-nodes.ts` | agency-shared | server-operation | server-operation | agency-platform | Deliberate agency-shared operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/maintenance/clear-team-data.ts` | team | server-operation | server-operation | team-domain | Deliberate team operation with isolated runtime side effects. | content: database access, process or filesystem tooling, package or task configuration; structure: source role and exported behavior |
@@ -173,6 +174,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/billing/containers/agency-money-surface-container.tsx` | billing | container | golden-feature | billing-domain | Feature-owned billing artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/billing/hooks/use-agency-billing-surface.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/billing/hooks/use-agency-money-surface.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
+| `apps/web/src/features/billing/money-bill-allocation.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/billing/money-bill-allocation.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/billing/money-bills-filters.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/billing/money-bills-filters.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/billing/money-bills-rows.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
@@ -190,7 +193,16 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/billing/money-stats-fixtures.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/billing/money-stats-live.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/billing/money-stats-live.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
-| `apps/web/src/features/clients/agency-clients-surface.tsx` | clients | web-query | golden-feature | clients-domain | Feature-owned clients artifact in the canonical web-query layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/clients/agency-client-detail-view.tsx` | clients | presentational-view | golden-feature | clients-domain | Feature-owned clients artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/clients/agency-client-detail.tsx` | clients | presentational-view | golden-feature | clients-domain | Feature-owned clients artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/clients/agency-clients-table-view.tsx` | clients | presentational-view | golden-feature | clients-domain | Feature-owned clients artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/clients/agency-clients-table.tsx` | clients | presentational-view | golden-feature | clients-domain | Feature-owned clients artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/clients/client-contact-completeness.test.ts` | clients | test | golden-feature | clients-domain | Feature-owned clients artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/clients/client-contact-completeness.ts` | clients | domain-logic | golden-feature | clients-domain | Feature-owned clients artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/clients/containers/agency-client-detail-container.tsx` | clients | container | golden-feature | clients-domain | Feature-owned clients artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
+| `apps/web/src/features/clients/containers/agency-clients-table-container.tsx` | clients | container | golden-feature | clients-domain | Feature-owned clients artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
+| `apps/web/src/features/clients/hooks/use-agency-client-detail.ts` | clients | feature-hook | golden-feature | clients-domain | Feature-owned clients artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
+| `apps/web/src/features/clients/hooks/use-agency-clients-table.ts` | clients | feature-hook | golden-feature | clients-domain | Feature-owned clients artifact in the canonical feature-hook layer. | content: TanStack Query orchestration, feature query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/dashboard/agency-dashboard-command-bar.test.ts` | dashboard | test | golden-feature | agency-dashboard-domain | Feature-owned dashboard artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/dashboard/agency-dashboard-command-bar.tsx` | dashboard | presentational-view | golden-feature | agency-dashboard-domain | Feature-owned dashboard artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/dashboard/agency-dashboard-surface-view.tsx` | dashboard | presentational-view | golden-feature | agency-dashboard-domain | Feature-owned dashboard artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -207,6 +219,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/member-profile/member-profile-activity-merge.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/member-profile/member-profile-activity-merge.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/member-profile/member-profile-activity-rails.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/member-profile/member-profile-alert-period.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/member-profile/member-profile-alert-period.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/member-profile/member-profile-alerts-view.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/member-profile-date-picker.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/member-profile-heat-layout.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
@@ -242,7 +256,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/projects/containers/agency-project-detail-container.tsx` | projects | container | golden-feature | projects-domain | Feature-owned projects artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/projects/containers/agency-projects-table-container.tsx` | projects | container | golden-feature | projects-domain | Feature-owned projects artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/projects/hooks/use-agency-project-create-dialog.ts` | projects | feature-hook | golden-feature | projects-domain | Feature-owned projects artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
-| `apps/web/src/features/projects/hooks/use-agency-project-detail.ts` | projects | feature-hook | golden-feature | projects-domain | Feature-owned projects artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
+| `apps/web/src/features/projects/hooks/use-agency-project-detail.ts` | projects | feature-hook | golden-feature | projects-domain | Feature-owned projects artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/projects/hooks/use-agency-projects-table.ts` | projects | feature-hook | golden-feature | projects-domain | Feature-owned projects artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/projects/journey-step-layout.ts` | projects | domain-logic | golden-feature | projects-domain | Feature-owned projects artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/projects/journey/agency-project-journey-stepper.tsx` | projects | presentational-view | golden-feature | projects-domain | Feature-owned projects artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -731,6 +745,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/lib/redis.ts` | api-platform | domain-service | shared-infrastructure | api-platform | Cross-cutting api-platform domain-service support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/lib/team-membership.ts` | team | domain-logic | golden-feature | team-domain | Feature-owned team artifact in the canonical domain-logic layer. | content: database access, exported declarations; structure: source role and exported behavior |
 | `packages/api/src/procedures.ts` | api-platform | domain-service | shared-infrastructure | api-platform | Cross-cutting api-platform domain-service support rather than a feature-owned business workflow. | content: oRPC procedures or clients, exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/agency-ops/billing/client-billable-income.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/billing/client-billable-income.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/billing/expense-helpers.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/expense-helpers.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/expense-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
@@ -738,6 +754,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agency-ops/billing/invoice-bill-status.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/invoice-period-totals.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/invoice-period-totals.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/agency-ops/billing/member-payable-income.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/billing/member-payable-income.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-context.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-eval.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/money-formula-eval.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
