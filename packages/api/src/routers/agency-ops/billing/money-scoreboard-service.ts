@@ -1,23 +1,41 @@
+import type { AgencyOpsMoneyFormulaDef } from "@orch/db/schema";
+
+import { applyFormulasToScoreboard } from "./money-formula-context";
+import { getMoneySettings } from "./money-settings-service";
 import { getInvoiceSummary } from "./service";
 import { sumExpensesInPeriod } from "./expense-service";
 import { getPayoutSectionTotals, getPayoutSummary } from "./payout-service";
 import { buildPeriodScoreboard } from "./period-scoreboard";
 
+function paidVacationHoursFromCalc(
+  valueByOptionId: Record<string, number> | undefined,
+  formulas: AgencyOpsMoneyFormulaDef[],
+): number {
+  const vacation = formulas.find((formula) => formula.key === "paid_vacation");
+  const fromTokens = vacation?.tokens.find((token) => token.kind === "number");
+  if (fromTokens && fromTokens.kind === "number") return fromTokens.value;
+  const hours = valueByOptionId?.["paid-vacation"];
+  return typeof hours === "number" && Number.isFinite(hours) ? hours : 200;
+}
+
 export async function getPeriodScoreboard(
   actorUserId: string,
   input: { teamId: string; periodStart: string; periodEnd: string },
 ) {
-  const [invoiceSummary, payoutSummary, expenseTotals, sectionTotals] = await Promise.all([
-    getInvoiceSummary(actorUserId, input),
-    getPayoutSummary(actorUserId, input),
-    sumExpensesInPeriod(actorUserId, input),
-    getPayoutSectionTotals(actorUserId, input),
-  ]);
+  const [invoiceSummary, payoutSummary, expenseTotals, sectionTotals, settings] = await Promise.all(
+    [
+      getInvoiceSummary(actorUserId, input),
+      getPayoutSummary(actorUserId, input),
+      sumExpensesInPeriod(actorUserId, input),
+      getPayoutSectionTotals(actorUserId, input),
+      getMoneySettings(actorUserId, { teamId: input.teamId }),
+    ],
+  );
 
   const currency =
     invoiceSummary.currency || payoutSummary.currency || expenseTotals.currency || "USD";
 
-  return buildPeriodScoreboard({
+  const scoreboardInput = {
     billedCents: invoiceSummary.billedCents,
     receivedCents: invoiceSummary.receivedCents,
     salariesDueCents: payoutSummary.salariesDueCents || sectionTotals.salaries,
@@ -29,5 +47,17 @@ export async function getPeriodScoreboard(
     pbcCents: sectionTotals.pbc,
     teamLossCents: sectionTotals.team_loss,
     currency,
-  });
+  };
+
+  const formulas = settings.calcOptions.formulas ?? [];
+  if (formulas.length === 0) {
+    return buildPeriodScoreboard(scoreboardInput);
+  }
+
+  const paidVacationHours = paidVacationHoursFromCalc(
+    settings.calcOptions.valueByOptionId,
+    formulas,
+  );
+
+  return applyFormulasToScoreboard(scoreboardInput, formulas, paidVacationHours);
 }

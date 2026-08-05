@@ -31,6 +31,14 @@ import {
 } from "./expense-service";
 import { getMoneySettings, upsertMoneySettings } from "./money-settings-service";
 import { getPeriodScoreboard } from "./money-scoreboard-service";
+import { previewMoneyFormula } from "./money-formula-preview-service";
+import { syncFormulaPayoutLines } from "./money-formula-payout-sync";
+import {
+  moneyCalcOptionsSchema,
+  moneyFormulaTokenSchema,
+  moneyRulesSchema,
+  moneySettingsRecordSchema,
+} from "./money-formula-schemas";
 
 const invoiceStatusSchema = z.enum(["draft", "sent", "partial", "paid", "refunded"]);
 const invoiceBillStatusSchema = z.enum(["outstanding", "partial", "paid", "refunded"]);
@@ -431,6 +439,22 @@ export const billingRouter = {
           await updatePayoutLineStatus(context.session.user.id, input),
         );
       }),
+    syncFormulaLines: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          refreshSnapshot: z.boolean().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            upserted: z.number().int().nonnegative(),
+            skipped: z.number().int().nonnegative(),
+          })
+          .parse(await syncFormulaPayoutLines(context.session.user.id, input));
+      }),
   },
 
   expenses: {
@@ -537,49 +561,39 @@ export const billingRouter = {
 
   moneySettings: {
     get: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
-      return z
-        .object({
-          teamId: z.string().min(1),
-          rules: z.object({
-            enabledRuleIds: z.array(z.string()),
-            notesByRuleId: z.record(z.string(), z.string()).optional(),
-          }),
-          calcOptions: z.object({
-            enabledOptionIds: z.array(z.string()),
-            notesByOptionId: z.record(z.string(), z.string()).optional(),
-          }),
-          updatedAt: z.string().datetime(),
-        })
-        .parse(await getMoneySettings(context.session.user.id, input));
+      return moneySettingsRecordSchema.parse(
+        await getMoneySettings(context.session.user.id, input),
+      );
     }),
     upsert: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
-          rules: z.object({
-            enabledRuleIds: z.array(z.string()),
-            notesByRuleId: z.record(z.string(), z.string()).optional(),
-          }),
-          calcOptions: z.object({
-            enabledOptionIds: z.array(z.string()),
-            notesByOptionId: z.record(z.string(), z.string()).optional(),
-          }),
+          rules: moneyRulesSchema,
+          calcOptions: moneyCalcOptionsSchema,
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return moneySettingsRecordSchema.parse(
+          await upsertMoneySettings(context.session.user.id, input),
+        );
+      }),
+    preview: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          tokens: z.array(moneyFormulaTokenSchema).min(1),
+          output: z.enum(["cents", "ratio", "hours"]),
+          memberUserId: z.string().min(1).nullable().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return z
           .object({
-            teamId: z.string().min(1),
-            rules: z.object({
-              enabledRuleIds: z.array(z.string()),
-              notesByRuleId: z.record(z.string(), z.string()).optional(),
-            }),
-            calcOptions: z.object({
-              enabledOptionIds: z.array(z.string()),
-              notesByOptionId: z.record(z.string(), z.string()).optional(),
-            }),
-            updatedAt: z.string().datetime(),
+            value: z.number().nullable(),
+            error: z.string().nullable(),
           })
-          .parse(await upsertMoneySettings(context.session.user.id, input));
+          .parse(await previewMoneyFormula(context.session.user.id, input));
       }),
   },
 };

@@ -28,6 +28,8 @@ import {
 } from "./payout-bill-status";
 import { payoutSalariesTotalsFromRows } from "./payout-period-totals";
 import { PAYOUT_SECTION_META, payoutSectionKeysForBillsParty } from "./payout-section-keys";
+import { enabledFormulasSnapshot } from "./money-formula-templates";
+import { getMoneySettings } from "./money-settings-service";
 
 export type AgencyPayoutLineRecord = {
   id: string;
@@ -191,6 +193,8 @@ export async function ensurePayoutPeriod(
   const runId = createWorkspaceId("agency-payout-run");
   const sectionId = createWorkspaceId("agency-payout-sec");
   const currency = input.currency ?? "USD";
+  const settings = await getMoneySettings(actorUserId, { teamId: input.teamId });
+  const formulaSnapshotJson = enabledFormulasSnapshot(settings.calcOptions.formulas ?? []);
 
   await db.transaction(async (tx) => {
     await tx.insert(agencyOpsPayoutRun).values({
@@ -200,6 +204,7 @@ export async function ensurePayoutPeriod(
       periodEnd,
       status: "draft",
       currency,
+      formulaSnapshotJson,
       createdByUserId: actorUserId,
     });
     await tx.insert(agencyOpsPayoutSection).values({

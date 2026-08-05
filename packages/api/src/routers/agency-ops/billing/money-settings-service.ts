@@ -7,23 +7,39 @@ import {
 import { eq } from "drizzle-orm";
 
 import { requireTeamMembership } from "../shared/membership";
+import {
+  normalizeNumberRecord,
+  normalizeStringArrayRecord,
+  normalizeStringRecord,
+} from "./money-settings-helpers";
+import { defaultMoneyFormulas, mergeMoneyFormulas } from "./money-formula-templates";
+import { validateMoneyFormulaTokens } from "./money-formula-tokens";
 
 const DEFAULT_RULES: AgencyOpsMoneyRulesJson = {
   enabledRuleIds: ["profit-loss-share", "rent-allowance"],
   notesByRuleId: {},
+  labelByRuleId: {},
+  cohortByRuleId: {},
+  memberIdsByRuleId: {},
 };
 
-const DEFAULT_CALC: AgencyOpsMoneyCalcOptionsJson = {
-  enabledOptionIds: [
-    "roi-variables",
-    "charity",
-    "profit-loss-share",
-    "paid-vacation",
-    "device-compensation",
-    "pbc",
-  ],
-  notesByOptionId: {},
-};
+function defaultCalc(): AgencyOpsMoneyCalcOptionsJson {
+  const formulas = defaultMoneyFormulas();
+  return {
+    enabledOptionIds: [
+      "roi-variables",
+      "charity",
+      "profit-loss-share",
+      "paid-vacation",
+      "device-compensation",
+      "pbc",
+    ],
+    notesByOptionId: {},
+    summaryByOptionId: {},
+    valueByOptionId: { "paid-vacation": 200 },
+    formulas,
+  };
+}
 
 export type AgencyMoneySettingsRecord = {
   teamId: string;
@@ -39,22 +55,42 @@ function normalizeRules(value: unknown): AgencyOpsMoneyRulesJson {
     enabledRuleIds: Array.isArray(record.enabledRuleIds)
       ? record.enabledRuleIds.filter((id): id is string => typeof id === "string")
       : DEFAULT_RULES.enabledRuleIds,
-    notesByRuleId:
-      record.notesByRuleId && typeof record.notesByRuleId === "object" ? record.notesByRuleId : {},
+    notesByRuleId: normalizeStringRecord(record.notesByRuleId),
+    labelByRuleId: normalizeStringRecord(record.labelByRuleId),
+    cohortByRuleId: normalizeStringRecord(record.cohortByRuleId),
+    memberIdsByRuleId: normalizeStringArrayRecord(record.memberIdsByRuleId),
   };
 }
 
 function normalizeCalc(value: unknown): AgencyOpsMoneyCalcOptionsJson {
-  if (!value || typeof value !== "object") return DEFAULT_CALC;
+  const fallback = defaultCalc();
+  if (!value || typeof value !== "object") return fallback;
   const record = value as Partial<AgencyOpsMoneyCalcOptionsJson>;
+  const enabledOptionIds = Array.isArray(record.enabledOptionIds)
+    ? record.enabledOptionIds.filter((id): id is string => typeof id === "string")
+    : fallback.enabledOptionIds;
+  const notesByOptionId = normalizeStringRecord(record.notesByOptionId);
+  const summaryByOptionId = normalizeStringRecord(record.summaryByOptionId);
+  const valueByOptionId = normalizeNumberRecord(record.valueByOptionId);
+  const formulas = mergeMoneyFormulas(record.formulas, {
+    enabledOptionIds,
+    valueByOptionId,
+    summaryByOptionId,
+  });
+
+  for (const formula of formulas) {
+    const validation = validateMoneyFormulaTokens(formula.tokens);
+    if (!validation.ok && formula.enabled) {
+      formula.enabled = false;
+    }
+  }
+
   return {
-    enabledOptionIds: Array.isArray(record.enabledOptionIds)
-      ? record.enabledOptionIds.filter((id): id is string => typeof id === "string")
-      : DEFAULT_CALC.enabledOptionIds,
-    notesByOptionId:
-      record.notesByOptionId && typeof record.notesByOptionId === "object"
-        ? record.notesByOptionId
-        : {},
+    enabledOptionIds,
+    notesByOptionId,
+    summaryByOptionId,
+    valueByOptionId,
+    formulas,
   };
 }
 
@@ -74,7 +110,7 @@ export async function getMoneySettings(
     return {
       teamId: input.teamId,
       rules: DEFAULT_RULES,
-      calcOptions: DEFAULT_CALC,
+      calcOptions: defaultCalc(),
       updatedAt: new Date(0).toISOString(),
     };
   }
@@ -99,6 +135,15 @@ export async function upsertMoneySettings(
 
   const rules = normalizeRules(input.rules);
   const calcOptions = normalizeCalc(input.calcOptions);
+
+  for (const formula of calcOptions.formulas ?? []) {
+    if (!formula.enabled) continue;
+    const validation = validateMoneyFormulaTokens(formula.tokens);
+    if (!validation.ok) {
+      throw new Error(validation.error);
+    }
+  }
+
   const now = new Date();
 
   const [row] = await db
