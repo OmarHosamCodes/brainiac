@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
@@ -24,7 +24,7 @@ import {
   resolveDefaultTenureMonthIndexes,
 } from "@/features/resourcing/tenure-utils";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { orpc } from "@/lib/orpc";
+import { orpc, orpcClient } from "@/lib/orpc";
 
 import {
   formatMoneyExpenseCents,
@@ -62,13 +62,31 @@ import {
   type MoneyBillPayoutSectionKey,
 } from "../money-bills-rows";
 import {
-  MONEY_CALC_OPTIONS_FIXTURE,
   MONEY_COHORT_PANE_OPTIONS,
   MONEY_COHORT_RULES_FIXTURE,
-  type MoneyCalcOptionId,
   type MoneyCohortPane,
-  type MoneyCohortRuleId,
 } from "../money-cohort-allocations-fixture";
+import {
+  formatMoneyFormulaPreview,
+  validateMoneyFormulaTokensClient,
+  type MoneyFormulaDef,
+} from "../money-formula-chips";
+import {
+  applyFormulaDraft,
+  applyRuleDraft,
+  createFormulaDraft,
+  createNewCustomFormulaDraft,
+  createNewCustomRuleDraft,
+  createRuleDraft,
+  defaultCalcState,
+  defaultRulesState,
+  listCustomMoneyRuleIds,
+  resolveRuleCohort,
+  resolveRuleLabel,
+  resolveRuleMemberCount,
+  resolveRuleSupportsMemberPick,
+  type MoneySettingsEditorDraft,
+} from "../money-settings-form";
 import {
   type MoneyStatsCardId,
   type MoneyStatsMetricFixture,
@@ -84,8 +102,8 @@ const BILL_CREATE_FORM_ID = "agency-money-bill-create";
 const BILL_PAYMENT_FORM_ID = "agency-money-bill-payment";
 
 export type MoneyCohortAllocationsSelection =
-  | { kind: "rule"; ruleId: MoneyCohortRuleId }
-  | { kind: "calc-option"; optionId: MoneyCalcOptionId };
+  | { kind: "rule"; ruleId: string }
+  | { kind: "formula"; formulaId: string };
 
 const EXPENSE_CREATE_FORM_ID = "agency-money-expense-create";
 
@@ -221,6 +239,17 @@ export function useAgencyMoneySurface(teamId: string) {
   const [selectedRunSectionId, setSelectedRunSectionId] = useState<string | null>(null);
   const [moneySettingsOpen, setMoneySettingsOpen] = useState(false);
   const [cohortPane, setCohortPane] = useState<MoneyCohortPane>("rules");
+  const [moneySettingsDraft, setMoneySettingsDraft] = useState<MoneySettingsEditorDraft | null>(
+    null,
+  );
+  const [formulaPreviewLabel, setFormulaPreviewLabel] = useState("—");
+  const [formulaPreviewPending, setFormulaPreviewPending] = useState(false);
+
+  const formulaValidationError = useMemo(() => {
+    if (moneySettingsDraft?.kind !== "formula") return null;
+    const result = validateMoneyFormulaTokensClient(moneySettingsDraft.formula.tokens);
+    return result.ok ? null : result.error;
+  }, [moneySettingsDraft]);
 
   const tenurePeriodLabel = useMemo(
     () =>
@@ -337,6 +366,11 @@ export function useAgencyMoneySurface(teamId: string) {
     enabled: Boolean(teamId),
   });
 
+  const teamMembersQuery = useQuery({
+    ...orpc.team.members.list.queryOptions({ input: { teamId } }),
+    enabled: Boolean(teamId) && moneySettingsOpen,
+  });
+
   const periodScoreboardQuery = useQuery({
     ...orpc.agencyOps.money.periodScoreboard.queryOptions({
       input: {
@@ -347,6 +381,65 @@ export function useAgencyMoneySurface(teamId: string) {
     }),
     enabled: Boolean(teamId),
   });
+
+  useEffect(() => {
+    if (moneySettingsDraft?.kind !== "formula" || !teamId) {
+      setFormulaPreviewLabel("—");
+      setFormulaPreviewPending(false);
+      return;
+    }
+    if (formulaValidationError) {
+      setFormulaPreviewLabel("—");
+      setFormulaPreviewPending(false);
+      return;
+    }
+
+    const formula = moneySettingsDraft.formula;
+    let cancelled = false;
+    setFormulaPreviewPending(true);
+    const timer = window.setTimeout(() => {
+      void orpcClient.agencyOps.moneySettings
+        .preview({
+          teamId,
+          periodStart: periodRange.from,
+          periodEnd: periodRange.to,
+          tokens: formula.tokens,
+          output: formula.output,
+        })
+        .then((result) => {
+          if (cancelled) return;
+          if (result.error) {
+            setFormulaPreviewLabel("—");
+            return;
+          }
+          setFormulaPreviewLabel(
+            formatMoneyFormulaPreview(
+              result.value,
+              formula.output,
+              periodScoreboardQuery.data?.currency ?? "USD",
+            ),
+          );
+        })
+        .catch(() => {
+          if (!cancelled) setFormulaPreviewLabel("—");
+        })
+        .finally(() => {
+          if (!cancelled) setFormulaPreviewPending(false);
+        });
+    }, 280);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    formulaValidationError,
+    moneySettingsDraft,
+    periodRange.from,
+    periodRange.to,
+    periodScoreboardQuery.data?.currency,
+    teamId,
+  ]);
 
   const payoutRunQuery = useQuery({
     ...orpc.agencyOps.payouts.getRun.queryOptions({
@@ -579,8 +672,9 @@ export function useAgencyMoneySurface(teamId: string) {
         setStatusFilter(null);
         break;
       case "profit-loss-share":
-        setMoneySettingsOpen(true);
+        setMoneySettingsDraft(null);
         setCohortPane("formulas");
+        setMoneySettingsOpen(true);
         break;
       case "team-profit":
       case "roi":
@@ -596,36 +690,92 @@ export function useAgencyMoneySurface(teamId: string) {
     }
   }
 
+  function onMoneySettingsOpenChange(open: boolean) {
+    setMoneySettingsOpen(open);
+    if (!open) {
+      setMoneySettingsDraft(null);
+      setCohortPane("rules");
+    }
+  }
+
+  function onMoneySettingsPaneChange(pane: MoneyCohortPane) {
+    setCohortPane(pane);
+    setMoneySettingsDraft(null);
+  }
+
   function onSelectCohortAllocation(selection: MoneyCohortAllocationsSelection) {
     const current = moneySettingsQuery.data;
-    const rules = current?.rules ?? {
-      enabledRuleIds: MONEY_COHORT_RULES_FIXTURE.map((rule) => rule.id),
-      notesByRuleId: {},
-    };
-    const calcOptions = current?.calcOptions ?? {
-      enabledOptionIds: MONEY_CALC_OPTIONS_FIXTURE.map((option) => option.id),
-      notesByOptionId: {},
-    };
-
     if (selection.kind === "rule") {
-      const enabledRuleIds = rules.enabledRuleIds.includes(selection.ruleId)
-        ? rules.enabledRuleIds.filter((id) => id !== selection.ruleId)
-        : [...rules.enabledRuleIds, selection.ruleId];
-      void agencyOps.upsertMoneySettings({
-        teamId,
-        rules: { ...rules, enabledRuleIds },
-        calcOptions,
-      });
+      setMoneySettingsDraft(
+        createRuleDraft(current?.rules ?? defaultRulesState(), selection.ruleId),
+      );
+      return;
+    }
+    const formula = (current?.calcOptions.formulas ?? []).find(
+      (item) => item.id === selection.formulaId,
+    );
+    if (!formula) return;
+    setMoneySettingsDraft(createFormulaDraft(formula as MoneyFormulaDef));
+  }
+
+  function onAddCustomFormula() {
+    setCohortPane("formulas");
+    setMoneySettingsDraft(createNewCustomFormulaDraft());
+  }
+
+  function onAddCustomRule() {
+    setCohortPane("rules");
+    setMoneySettingsDraft(createNewCustomRuleDraft());
+  }
+
+  function onMoneySettingsDraftChange(draft: MoneySettingsEditorDraft) {
+    setMoneySettingsDraft(draft);
+  }
+
+  function onMoneySettingsEditorCancel() {
+    setMoneySettingsDraft(null);
+  }
+
+  function onMoneySettingsEditorSave() {
+    if (!moneySettingsDraft) return;
+    const current = moneySettingsQuery.data;
+    const rules = current?.rules ?? defaultRulesState();
+    const calcOptions = current?.calcOptions ?? defaultCalcState();
+
+    if (moneySettingsDraft.kind === "rule") {
+      void agencyOps.upsertMoneySettings(
+        {
+          teamId,
+          rules: applyRuleDraft(rules, moneySettingsDraft),
+          calcOptions,
+        },
+        { onSuccess: () => setMoneySettingsDraft(null) },
+      );
       return;
     }
 
-    const enabledOptionIds = calcOptions.enabledOptionIds.includes(selection.optionId)
-      ? calcOptions.enabledOptionIds.filter((id) => id !== selection.optionId)
-      : [...calcOptions.enabledOptionIds, selection.optionId];
-    void agencyOps.upsertMoneySettings({
+    void agencyOps.upsertMoneySettings(
+      {
+        teamId,
+        rules,
+        calcOptions: applyFormulaDraft(
+          {
+            ...calcOptions,
+            formulas: (calcOptions.formulas ?? []) as MoneyFormulaDef[],
+          },
+          moneySettingsDraft,
+        ),
+      },
+      { onSuccess: () => setMoneySettingsDraft(null) },
+    );
+  }
+
+  function onSyncFormulaLines() {
+    void agencyOps.syncFormulaPayoutLines({
       teamId,
-      rules,
-      calcOptions: { ...calcOptions, enabledOptionIds },
+      periodStart: periodRange.from,
+      periodEnd: periodRange.to,
+      refreshSnapshot: true,
     });
   }
 
@@ -931,39 +1081,92 @@ export function useAgencyMoneySurface(teamId: string) {
       isLoading: payoutRunQuery.isPending,
       onOpenPayment,
       onMarkPaid: onMarkBillPaid,
-      onAddLine:
-        selectedRunSection &&
-        (selectedRunSection.key === "debt_discount" ||
-          selectedRunSection.key === "charity" ||
-          selectedRunSection.key === "pbc")
-          ? () => {
-              setAdjustmentSectionKey(selectedRunSection.key);
-              setPartyFilter("adjustments");
-              onAdjustmentCreateOpenChange(true);
-            }
-          : null,
+      onAddLine: (() => {
+        const sectionKey = selectedRunSection?.key;
+        if (sectionKey !== "debt_discount" && sectionKey !== "charity" && sectionKey !== "pbc") {
+          return null;
+        }
+        return () => {
+          setAdjustmentSectionKey(sectionKey);
+          setPartyFilter("adjustments");
+          onAdjustmentCreateOpenChange(true);
+        };
+      })(),
       onOpenTeamBills: () => setPartyFilter("team"),
+      onSyncFormulaLines:
+        payoutRunQuery.data?.status === "draft" || payoutRunQuery.data == null
+          ? onSyncFormulaLines
+          : null,
       isMutationPending: isInvoiceMutationPending,
     },
     moneySettings: {
       open: moneySettingsOpen,
-      onOpenChange: setMoneySettingsOpen,
-      onOpen: () => setMoneySettingsOpen(true),
+      onOpenChange: onMoneySettingsOpenChange,
+      onOpen: () => {
+        setMoneySettingsDraft(null);
+        setCohortPane("rules");
+        setMoneySettingsOpen(true);
+      },
       title: "Money settings",
-      description:
-        "Cohort rules and calculation options for this team’s Money surface. Click to enable or disable; formulas do not auto-generate payout lines yet.",
+      description: "Who qualifies and how much they get. Open a rule or formula, edit, then save.",
       pane: cohortPane,
       paneOptions: MONEY_COHORT_PANE_OPTIONS,
-      onPaneChange: setCohortPane,
-      rules: MONEY_COHORT_RULES_FIXTURE.map((rule) => ({
-        ...rule,
-        enabled: moneySettingsQuery.data?.rules.enabledRuleIds.includes(rule.id) ?? true,
+      onPaneChange: onMoneySettingsPaneChange,
+      rules: (() => {
+        const rules = moneySettingsQuery.data?.rules;
+        const systemRows = MONEY_COHORT_RULES_FIXTURE.map((rule) => ({
+          id: rule.id,
+          benefit: rule.benefit,
+          locked: true as const,
+          supportsMemberPick: rule.supportsMemberPick === true,
+          enabled: rules?.enabledRuleIds.includes(rule.id) ?? true,
+          cohort: resolveRuleCohort(rules, rule.id),
+          memberCount: resolveRuleMemberCount(rules, rule.id),
+        }));
+        const customRows = listCustomMoneyRuleIds(rules).map((ruleId) => ({
+          id: ruleId,
+          benefit: resolveRuleLabel(rules, ruleId),
+          locked: false as const,
+          supportsMemberPick: resolveRuleSupportsMemberPick(ruleId),
+          enabled: rules?.enabledRuleIds.includes(ruleId) ?? true,
+          cohort: resolveRuleCohort(rules, ruleId),
+          memberCount: resolveRuleMemberCount(rules, ruleId),
+        }));
+        return [...systemRows, ...customRows];
+      })(),
+      formulas: ((moneySettingsQuery.data?.calcOptions.formulas ?? []) as MoneyFormulaDef[]).map(
+        (formula) => ({
+          id: formula.id,
+          key: formula.key,
+          label: formula.label,
+          locked: formula.locked,
+          enabled: formula.enabled,
+          tokens: formula.tokens,
+          output: formula.output,
+          metricId: formula.metricId,
+          sectionKey: formula.sectionKey,
+        }),
+      ),
+      memberOptions: (teamMembersQuery.data?.items ?? []).map((member) => ({
+        value: member.userId,
+        label: member.userName,
       })),
-      calcOptions: MONEY_CALC_OPTIONS_FIXTURE.map((option) => ({
-        ...option,
-        enabled: moneySettingsQuery.data?.calcOptions.enabledOptionIds.includes(option.id) ?? true,
-      })),
+      editor: moneySettingsDraft,
       onSelect: onSelectCohortAllocation,
+      onAddCustomFormula,
+      onAddCustomRule,
+      onEditorChange: onMoneySettingsDraftChange,
+      onEditorCancel: onMoneySettingsEditorCancel,
+      onEditorSave: onMoneySettingsEditorSave,
+      canSaveEditor:
+        moneySettingsDraft != null &&
+        (moneySettingsDraft.kind === "rule"
+          ? moneySettingsDraft.cohort.trim().length > 0 &&
+            moneySettingsDraft.label.trim().length > 0
+          : moneySettingsDraft.formula.label.trim().length > 0 && formulaValidationError == null),
+      formulaValidationError,
+      formulaPreviewLabel,
+      formulaPreviewPending,
       isSaving: isInvoiceMutationPending,
     },
     bills: {

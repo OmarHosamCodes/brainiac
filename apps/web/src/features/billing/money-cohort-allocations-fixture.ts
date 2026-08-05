@@ -15,12 +15,16 @@ export type MoneyCohortRuleFixture = {
   benefit: string;
   cohort: string;
   memberCount: number | null;
+  /** When true, editor shows a member multi-select. */
+  supportsMemberPick?: boolean;
 };
 
 export type MoneyCalcOptionFixture = {
   id: MoneyCalcOptionId;
   label: string;
   summary: string;
+  valueLabel?: string;
+  defaultValue?: number;
 };
 
 export type MoneyCohortPane = "rules" | "formulas";
@@ -38,7 +42,7 @@ export const MONEY_COHORT_PANE_OPTIONS: ReadonlyArray<{
   {
     id: "formulas",
     label: "Formulas",
-    description: "How ROI, charity, shares, and vacation are calculated",
+    description: "How much each allocation is — scoreboard and payout amounts",
   },
 ];
 
@@ -52,8 +56,9 @@ export const MONEY_COHORT_RULES_FIXTURE: MoneyCohortRuleFixture[] = [
   {
     id: "rent-allowance",
     benefit: "Rent allowance",
-    cohort: "5 members",
+    cohort: "Selected members",
     memberCount: 5,
+    supportsMemberPick: true,
   },
 ];
 
@@ -77,6 +82,8 @@ export const MONEY_CALC_OPTIONS_FIXTURE: MoneyCalcOptionFixture[] = [
     id: "paid-vacation",
     label: "Paid vacation",
     summary: "200H · salary-rate conversion",
+    valueLabel: "Hours",
+    defaultValue: 200,
   },
   {
     id: "device-compensation",

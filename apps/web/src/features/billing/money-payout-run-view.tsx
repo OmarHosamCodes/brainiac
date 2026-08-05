@@ -7,6 +7,7 @@ import {
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import { Button } from "@/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import {
@@ -34,6 +35,7 @@ export type MoneyPayoutRunViewModel = {
   onMarkPaid: (lineId: string) => void;
   onAddLine: (() => void) | null;
   onOpenTeamBills: (() => void) | null;
+  onSyncFormulaLines: (() => void) | null;
   isMutationPending: boolean;
 };
 
@@ -52,13 +54,34 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
           <h2 className={cn(agencyWorkTitleClass, "text-balance")}>{viewModel.title}</h2>
           <p className="text-xs text-muted text-balance">{viewModel.subtitle}</p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-2">
           <span className="rounded-md bg-elevated px-2 py-0.5 text-[11px] font-medium text-muted">
             {moneyPayoutRunStatusLabel(viewModel.status)}
           </span>
           <span className={cn(agencyMetricClass, "text-xs tabular-nums text-muted")}>
             {viewModel.periodLabel}
           </span>
+          {viewModel.onSyncFormulaLines ? (
+            <TooltipProvider delayDuration={120}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    disabled={viewModel.isMutationPending}
+                    onClick={viewModel.onSyncFormulaLines}
+                  >
+                    {viewModel.isMutationPending ? "Syncing…" : "Sync formula lines"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-56 text-pretty">
+                  Apply enabled formula amounts to unpaid draft lines. Paid lines stay untouched.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
         </div>
       </div>
 
