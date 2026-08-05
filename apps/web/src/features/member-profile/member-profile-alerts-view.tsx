@@ -93,7 +93,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
             {alerts.items.map((alert) => {
               const rowId = `member-alert-${alert.id}`;
               const noteId = `member-alert-note-${alert.id}`;
-              const meta = (
+              const heading = (
                 <>
                   <p className="text-sm font-medium text-pretty text-foreground">{alert.title}</p>
                   <p className={cn(agencyWorkMetaClass, "mt-0.5 text-pretty")}>
@@ -107,8 +107,26 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
                       </>
                     ) : null}
                   </p>
-                  <p className={cn(agencyWorkMetaClass, "mt-1 text-pretty")}>{alert.body}</p>
                 </>
+              );
+              const periodBody = alert.canOpenPeriod ? (
+                <button
+                  type="button"
+                  className={cn(
+                    agencyWorkMetaClass,
+                    "mt-1 block w-full rounded-md text-start text-pretty underline-offset-2",
+                    "text-foreground/85 underline decoration-foreground/30",
+                    agencyFocusRingClass,
+                    "hover:text-foreground hover:decoration-foreground/55",
+                    "motion-reduce:transition-none",
+                  )}
+                  aria-label={`Show activity for: ${alert.body}`}
+                  onClick={() => alerts.openPeriod(alert.id)}
+                >
+                  {alert.body}
+                </button>
+              ) : (
+                <p className={cn(agencyWorkMetaClass, "mt-1 text-pretty")}>{alert.body}</p>
               );
 
               return (
@@ -143,7 +161,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
                                 alerts.setExpandedAlertId(alert.expanded ? null : alert.id)
                               }
                             >
-                              {meta}
+                              {heading}
                             </button>
                             <ChevronDown
                               className={cn(
@@ -154,6 +172,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
                               aria-hidden
                             />
                           </div>
+                          {periodBody}
                           <CollapsibleContent id={`${rowId}-panel`} className="mt-3">
                             <div className="space-y-2.5 rounded-lg bg-muted/35 p-2.5">
                               <Label htmlFor={noteId} className={agencyFormLabelClass}>
@@ -207,7 +226,8 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
                         </Collapsible>
                       ) : (
                         <div>
-                          {meta}
+                          {heading}
+                          {periodBody}
                           {alert.note.trim() ? (
                             <p className={cn(agencyWorkMetaClass, "mt-2 text-pretty")}>
                               Note: {alert.note}

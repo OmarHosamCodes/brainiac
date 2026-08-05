@@ -47,6 +47,8 @@ type Props = {
   teamId: string;
   days: MemberProfileActivityRailsDay[];
   totalEventsLabel: string;
+  /** Brief shimmer target after jumping here from an alert. */
+  highlightDate?: string | null;
 };
 
 function dayRailParts(dateKey: string) {
@@ -162,7 +164,12 @@ function FeedActivityRow({
   );
 }
 
-export function MemberProfileActivityRails({ teamId, days, totalEventsLabel }: Props) {
+export function MemberProfileActivityRails({
+  teamId,
+  days,
+  totalEventsLabel,
+  highlightDate = null,
+}: Props) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const feedRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -274,11 +281,13 @@ export function MemberProfileActivityRails({ teamId, days, totalEventsLabel }: P
                     "inline-flex min-h-8 items-center rounded-md px-2.5 font-mono text-[11px] tracking-wide transition-colors duration-150",
                     agencyFocusRingClass,
                     "motion-reduce:transition-none",
-                    current
-                      ? "border border-border bg-muted text-foreground"
-                      : "border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    day.date === highlightDate
+                      ? "border border-primary/40 bg-primary/10 text-foreground"
+                      : current
+                        ? "border border-border bg-muted text-foreground"
+                        : "border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                   )}
-                  aria-current={current ? "true" : undefined}
+                  aria-current={current || day.date === highlightDate ? "true" : undefined}
                   onClick={() => jumpToDay(day.date)}
                 >
                   {parts.tabLabel}
@@ -290,13 +299,18 @@ export function MemberProfileActivityRails({ teamId, days, totalEventsLabel }: P
           {daysWithMerged.map((day) => {
             const parts = dayRailParts(day.date);
             const isCurrent = day.date === currentDate;
+            const isHighlighted = day.date === highlightDate;
             const totalSeconds = dayTotalSeconds(day.items);
             return (
               <section
                 key={day.date}
                 id={`member-profile-day-${day.date}`}
                 data-label={parts.ariaLabel}
-                className="grid scroll-mt-[3.25rem] grid-cols-[4.5rem_minmax(0,1fr)] border-b border-border last:border-b-0 sm:grid-cols-[5.5rem_minmax(0,1fr)]"
+                data-highlighted={isHighlighted ? "true" : undefined}
+                className={cn(
+                  "grid scroll-mt-[3.25rem] grid-cols-[4.5rem_minmax(0,1fr)] border-b border-border last:border-b-0 sm:grid-cols-[5.5rem_minmax(0,1fr)]",
+                  isHighlighted && "member-profile-day-shimmer",
+                )}
               >
                 <h3 className="sticky top-[3.25rem] self-start px-3 py-4 font-mono text-[11px] tracking-[0.07em] text-muted-foreground uppercase sm:px-4">
                   <strong className="mb-0.5 block text-[1.5rem] font-medium tracking-tight text-foreground normal-case sm:text-[1.625rem]">

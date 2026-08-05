@@ -2,6 +2,10 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import {
+  resolveAlertPeriodTarget,
+  type AlertPeriodTarget,
+} from "@/features/member-profile/member-profile-alert-period";
 import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/agency-member-profile";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
@@ -26,6 +30,7 @@ export type MemberProfileAlertsViewModel = {
     severity: "warning" | "danger" | "info";
     canSnooze: boolean;
     expanded: boolean;
+    canOpenPeriod: boolean;
   }>;
   dialogOpen: boolean;
   draft: { title: string; note: string };
@@ -33,6 +38,7 @@ export type MemberProfileAlertsViewModel = {
   setDraft: (patch: Partial<{ title: string; note: string }>) => void;
   setExpandedAlertId: (alertId: string | null) => void;
   setNoteDraft: (alertId: string, note: string) => void;
+  openPeriod: (alertId: string) => void;
   refetch: () => void;
   submit: () => Promise<void>;
   send: (alertId: string) => Promise<void>;
@@ -80,6 +86,7 @@ export function useMemberProfileAlerts(input: {
   teamId: string;
   subjectUserId: string;
   utcOffsetMinutes: number;
+  onOpenPeriod: (target: AlertPeriodTarget) => void;
 }): MemberProfileAlertsViewModel {
   const session = authClient.useSession();
   const queryClient = useQueryClient();
@@ -136,6 +143,7 @@ export function useMemberProfileAlerts(input: {
         severity: alertSeverity(item.kind),
         canSnooze: item.source === "system",
         expanded: effectiveExpandedId === item.id,
+        canOpenPeriod: resolveAlertPeriodTarget(item.context ?? {}) !== null,
       };
     });
     return {
@@ -161,6 +169,13 @@ export function useMemberProfileAlerts(input: {
     setExpandedAlertId,
     setNoteDraft(alertId, note) {
       setNoteDrafts((prev) => ({ ...prev, [alertId]: note }));
+    },
+    openPeriod(alertId) {
+      const item = alertsQuery.data?.items.find((alert) => alert.id === alertId);
+      if (!item) return;
+      const target = resolveAlertPeriodTarget(item.context ?? {});
+      if (!target) return;
+      input.onOpenPeriod(target);
     },
     refetch() {
       void alertsQuery.refetch();

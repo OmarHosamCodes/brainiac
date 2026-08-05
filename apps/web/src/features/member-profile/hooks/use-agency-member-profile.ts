@@ -1,6 +1,6 @@
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
@@ -9,6 +9,7 @@ import {
   type MemberProfileAlertsViewModel,
 } from "@/features/member-profile/hooks/use-member-profile-alerts";
 import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/agency-member-profile";
+import type { AlertPeriodTarget } from "@/features/member-profile/member-profile-alert-period";
 import {
   resolveMemberProfileHeatLayout,
   type MemberProfileHeatLayout,
@@ -224,6 +225,8 @@ export type AgencyMemberProfileViewModel = {
   setHrDraft: (patch: Partial<AgencyMemberProfileViewModel["hrDraft"]>) => void;
   toggleDay: (date: string) => void;
   focusDay: (date: string) => void;
+  /** Activity day briefly shimmer-highlighted after an alert period jump. */
+  highlightedActivityDate: string | null;
   retry: () => void;
   submitLeave: () => Promise<void>;
   submitReview: () => Promise<void>;
@@ -486,6 +489,8 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   });
   const [hrDraft, setHrDraftState] = useState(emptyHrDraft);
   const [calendarMonthOverride, setCalendarMonthOverride] = useState<string | null>(null);
+  const pendingFocusDateRef = useRef<string | null>(null);
+  const [highlightedActivityDate, setHighlightedActivityDate] = useState<string | null>(null);
 
   const defaultCalendarMonth = range.to.slice(0, 7);
   const calendarMonth = calendarMonthOverride ?? defaultCalendarMonth;
@@ -519,11 +524,71 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     enabled: Boolean(teamId && session.data?.user),
   });
 
+  const rangeStartKey = range.from.slice(0, 10);
+  const rangeEndKey = range.to.slice(0, 10);
+
+  function scrollToActivityDay(date: string) {
+    setExpandedDays((prev) => ({ ...prev, [date]: true }));
+    const el = document.getElementById(`member-profile-day-${date}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function shimmerActivityDay(date: string) {
+    scrollToActivityDay(date);
+    // Drop then re-set so a repeat jump restarts the CSS animation.
+    setHighlightedActivityDate(null);
+    requestAnimationFrame(() => setHighlightedActivityDate(date));
+  }
+
+  function openAlertPeriod(target: AlertPeriodTarget) {
+    const focusDate = target.kind === "day" ? target.dateKey : target.focusDate;
+    const alreadyOnTargetPeriod =
+      effectiveRangePreset === "custom" &&
+      target.from === rangeStartKey &&
+      target.to === rangeEndKey;
+    const dayMounted = Boolean(document.getElementById(`member-profile-day-${focusDate}`));
+
+    // Snap the profile period to the alert window so the day's entries load even when
+    // the current preset omits that date from the timeline.
+    if (alreadyOnTargetPeriod && dayMounted) {
+      shimmerActivityDay(focusDate);
+      return;
+    }
+
+    setRangePreset("custom");
+    setCustomFromDate(target.from);
+    setCustomToDate(target.to);
+    setCalendarMonthOverride(focusDate.slice(0, 7));
+    pendingFocusDateRef.current = focusDate;
+  }
+
   const alerts = useMemberProfileAlerts({
     teamId,
     subjectUserId,
     utcOffsetMinutes,
+    onOpenPeriod: openAlertPeriod,
   });
+
+  useEffect(() => {
+    const date = pendingFocusDateRef.current;
+    if (!date || profileQuery.isFetching || profileQuery.isPending) return;
+    const timeline = profileQuery.data?.timeline ?? [];
+    const focusDate = timeline.some((day) => day.date === date)
+      ? date
+      : (timeline[0]?.date ?? null);
+    if (!focusDate) return;
+    pendingFocusDateRef.current = null;
+    // Defer one frame so the activity rails mount after period data swaps.
+    requestAnimationFrame(() => shimmerActivityDay(focusDate));
+  }, [profileQuery.data, profileQuery.isFetching, profileQuery.isPending, range.from, range.to]);
+
+  useEffect(() => {
+    if (!highlightedActivityDate) return;
+    const clearHandle = window.setTimeout(() => {
+      setHighlightedActivityDate(null);
+    }, 2400);
+    return () => window.clearTimeout(clearHandle);
+  }, [highlightedActivityDate]);
 
   const invalidate = useMutation({
     mutationFn: async () => undefined,
@@ -806,8 +871,6 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   ]);
 
   // Keep leave/review drafts inside the selected period when the range changes.
-  const rangeStartKey = range.from.slice(0, 10);
-  const rangeEndKey = range.to.slice(0, 10);
   const clampedDefaultDate =
     today < rangeStartKey ? rangeStartKey : today > rangeEndKey ? rangeEndKey : today;
 
@@ -915,10 +978,9 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       setExpandedDays((prev) => ({ ...prev, [date]: !(prev[date] ?? date === today) }));
     },
     focusDay(date) {
-      setExpandedDays((prev) => ({ ...prev, [date]: true }));
-      const el = document.getElementById(`member-profile-day-${date}`);
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToActivityDay(date);
     },
+    highlightedActivityDate,
     retry() {
       void profileQuery.refetch();
       alerts.refetch();

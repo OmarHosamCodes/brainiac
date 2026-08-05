@@ -441,6 +441,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                 teamId={viewModel.teamId}
                 days={profile.timeline}
                 totalEventsLabel={`${profile.timeline.reduce((sum, day) => sum + day.items.length, 0)} events`}
+                highlightDate={viewModel.highlightedActivityDate}
               />
             )}
           </main>
