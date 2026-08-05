@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { isWeekendDateKey } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 
@@ -18,11 +19,10 @@ import {
 import {
   addDaysToDateKey,
   periodAnchorUtc,
-  periodLabel,
   shiftPeriodAnchor,
-  type ResourcingPeriodGrain,
 } from "@/features/resourcing/resourcing-workload-heat";
 import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
+import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
@@ -58,7 +58,6 @@ export type ResourcingOutPerson = PresencePerson & {
 };
 
 export type AgencyResourcingWorkloadViewModel = {
-  grain: ResourcingPeriodGrain;
   periodTitle: string;
   focusMonthKey: string;
   focusMonthLabel: string;
@@ -70,11 +69,15 @@ export type AgencyResourcingWorkloadViewModel = {
   selectedDate: string | null;
   selectedDay: PresenceDayCell | null;
   selectedOut: ResourcingOutPerson[];
+  selectedOutPreview: ResourcingOutPerson[];
+  selectedOutHiddenCount: number;
+  selectedOutExpanded: boolean;
   selectedWorkingCount: number;
   coveragePct: number;
   briefingDayNumber: string;
   briefingWeekday: string;
   briefingHeadline: string;
+  briefingStatus: string;
   selectedDayLabel: string;
   selectedDaySummary: string;
   agenda: ResourcingAbsenceAgendaItem[];
@@ -86,9 +89,16 @@ export type AgencyResourcingWorkloadViewModel = {
     off: { type: string; reason: string | null } | null;
   }>;
   memberCount: number;
-  isPending: boolean;
-  isError: boolean;
-  errorMessage: string;
+  hasActivityData: boolean;
+  isActivityPending: boolean;
+  isLeavePending: boolean;
+  isActivityError: boolean;
+  isLeaveError: boolean;
+  activityErrorMessage: string;
+  leaveErrorMessage: string;
+  canManageOffDays: boolean;
+  canAddTeamHoliday: boolean;
+  actorUserId: string | null;
   leaveRequestOpen: boolean;
   leaveRequestPending: boolean;
   leaveRequestError: string | null;
@@ -99,12 +109,12 @@ export type AgencyResourcingWorkloadViewModel = {
     type: "pto" | "sick" | "team_holiday" | "other" | "";
     reason: string;
   };
-  setGrain: (grain: ResourcingPeriodGrain) => void;
   goPrevPeriod: () => void;
   goNextPeriod: () => void;
   selectDate: (date: string) => void;
   isWeekendDate: (date: string) => boolean;
   selectPerson: (userId: string) => void;
+  setSelectedOutExpanded: (expanded: boolean) => void;
   openLeaveRequest: () => void;
   closeLeaveRequest: () => void;
   setLeaveRequestDraft: (
@@ -120,6 +130,22 @@ export type AgencyResourcingWorkloadViewModel = {
   exportCsv: () => void;
   refetch: () => void;
 };
+
+const ABSENCE_PREVIEW_LIMIT = 4;
+
+export function localDateKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function escapeCsvCell(value: string): string {
+  const escaped = value.replaceAll('"', '""');
+  const needsFormulaGuard = /^[=+\-@]/.test(escaped);
+  const safe = needsFormulaGuard ? `'${escaped}` : escaped;
+  return `"${safe}"`;
+}
 
 function shortHours(totalSeconds: number) {
   const hours = Math.floor(totalSeconds / 3600);
@@ -164,16 +190,16 @@ function toActivityHeatMap(
   };
 }
 
-function leaveTypeLabel(type: string) {
+export function leaveTypeLabel(type: string) {
   switch (type) {
     case "pto":
       return "Paid time off";
     case "sick":
-      return "Sick leave";
+      return "Sick";
     case "team_holiday":
       return "Team holiday";
     case "other":
-      return "Personal leave";
+      return "Personal";
     default:
       return type;
   }
@@ -197,7 +223,7 @@ function defaultSelectedDate(
   calendarDays: PresenceDayCell[],
   isWeekend: (dateKey: string) => boolean,
 ): string | null {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey();
   if (today.startsWith(monthKey) && calendarDays.some((day) => day.date === today)) {
     return today;
   }
@@ -234,23 +260,19 @@ function buildFilmstrip(
   return dates;
 }
 
-function outPhrase(person: PresencePerson, leaveType: string): string {
-  const type = leaveType.toLowerCase();
-  if (type.includes("sick")) return `${person.userName} sick`;
-  if (type.includes("paid")) return `${person.userName} on PTO`;
-  return `${person.userName} on ${type}`;
-}
-
 export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWorkloadViewModel {
   const workSchedule = useTeamWorkSchedule(teamId);
   const isWeekend = (dateKey: string) =>
     isWeekendDateKey(dateKey, workSchedule.weekStartsOn, workSchedule.weekendDurationDays);
-  const [grain, setGrain] = useState<ResourcingPeriodGrain>("month");
+  const session = authClient.useSession();
+  const actorUserId = session.data?.user?.id ?? null;
+
   const [anchor, setAnchor] = useState(() =>
     periodAnchorUtc(new Date(), "month", workSchedule.weekStartsOn),
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [selectedOutExpanded, setSelectedOutExpanded] = useState(false);
   const [leaveRequestOpen, setLeaveRequestOpen] = useState(false);
   const [leaveRequestError, setLeaveRequestError] = useState<string | null>(null);
   const [leaveRequestDraft, setLeaveRequestDraftState] = useState({
@@ -266,6 +288,14 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
   const focusMonthKey = useMemo(() => focusMonthKeyFromAnchor(anchor), [anchor]);
   const presenceWindow = useMemo(() => monthWindowDateKeys(focusMonthKey), [focusMonthKey]);
   const utcOffsetMinutes = new Date().getTimezoneOffset();
+
+  const teamQuery = useQuery({
+    ...orpc.team.get.queryOptions({ input: { teamId } }),
+    enabled: Boolean(teamId),
+  });
+  const teamRole = teamQuery.data?.role;
+  const canManageOffDays = teamRole === "owner" || teamRole === "editor";
+  const canAddTeamHoliday = canManageOffDays;
 
   const activityHeatQuery = useQuery({
     ...orpc.agencyOps.activityHeat.list.queryOptions({
@@ -290,6 +320,7 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
     enabled: Boolean(teamId),
   });
 
+  const hasActivityData = Boolean(activityHeatQuery.data);
   const activityRows = useMemo<ResourcingActivityHeatMemberRow[]>(() => {
     const fromDate = activityHeatQuery.data?.fromDate ?? presenceWindow.fromDate;
     const toDate = activityHeatQuery.data?.toDate ?? presenceWindow.toDate;
@@ -320,8 +351,8 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
   }, [calendarDays, focusMonthKey, workSchedule.weekStartsOn, workSchedule.weekendDurationDays]);
 
   useEffect(() => {
-    setAnchor((current) => periodAnchorUtc(current, grain, workSchedule.weekStartsOn));
-  }, [grain, workSchedule.weekStartsOn]);
+    setAnchor((current) => periodAnchorUtc(current, "month", workSchedule.weekStartsOn));
+  }, [workSchedule.weekStartsOn]);
 
   useEffect(() => {
     if (activityRows.length === 0) {
@@ -334,6 +365,10 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
         : (activityRows[0]?.userId ?? null),
     );
   }, [activityRows]);
+
+  useEffect(() => {
+    setSelectedOutExpanded(false);
+  }, [selectedDate]);
 
   const selectedDay = useMemo(
     () => calendarDays.find((day) => day.date === selectedDate) ?? null,
@@ -354,6 +389,11 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
       };
     });
   }, [activityRows, selectedDate, selectedDay]);
+
+  const selectedOutPreview = selectedOutExpanded
+    ? selectedOut
+    : selectedOut.slice(0, ABSENCE_PREVIEW_LIMIT);
+  const selectedOutHiddenCount = Math.max(0, selectedOut.length - ABSENCE_PREVIEW_LIMIT);
 
   const selectedWorkingCount =
     selectedDate && isWeekend(selectedDate) ? 0 : (selectedDay?.working.length ?? 0);
@@ -447,18 +487,24 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
 
   const briefingDayNumber = selectedDate ? selectedDate.slice(8, 10) : "—";
   const briefingWeekday = selectedDate ? weekdayShort(selectedDate).toUpperCase() : "—";
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const briefingHeadline = selectedDate
-    ? `${selectedDate === todayKey ? "Today" : selectedDayLabel}, ${selectedWorkingCount} of ${memberCount || 0} people are working.`
-    : "Select a day to see coverage.";
+  const todayKey = localDateKey();
+  const briefingHeadline = !hasActivityData
+    ? "Team presence unavailable."
+    : selectedDate
+      ? `${selectedDate === todayKey ? "Today" : selectedDayLabel}: ${selectedWorkingCount} of ${memberCount || 0} not marked out.`
+      : "Select a day to inspect presence.";
+  const briefingStatus = !hasActivityData
+    ? "Team presence data is unavailable."
+    : selectedDate
+      ? `${selectedWorkingCount} of ${memberCount} not marked out. ${selectedOut.length} out.`
+      : "No day selected.";
   const selectedDaySummary =
     selectedOut.length === 0
-      ? "Full-team coverage."
-      : `${selectedOut.length} ${selectedOut.length === 1 ? "person is" : "people are"} unavailable.`;
+      ? "No one is marked out."
+      : `${selectedOut.length} ${selectedOut.length === 1 ? "person is" : "people are"} marked out.`;
 
   return {
-    grain,
-    periodTitle: periodLabel(anchor, grain),
+    periodTitle: monthLabelFromKey(focusMonthKey),
     focusMonthKey,
     focusMonthLabel: monthLabelFromKey(focusMonthKey),
     activityRows,
@@ -469,11 +515,15 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
     selectedDate,
     selectedDay,
     selectedOut,
+    selectedOutPreview,
+    selectedOutHiddenCount,
+    selectedOutExpanded,
     selectedWorkingCount,
     coveragePct,
     briefingDayNumber,
     briefingWeekday,
     briefingHeadline,
+    briefingStatus,
     selectedDayLabel,
     selectedDaySummary,
     agenda,
@@ -482,35 +532,38 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
     selectedPersonOutDays,
     selectedPersonMonthDays,
     memberCount,
-    isPending:
-      (activityHeatQuery.isPending && !activityHeatQuery.data) ||
-      (leaveQuery.isPending && !leaveQuery.data),
-    isError: activityHeatQuery.isError || leaveQuery.isError,
-    errorMessage: activityHeatQuery.isError
-      ? getErrorMessage(activityHeatQuery.error, "Try refreshing.")
-      : getErrorMessage(leaveQuery.error, "Try refreshing."),
+    hasActivityData,
+    isActivityPending: activityHeatQuery.isPending && !activityHeatQuery.data,
+    isLeavePending: leaveQuery.isPending && !leaveQuery.data,
+    isActivityError: activityHeatQuery.isError && !activityHeatQuery.data,
+    isLeaveError: leaveQuery.isError && !leaveQuery.data,
+    activityErrorMessage: getErrorMessage(activityHeatQuery.error, "Try refreshing."),
+    leaveErrorMessage: getErrorMessage(leaveQuery.error, "Try refreshing."),
+    canManageOffDays,
+    canAddTeamHoliday,
+    actorUserId,
     leaveRequestOpen,
     leaveRequestPending,
     leaveRequestError,
     leaveRequestDraft,
-    setGrain: (nextGrain) => {
-      setGrain(nextGrain);
-      setAnchor(periodAnchorUtc(new Date(), nextGrain, workSchedule.weekStartsOn));
-    },
     goPrevPeriod: () =>
-      setAnchor((current) => shiftPeriodAnchor(current, grain, -1, workSchedule.weekStartsOn)),
+      setAnchor((current) => shiftPeriodAnchor(current, "month", -1, workSchedule.weekStartsOn)),
     goNextPeriod: () =>
-      setAnchor((current) => shiftPeriodAnchor(current, grain, 1, workSchedule.weekStartsOn)),
+      setAnchor((current) => shiftPeriodAnchor(current, "month", 1, workSchedule.weekStartsOn)),
     selectDate: (date) => {
       if (isWeekend(date)) return;
       setSelectedDate(date);
     },
     isWeekendDate: isWeekend,
     selectPerson: setSelectedPersonId,
+    setSelectedOutExpanded,
     openLeaveRequest: () => {
       setLeaveRequestError(null);
+      const defaultUserId = canManageOffDays
+        ? (selectedPersonId ?? activityRows[0]?.userId ?? actorUserId ?? "")
+        : (actorUserId ?? "");
       setLeaveRequestDraftState({
-        userId: selectedPersonId ?? activityRows[0]?.userId ?? "",
+        userId: defaultUserId,
         startDate: selectedDate ?? `${focusMonthKey}-01`,
         endDate: selectedDate ?? `${focusMonthKey}-01`,
         type: "",
@@ -528,8 +581,20 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
     submitLeaveRequest: async () => {
       setLeaveRequestError(null);
       const { userId, startDate, endDate, type, reason } = leaveRequestDraft;
-      if (!userId || !startDate || !endDate || !type) {
-        setLeaveRequestError("Choose a teammate, dates, and leave type before submitting.");
+      if (!startDate || !endDate || !type) {
+        setLeaveRequestError("Choose dates and an off-day type before saving.");
+        return false;
+      }
+      if (type !== "team_holiday" && !userId) {
+        setLeaveRequestError("Choose a teammate before saving.");
+        return false;
+      }
+      if (type === "team_holiday" && !canAddTeamHoliday) {
+        setLeaveRequestError("Only managers can add team holidays.");
+        return false;
+      }
+      if (type !== "team_holiday" && !canManageOffDays && userId !== actorUserId) {
+        setLeaveRequestError("You can only add off days for yourself.");
         return false;
       }
       if (endDate < startDate) {
@@ -545,12 +610,12 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
           type,
           reason: reason.trim() || null,
         });
-        void activityHeatQuery.refetch();
-        void leaveQuery.refetch();
+        await Promise.all([activityHeatQuery.refetch(), leaveQuery.refetch()]);
+        toast.success("Off days saved");
         setLeaveRequestOpen(false);
         return true;
       } catch (error) {
-        setLeaveRequestError(getErrorMessage(error, "Couldn't submit leave request."));
+        setLeaveRequestError(getErrorMessage(error, "Couldn't save off days."));
         return false;
       }
     },
@@ -559,18 +624,23 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
       for (const member of activityRows) {
         for (const day of member.heatMap.days) {
           if (!day.date.startsWith(focusMonthKey) || isWeekend(day.date)) continue;
-          rows.push([member.userName, day.date, day.off ? day.off.type : "Working"]);
+          rows.push([
+            member.userName,
+            day.date,
+            day.off ? leaveTypeLabel(day.off.type) : "Not marked out",
+          ]);
         }
       }
-      const csv = rows
-        .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))
-        .join("\n");
+      const csv = rows.map((row) => row.map((value) => escapeCsvCell(value)).join(",")).join("\n");
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
       const link = document.createElement("a");
       link.href = url;
       link.download = `orch-resourcing-${focusMonthKey}.csv`;
       link.click();
       URL.revokeObjectURL(url);
+      toast.success("Export downloaded", {
+        description: `Presence for ${monthLabelFromKey(focusMonthKey)}.`,
+      });
     },
     refetch: () => {
       void activityHeatQuery.refetch();
