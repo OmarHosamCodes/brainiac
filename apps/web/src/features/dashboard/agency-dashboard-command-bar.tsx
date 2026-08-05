@@ -11,6 +11,8 @@ import {
   AgencyMultiSelectFilter,
   type AgencyFilterOptionGroup,
 } from "@/features/shared/filters/agency-multi-select-filter";
+import { MemberProfileLeaveRangePicker } from "@/features/member-profile/member-profile-leave-range-picker";
+import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import {
@@ -21,9 +23,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
-import { Input } from "@/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/ui/radio-group";
-import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import {
   AGENCY_REPORT_FIELD_LABELS,
   allAgencyReportFieldIds,
@@ -578,29 +578,18 @@ export function AgencyDashboardCommandBar({
       />
 
       {rangePreset === "custom" ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="sr-only" htmlFor="agency-dashboard-from">
-            From date
-          </label>
-          <Input
-            id="agency-dashboard-from"
-            type="date"
-            value={customFromDate}
-            className="h-9 w-auto min-w-32 rounded-xl border-default bg-default px-2 text-xs font-semibold text-highlighted"
-            onChange={(event) => onCustomFromChange(event.target.value)}
-          />
-          <span className="text-xs text-muted">–</span>
-          <label className="sr-only" htmlFor="agency-dashboard-to">
-            To date
-          </label>
-          <Input
-            id="agency-dashboard-to"
-            type="date"
-            value={customToDate}
-            className="h-9 w-auto min-w-32 rounded-xl border-default bg-default px-2 text-xs font-semibold text-highlighted"
-            onChange={(event) => onCustomToChange(event.target.value)}
-          />
-        </div>
+        <MemberProfileLeaveRangePicker
+          triggerId="agency-dashboard-custom-range"
+          startDate={customFromDate}
+          endDate={customToDate}
+          emptyLabel="Select dates"
+          ariaLabel="Custom date range"
+          triggerClassName="h-9 min-h-9 w-auto max-w-[22rem] py-1.5 text-xs font-semibold"
+          onRangeChange={(next) => {
+            onCustomFromChange(next.startDate);
+            onCustomToChange(next.endDate);
+          }}
+        />
       ) : null}
 
       <AgencyCommandBarActions>

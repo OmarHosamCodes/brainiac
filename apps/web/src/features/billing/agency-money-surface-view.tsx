@@ -1838,23 +1838,18 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
             onTenureMonthIndexesChange={period.onTenureMonthIndexesChange}
           />
           {period.rangePreset === "custom" ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                type="date"
-                aria-label="From date"
-                value={period.customFromDate}
-                onChange={(event) => period.onCustomFromChange(event.target.value)}
-                className="h-9 w-[11.5rem]"
-              />
-              <span className="text-xs text-muted-foreground">to</span>
-              <Input
-                type="date"
-                aria-label="To date"
-                value={period.customToDate}
-                onChange={(event) => period.onCustomToChange(event.target.value)}
-                className="h-9 w-[11.5rem]"
-              />
-            </div>
+            <MemberProfileLeaveRangePicker
+              triggerId="money-period-custom-range"
+              startDate={period.customFromDate}
+              endDate={period.customToDate}
+              emptyLabel="Select period dates"
+              ariaLabel="Custom period date range"
+              triggerClassName="h-9 min-h-9 w-auto max-w-[22rem] py-1.5 text-xs"
+              onRangeChange={(next) => {
+                period.onCustomFromChange(next.startDate);
+                period.onCustomToChange(next.endDate);
+              }}
+            />
           ) : null}
         </div>
       </header>

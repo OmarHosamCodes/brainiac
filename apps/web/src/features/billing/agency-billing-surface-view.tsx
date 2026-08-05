@@ -1,10 +1,14 @@
 import { cn } from "@/lib/utils";
 import { AlertTriangle, CornerDownRight, Info, Plus, Receipt, X } from "lucide-react";
 
+import { MemberProfileLeaveRangePicker } from "@/features/member-profile/member-profile-leave-range-picker";
 import { Button } from "@/ui/button";
-import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Skeleton } from "@/ui/skeleton";
 import {
+  agencyFormFieldClass,
+  agencyFormLabelClass,
   agencyLabelClass,
   agencyMetricClass,
   agencyErrorPanelClass,
@@ -269,38 +273,38 @@ export function AgencyBillingSurfaceView({ viewModel }: AgencyBillingSurfaceView
                 </Button>
               </div>
               <div className="grid gap-4 p-5 sm:grid-cols-2">
-                <div>
-                  <label className="text-[11px] font-bold text-muted">Client</label>
-                  <select
-                    value={selectedClientId}
-                    onChange={(e) => setSelectedClientId(e.target.value)}
-                    className="mt-1 h-9 w-full rounded-md border border-default bg-background px-2 text-sm"
-                  >
-                    <option value="">Select client</option>
-                    {clients.map((client) => (
-                      <option key={client.id} value={client.id}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
+                <div className={agencyFormFieldClass}>
+                  <Label htmlFor="billing-invoice-client" className={agencyFormLabelClass}>
+                    Client
+                  </Label>
+                  <Select value={selectedClientId || undefined} onValueChange={setSelectedClientId}>
+                    <SelectTrigger id="billing-invoice-client" className="w-full">
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <label className="text-[11px] font-bold text-muted">Billing period</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <Input
-                      type="date"
-                      value={periodStart}
-                      onChange={(e) => setPeriodStart(e.target.value)}
-                      className="flex-1"
-                    />
-                    <span className="text-[11px] text-muted">to</span>
-                    <Input
-                      type="date"
-                      value={periodEnd}
-                      onChange={(e) => setPeriodEnd(e.target.value)}
-                      className="flex-1"
-                    />
-                  </div>
+                <div className={agencyFormFieldClass}>
+                  <Label htmlFor="billing-invoice-period" className={agencyFormLabelClass}>
+                    Billing period
+                  </Label>
+                  <MemberProfileLeaveRangePicker
+                    triggerId="billing-invoice-period"
+                    startDate={periodStart}
+                    endDate={periodEnd}
+                    emptyLabel="Select billing period"
+                    ariaLabel="Billing period"
+                    onRangeChange={(next) => {
+                      setPeriodStart(next.startDate);
+                      setPeriodEnd(next.endDate);
+                    }}
+                  />
                 </div>
               </div>
               <div className="border-t border-default px-5 py-4">
