@@ -12,19 +12,12 @@ import {
   selectIsProjectMutationPending,
   useAgencyOpsStore,
 } from "@/features/shared/stores/agency-ops";
+import { startOfWeekUtc } from "@/features/shared/use-agency-time-range-filters";
+import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
 import { orpc } from "@/lib/orpc";
 import { getTaskGroupKey } from "@/features/task-management/agency-task-utils";
 import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-
-function getWeekStartUtc(): Date {
-  const now = new Date();
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const day = date.getUTCDay();
-  const diff = (day + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - diff);
-  return date;
-}
 
 export type AgencyProjectsTableProject = {
   id: string;
@@ -67,6 +60,7 @@ export function useAgencyProjectsTable({
   const { openNewProject } = useAgencyProjectsActions();
   const agencyOps = useAgencyOpsStore();
   const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
+  const workSchedule = useTeamWorkSchedule(teamId);
   const [pendingDeleteProject, setPendingDeleteProject] =
     useState<AgencyProjectsTableProject | null>(null);
 
@@ -106,7 +100,7 @@ export function useAgencyProjectsTable({
   const tasks = tasksQuery.data?.items ?? [];
 
   const hoursThisWeekByProject = useMemo(() => {
-    const weekStartMs = getWeekStartUtc().getTime();
+    const weekStartMs = startOfWeekUtc(workSchedule.weekStartsOn).getTime();
     const totals = new Map<string, number>();
     for (const entry of entries) {
       const startedAtMs = new Date(entry.startedAt).getTime();
@@ -114,7 +108,7 @@ export function useAgencyProjectsTable({
       totals.set(entry.projectId, (totals.get(entry.projectId) ?? 0) + entry.durationSeconds);
     }
     return totals;
-  }, [entries]);
+  }, [entries, workSchedule.weekStartsOn]);
 
   const filteredProjects = useMemo(() => {
     const term = filters.filterTerm;

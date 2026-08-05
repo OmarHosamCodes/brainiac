@@ -44,24 +44,28 @@ const weekRangeFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
-/** Monday-start local week key (YYYY-MM-DD) for the given day key. */
-export function getLocalWeekStartKey(dateKey: string): string {
+/** Team-week-start local week key (YYYY-MM-DD) for the given day key. */
+export function getLocalWeekStartKey(dateKey: string, weekStartsOn = 1): string {
   const date = parseDateKey(dateKey);
   const dayOfWeek = date.getDay();
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const diff = (dayOfWeek - weekStartsOn + 7) % 7;
   const weekStart = new Date(date);
-  weekStart.setDate(weekStart.getDate() + diff);
+  weekStart.setDate(weekStart.getDate() - diff);
   return toLocalDateKey(weekStart);
 }
 
 /** Smart week label: This week, Last week, or "Jun 16 - Jun 22". */
-export function formatAgencyWeekLabel(weekStartKey: string, referenceDate = new Date()): string {
-  const thisWeekStart = getLocalWeekStartKey(toLocalDateKey(referenceDate));
+export function formatAgencyWeekLabel(
+  weekStartKey: string,
+  referenceDate = new Date(),
+  weekStartsOn = 1,
+): string {
+  const thisWeekStart = getLocalWeekStartKey(toLocalDateKey(referenceDate), weekStartsOn);
   if (weekStartKey === thisWeekStart) return "This week";
 
   const lastWeekRef = new Date(referenceDate);
   lastWeekRef.setDate(lastWeekRef.getDate() - 7);
-  const lastWeekStart = getLocalWeekStartKey(toLocalDateKey(lastWeekRef));
+  const lastWeekStart = getLocalWeekStartKey(toLocalDateKey(lastWeekRef), weekStartsOn);
   if (weekStartKey === lastWeekStart) return "Last week";
 
   const weekStart = parseDateKey(weekStartKey);

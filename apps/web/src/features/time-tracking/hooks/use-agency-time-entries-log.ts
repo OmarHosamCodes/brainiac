@@ -10,6 +10,7 @@ import {
 } from "@/features/shared/agency-queries";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
+import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
 import {
   groupEntriesByWeek,
   type CollapsedEntryGroup,
@@ -150,8 +151,10 @@ export function useAgencyTimeEntriesLog({
   const weekSummary = entriesQuery.data?.weekSummary ?? null;
   const weekSummaries = entriesQuery.data?.weekSummaries ?? [];
 
+  const workSchedule = useTeamWorkSchedule(teamId);
+
   const weekGroups = useMemo(() => {
-    const groups = groupEntriesByWeek(entries);
+    const groups = groupEntriesByWeek(entries, new Date(), workSchedule.weekStartsOn);
     const summariesByWeek = new Map(
       weekSummaries.map((summary) => [summary.weekStartKey, summary]),
     );
@@ -171,7 +174,7 @@ export function useAgencyTimeEntriesLog({
 
       return { ...week, days, totalSeconds: summary.totalSeconds };
     });
-  }, [entries, weekSummaries, weekSummary]);
+  }, [entries, weekSummaries, weekSummary, workSchedule.weekStartsOn]);
 
   const maxPage = useMemo(() => {
     if (pageSize <= 0) return 1;

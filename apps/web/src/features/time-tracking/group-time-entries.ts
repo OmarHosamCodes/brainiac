@@ -142,12 +142,13 @@ export function groupEntriesByDay(entries: TimeEntryRecord[]): TimeEntryDayGroup
 export function groupEntriesByWeek(
   entries: TimeEntryRecord[],
   referenceDate = new Date(),
+  weekStartsOn = 1,
 ): TimeEntryWeekGroup[] {
   const dayGroups = groupEntriesByDay(entries);
   const byWeek = new Map<string, TimeEntryDayGroup[]>();
 
   for (const day of dayGroups) {
-    const weekStartKey = getLocalWeekStartKey(day.dateKey);
+    const weekStartKey = getLocalWeekStartKey(day.dateKey, weekStartsOn);
     const bucket = byWeek.get(weekStartKey) ?? [];
     bucket.push(day);
     byWeek.set(weekStartKey, bucket);
@@ -157,7 +158,7 @@ export function groupEntriesByWeek(
     .sort(([leftWeek], [rightWeek]) => rightWeek.localeCompare(leftWeek))
     .map(([weekStartKey, days]) => ({
       weekStartKey,
-      label: formatAgencyWeekLabel(weekStartKey, referenceDate),
+      label: formatAgencyWeekLabel(weekStartKey, referenceDate, weekStartsOn),
       totalSeconds: days.reduce((sum, day) => sum + day.totalSeconds, 0),
       days,
     }));

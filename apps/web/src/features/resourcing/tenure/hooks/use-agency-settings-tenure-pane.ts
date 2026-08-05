@@ -214,6 +214,9 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     penaltyMonths: "6",
     internDurationMonths: "4",
     internDurationWeeks: "0",
+    requiredDailyHours: "8",
+    weekStartsOn: "1",
+    weekendDurationDays: "2",
     policyEffectiveFrom: new Date().toISOString().slice(0, 10),
     enabled: false,
   });
@@ -227,6 +230,9 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       penaltyMonths: String(policy.penaltyMonths),
       internDurationMonths: String(policy.internDurationMonths),
       internDurationWeeks: String(policy.internDurationWeeks),
+      requiredDailyHours: String(policy.requiredDailyHours),
+      weekStartsOn: String(policy.weekStartsOn),
+      weekendDurationDays: String(policy.weekendDurationDays),
       policyEffectiveFrom: policy.policyEffectiveFrom.slice(0, 10),
       enabled: policy.enabled,
     });
@@ -500,6 +506,9 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
         penaltyMonths: Number.parseInt(policyDraft.penaltyMonths, 10),
         internDurationMonths: Number.parseInt(policyDraft.internDurationMonths, 10),
         internDurationWeeks: Number.parseInt(policyDraft.internDurationWeeks, 10),
+        requiredDailyHours: Number.parseInt(policyDraft.requiredDailyHours, 10),
+        weekStartsOn: Number.parseInt(policyDraft.weekStartsOn, 10),
+        weekendDurationDays: Number.parseInt(policyDraft.weekendDurationDays, 10),
         policyEffectiveFrom: dateKeyToUtcIso(policyDraft.policyEffectiveFrom),
         enabled: policyDraft.enabled,
       });

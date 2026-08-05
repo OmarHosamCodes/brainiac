@@ -1,3 +1,4 @@
+import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -205,7 +206,10 @@ export function useAgencyMoneySurface(teamId: string) {
 
   const [rangePreset, setRangePreset] = useState<RangePreset | null>(null);
   const effectiveRangePreset = rangePreset ?? defaultRangePreset;
-  const [customFromDate, setCustomFromDate] = useState(toDateInputValue(startOfWeekUtc()));
+  const weekStartsOn = tenurePolicy?.weekStartsOn ?? DEFAULT_WORK_SCHEDULE.weekStartsOn;
+  const [customFromDate, setCustomFromDate] = useState(
+    toDateInputValue(startOfWeekUtc(weekStartsOn)),
+  );
   const [customToDate, setCustomToDate] = useState(toDateInputValue(now));
   const [tenureMonthIndexes, setTenureMonthIndexes] = useState<number[] | null>(null);
   const effectiveTenureMonthIndexes = tenureMonthIndexes ?? defaultTenureMonthIndexes;
@@ -273,6 +277,7 @@ export function useAgencyMoneySurface(teamId: string) {
         tenurePolicy,
         now,
         effectiveTenureMonthIndexes,
+        weekStartsOn,
       ),
     [
       customFromDate,
@@ -281,6 +286,7 @@ export function useAgencyMoneySurface(teamId: string) {
       effectiveTenureMonthIndexes,
       now,
       tenurePolicy,
+      weekStartsOn,
     ],
   );
 

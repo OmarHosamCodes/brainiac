@@ -8,10 +8,7 @@ import {
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import type { AgencyResourcingWorkloadViewModel } from "@/features/resourcing/hooks/use-agency-resourcing-workload";
-import {
-  PRESENCE_WEEKDAY_LABELS,
-  shortDisplayName,
-} from "@/features/resourcing/resourcing-team-presence";
+import { shortDisplayName } from "@/features/resourcing/resourcing-team-presence";
 import type { ResourcingPeriodGrain } from "@/features/resourcing/resourcing-workload-heat";
 import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
@@ -45,11 +42,6 @@ const LEAVE_TYPES = [
 type AgencyResourcingWorkloadViewProps = {
   viewModel: AgencyResourcingWorkloadViewModel;
 };
-
-function isWeekendDate(dateKey: string): boolean {
-  const day = new Date(`${dateKey}T00:00:00Z`).getUTCDay();
-  return day === 0 || day === 6;
-}
 
 /** Compact leave range for agenda rows — handles same-day, same-month, and cross-month. */
 export function formatAgendaRange(startDate: string, endDate: string): string {
@@ -89,6 +81,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
     focusMonthLabel,
     activityRows,
     calendarDays,
+    weekdayLabels,
     filmstripDays,
     filmstripRangeLabel,
     selectedDate,
@@ -118,6 +111,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
     goPrevPeriod,
     goNextPeriod,
     selectDate,
+    isWeekendDate,
     selectPerson,
     openLeaveRequest,
     closeLeaveRequest,
@@ -288,7 +282,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                   className="bg-muted/40 text-muted grid grid-cols-7 border-b border-border text-[11px] font-semibold"
                   aria-hidden
                 >
-                  {PRESENCE_WEEKDAY_LABELS.map((label) => (
+                  {weekdayLabels.map((label) => (
                     <span key={label} className="px-2 py-2">
                       {label}
                     </span>

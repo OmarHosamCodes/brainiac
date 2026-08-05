@@ -19,6 +19,7 @@ import {
   type TimeEntryDraft,
 } from "@/features/time-tracking/agency-time-entry";
 import type { AgencyDayBulkDraft } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
+import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
 import {
   groupEntriesByWeek,
   type CollapsedEntryGroup,
@@ -152,7 +153,11 @@ export function useAgencyReportEntryDetailsDialog({
   const tasks = tasksQuery.items ?? [];
   const tags = (tagsQuery.data?.items ?? []) as AgencyTagOption[];
 
-  const weekGroups = useMemo(() => groupEntriesByWeek(entries), [entries]);
+  const workSchedule = useTeamWorkSchedule(teamId);
+  const weekGroups = useMemo(
+    () => groupEntriesByWeek(entries, new Date(), workSchedule.weekStartsOn),
+    [entries, workSchedule.weekStartsOn],
+  );
   const copy = reportEntryDetailsDialogCopy(title, entries.length);
 
   useEffect(() => {

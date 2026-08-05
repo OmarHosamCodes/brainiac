@@ -7,17 +7,10 @@ import {
   selectIsProjectMutationPending,
   useAgencyOpsStore,
 } from "@/features/shared/stores/agency-ops";
+import { startOfWeekUtc } from "@/features/shared/use-agency-time-range-filters";
+import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
 
 export type ActivitySort = "newest" | "oldest" | "longest";
-
-function startOfWeekUtcIso(): string {
-  const now = new Date();
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const day = date.getUTCDay();
-  const diff = (day + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - diff);
-  return date.toISOString();
-}
 
 export type AgencyProjectDetailViewModel = {
   teamId: string;
@@ -127,7 +120,8 @@ export function useAgencyProjectDetail({
   const budgetTone = budgetPct >= 100 ? "bg-error" : budgetPct >= 85 ? "bg-warning" : "bg-primary";
 
   const entries = entriesQuery.data?.items ?? [];
-  const weekStartIso = startOfWeekUtcIso();
+  const workSchedule = useTeamWorkSchedule(teamId);
+  const weekStartIso = startOfWeekUtc(workSchedule.weekStartsOn).toISOString();
 
   const totalsThisWeek = useMemo(() => {
     const cutoff = new Date(weekStartIso).getTime();

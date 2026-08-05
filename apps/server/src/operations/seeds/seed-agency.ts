@@ -24,6 +24,7 @@ import {
 } from "@orch/db/schema";
 import { createWorkspaceId } from "@orch/workspace";
 import { env } from "@orch/env/server";
+import { standardWeekCapacitySeconds } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { and, eq } from "drizzle-orm";
 import { ensureCredentialAccount } from "../../lib/ensure-credential-account";
 import {
@@ -64,11 +65,11 @@ function shiftDate(date: Date, options: { days?: number; hours?: number; minutes
   return new Date(date.getTime() + days * 86400000 + hours * 3600000 + minutes * 60000);
 }
 
-function getMonday(date: Date) {
+function getWeekStart(date: Date, weekStartsOn = 1) {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
+  const diff = (day - weekStartsOn + 7) % 7;
+  d.setDate(d.getDate() - diff);
   d.setHours(0, 0, 0, 0);
   return d;
 }
@@ -742,7 +743,11 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
   }
 
   s.message("Seeding member capacity...");
-  const weekStart = getMonday(now);
+  const seedWeekStartsOn = 1;
+  const seedDailyHours = 8;
+  const seedWeekendDays = 2;
+  const weekStart = getWeekStart(now, seedWeekStartsOn);
+  const capacitySeconds = standardWeekCapacitySeconds(seedDailyHours, seedWeekendDays);
   for (const member of ctx.members) {
     await db
       .insert(agencyOpsMemberCapacity)
@@ -751,7 +756,7 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
         teamId,
         userId: member.userId,
         weekStart,
-        capacitySeconds: 144000, // 40h
+        capacitySeconds,
         createdAt: now,
         updatedAt: now,
       })
@@ -761,7 +766,7 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
           agencyOpsMemberCapacity.userId,
           agencyOpsMemberCapacity.weekStart,
         ],
-        set: { capacitySeconds: 144000, updatedAt: now },
+        set: { capacitySeconds, updatedAt: now },
       });
   }
 
@@ -929,6 +934,9 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
       penaltyMonths: 6,
       internDurationMonths: 4,
       internDurationWeeks: 0,
+      requiredDailyHours: 8,
+      weekStartsOn: 1,
+      weekendDurationDays: 2,
       policyEffectiveFrom: shiftDate(now, { days: -365 }),
       enabled: true,
       createdAt: now,
@@ -936,7 +944,13 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
     })
     .onConflictDoUpdate({
       target: [agencyOpsTenurePolicy.teamId],
-      set: { enabled: true, updatedAt: now },
+      set: {
+        enabled: true,
+        requiredDailyHours: 8,
+        weekStartsOn: 1,
+        weekendDurationDays: 2,
+        updatedAt: now,
+      },
     });
 
   s.message("Seeding member tenure profiles...");

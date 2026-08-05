@@ -16,6 +16,16 @@ import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 
+const WEEK_START_OPTIONS = [
+  { value: 0, label: "Sunday" },
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+] as const;
+
 export type TenurePolicyDraft = {
   fiscalYearStartMonth: FiscalMonth;
   fiscalYearStartDay: string;
@@ -23,6 +33,9 @@ export type TenurePolicyDraft = {
   penaltyMonths: string;
   internDurationMonths: string;
   internDurationWeeks: string;
+  requiredDailyHours: string;
+  weekStartsOn: string;
+  weekendDurationDays: string;
   policyEffectiveFrom: string;
   enabled: boolean;
 };
@@ -56,6 +69,9 @@ export function AgencySettingsTenurePolicy({
   const internMonthsId = `${idPrefix}-intern-months`;
   const internWeeksId = `${idPrefix}-intern-weeks`;
   const penaltyId = `${idPrefix}-penalty-months`;
+  const dailyHoursId = `${idPrefix}-daily-hours`;
+  const weekStartsId = `${idPrefix}-week-starts`;
+  const weekendDaysId = `${idPrefix}-weekend-days`;
 
   if (!isOwner) {
     return null;
@@ -148,6 +164,67 @@ export function AgencySettingsTenurePolicy({
                 onPolicyDraftChange({ ...policyDraft, policyEffectiveFrom: value })
               }
             />
+          </div>
+
+          <div className={agencyFormFieldClass}>
+            <Label htmlFor={dailyHoursId} className={agencyFormLabelClass}>
+              Required daily hours
+            </Label>
+            <Input
+              id={dailyHoursId}
+              type="number"
+              min={1}
+              max={24}
+              value={policyDraft.requiredDailyHours}
+              className="w-full max-w-[10rem]"
+              onChange={(event) =>
+                onPolicyDraftChange({ ...policyDraft, requiredDailyHours: event.target.value })
+              }
+            />
+          </div>
+
+          <div className={agencyFormFieldClass}>
+            <Label htmlFor={weekStartsId} className={agencyFormLabelClass}>
+              Start week
+            </Label>
+            <Select
+              value={policyDraft.weekStartsOn}
+              onValueChange={(value) =>
+                onPolicyDraftChange({ ...policyDraft, weekStartsOn: value })
+              }
+            >
+              <SelectTrigger id={weekStartsId} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {WEEK_START_OPTIONS.map((day) => (
+                  <SelectItem key={day.value} value={String(day.value)}>
+                    {day.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className={agencyFormFieldClass}>
+            <Label htmlFor={weekendDaysId} className={agencyFormLabelClass}>
+              Weekend duration
+            </Label>
+            <Select
+              value={policyDraft.weekendDurationDays}
+              onValueChange={(value) =>
+                onPolicyDraftChange({ ...policyDraft, weekendDurationDays: value })
+              }
+            >
+              <SelectTrigger id={weekendDaysId} className="w-full max-w-[10rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 day</SelectItem>
+                <SelectItem value="2">2 days</SelectItem>
+                <SelectItem value="3">3 days</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

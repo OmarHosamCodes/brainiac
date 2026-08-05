@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
+import { isWeekendDateKey } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
+
 import type { MemberProfileHeatMapData } from "@/features/member-profile/member-profile-heat-map";
 import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/agency-member-profile";
 import {
@@ -8,6 +10,7 @@ import {
   focusMonthKeyFromAnchor,
   monthLabelFromKey,
   monthWindowDateKeys,
+  presenceWeekdayLabels,
   shortDisplayName,
   type PresenceDayCell,
   type PresencePerson,
@@ -19,6 +22,7 @@ import {
   shiftPeriodAnchor,
   type ResourcingPeriodGrain,
 } from "@/features/resourcing/resourcing-workload-heat";
+import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
@@ -60,6 +64,7 @@ export type AgencyResourcingWorkloadViewModel = {
   focusMonthLabel: string;
   activityRows: ResourcingActivityHeatMemberRow[];
   calendarDays: PresenceDayCell[];
+  weekdayLabels: string[];
   filmstripDays: ResourcingFilmstripDay[];
   filmstripRangeLabel: string;
   selectedDate: string | null;
@@ -99,6 +104,7 @@ export type AgencyResourcingWorkloadViewModel = {
   goPrevPeriod: () => void;
   goNextPeriod: () => void;
   selectDate: (date: string) => void;
+  isWeekendDate: (date: string) => boolean;
   selectPerson: (userId: string) => void;
   openLeaveRequest: () => void;
   closeLeaveRequest: () => void;
@@ -187,12 +193,11 @@ function weekdayShort(dateKey: string): string {
   });
 }
 
-function isWeekend(dateKey: string): boolean {
-  const day = new Date(`${dateKey}T00:00:00Z`).getUTCDay();
-  return day === 0 || day === 6;
-}
-
-function defaultSelectedDate(monthKey: string, calendarDays: PresenceDayCell[]): string | null {
+function defaultSelectedDate(
+  monthKey: string,
+  calendarDays: PresenceDayCell[],
+  isWeekend: (dateKey: string) => boolean,
+): string | null {
   const today = new Date().toISOString().slice(0, 10);
   if (today.startsWith(monthKey) && calendarDays.some((day) => day.date === today)) {
     return today;
@@ -203,7 +208,11 @@ function defaultSelectedDate(monthKey: string, calendarDays: PresenceDayCell[]):
   return firstWeekday?.date ?? calendarDays.find((day) => day.date)?.date ?? null;
 }
 
-function buildFilmstrip(selectedDate: string | null, monthKey: string): string[] {
+function buildFilmstrip(
+  selectedDate: string | null,
+  monthKey: string,
+  isWeekend: (dateKey: string) => boolean,
+): string[] {
   if (!selectedDate) return [];
   const monthStart = `${monthKey}-01`;
   const monthEnd = monthWindowDateKeys(monthKey).toDate;
@@ -241,8 +250,13 @@ function outSentence(out: Array<PresencePerson & { leaveType: string }>): string
 }
 
 export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWorkloadViewModel {
+  const workSchedule = useTeamWorkSchedule(teamId);
+  const isWeekend = (dateKey: string) =>
+    isWeekendDateKey(dateKey, workSchedule.weekStartsOn, workSchedule.weekendDurationDays);
   const [grain, setGrain] = useState<ResourcingPeriodGrain>("month");
-  const [anchor, setAnchor] = useState(() => periodAnchorUtc(new Date(), "month"));
+  const [anchor, setAnchor] = useState(() =>
+    periodAnchorUtc(new Date(), "month", workSchedule.weekStartsOn),
+  );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [leaveRequestOpen, setLeaveRequestOpen] = useState(false);
@@ -295,8 +309,13 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
   }, [activityHeatQuery.data, presenceWindow.fromDate, presenceWindow.toDate]);
 
   const calendarDays = useMemo(
-    () => buildPresenceCalendarDays(activityRows, focusMonthKey),
-    [activityRows, focusMonthKey],
+    () => buildPresenceCalendarDays(activityRows, focusMonthKey, workSchedule.weekStartsOn),
+    [activityRows, focusMonthKey, workSchedule.weekStartsOn],
+  );
+
+  const weekdayLabels = useMemo(
+    () => presenceWeekdayLabels(workSchedule.weekStartsOn),
+    [workSchedule.weekStartsOn],
   );
 
   useEffect(() => {
@@ -304,9 +323,13 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
       if (current && calendarDays.some((day) => day.date === current && !isWeekend(current))) {
         return current;
       }
-      return defaultSelectedDate(focusMonthKey, calendarDays);
+      return defaultSelectedDate(focusMonthKey, calendarDays, isWeekend);
     });
-  }, [calendarDays, focusMonthKey]);
+  }, [calendarDays, focusMonthKey, workSchedule.weekStartsOn, workSchedule.weekendDurationDays]);
+
+  useEffect(() => {
+    setAnchor((current) => periodAnchorUtc(current, grain, workSchedule.weekStartsOn));
+  }, [grain, workSchedule.weekStartsOn]);
 
   useEffect(() => {
     if (activityRows.length === 0) {
@@ -346,7 +369,7 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
   const coveragePct = memberCount > 0 ? Math.round((selectedWorkingCount / memberCount) * 100) : 0;
 
   const filmstripDays = useMemo<ResourcingFilmstripDay[]>(() => {
-    const dates = buildFilmstrip(selectedDate, focusMonthKey);
+    const dates = buildFilmstrip(selectedDate, focusMonthKey, isWeekend);
     return dates.map((date) => {
       const cell = calendarDays.find((day) => day.date === date);
       const workingCount = cell?.working.length ?? 0;
@@ -359,7 +382,14 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
         weekend: isWeekend(date),
       };
     });
-  }, [calendarDays, focusMonthKey, memberCount, selectedDate]);
+  }, [
+    calendarDays,
+    focusMonthKey,
+    memberCount,
+    selectedDate,
+    workSchedule.weekStartsOn,
+    workSchedule.weekendDurationDays,
+  ]);
 
   const filmstripRangeLabel = useMemo(() => {
     const first = filmstripDays[0]?.date;
@@ -441,6 +471,7 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
     focusMonthLabel: monthLabelFromKey(focusMonthKey),
     activityRows,
     calendarDays,
+    weekdayLabels,
     filmstripDays,
     filmstripRangeLabel,
     selectedDate,
@@ -473,14 +504,17 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
     leaveRequestDraft,
     setGrain: (nextGrain) => {
       setGrain(nextGrain);
-      setAnchor(periodAnchorUtc(new Date(), nextGrain));
+      setAnchor(periodAnchorUtc(new Date(), nextGrain, workSchedule.weekStartsOn));
     },
-    goPrevPeriod: () => setAnchor((current) => shiftPeriodAnchor(current, grain, -1)),
-    goNextPeriod: () => setAnchor((current) => shiftPeriodAnchor(current, grain, 1)),
+    goPrevPeriod: () =>
+      setAnchor((current) => shiftPeriodAnchor(current, grain, -1, workSchedule.weekStartsOn)),
+    goNextPeriod: () =>
+      setAnchor((current) => shiftPeriodAnchor(current, grain, 1, workSchedule.weekStartsOn)),
     selectDate: (date) => {
       if (isWeekend(date)) return;
       setSelectedDate(date);
     },
+    isWeekendDate: isWeekend,
     selectPerson: setSelectedPersonId,
     openLeaveRequest: () => {
       setLeaveRequestError(null);

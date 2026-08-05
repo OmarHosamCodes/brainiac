@@ -1,3 +1,9 @@
+import {
+  DEFAULT_WORK_SCHEDULE,
+  monthGridPad,
+  rotateWeekdayLabels,
+} from "@orch/api/routers/agency-ops/resourcing/work-schedule";
+
 import type { MemberProfileHeatMapData } from "@/features/member-profile/member-profile-heat-map";
 
 export type PresenceMember = {
@@ -37,7 +43,24 @@ export type PresenceOverviewRow = {
   months: PresenceOverviewCell[];
 };
 
-export const PRESENCE_WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+export const PRESENCE_WEEKDAY_LABELS_MON_FIRST = [
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+  "Sun",
+] as const;
+
+/** @deprecated Prefer presenceWeekdayLabels(weekStartsOn). */
+export const PRESENCE_WEEKDAY_LABELS = PRESENCE_WEEKDAY_LABELS_MON_FIRST;
+
+export function presenceWeekdayLabels(
+  weekStartsOn: number = DEFAULT_WORK_SCHEDULE.weekStartsOn,
+): string[] {
+  return rotateWeekdayLabels(PRESENCE_WEEKDAY_LABELS_MON_FIRST, weekStartsOn);
+}
 
 /** Soft member tints from theme charts / state — cycled by stable index. */
 export const PRESENCE_MEMBER_TINT_CLASS = [
@@ -111,10 +134,11 @@ function daysInMonth(monthKey: string): number {
   return new Date(Date.UTC(year!, month!, 0)).getUTCDate();
 }
 
-/** Monday-start month grid including leading/trailing pads (date null). */
+/** Week-start-aligned month grid including leading/trailing pads (date null). */
 export function buildPresenceCalendarDays(
   members: readonly PresenceMember[],
   monthKey: string,
+  weekStartsOn: number = DEFAULT_WORK_SCHEDULE.weekStartsOn,
 ): PresenceDayCell[] {
   const people = members.map(toPerson);
   const byUserDate = new Map<string, Map<string, { out: boolean }>>();
@@ -128,7 +152,7 @@ export function buildPresenceCalendarDays(
 
   const monthStart = `${monthKey}-01`;
   const first = new Date(`${monthStart}T00:00:00Z`);
-  const pad = (first.getUTCDay() + 6) % 7;
+  const pad = monthGridPad(first.getUTCDay(), weekStartsOn);
   const totalDays = daysInMonth(monthKey);
   const cells: PresenceDayCell[] = [];
 

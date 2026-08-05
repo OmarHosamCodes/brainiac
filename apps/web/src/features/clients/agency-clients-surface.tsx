@@ -25,6 +25,8 @@ import {
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
+import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
+import { startOfWeekUtc } from "@/features/shared/use-agency-time-range-filters";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { formatRate, parseBillableRateCents } from "@/features/shared/format-rate";
 import { projectHueStyle } from "@/features/shared/project-palette";
@@ -56,15 +58,6 @@ function ClientCategoryBadge({ category }: { category: AgencyClientCategory }) {
   );
 }
 
-function getWeekStartUtc(): Date {
-  const now = new Date();
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const day = date.getUTCDay();
-  const diff = (day + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - diff);
-  return date;
-}
-
 export function AgencyClientsSurface({
   teamId,
   filters,
@@ -86,6 +79,7 @@ export function AgencyClientsSurface({
   const [contactPhone, setContactPhone] = useState("");
   const [contactDirty, setContactDirty] = useState(false);
 
+  const workSchedule = useTeamWorkSchedule(teamId);
   const clientsQuery = useAgencyClientsQuery(teamId, { archiveFilter: filters.archiveFilter });
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
@@ -101,14 +95,14 @@ export function AgencyClientsSurface({
   const tasks = tasksQuery.data?.items ?? [];
 
   const weekHoursByClient = useMemo(() => {
-    const weekStartMs = getWeekStartUtc().getTime();
+    const weekStartMs = startOfWeekUtc(workSchedule.weekStartsOn).getTime();
     const totals = new Map<string, number>();
     for (const entry of entries) {
       if (new Date(entry.startedAt).getTime() < weekStartMs) continue;
       totals.set(entry.clientId, (totals.get(entry.clientId) ?? 0) + entry.durationSeconds);
     }
     return totals;
-  }, [entries]);
+  }, [entries, workSchedule.weekStartsOn]);
 
   const projectsByClient = useMemo(() => {
     const map = new Map<string, typeof projects>();
