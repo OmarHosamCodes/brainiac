@@ -1,0 +1,281 @@
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+
+import { useAgencyClientsActions } from "@/features/shared/agency-segment-filters";
+import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
+import {
+  useAgencyClientsQuery,
+  useAgencyProjectTasksQuery,
+  useAgencyProjectsQuery,
+  useAgencyTimeEntriesQuery,
+} from "@/features/shared/agency-queries";
+import { parseBillableRateCents } from "@/features/shared/format-rate";
+import {
+  selectIsClientMutationPending,
+  selectIsContactMutationPending,
+  useAgencyOpsStore,
+} from "@/features/shared/stores/agency-ops";
+import type { AgencyListFiltersApplied } from "@/features/shared/use-agency-list-filters";
+import { startOfWeekUtc } from "@/features/shared/use-agency-time-range-filters";
+import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
+import { getTaskGroupKey } from "@/features/task-management/agency-task-utils";
+import { teamDetailQueryOptions } from "@/features/team/team-queries";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
+
+export type AgencyClientCategory = "internal" | "external";
+
+export type AgencyClientsTableClient = {
+  id: string;
+  name: string;
+  category: AgencyClientCategory;
+  billableRateCents: number | null;
+  currency: string;
+  archivedAt: string | null;
+};
+
+export type AgencyClientsTableProject = {
+  id: string;
+  clientId: string;
+  name: string;
+  deletedAt: string | null;
+};
+
+export type AgencyClientsTableViewModel = {
+  openNewClient: () => void;
+  isOwner: boolean;
+  filteredClients: AgencyClientsTableClient[];
+  projectsByClient: Map<string, AgencyClientsTableProject[]>;
+  weekHoursByClient: Map<string, number>;
+  clients: AgencyClientsTableClient[];
+  isLoading: boolean;
+  isError: boolean;
+  errorMessage: string;
+  refetch: () => void;
+  isClientMutationPending: boolean;
+  isContactMutationPending: boolean;
+  editClientId: string;
+  setEditClientId: (id: string) => void;
+  editNameDraft: string;
+  setEditNameDraft: (value: string) => void;
+  editCategoryDraft: AgencyClientCategory;
+  setEditCategoryDraft: (value: AgencyClientCategory) => void;
+  editBillableRateDraft: string;
+  setEditBillableRateDraft: (value: string) => void;
+  saveClientEdits: (clientId: string) => void;
+  createProjectClientId: string;
+  setCreateProjectClientId: (id: string) => void;
+  createProjectClients: AgencyClientsTableClient[];
+  archiveClient: (clientId: string) => void;
+  unarchiveClient: (clientId: string) => void;
+};
+
+type UseAgencyClientsTableOptions = {
+  teamId: string;
+  filters: AgencyListFiltersApplied;
+};
+
+export function useAgencyClientsTable({
+  teamId,
+  filters,
+}: UseAgencyClientsTableOptions): AgencyClientsTableViewModel {
+  const { openNewClient } = useAgencyClientsActions();
+  const agencyOps = useAgencyOpsStore();
+  const isClientMutationPending = useAgencyOpsStore(selectIsClientMutationPending);
+  const isContactMutationPending = useAgencyOpsStore(selectIsContactMutationPending);
+
+  const [editClientId, setEditClientId] = useState("");
+  const [createProjectClientId, setCreateProjectClientId] = useState("");
+  const [editNameDraft, setEditNameDraft] = useState("");
+  const [editCategoryDraft, setEditCategoryDraft] = useState<AgencyClientCategory>("external");
+  const [editBillableRateDraft, setEditBillableRateDraft] = useState("");
+
+  const workSchedule = useTeamWorkSchedule(teamId);
+  const teamQuery = useQuery({
+    ...teamDetailQueryOptions(teamId),
+    enabled: Boolean(teamId),
+  });
+  const isOwner = teamQuery.data?.role === "owner";
+
+  const clientsQuery = useAgencyClientsQuery(teamId, { archiveFilter: filters.archiveFilter });
+  const projectsQuery = useAgencyProjectsQuery(teamId, { trashFilter: "all" });
+  const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
+  const tasksQuery = useAgencyProjectTasksQuery(teamId, {
+    search: filters.filterTerm.trim() || undefined,
+    pageSize: 100,
+  });
+
+  const clients = (clientsQuery.data?.items ?? []) as AgencyClientsTableClient[];
+  const projects = (projectsQuery.data?.items ?? []).map((project) => ({
+    id: project.id,
+    clientId: project.clientId,
+    name: project.name,
+    deletedAt: project.deletedAt ?? null,
+  }));
+  const entries = entriesQuery.data?.items ?? [];
+  const tasks = tasksQuery.data?.items ?? [];
+
+  const weekHoursByClient = useMemo(() => {
+    const weekStartMs = startOfWeekUtc(workSchedule.weekStartsOn).getTime();
+    const totals = new Map<string, number>();
+    for (const entry of entries) {
+      if (new Date(entry.startedAt).getTime() < weekStartMs) continue;
+      totals.set(entry.clientId, (totals.get(entry.clientId) ?? 0) + entry.durationSeconds);
+    }
+    return totals;
+  }, [entries, workSchedule.weekStartsOn]);
+
+  const projectsByClient = useMemo(() => {
+    const map = new Map<string, AgencyClientsTableProject[]>();
+    for (const project of projects) {
+      if (project.deletedAt) continue;
+      const list = map.get(project.clientId) ?? [];
+      list.push(project);
+      map.set(project.clientId, list);
+    }
+    return map;
+  }, [projects]);
+
+  const filteredClients = useMemo(() => {
+    const term = filters.filterTerm;
+    const { peopleSet, clientsSet, projectsSet, tasksSet } = filters;
+    return clients.filter((client) => {
+      const clientProjects = projects.filter((project) => project.clientId === client.id);
+      if (
+        term &&
+        !agencyListSearchMatches(
+          term,
+          client.name,
+          ...clientProjects.map((project) => project.name),
+        )
+      ) {
+        return false;
+      }
+      if (clientsSet.size > 0 && !clientsSet.has(client.id)) return false;
+      if (projectsSet.size > 0 && !clientProjects.some((project) => projectsSet.has(project.id))) {
+        return false;
+      }
+      if (
+        peopleSet.size > 0 &&
+        !clientProjects.some((project) =>
+          entries.some((entry) => entry.projectId === project.id && peopleSet.has(entry.userId)),
+        )
+      ) {
+        return false;
+      }
+      if (
+        tasksSet.size > 0 &&
+        !clientProjects.some((project) =>
+          tasks.some(
+            (task) => task.projectId === project.id && tasksSet.has(getTaskGroupKey(task)),
+          ),
+        )
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [clients, entries, filters, projects, tasks]);
+
+  function openEdit(clientId: string) {
+    const client = clients.find((entry) => entry.id === clientId);
+    if (client) {
+      setEditNameDraft(client.name);
+      setEditCategoryDraft(client.category);
+      setEditBillableRateDraft(
+        client.billableRateCents === null ? "" : String(client.billableRateCents / 100),
+      );
+    }
+    setEditClientId(clientId);
+  }
+
+  function saveClientEdits(clientId: string) {
+    const client = clients.find((entry) => entry.id === clientId);
+    if (!client || !teamId) return;
+
+    const name = editNameDraft.trim();
+    if (!name) return;
+
+    const billableRateCents = parseBillableRateCents(editBillableRateDraft);
+    if (editBillableRateDraft.trim() && billableRateCents === null) return;
+
+    const patch: {
+      teamId: string;
+      clientId: string;
+      name?: string;
+      category?: AgencyClientCategory;
+      billableRateCents?: number | null;
+    } = { teamId, clientId };
+
+    if (name !== client.name) patch.name = name;
+    if (editCategoryDraft !== client.category) patch.category = editCategoryDraft;
+    if (billableRateCents !== client.billableRateCents) {
+      patch.billableRateCents = billableRateCents;
+    }
+
+    setEditClientId("");
+    if (Object.keys(patch).length === 2) return;
+    void agencyOps.updateClient(patch);
+  }
+
+  function archiveClient(clientId: string) {
+    const client = clients.find((entry) => entry.id === clientId);
+    if (!client || !teamId) return;
+    void agencyOps.archiveClient({
+      teamId,
+      clientId: client.id,
+      clientName: client.name,
+    });
+  }
+
+  function unarchiveClient(clientId: string) {
+    const client = clients.find((entry) => entry.id === clientId);
+    if (!client || !teamId) return;
+    void agencyOps.unarchiveClient({
+      teamId,
+      clientId: client.id,
+      clientName: client.name,
+    });
+  }
+
+  const isLoading = clientsQuery.isPending || projectsQuery.isPending;
+  const isError = clientsQuery.isError || projectsQuery.isError;
+  const errorMessage = getErrorMessage(
+    clientsQuery.error ?? projectsQuery.error,
+    "Try refreshing.",
+  );
+
+  return {
+    openNewClient,
+    isOwner,
+    filteredClients,
+    projectsByClient,
+    weekHoursByClient,
+    clients,
+    isLoading,
+    isError,
+    errorMessage,
+    refetch: () => {
+      void clientsQuery.refetch();
+      void projectsQuery.refetch();
+    },
+    isClientMutationPending,
+    isContactMutationPending,
+    editClientId,
+    setEditClientId: (id) => {
+      if (id) openEdit(id);
+      else setEditClientId("");
+    },
+    editNameDraft,
+    setEditNameDraft,
+    editCategoryDraft,
+    setEditCategoryDraft,
+    editBillableRateDraft,
+    setEditBillableRateDraft,
+    saveClientEdits,
+    createProjectClientId,
+    setCreateProjectClientId,
+    createProjectClients: clients,
+    archiveClient,
+    unarchiveClient,
+  };
+}
