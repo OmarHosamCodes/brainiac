@@ -79,8 +79,9 @@ describe("applyFormulasToScoreboard", () => {
     );
     const board = applyFormulasToScoreboard(
       {
-        billedCents: 100_00,
+        billablePoolCents: 100_00,
         receivedCents: 40_00,
+        invoicedRemainingCents: 60_00,
         salariesDueCents: 20_00,
         expensesAmountCents: 10_00,
         debtDiscountCents: 0,
@@ -113,8 +114,9 @@ describe("applyFormulasToScoreboard", () => {
     );
     const board = applyFormulasToScoreboard(
       {
-        billedCents: 5000,
+        billablePoolCents: 5000,
         receivedCents: 0,
+        invoicedRemainingCents: 0,
         salariesDueCents: 0,
         expensesAmountCents: 0,
         debtDiscountCents: 0,

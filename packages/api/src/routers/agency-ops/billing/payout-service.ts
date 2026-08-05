@@ -360,6 +360,7 @@ export async function createPayoutLineFromMember(
       and(
         eq(agencyOpsTimeEntry.teamId, input.teamId),
         eq(agencyOpsTimeEntry.userId, input.userId),
+        eq(agencyOpsTimeEntry.isWaste, false),
         isNull(agencyOpsTimeEntry.deletedAt),
         gte(agencyOpsTimeEntry.startedAt, periodStart),
         lte(agencyOpsTimeEntry.startedAt, periodEnd),

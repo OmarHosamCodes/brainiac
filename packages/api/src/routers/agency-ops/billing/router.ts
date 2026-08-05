@@ -289,6 +289,8 @@ export const billingRouter = {
                 clientId: z.string().min(1),
                 clientName: z.string().min(1),
                 durationSeconds: z.number().int().nonnegative(),
+                billableCents: z.number().int().nonnegative(),
+                wasteCents: z.number().int().nonnegative(),
               }),
             ),
             members: z.array(
@@ -297,6 +299,8 @@ export const billingRouter = {
                 userName: z.string().min(1),
                 userAvatar: z.string().nullable(),
                 durationSeconds: z.number().int().nonnegative(),
+                payableCents: z.number().int().nonnegative(),
+                wasteCents: z.number().int().nonnegative(),
               }),
             ),
           })

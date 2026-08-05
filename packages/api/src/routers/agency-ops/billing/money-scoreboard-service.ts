@@ -2,7 +2,7 @@ import type { AgencyOpsMoneyFormulaDef } from "@orch/db/schema";
 
 import { applyFormulasToScoreboard } from "./money-formula-context";
 import { getMoneySettings } from "./money-settings-service";
-import { getInvoiceSummary } from "./service";
+import { getInvoiceSummary, sumPeriodExternalBillablePool } from "./service";
 import { sumExpensesInPeriod } from "./expense-service";
 import { getPayoutSectionTotals, getPayoutSummary } from "./payout-service";
 import { buildPeriodScoreboard } from "./period-scoreboard";
@@ -22,22 +22,27 @@ export async function getPeriodScoreboard(
   actorUserId: string,
   input: { teamId: string; periodStart: string; periodEnd: string },
 ) {
-  const [invoiceSummary, payoutSummary, expenseTotals, sectionTotals, settings] = await Promise.all(
-    [
+  const [invoiceSummary, payoutSummary, expenseTotals, sectionTotals, settings, billablePool] =
+    await Promise.all([
       getInvoiceSummary(actorUserId, input),
       getPayoutSummary(actorUserId, input),
       sumExpensesInPeriod(actorUserId, input),
       getPayoutSectionTotals(actorUserId, input),
       getMoneySettings(actorUserId, { teamId: input.teamId }),
-    ],
-  );
+      sumPeriodExternalBillablePool(actorUserId, input),
+    ]);
 
   const currency =
-    invoiceSummary.currency || payoutSummary.currency || expenseTotals.currency || "USD";
+    invoiceSummary.currency ||
+    payoutSummary.currency ||
+    expenseTotals.currency ||
+    billablePool.currency ||
+    "USD";
 
   const scoreboardInput = {
-    billedCents: invoiceSummary.billedCents,
+    billablePoolCents: billablePool.billablePoolCents,
     receivedCents: invoiceSummary.receivedCents,
+    invoicedRemainingCents: invoiceSummary.remainingCents,
     salariesDueCents: payoutSummary.salariesDueCents || sectionTotals.salaries,
     expensesAmountCents: expenseTotals.amountCents,
     debtDiscountCents: sectionTotals.debt_discount,

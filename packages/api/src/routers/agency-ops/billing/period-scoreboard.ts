@@ -1,8 +1,11 @@
 /** Pure Fin-Sheet scoreboard composition for Money stats cards. */
 
 export type PeriodScoreboardInput = {
-  billedCents: number;
+  /** External non-waste tracked value (billable rates). */
+  billablePoolCents: number;
   receivedCents: number;
+  /** Invoiced unpaid — not total − received. */
+  invoicedRemainingCents: number;
   salariesDueCents: number;
   expensesAmountCents: number;
   debtDiscountCents: number;
@@ -32,9 +35,12 @@ export type PeriodScoreboard = {
 };
 
 export function buildPeriodScoreboard(input: PeriodScoreboardInput): PeriodScoreboard {
-  const totalIncomeCents = input.billedCents;
   const receivedCents = input.receivedCents;
-  const remainingCents = Math.max(0, totalIncomeCents - receivedCents);
+  const remainingCents = Math.max(0, input.invoicedRemainingCents);
+  const totalIncomeCents = Math.max(
+    Math.max(0, input.billablePoolCents),
+    receivedCents + remainingCents,
+  );
   const teamProfitCents =
     totalIncomeCents -
     (input.salariesDueCents +

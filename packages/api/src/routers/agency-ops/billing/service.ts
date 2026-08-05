@@ -25,8 +25,11 @@ import {
 import { invoicePeriodTotalsFromRows } from "./invoice-period-totals";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import {
-  aggregatePeriodClientActivity,
-  aggregatePeriodMemberActivity,
+  aggregateExternalBillableIncome,
+  type ClientBillableIncomeRow,
+} from "./client-billable-income";
+import { aggregateMemberPayableIncome } from "./member-payable-income";
+import {
   type PeriodBillClientActivity,
   type PeriodBillMemberActivity,
 } from "./period-bill-activity";
@@ -413,6 +416,7 @@ export async function createInvoice(
       projectId: agencyOpsTimeEntry.projectId,
       projectName: agencyOpsProject.name,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      isWaste: agencyOpsTimeEntry.isWaste,
     })
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
@@ -426,6 +430,9 @@ export async function createInvoice(
       ),
     );
 
+  // Waste is outside billable income — never invoice it.
+  const billableEntries = entries.filter((entry) => !entry.isWaste);
+
   // Fetch per-user billable rates so each user's work is priced correctly.
   const memberRateRows = await db
     .select({
@@ -437,8 +444,8 @@ export async function createInvoice(
 
   const rateByUserId = new Map(memberRateRows.map((r) => [r.userId, r.billableRateCents]));
 
-  // Check that every user who logged time has a rate set.
-  const userIdsWithEntries = [...new Set(entries.map((e) => e.userId))];
+  // Check that every user who logged billable time has a rate set.
+  const userIdsWithEntries = [...new Set(billableEntries.map((e) => e.userId))];
   const usersWithoutRate = userIdsWithEntries.filter(
     (uid) => (rateByUserId.get(uid) ?? null) === null,
   );
@@ -450,7 +457,7 @@ export async function createInvoice(
 
   type ProjectBucket = { projectName: string; seconds: number; rateCents: number };
   const byProject = new Map<string, ProjectBucket>();
-  for (const entry of entries) {
+  for (const entry of billableEntries) {
     const rateCents = rateByUserId.get(entry.userId) ?? 0;
     const existing = byProject.get(entry.projectId) ?? {
       projectName: entry.projectName,
@@ -646,6 +653,68 @@ export async function recordInvoicePayment(
   return mapInvoiceRow(updated, existing.clientName);
 }
 
+async function loadPeriodClientBillableRows(
+  teamId: string,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<ClientBillableIncomeRow[]> {
+  const rows = await db
+    .select({
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      category: agencyOpsClient.category,
+      userId: agencyOpsTimeEntry.userId,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      isWaste: agencyOpsTimeEntry.isWaste,
+      billableRateCents: agencyOpsMemberRate.billableRateCents,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(
+      agencyOpsMemberRate,
+      and(
+        eq(agencyOpsMemberRate.teamId, agencyOpsTimeEntry.teamId),
+        eq(agencyOpsMemberRate.userId, agencyOpsTimeEntry.userId),
+      ),
+    )
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.teamId, teamId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+        gte(agencyOpsTimeEntry.startedAt, periodStart),
+        lte(agencyOpsTimeEntry.startedAt, periodEnd),
+      ),
+    );
+
+  return rows.map((row) => ({
+    clientId: row.clientId,
+    clientName: row.clientName,
+    category: row.category,
+    userId: row.userId,
+    durationSeconds: row.durationSeconds,
+    isWaste: row.isWaste,
+    billableRateCents: row.billableRateCents,
+  }));
+}
+
+export async function sumPeriodExternalBillablePool(
+  actorUserId: string,
+  input: { teamId: string; periodStart: string; periodEnd: string },
+): Promise<{ billablePoolCents: number; currency: string }> {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
+  const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
+  if (periodStart >= periodEnd) {
+    throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
+  }
+
+  const rows = await loadPeriodClientBillableRows(input.teamId, periodStart, periodEnd);
+  const { billablePoolCents } = aggregateExternalBillableIncome(rows);
+  return { billablePoolCents, currency: "USD" };
+}
+
 export async function listPeriodBillActivity(
   actorUserId: string,
   input: { teamId: string; periodStart: string; periodEnd: string; search?: string },
@@ -658,35 +727,53 @@ export async function listPeriodBillActivity(
     throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
   }
 
-  const rows = await db
-    .select({
-      clientId: agencyOpsClient.id,
-      clientName: agencyOpsClient.name,
-      userId: agencyOpsTimeEntry.userId,
-      userName: user.name,
-      userAvatar: user.image,
-      durationSeconds: agencyOpsTimeEntry.durationSeconds,
-    })
-    .from(agencyOpsTimeEntry)
-    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
-    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-    .innerJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
-    .where(
-      and(
-        eq(agencyOpsTimeEntry.teamId, input.teamId),
-        isNull(agencyOpsTimeEntry.deletedAt),
-        gte(agencyOpsTimeEntry.startedAt, periodStart),
-        lte(agencyOpsTimeEntry.startedAt, periodEnd),
+  const [billableRows, memberPayableRows] = await Promise.all([
+    loadPeriodClientBillableRows(input.teamId, periodStart, periodEnd),
+    db
+      .select({
+        userId: agencyOpsTimeEntry.userId,
+        userName: user.name,
+        userAvatar: user.image,
+        durationSeconds: agencyOpsTimeEntry.durationSeconds,
+        isWaste: agencyOpsTimeEntry.isWaste,
+        costRateCents: agencyOpsMemberRate.costRateCents,
+      })
+      .from(agencyOpsTimeEntry)
+      .innerJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+      .leftJoin(
+        agencyOpsMemberRate,
+        and(
+          eq(agencyOpsMemberRate.teamId, agencyOpsTimeEntry.teamId),
+          eq(agencyOpsMemberRate.userId, agencyOpsTimeEntry.userId),
+        ),
+      )
+      .where(
+        and(
+          eq(agencyOpsTimeEntry.teamId, input.teamId),
+          isNull(agencyOpsTimeEntry.deletedAt),
+          gte(agencyOpsTimeEntry.startedAt, periodStart),
+          lte(agencyOpsTimeEntry.startedAt, periodEnd),
+        ),
       ),
-    );
+  ]);
 
-  let clients = aggregatePeriodClientActivity(rows);
-  let members = aggregatePeriodMemberActivity(
-    rows.map((row) => ({
+  const money = aggregateExternalBillableIncome(billableRows);
+  let clients = money.clients.map((client) => ({
+    clientId: client.clientId,
+    clientName: client.clientName,
+    durationSeconds: client.durationSeconds,
+    billableCents: client.billableCents,
+    wasteCents: client.wasteCents,
+  }));
+
+  let members = aggregateMemberPayableIncome(
+    memberPayableRows.map((row) => ({
       userId: row.userId,
       userName: row.userName?.trim() || "Unknown",
       userAvatar: formatAvatarUrl(row.userAvatar),
       durationSeconds: row.durationSeconds,
+      isWaste: row.isWaste,
+      costRateCents: row.costRateCents,
     })),
   );
 
