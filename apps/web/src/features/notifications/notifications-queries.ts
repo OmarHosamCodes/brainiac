@@ -191,7 +191,8 @@ export function useSetNotificationPreferencesMutation(teamId: string) {
           | "task.message"
           | "journey.milestone"
           | "timer.activity"
-          | "team.digest";
+          | "team.digest"
+          | "member.alert";
         inApp: boolean;
         push: boolean;
       }>,

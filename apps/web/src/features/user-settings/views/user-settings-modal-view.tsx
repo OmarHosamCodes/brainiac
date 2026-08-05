@@ -31,6 +31,7 @@ const NOTIFICATION_TYPE_LABELS: Record<NotificationPreferenceType, string> = {
   "journey.milestone": "Journey milestones",
   "timer.activity": "Timer activity",
   "team.digest": "Team digest",
+  "member.alert": "Profile alerts",
 };
 
 function SettingsRow({

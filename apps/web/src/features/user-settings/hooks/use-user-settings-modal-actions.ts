@@ -23,7 +23,8 @@ export type NotificationPreferenceType =
   | "task.message"
   | "journey.milestone"
   | "timer.activity"
-  | "team.digest";
+  | "team.digest"
+  | "member.alert";
 
 export type NotificationPreferenceItem = {
   type: NotificationPreferenceType;

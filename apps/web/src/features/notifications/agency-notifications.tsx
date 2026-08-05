@@ -1,7 +1,7 @@
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
 import { Bell, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
@@ -125,6 +125,22 @@ function notificationSentence(notification: NotificationRecord) {
           {(payload.digestTasksCompleted ?? 0) === 1 ? "" : "s"} completed
         </>
       );
+    case "member.alert": {
+      const note = payload.notePreview?.trim();
+      return (
+        <>
+          <span className="font-semibold text-foreground">{actor}</span> sent{" "}
+          <span className="font-semibold text-foreground">
+            {payload.alertTitle ?? "a profile alert"}
+          </span>
+          {note ? (
+            <>
+              : <span className="text-muted-foreground">{note}</span>
+            </>
+          ) : null}
+        </>
+      );
+    }
     default: {
       const _exhaustive: never = notification.type;
       return _exhaustive;
@@ -173,6 +189,8 @@ function buildNotificationSearchParams(notification: NotificationRecord) {
     case "team.digest":
       params.set("section", "reports");
       break;
+    case "member.alert":
+      break;
     default: {
       const _exhaustive: never = notification.type;
       return _exhaustive;
@@ -182,7 +200,15 @@ function buildNotificationSearchParams(notification: NotificationRecord) {
   return params;
 }
 
+function notificationHref(notification: NotificationRecord): string | null {
+  if (notification.type === "member.alert" && notification.payload.subjectUserId) {
+    return `/agency/members/${encodeURIComponent(notification.payload.subjectUserId)}`;
+  }
+  return null;
+}
+
 export function AgencyNotifications({ teamId, variant = "icon" }: AgencyNotificationsProps) {
+  const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -226,6 +252,11 @@ export function AgencyNotifications({ teamId, variant = "icon" }: AgencyNotifica
   function openNotification(notification: NotificationRecord) {
     void markReadMutation.mutateAsync(notification.id);
     setOpen(false);
+    const href = notificationHref(notification);
+    if (href) {
+      navigate(href);
+      return;
+    }
     setSearchParams(buildNotificationSearchParams(notification), { replace: false });
   }
 
