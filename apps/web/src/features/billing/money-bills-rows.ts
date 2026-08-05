@@ -77,7 +77,7 @@ export type MoneyBillTeamPayoutSource = {
 
 export type MoneyBillAdjustmentSource = MoneyBillTeamPayoutSource;
 
-type MoneyBillRowBase = {
+export type MoneyBillRowBase = {
   id: string;
   title: string;
   subtitle: string;

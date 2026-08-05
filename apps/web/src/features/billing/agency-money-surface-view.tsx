@@ -63,16 +63,12 @@ import { type MoneyExpenseKind, type MoneyExpensePeriod } from "./money-expense-
 import { MoneyPayoutRunView } from "./money-payout-run-view";
 import { type MoneyBillsPartyFilter, type MoneyBillsStatusFilter } from "./money-bills-filters";
 import {
-  type MoneyBillAllocationSegmentId,
-  type MoneyBillAllocationView,
-} from "./money-bill-allocation";
-import {
-  groupMoneyBillRows,
-  moneyBillHueId,
-  moneyBillInitials,
-  moneyBillListInsight,
-  type MoneyBillRow,
-} from "./money-bills-rows";
+  groupMoneyBillDisplayRows,
+  moneyBillDisplayHueId,
+  moneyBillDisplayListInsight,
+  type MoneyBillDisplayRow,
+} from "./money-bill-merged-rows";
+import { moneyBillInitials } from "./money-bills-rows";
 import {
   type MoneyStatsMetricFixture,
   type MoneyStatsMetricKind,
@@ -693,81 +689,93 @@ function BillClientMark({ title, hueId }: { title: string; hueId: string }) {
   );
 }
 
-function allocationSegmentClass(id: MoneyBillAllocationSegmentId): string {
-  switch (id) {
-    case "received":
-      return "bg-success/80";
-    case "remaining":
-      return "bg-warning/80";
-    case "uninvoiced":
-      return "bg-muted-foreground/45";
+function mergedBillStatusChipClass(statusLabel: string): string {
+  switch (statusLabel) {
+    case "Mixed":
+    case "Part paid":
+    case "Partial":
+      return "bg-info/10 text-info";
+    case "Ready":
+      return "bg-elevated text-muted";
+    case "Outstanding":
+    case "Sent":
+      return "bg-warning/10 text-warning";
+    case "Paid":
+      return "bg-success/10 text-success";
+    case "Refunded":
+      return "bg-destructive/10 text-destructive";
+    default:
+      return "bg-elevated text-muted";
+  }
+}
+
+function billDocumentActionId(row: MoneyBillDisplayRow): string | null {
+  switch (row.kind) {
+    case "merged-client":
+      return row.primaryInvoiceId;
+    case "merged-member":
+      return row.primaryPayoutId;
+    case "adjustment":
+      return row.id;
     default: {
-      const _exhaustive: never = id;
+      const _exhaustive: never = row;
       return _exhaustive;
     }
   }
 }
 
-function MoneyBillAllocationBar({ allocation }: { allocation: MoneyBillAllocationView }) {
-  const isActivity = allocation.presentation === "activity";
+function BillMergedMetricCell({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
   return (
-    <div className="mt-1.5 min-w-0 space-y-1.5" aria-label={allocation.ariaLabel} role="img">
-      <div className={cn("grid gap-2", isActivity ? "grid-cols-1" : "grid-cols-3")}>
-        {!isActivity ? (
-          <>
-            <div className="min-w-0">
-              <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
-                {allocation.receivedTitle}
-              </div>
-              <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-success">
-                {allocation.receivedLabel}
-              </div>
-            </div>
-            <div className="min-w-0">
-              <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
-                {allocation.remainingTitle}
-              </div>
-              <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-warning">
-                {allocation.remainingLabel}
-              </div>
-            </div>
-          </>
-        ) : null}
-        <div className="min-w-0">
-          <div className="text-[0.625rem] font-semibold tracking-wide text-muted-foreground uppercase">
-            {allocation.uninvoicedTitle}
-          </div>
-          <div className="mt-0.5 truncate font-mono text-[0.6875rem] tabular-nums text-foreground/85">
-            {allocation.uninvoicedLabel}
-          </div>
-        </div>
+    <div className="min-w-0 px-1.5 py-2 sm:px-3">
+      <div className="text-[0.6875rem] font-medium text-muted">{label}</div>
+      <div
+        className={cn(
+          "mt-1 truncate font-mono text-xs font-semibold tabular-nums text-highlighted",
+          valueClassName,
+        )}
+      >
+        {value}
       </div>
-      <div className="flex h-1.5 overflow-hidden rounded-full bg-elevated">
-        {allocation.segments.map((segment) => (
-          <span
-            key={segment.id}
-            className={cn("h-full", allocationSegmentClass(segment.id))}
-            style={{ width: `${segment.percent}%` }}
-          />
-        ))}
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-mono text-[0.625rem] text-muted-foreground">
-          Total {allocation.totalLabel}
-        </span>
-        {allocation.showWaste ? (
-          <TooltipProvider delayDuration={120}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex shrink-0 items-center rounded-full bg-destructive/10 px-1.5 py-0.5 font-mono text-[0.625rem] text-destructive ring-1 ring-destructive/25">
-                  Excluded waste {allocation.wasteLabel}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>Waste is excluded from billable and payable totals.</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : null}
-      </div>
+    </div>
+  );
+}
+
+function BillMergedMetricGrid({
+  row,
+}: {
+  row: Extract<MoneyBillDisplayRow, { kind: "merged-client" | "merged-member" }>;
+}) {
+  const receivedTitle = row.kind === "merged-member" ? row.paidTitle : "Received";
+  const showWaste = row.wasteCents > 0;
+  return (
+    <div
+      className="grid min-w-0 grid-cols-4 divide-x divide-border overflow-hidden rounded-lg border border-default bg-elevated/30"
+      aria-label={`${row.title} money breakdown`}
+    >
+      <BillMergedMetricCell label="Total" value={row.totalLabel} />
+      <BillMergedMetricCell
+        label={receivedTitle}
+        value={row.receivedLabel}
+        valueClassName="text-success"
+      />
+      <BillMergedMetricCell
+        label="Remaining"
+        value={row.remainingLabel}
+        valueClassName="text-warning"
+      />
+      <BillMergedMetricCell
+        label="Waste"
+        value={showWaste ? row.wasteLabel : "—"}
+        valueClassName={showWaste ? "text-destructive/80" : "text-muted"}
+      />
     </div>
   );
 }
@@ -786,7 +794,7 @@ function BillListRow({
   onMarkPaid,
   onRefund,
 }: {
-  row: MoneyBillRow;
+  row: MoneyBillDisplayRow;
   searchTerm: string;
   pending: boolean;
   isMutationPending: boolean;
@@ -799,24 +807,18 @@ function BillListRow({
   onMarkPaid: (rowId: string) => void;
   onRefund: (invoiceId: string) => void;
 }) {
-  const hueId = moneyBillHueId(row);
-  const isReady = row.kind === "client-activity" || row.kind === "member-activity";
-  const showMemberAvatar =
-    row.kind === "member-activity" || (row.kind === "team-payout" && Boolean(row.userId));
-  const showStatusChip =
-    row.kind === "invoice" || row.kind === "team-payout" || row.kind === "adjustment";
+  const hueId = moneyBillDisplayHueId(row);
+  const documentId = billDocumentActionId(row);
+  const isMerged = row.kind === "merged-client" || row.kind === "merged-member";
+  const showMemberAvatar = row.kind === "merged-member";
 
   function onOpenParty() {
     switch (row.kind) {
-      case "invoice":
-      case "client-activity":
+      case "merged-client":
         onOpenClient(row.clientId);
         break;
-      case "member-activity":
+      case "merged-member":
         onOpenMember(row.userId);
-        break;
-      case "team-payout":
-        if (row.userId) onOpenMember(row.userId);
         break;
       case "adjustment":
         break;
@@ -830,150 +832,149 @@ function BillListRow({
   return (
     <li
       className={cn(
-        "group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors",
-        isReady
-          ? "border border-default hover:bg-elevated/50"
-          : "border border-transparent hover:border-default hover:bg-elevated/40",
+        "group grid items-center gap-3 px-3 py-3 transition-colors hover:bg-elevated/40",
+        isMerged
+          ? "grid-cols-1 md:grid-cols-[minmax(11rem,0.85fr)_minmax(0,1.8fr)_minmax(7rem,9rem)]"
+          : "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]",
       )}
     >
-      {showMemberAvatar ? (
-        <AgencyMemberAvatar
-          name={row.userName}
-          userId={row.userId}
-          avatarUrl={row.userAvatar}
-          size="md"
-          className="size-9"
-        />
-      ) : hueId ? (
-        <BillClientMark title={row.title} hueId={hueId} />
-      ) : null}
+      <div className="flex min-w-0 items-center gap-3">
+        {showMemberAvatar ? (
+          <AgencyMemberAvatar
+            name={row.userName}
+            userId={row.userId}
+            avatarUrl={row.userAvatar}
+            size="md"
+            className="size-9"
+          />
+        ) : hueId ? (
+          <BillClientMark title={row.title} hueId={hueId} />
+        ) : null}
 
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-          {row.kind === "adjustment" ? (
-            <span className="min-w-0 truncate text-sm font-medium text-highlighted">
-              <AgencySearchHighlight text={row.title} query={searchTerm} />
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={onOpenParty}
-              className={cn(
-                "min-w-0 truncate text-left text-sm font-medium text-highlighted hover:underline",
-                agencyFocusRingClass,
-                "rounded-sm",
-              )}
-            >
-              <AgencySearchHighlight text={row.title} query={searchTerm} />
-            </button>
-          )}
-          {showStatusChip ? (
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+            {row.kind === "adjustment" ? (
+              <span className="min-w-0 truncate text-sm font-medium text-highlighted">
+                <AgencySearchHighlight text={row.title} query={searchTerm} />
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpenParty}
+                className={cn(
+                  "min-w-0 truncate text-left text-sm font-medium text-highlighted hover:underline",
+                  agencyFocusRingClass,
+                  "rounded-sm",
+                )}
+              >
+                <AgencySearchHighlight text={row.title} query={searchTerm} />
+              </button>
+            )}
             <span
               className={cn(
-                "inline-flex h-5 items-center rounded-md px-1.5 text-[0.65rem] font-medium tracking-wide",
-                hueId
-                  ? "bg-[var(--project-hue-soft)] text-[var(--project-hue)] dark:bg-[var(--project-hue-soft-dark)] dark:text-[var(--project-hue-dark)]"
-                  : "bg-elevated text-muted",
+                "inline-flex h-5 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
+                mergedBillStatusChipClass(row.statusLabel),
               )}
-              style={hueId ? projectHueStyle(hueId) : undefined}
             >
               {row.statusLabel}
             </span>
-          ) : null}
+          </div>
+          <p className="mt-0.5 truncate text-xs text-muted">
+            <AgencySearchHighlight text={row.subtitle} query={searchTerm} />
+            {row.kind === "adjustment" && row.paidCents > 0 && row.remainingCents > 0 ? (
+              <>
+                <span aria-hidden> · </span>
+                {row.paidLabel} paid · {row.remainingLabel} left
+              </>
+            ) : null}
+          </p>
         </div>
-        <p className="mt-0.5 truncate text-xs text-muted">
-          <AgencySearchHighlight text={row.subtitle} query={searchTerm} />
-          {row.kind === "adjustment" && row.paidCents > 0 && row.remainingCents > 0 ? (
-            <>
-              <span aria-hidden> · </span>
-              {row.paidLabel} paid · {row.remainingLabel} left
-            </>
-          ) : null}
-        </p>
-        {row.kind === "invoice" ||
-        row.kind === "client-activity" ||
-        row.kind === "member-activity" ||
-        row.kind === "team-payout" ? (
-          <MoneyBillAllocationBar allocation={row.allocation} />
-        ) : null}
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+      {isMerged ? <BillMergedMetricGrid row={row} /> : null}
+
+      <div
+        className={cn(
+          "flex shrink-0 flex-col gap-1.5 sm:items-end",
+          !isMerged && "sm:flex-row sm:items-center sm:gap-3",
+        )}
+      >
         <span
           className={cn(
-            "font-mono text-sm tabular-nums",
+            "font-mono text-sm font-semibold tabular-nums",
             row.kind === "adjustment" ? "text-muted" : "text-highlighted",
           )}
         >
-          {row.metaLabel}
+          {isMerged ? `${row.openLabel} open` : row.metaLabel}
         </span>
 
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
-          {row.canCreateInvoice && row.kind === "client-activity" ? (
+          {row.canCreateInvoice && row.kind === "merged-client" ? (
             <Button
               type="button"
               size="sm"
-              className="h-8 rounded-lg px-3"
+              className="h-8 min-w-11 rounded-lg px-3"
               disabled={isMutationPending}
               onClick={() => onCreateInvoiceForClient(row.clientId)}
             >
-              Draft invoice
+              Create invoice
             </Button>
           ) : null}
-          {row.canCreatePayout && row.kind === "member-activity" ? (
+          {row.canCreatePayout && row.kind === "merged-member" ? (
             <Button
               type="button"
               size="sm"
-              className="h-8 rounded-lg px-3"
+              className="h-8 min-w-11 rounded-lg px-3"
               disabled={pending || isMutationPending}
               onClick={() => void onCreatePayoutForMember(row.userId)}
             >
-              Draft payout
+              Create payout
             </Button>
           ) : null}
-          {row.canSend ? (
+          {row.canSend && documentId ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="h-8 rounded-lg"
+              className="h-8 min-w-11 rounded-lg"
               disabled={pending || isMutationPending}
-              onClick={() => void onSend(row.id)}
+              onClick={() => void onSend(documentId)}
             >
               Send
             </Button>
           ) : null}
-          {row.canRecordPayment ? (
+          {row.canRecordPayment && documentId ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="h-8 rounded-lg"
+              className="h-8 min-w-11 rounded-lg"
               disabled={pending || isMutationPending}
-              onClick={() => onOpenPayment(row.id)}
+              onClick={() => onOpenPayment(documentId)}
             >
               Record payment
             </Button>
           ) : null}
-          {row.canMarkPaid ? (
+          {row.canMarkPaid && documentId ? (
             <Button
               type="button"
               size="sm"
-              className="h-8 rounded-lg"
+              variant="outline"
+              className="h-8 min-w-11 rounded-lg"
               disabled={pending || isMutationPending}
-              onClick={() => void onMarkPaid(row.id)}
+              onClick={() => void onMarkPaid(documentId)}
             >
-              Mark fully paid
+              Mark paid
             </Button>
           ) : null}
-          {row.canRefund ? (
+          {row.canRefund && documentId ? (
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              className="h-8 rounded-lg text-muted opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+              className="h-8 min-w-11 rounded-lg text-muted opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
               disabled={pending || isMutationPending}
-              onClick={() => void onRefund(row.id)}
+              onClick={() => void onRefund(documentId)}
             >
               Refund
             </Button>
@@ -991,8 +992,8 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
   const adjustmentCreate = bills.adjustmentCreate;
   const payment = bills.payment;
   const showEmpty = !bills.isLoading && !bills.isError && bills.rows.length === 0;
-  const sections = groupMoneyBillRows(bills.rows);
-  const insight = moneyBillListInsight(bills.rows);
+  const sections = groupMoneyBillDisplayRows(bills.rows);
+  const insight = moneyBillDisplayListInsight(bills.rows);
   const showSectionHeaders = sections.length > 1;
 
   return (
@@ -1206,44 +1207,49 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
         {!bills.isLoading && !bills.isError && bills.rows.length > 0 ? (
           <div className="flex flex-col gap-4 px-4 pt-4" aria-label="Bill list">
             {insight ? (
-              <div className="flex items-center gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2">
-                <Receipt className="size-3.5 shrink-0 text-primary" aria-hidden />
-                <p className="text-xs font-medium text-highlighted">{insight}</p>
+              <div className="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-2">
+                <Receipt className="size-3.5 shrink-0 text-muted" aria-hidden />
+                <p className="text-xs text-muted">{insight}</p>
               </div>
             ) : null}
 
             {sections.map((section) => (
-              <section
-                key={section.id}
-                className="flex flex-col gap-1.5"
-                aria-label={section.title}
-              >
+              <section key={section.id} className="flex flex-col gap-2" aria-label={section.title}>
                 {showSectionHeaders ? (
-                  <div className="flex items-baseline justify-between gap-2 px-1 pt-1">
-                    <h3 className="text-xs font-semibold tracking-wide text-highlighted uppercase">
-                      {section.title}
-                    </h3>
-                    <span className="text-[0.7rem] text-muted">{section.hint}</span>
+                  <div className="flex items-baseline justify-between gap-2 px-1">
+                    <h3 className="text-sm font-medium text-highlighted">{section.title}</h3>
+                    <span className="text-xs text-muted">{section.hint}</span>
                   </div>
                 ) : null}
-                <ul className="flex flex-col gap-1">
-                  {section.rows.map((row) => (
-                    <BillListRow
-                      key={row.id}
-                      row={row}
-                      searchTerm={bills.searchTerm}
-                      pending={bills.pendingActionInvoiceId === row.id}
-                      isMutationPending={bills.isMutationPending}
-                      onOpenClient={bills.onOpenClient}
-                      onOpenMember={bills.onOpenMember}
-                      onCreateInvoiceForClient={bills.onCreateInvoiceForClient}
-                      onCreatePayoutForMember={bills.onCreatePayoutForMember}
-                      onSend={bills.onSend}
-                      onOpenPayment={bills.onOpenPayment}
-                      onMarkPaid={bills.onMarkPaid}
-                      onRefund={bills.onRefund}
-                    />
-                  ))}
+                <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
+                  {section.rows.map((row) => {
+                    const documentId =
+                      row.kind === "merged-client"
+                        ? row.primaryInvoiceId
+                        : row.kind === "merged-member"
+                          ? row.primaryPayoutId
+                          : row.id;
+                    const pending =
+                      bills.pendingActionInvoiceId === row.id ||
+                      (documentId !== null && bills.pendingActionInvoiceId === documentId);
+                    return (
+                      <BillListRow
+                        key={row.id}
+                        row={row}
+                        searchTerm={bills.searchTerm}
+                        pending={pending}
+                        isMutationPending={bills.isMutationPending}
+                        onOpenClient={bills.onOpenClient}
+                        onOpenMember={bills.onOpenMember}
+                        onCreateInvoiceForClient={bills.onCreateInvoiceForClient}
+                        onCreatePayoutForMember={bills.onCreatePayoutForMember}
+                        onSend={bills.onSend}
+                        onOpenPayment={bills.onOpenPayment}
+                        onMarkPaid={bills.onMarkPaid}
+                        onRefund={bills.onRefund}
+                      />
+                    );
+                  })}
                 </ul>
               </section>
             ))}

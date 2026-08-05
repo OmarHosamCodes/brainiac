@@ -50,11 +50,14 @@ import {
   type MoneyBillsStatusFilter,
 } from "../money-bills-filters";
 import {
-  buildMoneyBillRows,
-  filterMoneyBillRowsByClientCategory,
+  buildMergedMoneyBillDisplayRows,
+  filterMergedRowsByClientCategory,
+} from "../money-bill-merged-rows";
+import {
   formatMoneyBillCents,
   moneyBillClientHref,
   moneyBillMemberHref,
+  moneyBillRowFromAdjustmentLine,
   MONEY_ADJUSTMENT_SECTION_OPTIONS,
   moneyBillsAdjustmentCreateValid,
   moneyBillsCreateFormValid,
@@ -603,24 +606,32 @@ export function useAgencyMoneySurface(teamId: string) {
       wasteCents: member.wasteCents,
       currency,
     }));
-    const wasteByClientId = new Map(
-      activityClients.map((client) => [client.clientId, client.wasteCents] as const),
+    const teamPayouts = (payoutsQuery.data?.items ?? []).filter(
+      (payout) =>
+        payout.sectionKey !== "debt_discount" &&
+        payout.sectionKey !== "charity" &&
+        payout.sectionKey !== "pbc",
     );
-    const wasteByUserId = new Map(
-      activityMembers.map((member) => [member.userId, member.wasteCents] as const),
-    );
-    const rows = buildMoneyBillRows({
-      party: partyFilter,
-      statusFilter,
-      invoices: showsClientBills ? (invoicesQuery.data?.items ?? []) : [],
+    const adjustmentLines = (payoutsQuery.data?.items ?? [])
+      .filter(
+        (payout) =>
+          payout.sectionKey === "debt_discount" ||
+          payout.sectionKey === "charity" ||
+          payout.sectionKey === "pbc",
+      )
+      .map((payout) => moneyBillRowFromAdjustmentLine(payout));
+    const rows = buildMergedMoneyBillDisplayRows({
       clients: activityClients,
+      invoices: showsClientBills ? (invoicesQuery.data?.items ?? []) : [],
       members: showsMemberBills ? activityMembers : [],
-      payouts: showsMemberBills ? (payoutsQuery.data?.items ?? []) : [],
-      wasteByClientId,
-      wasteByUserId,
+      payouts: showsMemberBills ? teamPayouts : [],
+      adjustments: showsAdjustmentBills ? adjustmentLines : [],
+      statusFilter,
+      includeClients: showsClientBills,
+      includeMembers: showsMemberBills,
     });
     if (billsClientCategoryFilterActive === null) return rows;
-    return filterMoneyBillRowsByClientCategory(
+    return filterMergedRowsByClientCategory(
       rows,
       billsClientCategoryFilterActive,
       clientCategoryById,
@@ -634,6 +645,7 @@ export function useAgencyMoneySurface(teamId: string) {
     periodActivityQuery.data?.members,
     periodScoreboardQuery.data?.currency,
     payoutsQuery.data?.items,
+    showsAdjustmentBills,
     showsClientBills,
     showsMemberBills,
     statusFilter,
@@ -680,44 +692,9 @@ export function useAgencyMoneySurface(teamId: string) {
           };
         }
 
-        const row = billRows.find((item) => item.id === rowId);
-        if (
-          !row ||
-          (row.kind !== "invoice" && row.kind !== "team-payout" && row.kind !== "adjustment")
-        ) {
-          return null;
-        }
-        return {
-          kind:
-            row.kind === "invoice"
-              ? "invoice"
-              : row.kind === "adjustment"
-                ? "adjustment"
-                : "payout",
-          id: row.id,
-          partyName:
-            row.kind === "invoice"
-              ? row.clientName
-              : row.kind === "adjustment"
-                ? row.title
-                : row.userName,
-          referenceLabel:
-            row.kind === "invoice"
-              ? row.number
-              : row.kind === "adjustment"
-                ? row.sectionTitle
-                : row.label,
-          remainingCents: row.remainingCents,
-          remainingLabel: row.remainingLabel,
-          currency: row.currency,
-        };
+        return null;
       },
-    [
-      billRows,
-      invoicesQuery.data?.items,
-      payoutsQuery.data?.items,
-      runSectionLinesQuery.data?.items,
-    ],
+    [invoicesQuery.data?.items, payoutsQuery.data?.items, runSectionLinesQuery.data?.items],
   );
 
   const paymentRow = useMemo(
@@ -1005,7 +982,7 @@ export function useAgencyMoneySurface(teamId: string) {
 
   async function onCreatePayoutForMember(userId: string) {
     const member = (periodActivityQuery.data?.members ?? []).find((item) => item.userId === userId);
-    setPendingActionInvoiceId(`member-activity:${userId}`);
+    setPendingActionInvoiceId(`merged-member:${userId}`);
     await agencyOps.createPayoutFromMember(
       {
         teamId,
