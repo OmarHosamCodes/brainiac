@@ -68,6 +68,7 @@ type AgencySegmentFiltersRootProps = {
   segment: AgencySegmentId;
   teamId: string;
   selectedProjectId: string;
+  selectedClientId?: string;
   reportMode: string | null;
   searchParams: URLSearchParams;
   children: ReactNode;
@@ -76,10 +77,12 @@ type AgencySegmentFiltersRootProps = {
 function commandBarVisible(
   segment: AgencySegmentId,
   selectedProjectId: string,
+  selectedClientId: string,
   reportMode: string | null,
 ): boolean {
   if (segment === "work" || segment === "management") return false;
   if (segment === "projects" && selectedProjectId) return false;
+  if (segment === "clients" && selectedClientId) return false;
   if (segment === "reports" && reportMode) return false;
   return (
     segment === "dashboard" ||
@@ -539,11 +542,12 @@ export function AgencySegmentFiltersRoot({
   segment,
   teamId,
   selectedProjectId,
+  selectedClientId = "",
   reportMode,
   searchParams,
   children,
 }: AgencySegmentFiltersRootProps) {
-  const showBar = commandBarVisible(segment, selectedProjectId, reportMode);
+  const showBar = commandBarVisible(segment, selectedProjectId, selectedClientId, reportMode);
 
   switch (segment) {
     case "dashboard":

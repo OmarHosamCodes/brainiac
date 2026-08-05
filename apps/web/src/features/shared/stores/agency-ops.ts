@@ -1274,8 +1274,8 @@ function createAgencyOpsActions(
     });
   }
 
-  async function archiveClient(payload: ArchiveClientPayload) {
-    if (!payload.teamId || !payload.clientId) return;
+  async function archiveClient(payload: ArchiveClientPayload): Promise<boolean> {
+    if (!payload.teamId || !payload.clientId) return false;
 
     const snapshots = snapshotQueries(registryPayloads(clientsQueryRegistry));
     const optimisticSnapshot = optimistic().snapshotClients(payload.teamId);
@@ -1290,10 +1290,53 @@ function createAgencyOpsActions(
       });
 
       toast.success("Client archived", { description: `${payload.clientName} has been archived.` });
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.clients.key(),
+      });
+      return true;
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       optimistic().restoreClients(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't archive client", { description: getErrorMessage(error, "Try again.") });
+      return false;
+    } finally {
+      set((state) => ({
+        ...state,
+        clientMutationCount: Math.max(0, state.clientMutationCount - 1),
+      }));
+    }
+  }
+
+  async function unarchiveClient(payload: ArchiveClientPayload): Promise<boolean> {
+    if (!payload.teamId || !payload.clientId) return false;
+
+    const snapshots = snapshotQueries(registryPayloads(clientsQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotClients(payload.teamId);
+    set((state) => ({ ...state, clientMutationCount: state.clientMutationCount + 1 }));
+
+    try {
+      // Archived list removes the row; active list will pick it up on invalidate.
+      patchRemovedClient(payload.teamId, payload.clientId);
+
+      await orpcClient.agencyOps.clients.unarchive({
+        teamId: payload.teamId,
+        clientId: payload.clientId,
+      });
+
+      toast.success("Client restored", {
+        description: `${payload.clientName} is active again.`,
+      });
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.clients.key(),
+      });
+      return true;
+    } catch (error) {
+      restoreQuerySnapshots(snapshots);
+      optimistic().restoreClients(payload.teamId, optimisticSnapshot);
+      toast.error("Couldn't restore client", {
+        description: getErrorMessage(error, "Try again."),
+      });
+      return false;
     } finally {
       set((state) => ({
         ...state,
@@ -2111,6 +2154,7 @@ function createAgencyOpsActions(
     createClient,
     updateClient,
     archiveClient,
+    unarchiveClient,
     createProject,
     createProjectWithJourney,
     deleteProject,

@@ -1,4 +1,5 @@
-import { AgencyClientsSurface } from "@/features/clients/agency-clients-surface";
+import { AgencyClientDetail } from "@/features/clients/agency-client-detail";
+import { AgencyClientsTable } from "@/features/clients/agency-clients-table";
 import { AgencyDashboardSurface } from "@/features/dashboard/agency-dashboard-surface";
 import { AgencyProjectDetail } from "@/features/projects/agency-project-detail";
 import { AgencyProjectsTable } from "@/features/projects/agency-projects-table";
@@ -15,6 +16,7 @@ type AgencySegmentBodyProps = {
   onSelectClient: (clientId: string) => void;
   onSelectMember: (userId: string) => void;
   onCloseProject: () => void;
+  onCloseClient: () => void;
 };
 
 export function AgencySegmentBody({
@@ -26,6 +28,7 @@ export function AgencySegmentBody({
   onSelectClient,
   onSelectMember,
   onCloseProject,
+  onCloseClient,
 }: AgencySegmentBodyProps) {
   const surfaceFilters = useAgencySegmentSurfaceFilters();
 
@@ -45,14 +48,26 @@ export function AgencySegmentBody({
     return <AgencyReportsSurface teamId={teamId} filters={surfaceFilters.applied} />;
   }
 
-  if (segment === "clients" && surfaceFilters.kind === "list") {
-    return (
-      <AgencyClientsSurface
-        teamId={teamId}
-        filters={surfaceFilters.applied}
-        selectedClientId={selectedClientId}
-      />
-    );
+  if (segment === "clients") {
+    if (selectedClientId) {
+      return (
+        <AgencyClientDetail
+          teamId={teamId}
+          clientId={selectedClientId}
+          onBack={onCloseClient}
+          onSelectProject={onSelectProject}
+        />
+      );
+    }
+    if (surfaceFilters.kind === "list") {
+      return (
+        <AgencyClientsTable
+          teamId={teamId}
+          filters={surfaceFilters.applied}
+          onSelect={onSelectClient}
+        />
+      );
+    }
   }
 
   if (segment === "projects") {
@@ -62,6 +77,7 @@ export function AgencySegmentBody({
           teamId={teamId}
           projectId={selectedProjectId}
           onBack={onCloseProject}
+          onSelectClient={onSelectClient}
         />
       );
     }

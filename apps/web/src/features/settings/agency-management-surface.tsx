@@ -6,12 +6,9 @@ import { AgencyResourcingSurface } from "@/features/resourcing/agency-resourcing
 import { AgencySettingsTenurePane } from "@/features/resourcing/tenure/agency-settings-tenure-pane";
 import {
   agencyManagementPaneLabel,
-  agencyManagementPaneSubtitle,
   isAgencyManagementPaneId,
   type AgencyManagementPaneId,
 } from "@/features/shared/agency-management-sections";
-import { agencyLabelClass, agencySectionTitleClass } from "@/features/shared/agency-ui";
-import { cn } from "@/lib/utils";
 
 type AgencyManagementSurfaceProps = {
   teamId: string;
@@ -47,7 +44,6 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
   }, [searchParams, setSearchParams]);
 
   const activeLabel = agencyManagementPaneLabel(activePane);
-  const activeSubtitle = agencyManagementPaneSubtitle(activePane);
 
   return (
     <main
@@ -58,17 +54,8 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
         <AgencyResourcingSurface teamId={teamId} />
       ) : activePane === "tenure" ? (
         <AgencySettingsTenurePane teamId={teamId} active />
-      ) : activePane === "money" ? (
-        <AgencyMoneySurface teamId={teamId} />
       ) : (
-        <header className="flex flex-col gap-1">
-          <h1 className={cn(agencySectionTitleClass, "text-balance")}>{activeLabel}</h1>
-          {activeSubtitle ? (
-            <p className={cn(agencyLabelClass, "text-muted-foreground text-balance")}>
-              {activeSubtitle}
-            </p>
-          ) : null}
-        </header>
+        <AgencyMoneySurface teamId={teamId} />
       )}
     </main>
   );

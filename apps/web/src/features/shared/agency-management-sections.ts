@@ -1,6 +1,6 @@
 /** Agency management panes — Operations + Commercial hubs under Management. */
 
-export type AgencyManagementPaneId = "resourcing" | "tenure" | "money" | "rates";
+export type AgencyManagementPaneId = "resourcing" | "tenure" | "money";
 
 export type AgencyManagementHubId = "operations" | "commercial";
 
@@ -29,7 +29,6 @@ export const AGENCY_MANAGEMENT_PANES: readonly AgencyManagementPane[] = [
     icon: "i-lucide-wallet",
     hub: "commercial",
   },
-  { id: "rates", label: "Rates", icon: "i-lucide-dollar-sign", hub: "commercial" },
 ] as const;
 
 export const AGENCY_MANAGEMENT_HUBS: readonly AgencyManagementHub[] = [

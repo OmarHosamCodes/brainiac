@@ -181,6 +181,13 @@ export function AgencyPage() {
     setSearchParams(next);
   }
 
+  function closeClient() {
+    const next = new URLSearchParams(searchParams);
+    next.set("section", "clients");
+    next.delete("client");
+    setSearchParams(next);
+  }
+
   const isFullHeightSegment = segment === "work" || segment === "management";
 
   return (
@@ -220,6 +227,7 @@ export function AgencyPage() {
                   segment={segment}
                   teamId={selectedTeamId}
                   selectedProjectId={selectedProjectId}
+                  selectedClientId={selectedClientId}
                   reportMode={searchParams.get("report")}
                   searchParams={searchParams}
                 >
@@ -250,6 +258,7 @@ export function AgencyPage() {
                       onSelectClient={openClient}
                       onSelectMember={openMember}
                       onCloseProject={closeProject}
+                      onCloseClient={closeClient}
                     />
                   ) : null}
                 </AgencySegmentFiltersRoot>

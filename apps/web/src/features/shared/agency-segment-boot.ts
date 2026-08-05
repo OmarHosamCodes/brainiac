@@ -120,7 +120,6 @@ async function ensureManagementBootQueries(
       break;
     }
     case "money":
-    case "rates":
       break;
     default: {
       const _exhaustive: never = pane;
