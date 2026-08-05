@@ -610,6 +610,30 @@ export const agencyOpsInvoiceLineItem = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Money formula chip tokens (settings + payout run snapshots)
+// ---------------------------------------------------------------------------
+
+export type AgencyOpsMoneyFormulaToken =
+  | { kind: "var"; id: string }
+  | { kind: "number"; value: number }
+  | { kind: "op"; op: "+" | "-" | "*" | "/" }
+  | { kind: "paren"; value: "(" | ")" };
+
+export type AgencyOpsMoneyFormulaOutput = "cents" | "ratio" | "hours";
+
+export type AgencyOpsMoneyFormulaDef = {
+  id: string;
+  key: string;
+  label: string;
+  locked: boolean;
+  enabled: boolean;
+  tokens: AgencyOpsMoneyFormulaToken[];
+  output: AgencyOpsMoneyFormulaOutput;
+  metricId: string | null;
+  sectionKey: string | null;
+};
+
+// ---------------------------------------------------------------------------
 // Payout runs (Team Bills / money out)
 // ---------------------------------------------------------------------------
 
@@ -635,6 +659,8 @@ export const agencyOpsPayoutRun = pgTable(
     periodEnd: timestamp("period_end").notNull(),
     status: text("status").$type<AgencyOpsPayoutRunStatus>().notNull().default("draft"),
     currency: text("currency").notNull().default("USD"),
+    /** Enabled Money formulas pinned when the run is ensured / formula-synced. */
+    formulaSnapshotJson: jsonb("formula_snapshot_json").$type<AgencyOpsMoneyFormulaDef[]>(),
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -722,11 +748,23 @@ export const agencyOpsPayoutLine = pgTable(
 export type AgencyOpsMoneyRulesJson = {
   enabledRuleIds: string[];
   notesByRuleId?: Record<string, string>;
+  /** Display labels for custom rules (system labels stay in the web fixture). */
+  labelByRuleId?: Record<string, string>;
+  /** Cohort label shown on Rules (e.g. "All members except interns"). */
+  cohortByRuleId?: Record<string, string>;
+  /** Explicit member cohort when the rule uses a member picker. */
+  memberIdsByRuleId?: Record<string, string[]>;
 };
 
 export type AgencyOpsMoneyCalcOptionsJson = {
   enabledOptionIds: string[];
   notesByOptionId?: Record<string, string>;
+  /** Formula summary shown on Formulas (legacy). */
+  summaryByOptionId?: Record<string, string>;
+  /** Numeric param (e.g. paid vacation hours) (legacy). */
+  valueByOptionId?: Record<string, number>;
+  /** Chip/token formulas (system templates + custom). */
+  formulas?: AgencyOpsMoneyFormulaDef[];
 };
 
 export const agencyOpsMoneySettings = pgTable("agency_ops_money_settings", {

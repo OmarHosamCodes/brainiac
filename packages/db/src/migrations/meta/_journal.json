@@ -295,6 +295,13 @@
       "when": 1787900000018,
       "tag": "0041_agency_money_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1787900000019,
+      "tag": "0042_agency_payout_formula_snapshot",
+      "breakpoints": true
     }
   ]
 }
