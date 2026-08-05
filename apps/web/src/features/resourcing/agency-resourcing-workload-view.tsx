@@ -1,8 +1,11 @@
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
+import { MemberProfileLeaveRangePicker } from "@/features/member-profile/member-profile-leave-range-picker";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import {
+  agencyFormFieldClass,
+  agencyFormLabelClass,
   agencySectionTitleClass,
   agencyWorkMetaClass,
   agencyWorkTitleClass,
@@ -20,8 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/ui/dialog";
-import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Skeleton } from "@/ui/skeleton";
 import { Textarea } from "@/ui/textarea";
 
@@ -91,7 +94,6 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
     briefingDayNumber,
     briefingWeekday,
     briefingHeadline,
-    briefingSentence,
     selectedDayLabel,
     selectedDaySummary,
     agenda,
@@ -238,7 +240,6 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
                 <h2 className="text-highlighted text-lg font-semibold tracking-tight text-balance sm:text-xl">
                   {briefingHeadline}
                 </h2>
-                <p className={cn(agencyWorkMetaClass, "mt-1 text-pretty")}>{briefingSentence}</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -627,74 +628,74 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
             <DialogTitle>Request time off</DialogTitle>
           </DialogHeader>
           <form
-            className="grid gap-4"
+            className="flex flex-col gap-4"
             onSubmit={(event) => {
               event.preventDefault();
               void submitLeaveRequest();
             }}
           >
-            <div className="grid gap-2">
-              <Label htmlFor="resourcing-leave-member">Team member</Label>
-              <select
-                id="resourcing-leave-member"
-                className="border-input bg-background h-10 w-full rounded-xl border px-3 text-sm"
-                value={leaveRequestDraft.userId}
-                onChange={(event) => setLeaveRequestDraft({ userId: event.target.value })}
-                required
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor="resourcing-leave-member" className={agencyFormLabelClass}>
+                Team member
+              </Label>
+              <Select
+                value={leaveRequestDraft.userId || undefined}
+                onValueChange={(value) => setLeaveRequestDraft({ userId: value })}
               >
-                {activityRows.map((row) => (
-                  <option key={row.userId} value={row.userId}>
-                    {row.userName}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="resourcing-leave-member" className="w-full">
+                  <SelectValue placeholder="Select a teammate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activityRows.map((row) => (
+                    <SelectItem key={row.userId} value={row.userId}>
+                      {row.userName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="resourcing-leave-start">Start date</Label>
-                <Input
-                  id="resourcing-leave-start"
-                  type="date"
-                  value={leaveRequestDraft.startDate}
-                  onChange={(event) => setLeaveRequestDraft({ startDate: event.target.value })}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="resourcing-leave-end">End date</Label>
-                <Input
-                  id="resourcing-leave-end"
-                  type="date"
-                  value={leaveRequestDraft.endDate}
-                  onChange={(event) => setLeaveRequestDraft({ endDate: event.target.value })}
-                  required
-                />
-              </div>
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor="resourcing-leave-range" className={agencyFormLabelClass}>
+                Dates
+              </Label>
+              <MemberProfileLeaveRangePicker
+                triggerId="resourcing-leave-range"
+                startDate={leaveRequestDraft.startDate}
+                endDate={leaveRequestDraft.endDate}
+                emptyLabel="Select time off dates"
+                ariaLabel="Time off date range"
+                onRangeChange={(next) =>
+                  setLeaveRequestDraft({ startDate: next.startDate, endDate: next.endDate })
+                }
+              />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="resourcing-leave-type">Leave type</Label>
-              <select
-                id="resourcing-leave-type"
-                className="border-input bg-background h-10 w-full rounded-xl border px-3 text-sm"
-                value={leaveRequestDraft.type}
-                onChange={(event) =>
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor="resourcing-leave-type" className={agencyFormLabelClass}>
+                Leave type
+              </Label>
+              <Select
+                value={leaveRequestDraft.type || undefined}
+                onValueChange={(value) =>
                   setLeaveRequestDraft({
-                    type: event.target.value as (typeof LEAVE_TYPES)[number]["id"] | "",
+                    type: value as (typeof LEAVE_TYPES)[number]["id"],
                   })
                 }
-                required
               >
-                <option value="">Select a type</option>
-                {LEAVE_TYPES.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="resourcing-leave-type" className="w-full">
+                  <SelectValue placeholder="Select a type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEAVE_TYPES.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="resourcing-leave-note">
-                Note <span className="text-muted font-normal">optional</span>
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor="resourcing-leave-note" className={agencyFormLabelClass}>
+                Note <span className="font-normal text-muted-foreground">optional</span>
               </Label>
               <Textarea
                 id="resourcing-leave-note"
@@ -704,7 +705,7 @@ export function AgencyResourcingWorkloadView({ viewModel }: AgencyResourcingWork
               />
             </div>
             {leaveRequestError ? (
-              <p className="text-destructive text-sm" role="alert">
+              <p className="text-sm text-destructive" role="alert">
                 {leaveRequestError}
               </p>
             ) : null}

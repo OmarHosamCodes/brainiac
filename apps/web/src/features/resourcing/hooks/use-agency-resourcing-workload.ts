@@ -75,7 +75,6 @@ export type AgencyResourcingWorkloadViewModel = {
   briefingDayNumber: string;
   briefingWeekday: string;
   briefingHeadline: string;
-  briefingSentence: string;
   selectedDayLabel: string;
   selectedDaySummary: string;
   agenda: ResourcingAbsenceAgendaItem[];
@@ -240,13 +239,6 @@ function outPhrase(person: PresencePerson, leaveType: string): string {
   if (type.includes("sick")) return `${person.userName} sick`;
   if (type.includes("paid")) return `${person.userName} on PTO`;
   return `${person.userName} on ${type}`;
-}
-
-function outSentence(out: Array<PresencePerson & { leaveType: string }>): string {
-  if (out.length === 0) return "No one is out. Full-team coverage is expected.";
-  const phrases = out.map((person) => outPhrase(person, person.leaveType));
-  if (phrases.length === 1) return `Out: ${phrases[0]}.`;
-  return `Out: ${phrases.slice(0, -1).join(", ")}, and ${phrases[phrases.length - 1]}.`;
 }
 
 export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWorkloadViewModel {
@@ -482,7 +474,6 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
     briefingDayNumber,
     briefingWeekday,
     briefingHeadline,
-    briefingSentence: outSentence(selectedOut),
     selectedDayLabel,
     selectedDaySummary,
     agenda,

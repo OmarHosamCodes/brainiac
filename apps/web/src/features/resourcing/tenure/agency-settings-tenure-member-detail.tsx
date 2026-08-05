@@ -2,10 +2,12 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 
+import { MemberProfileDatePicker } from "@/features/member-profile/member-profile-date-picker";
 import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
 import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Skeleton } from "@/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
@@ -310,26 +312,38 @@ export function AgencySettingsTenureMemberDetail({
                     </p>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className={agencyFormFieldClass}>
-                        <label className={agencyFormLabelClass}>Intern start override</label>
-                        <Input
-                          type="date"
+                        <Label
+                          className={agencyFormLabelClass}
+                          htmlFor="tenure-intern-start-override"
+                        >
+                          Intern start override
+                        </Label>
+                        <MemberProfileDatePicker
+                          id="tenure-intern-start-override"
                           value={profileDraft.internStart}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             onProfileDraftChange({
                               ...profileDraft,
-                              internStart: event.target.value,
+                              internStart: value,
                             })
                           }
+                          aria-label="Intern start override"
                         />
                       </div>
                       <div className={agencyFormFieldClass}>
-                        <label className={agencyFormLabelClass}>Intern end override</label>
-                        <Input
-                          type="date"
+                        <Label
+                          className={agencyFormLabelClass}
+                          htmlFor="tenure-intern-end-override"
+                        >
+                          Intern end override
+                        </Label>
+                        <MemberProfileDatePicker
+                          id="tenure-intern-end-override"
                           value={profileDraft.internEnd}
-                          onChange={(event) =>
-                            onProfileDraftChange({ ...profileDraft, internEnd: event.target.value })
+                          onChange={(value) =>
+                            onProfileDraftChange({ ...profileDraft, internEnd: value })
                           }
+                          aria-label="Intern end override"
                         />
                       </div>
                     </div>
