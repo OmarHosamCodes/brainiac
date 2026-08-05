@@ -1,5 +1,9 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
+import {
+  DEFAULT_WORK_SCHEDULE,
+  startOfWeekUtc as startOfWeekUtcShared,
+} from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 
 import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
 import type { AgencyFilterOptionGroup } from "@/features/shared/filters/agency-multi-select-filter";
@@ -24,13 +28,11 @@ import {
   resolveDefaultTenureMonthIndexes,
 } from "@/features/resourcing/tenure-utils";
 
-export function startOfWeekUtc(): Date {
-  const now = new Date();
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const day = date.getUTCDay();
-  const diff = (day + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - diff);
-  return date;
+export function startOfWeekUtc(
+  weekStartsOn: number = DEFAULT_WORK_SCHEDULE.weekStartsOn,
+  now = new Date(),
+): Date {
+  return startOfWeekUtcShared(now, weekStartsOn);
 }
 
 export function toDateInputValue(date: Date): string {
@@ -128,6 +130,7 @@ export function resolveAgencyRangeFromPreset(
   tenurePolicy: Parameters<typeof getCurrentTenurePeriodRange>[0],
   now: Date,
   tenureMonthIndexes: number[] = [],
+  weekStartsOn: number = DEFAULT_WORK_SCHEDULE.weekStartsOn,
 ): { from: string; to: string } {
   const endIso = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
@@ -152,7 +155,7 @@ export function resolveAgencyRangeFromPreset(
     case "today":
       return { from: startOfTodayIso, to: endIso };
     case "week":
-      return { from: startOfWeekUtc().toISOString(), to: endIso };
+      return { from: startOfWeekUtc(weekStartsOn, now).toISOString(), to: endIso };
     case "month":
       return {
         from: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
@@ -214,6 +217,7 @@ export function useAgencyTimeRangeFilters({
     enabled: Boolean(teamId),
   });
   const tenurePolicy = tenurePolicyQuery.data?.policy ?? null;
+  const weekStartsOn = tenurePolicy?.weekStartsOn ?? DEFAULT_WORK_SCHEDULE.weekStartsOn;
   const defaultRangePreset = useMemo(
     () => resolveDefaultDashboardRangePreset(tenurePolicy),
     [tenurePolicy],
@@ -230,7 +234,7 @@ export function useAgencyTimeRangeFilters({
   const [appliedRangePreset, setAppliedRangePreset] = useState<RangePreset | null>(null);
   const effectiveAppliedRangePreset = appliedRangePreset ?? defaultRangePreset;
   const [appliedCustomFromDate, setAppliedCustomFromDate] = useState(
-    toDateInputValue(startOfWeekUtc()),
+    toDateInputValue(startOfWeekUtc(weekStartsOn, now)),
   );
   const [appliedCustomToDate, setAppliedCustomToDate] = useState(toDateInputValue(now));
   const [appliedClientIds, setAppliedClientIds] = useState<string[]>([]);
@@ -249,7 +253,7 @@ export function useAgencyTimeRangeFilters({
   const [draftRangePreset, setDraftRangePreset] = useState<RangePreset | null>(null);
   const effectiveDraftRangePreset = draftRangePreset ?? defaultRangePreset;
   const [draftCustomFromDate, setDraftCustomFromDate] = useState(
-    toDateInputValue(startOfWeekUtc()),
+    toDateInputValue(startOfWeekUtc(weekStartsOn, now)),
   );
   const [draftCustomToDate, setDraftCustomToDate] = useState(toDateInputValue(now));
   const [draftClientIds, setDraftClientIds] = useState<string[]>([]);
@@ -299,6 +303,7 @@ export function useAgencyTimeRangeFilters({
         tenurePolicy,
         now,
         effectiveAppliedTenureMonthIndexes,
+        weekStartsOn,
       ),
     [
       appliedCustomFromDate,
@@ -307,6 +312,7 @@ export function useAgencyTimeRangeFilters({
       effectiveAppliedRangePreset,
       now,
       tenurePolicy,
+      weekStartsOn,
     ],
   );
 
@@ -434,6 +440,7 @@ export function useAgencyTimeRangeFilters({
         tenurePolicy,
         now,
         tenureMonthIndexes,
+        weekStartsOn,
       ),
     };
   }
