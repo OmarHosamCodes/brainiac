@@ -6,6 +6,7 @@ export const notificationTypeSchema = z.enum([
   "journey.milestone",
   "timer.activity",
   "team.digest",
+  "member.alert",
 ]);
 
 export const notificationPayloadSchema = z.object({
@@ -22,6 +23,10 @@ export const notificationPayloadSchema = z.object({
   digestHoursSeconds: z.number().int().nonnegative().optional(),
   digestTasksCompleted: z.number().int().nonnegative().optional(),
   digestDate: z.string().optional(),
+  subjectUserId: z.string().min(1).optional(),
+  alertId: z.string().min(1).optional(),
+  alertTitle: z.string().min(1).optional(),
+  notePreview: z.string().optional(),
 });
 
 export const notificationRecordSchema = z.object({

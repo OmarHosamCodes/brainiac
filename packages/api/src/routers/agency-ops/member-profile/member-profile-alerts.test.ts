@@ -1,0 +1,91 @@
+import { describe, expect, test } from "bun:test";
+
+import { notificationTypeSchema } from "../../../schemas/notifications";
+import {
+  abnormalDayThresholdHours,
+  detectAbnormalDays,
+  detectMonthPace,
+  detectQuarterPace,
+  detectSystemAlerts,
+  detectWasteSpike,
+} from "./member-profile-alerts";
+
+const schedule = { requiredDailyHours: 8, weekStartsOn: 1, weekendDurationDays: 2 };
+const calendar = { fiscalYearStartMonth: 1, fiscalYearStartDay: 1 };
+
+describe("member-profile-alerts detectors", () => {
+  test("member.alert is a registered notification type", () => {
+    expect(notificationTypeSchema.safeParse("member.alert").success).toBe(true);
+  });
+
+  test("abnormal day threshold is max(1.5x, +4)", () => {
+    expect(abnormalDayThresholdHours(8)).toBe(12);
+    expect(abnormalDayThresholdHours(4)).toBe(8);
+  });
+
+  test("detectAbnormalDays flags days over threshold", () => {
+    const alerts = detectAbnormalDays({
+      todayKey: "2026-08-05",
+      requiredDailyHours: 8,
+      days: [
+        { dateKey: "2026-08-04", totalSeconds: 13 * 3600, wasteSeconds: 0 },
+        { dateKey: "2026-08-03", totalSeconds: 8 * 3600, wasteSeconds: 0 },
+      ],
+    });
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]?.fingerprint).toBe("abnormal_day:2026-08-04");
+  });
+
+  test("detectMonthPace fires when projected under 85% after midpoint", () => {
+    const days = [
+      { dateKey: "2026-08-03", totalSeconds: 3600, wasteSeconds: 0 },
+      { dateKey: "2026-08-10", totalSeconds: 3600, wasteSeconds: 0 },
+    ];
+    const alert = detectMonthPace({ days, schedule, todayKey: "2026-08-20" });
+    expect(alert?.kind).toBe("month_pace");
+    expect(alert?.fingerprint).toBe("month_pace:2026-08");
+  });
+
+  test("detectMonthPace skips early in month", () => {
+    const alert = detectMonthPace({
+      days: [{ dateKey: "2026-08-03", totalSeconds: 0, wasteSeconds: 0 }],
+      schedule,
+      todayKey: "2026-08-03",
+    });
+    expect(alert).toBeNull();
+  });
+
+  test("detectQuarterPace fires when projected under minimum", () => {
+    const days = [{ dateKey: "2026-07-15", totalSeconds: 10 * 3600, wasteSeconds: 0 }];
+    const alert = detectQuarterPace({
+      days,
+      schedule,
+      calendar,
+      quarterlyMinHours: 525,
+      todayKey: "2026-08-20",
+    });
+    expect(alert?.kind).toBe("quarter_pace");
+    expect(alert?.fingerprint).toContain("quarter_pace:2026-Q3");
+  });
+
+  test("detectWasteSpike fires above 20%", () => {
+    const alert = detectWasteSpike({
+      todayKey: "2026-08-20",
+      schedule,
+      days: [{ dateKey: "2026-08-10", totalSeconds: 10_000, wasteSeconds: 3_000 }],
+    });
+    expect(alert?.kind).toBe("waste_spike");
+  });
+
+  test("removed fingerprint suppresses system alerts", () => {
+    const alerts = detectSystemAlerts({
+      todayKey: "2026-08-05",
+      schedule,
+      calendar,
+      quarterlyMinHours: 525,
+      suppressedFingerprints: new Set(["abnormal_day:2026-08-04"]),
+      days: [{ dateKey: "2026-08-04", totalSeconds: 13 * 3600, wasteSeconds: 0 }],
+    });
+    expect(alerts.every((a) => a.fingerprint !== "abnormal_day:2026-08-04")).toBe(true);
+  });
+});

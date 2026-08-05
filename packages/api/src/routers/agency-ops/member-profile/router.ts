@@ -3,6 +3,14 @@ import { z } from "zod";
 import { protectedProProcedure } from "../../../procedures";
 import { teamScopedInputSchema } from "../shared/schemas";
 import {
+  createMemberProfileAlert,
+  listMemberProfileAlerts,
+  removeMemberProfileAlert,
+  sendMemberProfileAlert,
+  setMemberProfileAlertNote,
+  snoozeMemberProfileAlert,
+} from "./member-profile-alert-service";
+import {
   createMemberLeave,
   createMemberReview,
   deleteMemberLeave,
@@ -17,6 +25,7 @@ import {
   memberHrProfileSchema,
   memberLeaveSchema,
   memberLeaveTypeSchema,
+  memberProfileAlertSchema,
   memberProfileSchema,
   memberReviewSchema,
   memberWorkModelSchema,
@@ -126,6 +135,93 @@ export const memberProfileRouter = {
           return z
             .object({ id: z.string().min(1) })
             .parse(await deleteMemberReview(context.session.user.id, input));
+        }),
+    },
+    alerts: {
+      list: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            userId: z.string().min(1),
+            utcOffsetMinutes: z
+              .number()
+              .int()
+              .min(-14 * 60)
+              .max(14 * 60)
+              .optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({
+              items: z.array(memberProfileAlertSchema),
+              canManageAlerts: z.boolean(),
+            })
+            .parse(await listMemberProfileAlerts(context.session.user.id, input));
+        }),
+      create: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            userId: z.string().min(1),
+            title: z.string().min(1).max(200),
+            body: z.string().max(1_000).optional(),
+            note: z.string().max(2_000).nullable().optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ alert: memberProfileAlertSchema })
+            .parse(await createMemberProfileAlert(context.session.user.id, input));
+        }),
+      setNote: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            userId: z.string().min(1),
+            alertId: z.string().min(1),
+            note: z.string().max(2_000),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ alert: memberProfileAlertSchema })
+            .parse(await setMemberProfileAlertNote(context.session.user.id, input));
+        }),
+      send: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            userId: z.string().min(1),
+            alertId: z.string().min(1),
+            note: z.string().max(2_000).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ alert: memberProfileAlertSchema })
+            .parse(await sendMemberProfileAlert(context.session.user.id, input));
+        }),
+      remove: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            userId: z.string().min(1),
+            alertId: z.string().min(1),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ id: z.string().min(1) })
+            .parse(await removeMemberProfileAlert(context.session.user.id, input));
+        }),
+      snooze: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            userId: z.string().min(1),
+            alertId: z.string().min(1),
+            snoozedUntil: z.string().datetime().optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ alert: memberProfileAlertSchema })
+            .parse(await snoozeMemberProfileAlert(context.session.user.id, input));
         }),
     },
   },

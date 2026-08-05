@@ -179,6 +179,7 @@ export const calendarMonthSchema = z.object({
   year: z.number().int(),
   month: z.number().int().min(1).max(12),
   label: z.string().min(1),
+  weekdayLabels: z.array(z.string().min(1)).length(7),
   days: z.array(calendarMonthDaySchema),
 });
 
@@ -211,4 +212,42 @@ export const memberProfileSchema = z.object({
   leaveBalances: leaveBalancesSchema,
   weekHours: z.array(weekHourDaySchema),
   calendarMonth: calendarMonthSchema,
+});
+
+export const memberProfileAlertKindSchema = z.enum([
+  "abnormal_day",
+  "month_pace",
+  "quarter_pace",
+  "waste_spike",
+  "custom",
+]);
+
+export const memberProfileAlertContextSchema = z.object({
+  dateKey: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  hours: z.number().optional(),
+  requiredHours: z.number().optional(),
+  loggedHours: z.number().optional(),
+  projectedHours: z.number().optional(),
+  wasteRatio: z.number().optional(),
+  periodKey: z.string().optional(),
+  defaultSnoozeUntil: z.string().datetime().optional(),
+});
+
+export const memberProfileAlertSchema = z.object({
+  id: z.string().min(1),
+  kind: memberProfileAlertKindSchema,
+  source: z.enum(["system", "custom"]),
+  status: z.enum(["open", "snoozed", "removed"]),
+  fingerprint: z.string().min(1),
+  title: z.string().min(1),
+  body: z.string().min(1),
+  note: z.string().nullable(),
+  context: memberProfileAlertContextSchema,
+  sentAt: z.string().datetime().nullable(),
+  snoozedUntil: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  ephemeral: z.boolean(),
 });

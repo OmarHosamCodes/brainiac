@@ -51,6 +51,14 @@ export function notificationPushCopy(notification: NotificationRecord) {
         url: buildNotificationUrl(notification),
       };
     }
+    case "member.alert": {
+      const note = payload.notePreview?.trim();
+      return {
+        title: payload.alertTitle ?? "Profile alert",
+        body: note ? `${actor}: ${note}` : `${actor} sent you a profile alert to review`,
+        url: buildNotificationUrl(notification),
+      };
+    }
     default: {
       const _exhaustive: never = notification.type;
       return _exhaustive;
@@ -77,6 +85,13 @@ export function buildNotificationUrl(notification: NotificationRecord) {
       break;
     case "team.digest":
       params.set("section", "reports");
+      break;
+    case "member.alert":
+      if (payload.subjectUserId) {
+        return `/agency/members/${encodeURIComponent(payload.subjectUserId)}`;
+      }
+      params.set("section", "management");
+      params.set("manage", "tenure");
       break;
     default: {
       const _exhaustive: never = notification.type;

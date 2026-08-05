@@ -21,6 +21,7 @@ export function defaultNotificationChannels(type: NotificationType): {
     case "task.message":
     case "journey.milestone":
     case "team.digest":
+    case "member.alert":
       return { inApp: true, push: true };
     default: {
       const _exhaustive: never = type;

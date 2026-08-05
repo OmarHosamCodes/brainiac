@@ -28,6 +28,7 @@ const NOTIFICATION_TYPES: NotificationType[] = [
   "journey.milestone",
   "timer.activity",
   "team.digest",
+  "member.alert",
 ];
 
 function formatAvatarUrl(image: string | null): string | null {
