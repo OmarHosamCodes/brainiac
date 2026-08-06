@@ -17,6 +17,10 @@ import {
   agencyOpsPayoutRun,
   workspaceTeam,
 } from "@orch/db/schema";
+import {
+  normalizeCurrencyCode,
+  resolveMoneyValue,
+} from "@orch/api/routers/agency-ops/billing/money-currency";
 import { createWorkspaceId } from "@orch/workspace";
 import { eq } from "drizzle-orm";
 
@@ -27,10 +31,6 @@ type CountMap = Record<string, number>;
 
 function bump(map: CountMap, key: string) {
   map[key] = (map[key] ?? 0) + 1;
-}
-
-function normalizeCurrencyCode(code: string): string {
-  return code.trim().toUpperCase();
 }
 
 function dominantCurrency(codes: string[]): string {
@@ -48,41 +48,6 @@ function dominantCurrency(codes: string[]): string {
   }
   return best;
 }
-
-function resolveLocal(input: {
-  sourceAmount: number;
-  sourceCurrency: string;
-  agencyCurrency: string;
-  rate: string;
-}): {
-  sourceAmount: number;
-  sourceCurrency: string;
-  amount: number;
-  fxRate: string;
-  fxAsOf: string;
-} {
-  const sourceCurrency = normalizeCurrencyCode(input.sourceCurrency);
-  const agencyCurrency = normalizeCurrencyCode(input.agencyCurrency);
-  const fxAsOf = new Date().toISOString();
-  if (sourceCurrency === agencyCurrency) {
-    return {
-      sourceAmount: input.sourceAmount,
-      sourceCurrency,
-      amount: input.sourceAmount,
-      fxRate: "1",
-      fxAsOf,
-    };
-  }
-  const multiplier = Number(input.rate);
-  return {
-    sourceAmount: input.sourceAmount,
-    sourceCurrency,
-    amount: Math.round(input.sourceAmount * multiplier),
-    fxRate: input.rate,
-    fxAsOf,
-  };
-}
-
 async function fetchFrankfurterRate(from: string, to: string): Promise<string | null> {
   if (from === to) return "1";
   try {
@@ -154,11 +119,11 @@ async function migrateTeam(teamId: string, teamName: string) {
     const from = normalizeCurrencyCode(sourceCurrency);
     if (from === agencyCurrency) {
       report.identity += 1;
-      return resolveLocal({
+      return resolveMoneyValue({
         sourceAmount,
         sourceCurrency: from,
         agencyCurrency,
-        rate: "1",
+        rates: [],
       });
     }
     const live = await rateFor(from, agencyCurrency);
@@ -167,11 +132,11 @@ async function migrateTeam(teamId: string, teamName: string) {
       return null;
     }
     report.converted += 1;
-    return resolveLocal({
+    return resolveMoneyValue({
       sourceAmount,
       sourceCurrency: from,
       agencyCurrency,
-      rate: live,
+      rates: [{ fromCurrency: from, toCurrency: agencyCurrency, rate: live }],
     });
   }
 
