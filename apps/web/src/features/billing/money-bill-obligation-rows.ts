@@ -1,0 +1,480 @@
+/** Display rows for compose-on-demand: person groups with separate obligation lines. */
+
+import { formatDuration } from "@/lib/utils/format-duration";
+
+import type { MoneyBillsStatusFilter } from "./money-bills-filters";
+import {
+  formatMoneyBillCents,
+  formatMoneyBillPeriod,
+  type MoneyBillAdjustmentRow,
+} from "./money-bills-rows";
+
+export type MoneyObligationClientSource = {
+  kind: "invoice" | "ready";
+  id: string;
+  clientId: string;
+  clientName: string;
+  periodStart: string;
+  periodEnd: string;
+  isCarry: boolean;
+  amountCents: number;
+  receivedCents: number;
+  remainingCents: number;
+  wasteCents: number;
+  durationSeconds: number;
+  number: string | null;
+  currency?: string;
+};
+
+export type MoneyObligationMemberSource = {
+  kind: "payout" | "ready";
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  periodStart: string;
+  periodEnd: string;
+  isCarry: boolean;
+  amountCents: number;
+  paidCents: number;
+  remainingCents: number;
+  wasteCents: number;
+  durationSeconds: number;
+  currency?: string;
+};
+
+export type MoneyPendingAdjustmentSource = {
+  id: string;
+  partyType: "client" | "member";
+  partyId: string;
+  kind: "discount" | "surcharge" | "debt";
+  amountCents: number;
+  note: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+};
+
+export type MoneyBillObligationLine = {
+  id: string;
+  party: "client" | "team";
+  obligationKind: "ready" | "invoice" | "payout";
+  isCarry: boolean;
+  title: string;
+  subtitle: string;
+  statusLabel: string;
+  totalCents: number;
+  receivedCents: number;
+  remainingCents: number;
+  wasteCents: number;
+  openCents: number;
+  currency: string;
+  totalLabel: string;
+  receivedLabel: string;
+  remainingLabel: string;
+  wasteLabel: string;
+  openLabel: string;
+  periodStart: string;
+  periodEnd: string;
+  documentId: string | null;
+  clientId?: string;
+  userId?: string;
+  userAvatar?: string | null;
+};
+
+export type MoneyBillPersonGroup = {
+  kind: "person-group";
+  id: string;
+  party: "client" | "team";
+  title: string;
+  clientId?: string;
+  userId?: string;
+  userAvatar?: string | null;
+  lines: MoneyBillObligationLine[];
+  totalCents: number;
+  receivedCents: number;
+  remainingCents: number;
+  wasteCents: number;
+  openCents: number;
+  currency: string;
+  totalLabel: string;
+  receivedLabel: string;
+  remainingLabel: string;
+  wasteLabel: string;
+  openLabel: string;
+  pendingAdjustmentCents: number;
+};
+
+export type MoneyBillComposeDisplayRow = MoneyBillPersonGroup | MoneyBillAdjustmentRow;
+
+function obligationStatusLabel(line: {
+  obligationKind: "ready" | "invoice" | "payout";
+  remainingCents: number;
+  receivedCents: number;
+  totalCents: number;
+}): string {
+  if (line.obligationKind === "ready") return "Ready";
+  if (line.remainingCents <= 0 && line.receivedCents > 0) return "Paid";
+  if (line.receivedCents > 0 && line.remainingCents > 0) return "Part paid";
+  if (line.remainingCents > 0) return "Outstanding";
+  return "Paid";
+}
+
+function matchesObligationStatus(
+  statusFilter: MoneyBillsStatusFilter | null,
+  line: MoneyBillObligationLine,
+): boolean {
+  if (!statusFilter) return true;
+  switch (statusFilter) {
+    case "outstanding":
+      return line.obligationKind === "ready" || line.statusLabel === "Outstanding";
+    case "partial":
+      return line.statusLabel === "Part paid";
+    case "paid":
+      return line.statusLabel === "Paid";
+    case "refunded":
+      return false;
+    default: {
+      const _exhaustive: never = statusFilter;
+      return _exhaustive;
+    }
+  }
+}
+
+export function moneyBillLineFromClientObligation(
+  source: MoneyObligationClientSource,
+): MoneyBillObligationLine {
+  const currency = source.currency ?? "USD";
+  const totalCents = source.amountCents;
+  const receivedCents = source.receivedCents;
+  const remainingCents = source.remainingCents;
+  const wasteCents = source.wasteCents;
+  const openCents = remainingCents;
+  const obligationKind = source.kind;
+  const statusLabel = obligationStatusLabel({
+    obligationKind,
+    remainingCents,
+    receivedCents,
+    totalCents,
+  });
+  const subtitleParts = [
+    source.isCarry ? "Prior period" : null,
+    formatMoneyBillPeriod(source.periodStart, source.periodEnd),
+    source.number,
+    source.durationSeconds > 0 ? formatDuration(source.durationSeconds, "short") : null,
+  ].filter(Boolean);
+
+  return {
+    id: source.id,
+    party: "client",
+    obligationKind,
+    isCarry: source.isCarry,
+    title: source.clientName,
+    subtitle: subtitleParts.join(" · "),
+    statusLabel,
+    totalCents,
+    receivedCents,
+    remainingCents,
+    wasteCents,
+    openCents,
+    currency,
+    totalLabel: formatMoneyBillCents(totalCents, currency),
+    receivedLabel: formatMoneyBillCents(receivedCents, currency),
+    remainingLabel: formatMoneyBillCents(remainingCents, currency),
+    wasteLabel: formatMoneyBillCents(wasteCents, currency),
+    openLabel: formatMoneyBillCents(openCents, currency),
+    periodStart: source.periodStart,
+    periodEnd: source.periodEnd,
+    documentId: source.kind === "invoice" ? source.id : null,
+    clientId: source.clientId,
+  };
+}
+
+export function moneyBillLineFromMemberObligation(
+  source: MoneyObligationMemberSource,
+): MoneyBillObligationLine {
+  const currency = source.currency ?? "USD";
+  const totalCents = source.amountCents;
+  const receivedCents = source.paidCents;
+  const remainingCents = source.remainingCents;
+  const wasteCents = source.wasteCents;
+  const openCents = remainingCents;
+  const obligationKind = source.kind;
+  const statusLabel = obligationStatusLabel({
+    obligationKind,
+    remainingCents,
+    receivedCents,
+    totalCents,
+  });
+  const subtitleParts = [
+    source.isCarry ? "Prior period" : null,
+    formatMoneyBillPeriod(source.periodStart, source.periodEnd),
+    source.durationSeconds > 0 ? formatDuration(source.durationSeconds, "short") : null,
+  ].filter(Boolean);
+
+  return {
+    id: source.id,
+    party: "team",
+    obligationKind,
+    isCarry: source.isCarry,
+    title: source.userName,
+    subtitle: subtitleParts.join(" · "),
+    statusLabel,
+    totalCents,
+    receivedCents,
+    remainingCents,
+    wasteCents,
+    openCents,
+    currency,
+    totalLabel: formatMoneyBillCents(totalCents, currency),
+    receivedLabel: formatMoneyBillCents(receivedCents, currency),
+    remainingLabel: formatMoneyBillCents(remainingCents, currency),
+    wasteLabel: formatMoneyBillCents(wasteCents, currency),
+    openLabel: formatMoneyBillCents(openCents, currency),
+    periodStart: source.periodStart,
+    periodEnd: source.periodEnd,
+    documentId: source.kind === "payout" ? source.id : null,
+    userId: source.userId,
+    userAvatar: source.userAvatar,
+  };
+}
+
+function sumPendingForParty(
+  pending: MoneyPendingAdjustmentSource[],
+  partyType: "client" | "member",
+  partyId: string,
+): number {
+  let delta = 0;
+  for (const item of pending) {
+    if (item.partyType !== partyType || item.partyId !== partyId) continue;
+    switch (item.kind) {
+      case "discount":
+        delta -= item.amountCents;
+        break;
+      case "surcharge":
+      case "debt":
+        delta += item.amountCents;
+        break;
+      default: {
+        const _exhaustive: never = item.kind;
+        void _exhaustive;
+      }
+    }
+  }
+  return delta;
+}
+
+export function buildMoneyBillPersonGroups(input: {
+  clients: MoneyObligationClientSource[];
+  members: MoneyObligationMemberSource[];
+  adjustments: MoneyBillAdjustmentRow[];
+  pendingAdjustments: MoneyPendingAdjustmentSource[];
+  statusFilter: MoneyBillsStatusFilter | null;
+  includeClients: boolean;
+  includeMembers: boolean;
+  includeAdjustments: boolean;
+}): MoneyBillComposeDisplayRow[] {
+  const rows: MoneyBillComposeDisplayRow[] = [];
+
+  if (input.includeClients) {
+    const byClient = new Map<string, MoneyBillObligationLine[]>();
+    for (const source of input.clients) {
+      const line = moneyBillLineFromClientObligation(source);
+      if (!matchesObligationStatus(input.statusFilter, line)) continue;
+      const list = byClient.get(source.clientId) ?? [];
+      list.push(line);
+      byClient.set(source.clientId, list);
+    }
+    for (const [clientId, lines] of byClient) {
+      if (lines.length === 0) continue;
+      const currency = lines[0]?.currency ?? "USD";
+      const totalCents = lines.reduce((sum, line) => sum + line.totalCents, 0);
+      const receivedCents = lines.reduce((sum, line) => sum + line.receivedCents, 0);
+      const remainingCents = lines.reduce((sum, line) => sum + line.remainingCents, 0);
+      const wasteCents = lines.reduce((sum, line) => sum + line.wasteCents, 0);
+      const openCents = lines.reduce((sum, line) => sum + line.openCents, 0);
+      const pendingAdjustmentCents = sumPendingForParty(
+        input.pendingAdjustments,
+        "client",
+        clientId,
+      );
+      rows.push({
+        kind: "person-group",
+        id: `person-group:client:${clientId}`,
+        party: "client",
+        title: lines[0]?.title ?? clientId,
+        clientId,
+        lines,
+        totalCents,
+        receivedCents,
+        remainingCents,
+        wasteCents,
+        openCents,
+        currency,
+        totalLabel: formatMoneyBillCents(totalCents, currency),
+        receivedLabel: formatMoneyBillCents(receivedCents, currency),
+        remainingLabel: formatMoneyBillCents(remainingCents, currency),
+        wasteLabel: formatMoneyBillCents(wasteCents, currency),
+        openLabel: formatMoneyBillCents(openCents, currency),
+        pendingAdjustmentCents,
+      });
+    }
+  }
+
+  if (input.includeMembers) {
+    const byMember = new Map<string, MoneyBillObligationLine[]>();
+    for (const source of input.members) {
+      const line = moneyBillLineFromMemberObligation(source);
+      if (!matchesObligationStatus(input.statusFilter, line)) continue;
+      const list = byMember.get(source.userId) ?? [];
+      list.push(line);
+      byMember.set(source.userId, list);
+    }
+    for (const [userId, lines] of byMember) {
+      if (lines.length === 0) continue;
+      const currency = lines[0]?.currency ?? "USD";
+      const totalCents = lines.reduce((sum, line) => sum + line.totalCents, 0);
+      const receivedCents = lines.reduce((sum, line) => sum + line.receivedCents, 0);
+      const remainingCents = lines.reduce((sum, line) => sum + line.remainingCents, 0);
+      const wasteCents = lines.reduce((sum, line) => sum + line.wasteCents, 0);
+      const openCents = lines.reduce((sum, line) => sum + line.openCents, 0);
+      const pendingAdjustmentCents = sumPendingForParty(input.pendingAdjustments, "member", userId);
+      rows.push({
+        kind: "person-group",
+        id: `person-group:member:${userId}`,
+        party: "team",
+        title: lines[0]?.title ?? userId,
+        userId,
+        userAvatar: lines[0]?.userAvatar ?? null,
+        lines,
+        totalCents,
+        receivedCents,
+        remainingCents,
+        wasteCents,
+        openCents,
+        currency,
+        totalLabel: formatMoneyBillCents(totalCents, currency),
+        receivedLabel: formatMoneyBillCents(receivedCents, currency),
+        remainingLabel: formatMoneyBillCents(remainingCents, currency),
+        wasteLabel: formatMoneyBillCents(wasteCents, currency),
+        openLabel: formatMoneyBillCents(openCents, currency),
+        pendingAdjustmentCents,
+      });
+    }
+  }
+
+  if (input.includeAdjustments) {
+    rows.push(...input.adjustments);
+  }
+
+  return rows;
+}
+
+export function moneyBillComposeHueId(row: MoneyBillComposeDisplayRow): string | null {
+  switch (row.kind) {
+    case "person-group":
+      return row.clientId ?? row.userId ?? row.id;
+    case "adjustment":
+      return row.id;
+    default: {
+      const _exhaustive: never = row;
+      return _exhaustive;
+    }
+  }
+}
+
+export type MoneyBillComposeSectionId = "clients" | "team" | "adjustments";
+
+export type MoneyBillComposeSection = {
+  id: MoneyBillComposeSectionId;
+  title: string;
+  hint: string;
+  rows: MoneyBillComposeDisplayRow[];
+};
+
+export function groupMoneyBillComposeDisplayRows(
+  rows: MoneyBillComposeDisplayRow[],
+): MoneyBillComposeSection[] {
+  const buckets: Record<MoneyBillComposeSectionId, MoneyBillComposeDisplayRow[]> = {
+    clients: [],
+    team: [],
+    adjustments: [],
+  };
+  for (const row of rows) {
+    switch (row.kind) {
+      case "person-group":
+        if (row.party === "client") buckets.clients.push(row);
+        else buckets.team.push(row);
+        break;
+      case "adjustment":
+        buckets.adjustments.push(row);
+        break;
+      default: {
+        const _exhaustive: never = row;
+        void _exhaustive;
+      }
+    }
+  }
+
+  const sections: MoneyBillComposeSection[] = [];
+  if (buckets.clients.length > 0) {
+    sections.push({
+      id: "clients",
+      title: "Clients",
+      hint: "Open balances and ready work",
+      rows: buckets.clients,
+    });
+  }
+  if (buckets.team.length > 0) {
+    sections.push({
+      id: "team",
+      title: "Team",
+      hint: "Open payouts and ready pay",
+      rows: buckets.team,
+    });
+  }
+  if (buckets.adjustments.length > 0) {
+    sections.push({
+      id: "adjustments",
+      title: "Adjustments",
+      hint: `${buckets.adjustments.length} in this period`,
+      rows: buckets.adjustments,
+    });
+  }
+  return sections;
+}
+
+export function moneyBillComposeListInsight(rows: MoneyBillComposeDisplayRow[]): string | null {
+  const groups = rows.filter((row): row is MoneyBillPersonGroup => row.kind === "person-group");
+  const lines = groups.flatMap((group) => group.lines);
+  const readyCount = lines.filter((line) => line.obligationKind === "ready").length;
+  const priorOpenCount = lines.filter(
+    (line) => line.isCarry && line.openCents > 0 && line.obligationKind !== "ready",
+  ).length;
+  const openGroups = groups.filter((group) => group.openCents > 0).length;
+  const parts: string[] = [];
+  if (openGroups > 0) {
+    parts.push(`${openGroups} account${openGroups === 1 ? "" : "s"} still open`);
+  }
+  if (priorOpenCount > 0) {
+    parts.push(
+      `${priorOpenCount} prior-period balance${priorOpenCount === 1 ? "" : "s"} to settle`,
+    );
+  }
+  if (readyCount > 0) {
+    parts.push(`${readyCount} ready to export`);
+  }
+  if (parts.length === 0) return null;
+  return parts.join(" · ");
+}
+
+export function filterComposeRowsByClientCategory(
+  rows: MoneyBillComposeDisplayRow[],
+  category: "external" | null,
+  clientCategoryById: ReadonlyMap<string, "internal" | "external">,
+): MoneyBillComposeDisplayRow[] {
+  if (!category) return rows;
+  return rows.filter((row) => {
+    if (row.kind !== "person-group" || row.party !== "client" || !row.clientId) return true;
+    return (clientCategoryById.get(row.clientId) ?? "external") === category;
+  });
+}

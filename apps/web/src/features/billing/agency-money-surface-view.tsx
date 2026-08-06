@@ -4,6 +4,7 @@ import {
   Calculator,
   CalendarClock,
   ChevronRight,
+  FileText,
   History,
   List,
   Lock,
@@ -11,6 +12,7 @@ import {
   Receipt,
   Search,
   Settings,
+  SlidersHorizontal,
   Users,
   X,
 } from "lucide-react";
@@ -49,7 +51,7 @@ import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Skeleton } from "@/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Textarea } from "@/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -63,12 +65,17 @@ import { type MoneyExpenseKind, type MoneyExpensePeriod } from "./money-expense-
 import { MoneyPayoutRunView } from "./money-payout-run-view";
 import { type MoneyBillsPartyFilter, type MoneyBillsStatusFilter } from "./money-bills-filters";
 import {
-  groupMoneyBillDisplayRows,
-  moneyBillDisplayHueId,
-  moneyBillDisplayListInsight,
-  type MoneyBillDisplayRow,
-} from "./money-bill-merged-rows";
-import { moneyBillInitials } from "./money-bills-rows";
+  groupMoneyBillComposeDisplayRows,
+  moneyBillComposeHueId,
+  moneyBillComposeListInsight,
+  type MoneyBillObligationLine,
+  type MoneyBillPersonGroup,
+} from "./money-bill-obligation-rows";
+import {
+  formatMoneyBillCents,
+  moneyBillInitials,
+  type MoneyBillAdjustmentRow,
+} from "./money-bills-rows";
 import {
   type MoneyStatsMetricFixture,
   type MoneyStatsMetricKind,
@@ -709,36 +716,23 @@ function mergedBillStatusChipClass(statusLabel: string): string {
   }
 }
 
-function billDocumentActionId(row: MoneyBillDisplayRow): string | null {
-  switch (row.kind) {
-    case "merged-client":
-      return row.primaryInvoiceId;
-    case "merged-member":
-      return row.primaryPayoutId;
-    case "adjustment":
-      return row.id;
-    default: {
-      const _exhaustive: never = row;
-      return _exhaustive;
-    }
-  }
-}
-
-function BillMergedMetricCell({
+function BillMetricCell({
   label,
   value,
   valueClassName,
+  align = "start",
 }: {
   label: string;
   value: string;
   valueClassName?: string;
+  align?: "start" | "end";
 }) {
   return (
-    <div className="min-w-0 px-1.5 py-2 sm:px-3">
+    <div className={cn("min-w-0 px-1.5 py-2 sm:px-3", align === "end" && "text-end")}>
       <div className="text-[0.6875rem] font-medium text-muted">{label}</div>
       <div
         className={cn(
-          "mt-1 truncate font-mono text-xs font-semibold tabular-nums text-highlighted",
+          "mt-1 truncate font-mono text-xs font-medium tabular-nums text-highlighted",
           valueClassName,
         )}
       >
@@ -748,239 +742,370 @@ function BillMergedMetricCell({
   );
 }
 
-function BillMergedMetricGrid({
-  row,
+function BillMetricGrid({
+  totalLabel,
+  receivedLabel,
+  remainingLabel,
+  wasteLabel,
+  wasteCents,
+  remainingCents = 0,
+  receivedTitle = "Received",
+  ariaLabel,
+  compact = false,
 }: {
-  row: Extract<MoneyBillDisplayRow, { kind: "merged-client" | "merged-member" }>;
+  totalLabel: string;
+  receivedLabel: string;
+  remainingLabel: string;
+  wasteLabel: string;
+  wasteCents: number;
+  remainingCents?: number;
+  receivedTitle?: string;
+  ariaLabel: string;
+  compact?: boolean;
 }) {
-  const receivedTitle = row.kind === "merged-member" ? row.paidTitle : "Received";
-  const showWaste = row.wasteCents > 0;
+  const showWaste = wasteCents > 0;
+  const remainingUrgent = remainingCents > 0;
   return (
     <div
-      className="grid min-w-0 grid-cols-4 divide-x divide-border overflow-hidden rounded-lg border border-default bg-elevated/30"
-      aria-label={`${row.title} money breakdown`}
+      className={cn(
+        "grid min-w-0 grid-cols-4 divide-x divide-border overflow-hidden rounded-lg border border-default bg-elevated/30",
+        compact && "bg-transparent",
+      )}
+      aria-label={ariaLabel}
     >
-      <BillMergedMetricCell label="Total" value={row.totalLabel} />
-      <BillMergedMetricCell
-        label={receivedTitle}
-        value={row.receivedLabel}
-        valueClassName="text-success"
-      />
-      <BillMergedMetricCell
+      <BillMetricCell label="Total" value={totalLabel} align="end" />
+      <BillMetricCell label={receivedTitle} value={receivedLabel} align="end" />
+      <BillMetricCell
         label="Remaining"
-        value={row.remainingLabel}
-        valueClassName="text-warning"
+        value={remainingLabel}
+        align="end"
+        valueClassName={remainingUrgent ? "text-warning" : "text-muted"}
       />
-      <BillMergedMetricCell
+      <BillMetricCell
         label="Waste"
-        value={showWaste ? row.wasteLabel : "—"}
+        value={showWaste ? wasteLabel : "—"}
+        align="end"
         valueClassName={showWaste ? "text-destructive/80" : "text-muted"}
       />
     </div>
   );
 }
 
-function BillListRow({
+function BillIconAction({
+  label,
+  onClick,
+  disabled,
+  children,
+  quiet = false,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+  /** Secondary actions: visible on group hover / focus-within. */
+  quiet?: boolean;
+}) {
+  return (
+    <TooltipProvider delayDuration={120}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className={cn(
+              "size-9 rounded-lg text-muted hover:text-highlighted",
+              quiet &&
+                "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:group-hover/line:opacity-100 sm:group-focus-within/line:opacity-100 sm:focus-visible:opacity-100",
+            )}
+            disabled={disabled}
+            onClick={onClick}
+            aria-label={label}
+          >
+            {children}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function BillAdjustmentRow({
   row,
   searchTerm,
   pending,
   isMutationPending,
-  onOpenClient,
-  onOpenMember,
-  onCreateInvoiceForClient,
-  onCreatePayoutForMember,
-  onSend,
   onOpenPayment,
   onMarkPaid,
-  onRefund,
 }: {
-  row: MoneyBillDisplayRow;
+  row: MoneyBillAdjustmentRow;
   searchTerm: string;
   pending: boolean;
   isMutationPending: boolean;
-  onOpenClient: (clientId: string) => void;
-  onOpenMember: (userId: string) => void;
-  onCreateInvoiceForClient: (clientId: string) => void;
-  onCreatePayoutForMember: (userId: string) => void;
-  onSend: (invoiceId: string) => void;
   onOpenPayment: (rowId: string) => void;
   onMarkPaid: (rowId: string) => void;
-  onRefund: (invoiceId: string) => void;
 }) {
-  const hueId = moneyBillDisplayHueId(row);
-  const documentId = billDocumentActionId(row);
-  const isMerged = row.kind === "merged-client" || row.kind === "merged-member";
-  const showMemberAvatar = row.kind === "merged-member";
-
-  function onOpenParty() {
-    switch (row.kind) {
-      case "merged-client":
-        onOpenClient(row.clientId);
-        break;
-      case "merged-member":
-        onOpenMember(row.userId);
-        break;
-      case "adjustment":
-        break;
-      default: {
-        const _exhaustive: never = row;
-        void _exhaustive;
-      }
-    }
-  }
-
   return (
-    <li
-      className={cn(
-        "group grid items-center gap-3 px-3 py-3 transition-colors hover:bg-elevated/40",
-        isMerged
-          ? "grid-cols-1 md:grid-cols-[minmax(11rem,0.85fr)_minmax(0,1.8fr)_minmax(7rem,9rem)]"
-          : "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto]",
-      )}
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        {showMemberAvatar ? (
-          <AgencyMemberAvatar
-            name={row.userName}
-            userId={row.userId}
-            avatarUrl={row.userAvatar}
-            size="md"
-            className="size-9"
-          />
-        ) : hueId ? (
-          <BillClientMark title={row.title} hueId={hueId} />
-        ) : null}
-
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            {row.kind === "adjustment" ? (
-              <span className="min-w-0 truncate text-sm font-medium text-highlighted">
-                <AgencySearchHighlight text={row.title} query={searchTerm} />
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={onOpenParty}
-                className={cn(
-                  "min-w-0 truncate text-left text-sm font-medium text-highlighted hover:underline",
-                  agencyFocusRingClass,
-                  "rounded-sm",
-                )}
-              >
-                <AgencySearchHighlight text={row.title} query={searchTerm} />
-              </button>
+    <li className="group grid items-center gap-3 px-3 py-3 transition-colors hover:bg-elevated/40 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="min-w-0 truncate text-sm font-medium text-highlighted">
+            <AgencySearchHighlight text={row.title} query={searchTerm} />
+          </span>
+          <span
+            className={cn(
+              "inline-flex h-5 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
+              mergedBillStatusChipClass(row.statusLabel),
             )}
-            <span
-              className={cn(
-                "inline-flex h-5 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
-                mergedBillStatusChipClass(row.statusLabel),
-              )}
-            >
-              {row.statusLabel}
-            </span>
-          </div>
-          <p className="mt-0.5 truncate text-xs text-muted">
-            <AgencySearchHighlight text={row.subtitle} query={searchTerm} />
-            {row.kind === "adjustment" && row.paidCents > 0 && row.remainingCents > 0 ? (
-              <>
-                <span aria-hidden> · </span>
-                {row.paidLabel} paid · {row.remainingLabel} left
-              </>
-            ) : null}
-          </p>
+          >
+            {row.statusLabel}
+          </span>
         </div>
+        <p className="mt-0.5 truncate text-xs text-muted">
+          <AgencySearchHighlight text={row.subtitle} query={searchTerm} />
+          {row.paidCents > 0 && row.remainingCents > 0 ? (
+            <>
+              <span aria-hidden> · </span>
+              {row.paidLabel} paid · {row.remainingLabel} left
+            </>
+          ) : null}
+        </p>
       </div>
-
-      {isMerged ? <BillMergedMetricGrid row={row} /> : null}
-
-      <div
-        className={cn(
-          "flex shrink-0 flex-col gap-1.5 sm:items-end",
-          !isMerged && "sm:flex-row sm:items-center sm:gap-3",
-        )}
-      >
-        <span
-          className={cn(
-            "font-mono text-sm font-semibold tabular-nums",
-            row.kind === "adjustment" ? "text-muted" : "text-highlighted",
-          )}
-        >
-          {isMerged ? `${row.openLabel} open` : row.metaLabel}
+      <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+        <span className="font-mono text-sm font-semibold tabular-nums text-muted">
+          {row.metaLabel}
         </span>
-
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
-          {row.canCreateInvoice && row.kind === "merged-client" ? (
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 min-w-11 rounded-lg px-3"
-              disabled={isMutationPending}
-              onClick={() => onCreateInvoiceForClient(row.clientId)}
-            >
-              Create invoice
-            </Button>
-          ) : null}
-          {row.canCreatePayout && row.kind === "merged-member" ? (
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 min-w-11 rounded-lg px-3"
-              disabled={pending || isMutationPending}
-              onClick={() => void onCreatePayoutForMember(row.userId)}
-            >
-              Create payout
-            </Button>
-          ) : null}
-          {row.canSend && documentId ? (
+          {row.canRecordPayment ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
               className="h-8 min-w-11 rounded-lg"
               disabled={pending || isMutationPending}
-              onClick={() => void onSend(documentId)}
-            >
-              Send
-            </Button>
-          ) : null}
-          {row.canRecordPayment && documentId ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-8 min-w-11 rounded-lg"
-              disabled={pending || isMutationPending}
-              onClick={() => onOpenPayment(documentId)}
+              onClick={() => onOpenPayment(row.id)}
             >
               Record payment
             </Button>
           ) : null}
-          {row.canMarkPaid && documentId ? (
+          {row.canMarkPaid ? (
             <Button
               type="button"
               size="sm"
               variant="outline"
               className="h-8 min-w-11 rounded-lg"
               disabled={pending || isMutationPending}
-              onClick={() => void onMarkPaid(documentId)}
+              onClick={() => void onMarkPaid(row.id)}
             >
               Mark paid
             </Button>
           ) : null}
-          {row.canRefund && documentId ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-8 min-w-11 rounded-lg text-muted opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-              disabled={pending || isMutationPending}
-              onClick={() => void onRefund(documentId)}
-            >
-              Refund
-            </Button>
-          ) : null}
         </div>
       </div>
+    </li>
+  );
+}
+
+function BillObligationLineRow({
+  group,
+  line,
+  searchTerm,
+  isMutationPending,
+  onOpenPreviewLine,
+  onOpenAdjustLine,
+}: {
+  group: MoneyBillPersonGroup;
+  line: MoneyBillObligationLine;
+  searchTerm: string;
+  isMutationPending: boolean;
+  onOpenPreviewLine: (group: MoneyBillPersonGroup, line: MoneyBillObligationLine) => void;
+  onOpenAdjustLine: (group: MoneyBillPersonGroup, line: MoneyBillObligationLine) => void;
+}) {
+  const receivedTitle = group.party === "team" ? "Paid" : "Received";
+  return (
+    <li
+      className={cn(
+        "group/line grid items-center gap-3 px-3 py-2.5 transition-colors hover:bg-elevated/30 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto]",
+        line.isCarry && "bg-elevated/20",
+      )}
+    >
+      <div className="flex min-w-0 items-start gap-2">
+        {line.isCarry ? (
+          <span className="mt-0.5 shrink-0 rounded-md bg-elevated px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted">
+            Prior
+          </span>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="min-w-0 truncate text-sm font-medium text-highlighted">
+              <AgencySearchHighlight text={line.subtitle} query={searchTerm} />
+            </span>
+            <span
+              className={cn(
+                "inline-flex h-5 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
+                mergedBillStatusChipClass(line.statusLabel),
+              )}
+            >
+              {line.statusLabel}
+            </span>
+          </div>
+        </div>
+      </div>
+      <BillMetricGrid
+        totalLabel={line.totalLabel}
+        receivedLabel={line.receivedLabel}
+        remainingLabel={line.remainingLabel}
+        wasteLabel={line.wasteLabel}
+        wasteCents={line.wasteCents}
+        remainingCents={line.remainingCents}
+        receivedTitle={receivedTitle}
+        ariaLabel={`${line.subtitle} money breakdown`}
+        compact
+      />
+      <div className="flex shrink-0 items-center justify-end gap-0.5">
+        <BillIconAction
+          label={group.party === "team" ? "Preview payslip" : "Preview invoice"}
+          disabled={isMutationPending}
+          quiet
+          onClick={() => onOpenPreviewLine(group, line)}
+        >
+          <FileText className="size-4" aria-hidden />
+        </BillIconAction>
+        <BillIconAction
+          label="Adjust"
+          disabled={isMutationPending}
+          quiet
+          onClick={() => onOpenAdjustLine(group, line)}
+        >
+          <SlidersHorizontal className="size-4" aria-hidden />
+        </BillIconAction>
+      </div>
+    </li>
+  );
+}
+
+function BillPersonGroupCard({
+  group,
+  searchTerm,
+  isMutationPending,
+  onOpenClient,
+  onOpenMember,
+  onOpenPreview,
+  onOpenPreviewLine,
+  onOpenAdjust,
+  onOpenAdjustLine,
+}: {
+  group: MoneyBillPersonGroup;
+  searchTerm: string;
+  isMutationPending: boolean;
+  onOpenClient: (clientId: string) => void;
+  onOpenMember: (userId: string) => void;
+  onOpenPreview: (group: MoneyBillPersonGroup) => void;
+  onOpenPreviewLine: (group: MoneyBillPersonGroup, line: MoneyBillObligationLine) => void;
+  onOpenAdjust: (group: MoneyBillPersonGroup) => void;
+  onOpenAdjustLine: (group: MoneyBillPersonGroup, line: MoneyBillObligationLine) => void;
+}) {
+  const hueId = moneyBillComposeHueId(group);
+  const receivedTitle = group.party === "team" ? "Paid" : "Received";
+  const previewLabel = group.party === "team" ? "Preview payslip" : "Preview invoice";
+  const priorLineCount = group.lines.filter((line) => line.isCarry).length;
+  const pendingAdjLabel =
+    group.pendingAdjustmentCents !== 0
+      ? formatMoneyBillCents(Math.abs(group.pendingAdjustmentCents), group.currency)
+      : null;
+
+  function onOpenParty() {
+    if (group.party === "client" && group.clientId) onOpenClient(group.clientId);
+    else if (group.party === "team" && group.userId) onOpenMember(group.userId);
+  }
+
+  return (
+    <li className="group overflow-hidden">
+      <div className="grid items-center gap-3 border-b border-default bg-default/40 px-3 py-3 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto]">
+        <div className="flex min-w-0 items-center gap-3">
+          {group.party === "team" ? (
+            <AgencyMemberAvatar
+              name={group.title}
+              userId={group.userId ?? group.id}
+              avatarUrl={group.userAvatar}
+              size="md"
+              className="size-9"
+            />
+          ) : hueId ? (
+            <BillClientMark title={group.title} hueId={hueId} />
+          ) : null}
+          <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={onOpenParty}
+              className={cn(
+                "min-w-0 truncate text-left text-sm font-medium text-highlighted hover:underline",
+                agencyFocusRingClass,
+                "rounded-sm",
+              )}
+            >
+              <AgencySearchHighlight text={group.title} query={searchTerm} />
+            </button>
+            <p className="mt-0.5 text-xs text-muted">
+              <span className="font-mono tabular-nums">{group.openLabel}</span> open
+              {priorLineCount > 0 ? (
+                <>
+                  <span aria-hidden> · </span>
+                  {priorLineCount} prior
+                </>
+              ) : null}
+              {pendingAdjLabel ? (
+                <>
+                  <span aria-hidden> · </span>
+                  {group.pendingAdjustmentCents > 0 ? "+" : "−"}
+                  {pendingAdjLabel} pending
+                </>
+              ) : null}
+            </p>
+          </div>
+        </div>
+        <BillMetricGrid
+          totalLabel={group.totalLabel}
+          receivedLabel={group.receivedLabel}
+          remainingLabel={group.remainingLabel}
+          wasteLabel={group.wasteLabel}
+          wasteCents={group.wasteCents}
+          remainingCents={group.remainingCents}
+          receivedTitle={receivedTitle}
+          ariaLabel={`${group.title} money breakdown`}
+        />
+        <div className="flex shrink-0 items-center justify-end gap-0.5">
+          <BillIconAction
+            label={previewLabel}
+            disabled={isMutationPending}
+            onClick={() => onOpenPreview(group)}
+          >
+            <FileText className="size-4" aria-hidden />
+          </BillIconAction>
+          <BillIconAction
+            label="Adjust"
+            disabled={isMutationPending}
+            quiet
+            onClick={() => onOpenAdjust(group)}
+          >
+            <SlidersHorizontal className="size-4" aria-hidden />
+          </BillIconAction>
+        </div>
+      </div>
+      <ul className="divide-y divide-border">
+        {group.lines.map((line) => (
+          <BillObligationLineRow
+            key={line.id}
+            group={group}
+            line={line}
+            searchTerm={searchTerm}
+            isMutationPending={isMutationPending}
+            onOpenPreviewLine={onOpenPreviewLine}
+            onOpenAdjustLine={onOpenAdjustLine}
+          />
+        ))}
+      </ul>
     </li>
   );
 }
@@ -991,9 +1116,11 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
   const create = bills.create;
   const adjustmentCreate = bills.adjustmentCreate;
   const payment = bills.payment;
+  const preview = bills.preview;
+  const adjust = bills.adjust;
   const showEmpty = !bills.isLoading && !bills.isError && bills.rows.length === 0;
-  const sections = groupMoneyBillDisplayRows(bills.rows);
-  const insight = moneyBillDisplayListInsight(bills.rows);
+  const sections = groupMoneyBillComposeDisplayRows(bills.rows);
+  const insight = moneyBillComposeListInsight(bills.rows);
   const showSectionHeaders = sections.length > 1;
 
   return (
@@ -1221,36 +1348,45 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                     <span className="text-xs text-muted">{section.hint}</span>
                   </div>
                 ) : null}
-                <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
-                  {section.rows.map((row) => {
-                    const documentId =
-                      row.kind === "merged-client"
-                        ? row.primaryInvoiceId
-                        : row.kind === "merged-member"
-                          ? row.primaryPayoutId
-                          : row.id;
-                    const pending =
-                      bills.pendingActionInvoiceId === row.id ||
-                      (documentId !== null && bills.pendingActionInvoiceId === documentId);
-                    return (
-                      <BillListRow
-                        key={row.id}
-                        row={row}
-                        searchTerm={bills.searchTerm}
-                        pending={pending}
-                        isMutationPending={bills.isMutationPending}
-                        onOpenClient={bills.onOpenClient}
-                        onOpenMember={bills.onOpenMember}
-                        onCreateInvoiceForClient={bills.onCreateInvoiceForClient}
-                        onCreatePayoutForMember={bills.onCreatePayoutForMember}
-                        onSend={bills.onSend}
-                        onOpenPayment={bills.onOpenPayment}
-                        onMarkPaid={bills.onMarkPaid}
-                        onRefund={bills.onRefund}
-                      />
-                    );
-                  })}
-                </ul>
+                {section.id === "adjustments" ? (
+                  <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
+                    {section.rows.map((row) => {
+                      if (row.kind !== "adjustment") return null;
+                      const pending = bills.pendingActionInvoiceId === row.id;
+                      return (
+                        <BillAdjustmentRow
+                          key={row.id}
+                          row={row}
+                          searchTerm={bills.searchTerm}
+                          pending={pending}
+                          isMutationPending={bills.isMutationPending}
+                          onOpenPayment={bills.onOpenPayment}
+                          onMarkPaid={bills.onMarkPaid}
+                        />
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
+                    {section.rows.map((row) => {
+                      if (row.kind !== "person-group") return null;
+                      return (
+                        <BillPersonGroupCard
+                          key={row.id}
+                          group={row}
+                          searchTerm={bills.searchTerm}
+                          isMutationPending={bills.isMutationPending}
+                          onOpenClient={bills.onOpenClient}
+                          onOpenMember={bills.onOpenMember}
+                          onOpenPreview={bills.onOpenPreview}
+                          onOpenPreviewLine={bills.onOpenPreviewLine}
+                          onOpenAdjust={bills.onOpenAdjust}
+                          onOpenAdjustLine={bills.onOpenAdjustLine}
+                        />
+                      );
+                    })}
+                  </ul>
+                )}
               </section>
             ))}
           </div>
@@ -1274,6 +1410,235 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
           </>
         ) : null}
       </div>
+
+      <Dialog open={preview.open} onOpenChange={preview.onOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <p className="text-[0.6875rem] font-medium tracking-wide text-muted uppercase">
+              Preview only · not saved
+              {preview.periodLabel ? ` · ${preview.periodLabel}` : null}
+            </p>
+            <DialogTitle>{preview.title}</DialogTitle>
+            <DialogDescription>
+              Choose lines for {preview.partyTitle}, then export to create the document.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="rounded-xl border border-default bg-elevated/30 px-3 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium text-highlighted">Include lines</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs"
+                  onClick={preview.onSelectAllObligations}
+                >
+                  {preview.allSelected ? "Clear all" : "Select all"}
+                </Button>
+              </div>
+              <ul className="mt-2 divide-y divide-border">
+                {preview.lines.map((line) => (
+                  <li key={line.id} className="flex items-center gap-3 py-2">
+                    <Checkbox
+                      checked={line.checked}
+                      onCheckedChange={() => preview.onToggleObligationSelect(line.id)}
+                      aria-label={`Include ${line.subtitle}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-highlighted">{line.subtitle}</p>
+                      <p className="text-xs text-muted">
+                        {line.isCarry ? "Prior · " : null}
+                        {line.statusLabel}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-mono text-xs tabular-nums text-highlighted">
+                      {line.amountLabel}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-xl border border-default px-3 py-3">
+              <p className="text-sm font-medium text-highlighted">Export shape</p>
+              <p className="mt-1 text-xs text-muted">
+                How selected periods become persisted documents.
+              </p>
+              <Tabs
+                value={preview.exportMode}
+                onValueChange={(value) => preview.onExportModeChange(value as "combine" | "split")}
+                className="mt-3"
+              >
+                <TabsList className="h-9 w-full">
+                  <TabsTrigger value="combine" className="flex-1">
+                    One document
+                  </TabsTrigger>
+                  <TabsTrigger value="split" className="flex-1">
+                    Split by period
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <div className="rounded-xl border border-default bg-elevated/20 px-3 py-3 text-sm">
+              <div className="flex justify-between gap-2">
+                <span className="text-muted">Selected</span>
+                <span className="font-mono tabular-nums text-highlighted">
+                  {preview.selectedTotalLabel}
+                </span>
+              </div>
+              {preview.pendingAdjustmentCents !== 0 ? (
+                <div className="mt-1 flex justify-between gap-2">
+                  <span className="text-muted">Pending adjustments</span>
+                  <span className="font-mono tabular-nums text-highlighted">
+                    {preview.pendingAdjustmentLabel}
+                  </span>
+                </div>
+              ) : null}
+              <div className="mt-2 flex justify-between gap-2 border-t border-default pt-2 font-medium">
+                <span className="text-highlighted">Due</span>
+                <span className="font-mono tabular-nums text-highlighted">{preview.dueLabel}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={preview.onClose}>
+              Close
+            </Button>
+            <Button
+              type="button"
+              disabled={!preview.canExport || bills.isMutationPending}
+              onClick={preview.onExport}
+            >
+              Export
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={adjust.open} onOpenChange={adjust.onOpenChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Adjust {adjust.partyTitle}</DialogTitle>
+            <DialogDescription>
+              {adjust.lineSubtitle || "Settlement and ledger adjustments"}
+              {adjust.statusLabel ? ` · ${adjust.statusLabel}` : null}
+            </DialogDescription>
+          </DialogHeader>
+          {adjust.isReady ? (
+            <div className="rounded-lg border border-default bg-elevated/40 px-3 py-2 text-xs text-muted">
+              Ready lines create the original-period document first, then record payment.
+            </div>
+          ) : null}
+          <Tabs
+            value={adjust.tab}
+            onValueChange={(value) => adjust.onTabChange(value as typeof adjust.tab)}
+          >
+            <TabsList className="h-9 w-full flex-wrap">
+              <TabsTrigger value="pay" className="flex-1">
+                Pay
+              </TabsTrigger>
+              <TabsTrigger value="partial" className="flex-1">
+                Partial
+              </TabsTrigger>
+              <TabsTrigger value="refund" className="flex-1">
+                Refund
+              </TabsTrigger>
+              <TabsTrigger value="adjustments" className="flex-1">
+                Adjustments
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="pay" className="mt-4 flex flex-col gap-3">
+              <p className="text-sm text-muted">
+                Pay remaining{" "}
+                <span className="font-mono text-highlighted">{adjust.remainingLabel}</span>.
+              </p>
+            </TabsContent>
+            <TabsContent value="partial" className="mt-4 flex flex-col gap-3">
+              <div className={agencyFormFieldClass}>
+                <Label htmlFor="money-adjust-amount" className={agencyFormLabelClass}>
+                  Amount ({adjust.currency})
+                </Label>
+                <Input
+                  id="money-adjust-amount"
+                  inputMode="decimal"
+                  value={adjust.amount}
+                  onChange={(event) => adjust.onAmountChange(event.target.value)}
+                  className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
+                />
+              </div>
+            </TabsContent>
+            <TabsContent value="refund" className="mt-4">
+              <p className="text-sm text-muted">
+                Refund this obligation. This changes its bill status.
+              </p>
+            </TabsContent>
+            <TabsContent value="adjustments" className="mt-4 flex flex-col gap-3">
+              <div className={agencyFormFieldClass}>
+                <Label htmlFor="money-adjust-kind" className={agencyFormLabelClass}>
+                  Kind
+                </Label>
+                <Select
+                  value={adjust.kind}
+                  onValueChange={(value) => adjust.onKindChange(value as typeof adjust.kind)}
+                >
+                  <SelectTrigger
+                    id="money-adjust-kind"
+                    className="h-9 w-full rounded-xl border-default bg-default"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="discount">Discount</SelectItem>
+                    <SelectItem value="surcharge">Surcharge</SelectItem>
+                    <SelectItem value="debt">Debt</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className={agencyFormFieldClass}>
+                <Label htmlFor="money-adjust-adj-amount" className={agencyFormLabelClass}>
+                  Amount ({adjust.currency})
+                </Label>
+                <Input
+                  id="money-adjust-adj-amount"
+                  inputMode="decimal"
+                  value={adjust.amount}
+                  onChange={(event) => adjust.onAmountChange(event.target.value)}
+                  placeholder="0.00"
+                  className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
+                />
+              </div>
+              <div className={agencyFormFieldClass}>
+                <Label htmlFor="money-adjust-note" className={agencyFormLabelClass}>
+                  Note
+                </Label>
+                <Textarea
+                  id="money-adjust-note"
+                  value={adjust.note}
+                  onChange={(event) => adjust.onNoteChange(event.target.value)}
+                  placeholder="Shown on the next export"
+                  className="min-h-20 rounded-xl border-default bg-default text-sm"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => adjust.onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!adjust.canSubmit || bills.isMutationPending}
+              onClick={adjust.onSubmit}
+            >
+              {adjust.tab === "adjustments"
+                ? "Save"
+                : adjust.tab === "refund"
+                  ? "Confirm refund"
+                  : "Record"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={create.open} onOpenChange={create.onOpenChange}>
         <DialogContent className="sm:max-w-md">

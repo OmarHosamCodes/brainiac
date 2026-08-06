@@ -1707,6 +1707,9 @@ function createAgencyOpsActions(
         getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.invoices.periodActivity.key(),
         }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.periodObligations.list.key(),
+        }),
       ]);
 
       callbacks?.onSuccess?.();
@@ -1738,6 +1741,9 @@ function createAgencyOpsActions(
         }),
         getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.invoices.summary.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.periodObligations.list.key(),
         }),
       ]);
 
@@ -1774,6 +1780,9 @@ function createAgencyOpsActions(
         }),
         getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.invoices.summary.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.periodObligations.list.key(),
         }),
       ]);
 
@@ -1820,6 +1829,9 @@ function createAgencyOpsActions(
         }),
         getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.invoices.periodActivity.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.periodObligations.list.key(),
         }),
       ]);
 
@@ -1868,6 +1880,9 @@ function createAgencyOpsActions(
         getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.payouts.getRun.key(),
         }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.periodObligations.list.key(),
+        }),
       ]);
 
       callbacks?.onSuccess?.();
@@ -1898,6 +1913,9 @@ function createAgencyOpsActions(
         getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.payouts.summary.key(),
         }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.periodObligations.list.key(),
+        }),
       ]);
 
       callbacks?.onSuccess?.();
@@ -1927,6 +1945,9 @@ function createAgencyOpsActions(
         }),
         getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.payouts.summary.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.periodObligations.list.key(),
         }),
       ]);
 
