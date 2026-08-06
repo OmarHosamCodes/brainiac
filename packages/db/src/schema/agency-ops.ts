@@ -610,6 +610,48 @@ export const agencyOpsInvoiceLineItem = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Pending Money adjustments (compose-on-demand — apply on next export)
+// ---------------------------------------------------------------------------
+
+export type AgencyOpsMoneyPendingPartyType = "client" | "member";
+export type AgencyOpsMoneyPendingAdjustmentKind = "discount" | "surcharge" | "debt";
+
+export const agencyOpsMoneyPendingAdjustment = pgTable(
+  "agency_ops_money_pending_adjustment",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    partyType: text("party_type").$type<AgencyOpsMoneyPendingPartyType>().notNull(),
+    /** Client id or member user id. */
+    partyId: text("party_id").notNull(),
+    /** Optional obligation period this adjustment scopes to. */
+    periodStart: timestamp("period_start"),
+    periodEnd: timestamp("period_end"),
+    kind: text("kind").$type<AgencyOpsMoneyPendingAdjustmentKind>().notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    note: text("note").notNull().default(""),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_money_pending_adj_team_idx").on(table.teamId),
+    index("agency_ops_money_pending_adj_team_party_idx").on(
+      table.teamId,
+      table.partyType,
+      table.partyId,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Money formula chip tokens (settings + payout run snapshots)
 // ---------------------------------------------------------------------------
 
