@@ -12,6 +12,7 @@ import { ORPCError } from "@orpc/server";
 import { getClientByIdForTeam } from "../shared/lookup-helpers";
 import { type AgencyClientArchiveFilter } from "../shared/report-helpers";
 import { requireTeamMembership } from "../shared/membership";
+import { loadMoneyResolveContext } from "../billing/money-fx-service";
 
 type AgencyClientRecord = {
   id: string;
@@ -335,6 +336,24 @@ export async function createAgencyClient(
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const now = new Date();
+  let billableRateAmount = input.billableRateAmount ?? null;
+  let currency = (input.currency ?? "USD").toUpperCase();
+  let sourceBillableRateAmount: number | null = null;
+  let fxRate = "1";
+  let fxAsOf: Date | null = null;
+
+  if (billableRateAmount != null) {
+    const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+    currency = (input.currency ?? moneyCtx.agencyCurrency).toUpperCase();
+    const money = moneyCtx.resolve(billableRateAmount, currency);
+    await moneyCtx.lock();
+    billableRateAmount = money.amount;
+    sourceBillableRateAmount = money.sourceAmount;
+    currency = money.sourceCurrency;
+    fxRate = money.fxRate;
+    fxAsOf = new Date(money.fxAsOf);
+  }
+
   const [created] = await db
     .insert(agencyOpsClient)
     .values({
@@ -342,8 +361,11 @@ export async function createAgencyClient(
       teamId: input.teamId,
       name: input.name.trim(),
       category: input.category ?? "external",
-      billableRateAmount: input.billableRateAmount ?? null,
-      currency: input.currency ?? "USD",
+      billableRateAmount,
+      currency,
+      sourceBillableRateAmount,
+      fxRate,
+      fxAsOf,
       createdByUserId: actorUserId,
       createdAt: now,
       updatedAt: now,
@@ -373,6 +395,9 @@ export async function updateAgencyClient(
   const [current] = await db
     .select({
       id: agencyOpsClient.id,
+      currency: agencyOpsClient.currency,
+      billableRateAmount: agencyOpsClient.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
     })
     .from(agencyOpsClient)
     .where(and(eq(agencyOpsClient.teamId, input.teamId), eq(agencyOpsClient.id, input.clientId)))
@@ -399,6 +424,9 @@ export async function updateAgencyClient(
     category?: "internal" | "external";
     billableRateAmount?: number | null;
     currency?: string;
+    sourceBillableRateAmount?: number | null;
+    fxRate?: string;
+    fxAsOf?: Date | null;
   } = { updatedAt: now };
 
   if (input.name !== undefined) {
@@ -407,11 +435,34 @@ export async function updateAgencyClient(
   if (input.category !== undefined) {
     patch.category = input.category;
   }
-  if (input.billableRateAmount !== undefined) {
-    patch.billableRateAmount = input.billableRateAmount;
-  }
-  if (input.currency !== undefined) {
-    patch.currency = input.currency;
+  if (input.billableRateAmount !== undefined || input.currency !== undefined) {
+    if (input.billableRateAmount === null) {
+      patch.billableRateAmount = null;
+      patch.sourceBillableRateAmount = null;
+      patch.fxRate = "1";
+      patch.fxAsOf = null;
+      if (input.currency !== undefined) patch.currency = input.currency.toUpperCase();
+    } else {
+      const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+      const sourceCurrency = (
+        input.currency ??
+        current.currency ??
+        moneyCtx.agencyCurrency
+      ).toUpperCase();
+      const sourceAmount =
+        input.billableRateAmount ?? current.sourceBillableRateAmount ?? current.billableRateAmount;
+      if (sourceAmount != null) {
+        const money = moneyCtx.resolve(sourceAmount, sourceCurrency);
+        await moneyCtx.lock();
+        patch.billableRateAmount = money.amount;
+        patch.sourceBillableRateAmount = money.sourceAmount;
+        patch.currency = money.sourceCurrency;
+        patch.fxRate = money.fxRate;
+        patch.fxAsOf = new Date(money.fxAsOf);
+      } else if (input.currency !== undefined) {
+        patch.currency = input.currency.toUpperCase();
+      }
+    }
   }
 
   const [updated] = await db

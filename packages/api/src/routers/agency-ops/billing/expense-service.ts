@@ -17,7 +17,7 @@ import {
   expenseRemainingAmount,
   expenseStatusAfterPaid,
 } from "./expense-helpers";
-import { getAgencyCurrency, resolveMoneyForTeam } from "./money-fx-service";
+import { loadMoneyResolveContext } from "./money-fx-service";
 
 export type AgencyExpenseRecord = {
   id: string;
@@ -141,14 +141,12 @@ export async function createExpense(
   }
 
   const id = createWorkspaceId("agency-expense");
-  const { currency: agencyCurrency } = await getAgencyCurrency(actorUserId, {
-    teamId: input.teamId,
-  });
-  const money = await resolveMoneyForTeam(actorUserId, {
-    teamId: input.teamId,
-    sourceAmount: input.amount,
-    sourceCurrency: (input.currency ?? agencyCurrency).toUpperCase(),
-  });
+  const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+  const money = moneyCtx.resolve(
+    input.amount,
+    (input.currency ?? moneyCtx.agencyCurrency).toUpperCase(),
+  );
+  await moneyCtx.lock();
 
   const [row] = await db
     .insert(agencyOpsExpense)
@@ -209,7 +207,26 @@ export async function updateExpense(
     throw new ORPCError("BAD_REQUEST", { message: "Name is required." });
   }
 
-  const amount = input.amount ?? existing.amount;
+  const sourceCurrency = (
+    input.currency !== undefined ? input.currency : existing.currency
+  ).toUpperCase();
+  const sourceAmount = input.amount ?? existing.sourceAmount ?? existing.amount;
+  const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+  const money =
+    input.amount !== undefined || input.currency !== undefined
+      ? moneyCtx.resolve(sourceAmount, sourceCurrency)
+      : {
+          amount: existing.amount,
+          sourceAmount: existing.sourceAmount ?? existing.amount,
+          sourceCurrency: existing.currency,
+          fxRate: existing.fxRate,
+          fxAsOf: existing.fxAsOf?.toISOString() ?? new Date().toISOString(),
+        };
+  if (input.amount !== undefined || input.currency !== undefined) {
+    await moneyCtx.lock();
+  }
+
+  const amount = money.amount;
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Amount must be a positive integer (minor units).",
@@ -243,7 +260,10 @@ export async function updateExpense(
       name,
       note: input.note !== undefined ? input.note.trim() : existing.note,
       amount,
-      currency: input.currency !== undefined ? input.currency.toUpperCase() : existing.currency,
+      currency: money.sourceCurrency,
+      sourceAmount: money.sourceAmount,
+      fxRate: money.fxRate,
+      fxAsOf: new Date(money.fxAsOf),
       period,
       nextDueAt,
       occurredAt,

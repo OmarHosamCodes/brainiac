@@ -33,7 +33,7 @@ import {
   type PeriodBillClientActivity,
   type PeriodBillMemberActivity,
 } from "./period-bill-activity";
-import { getAgencyCurrency, resolveMoneyForTeam } from "./money-fx-service";
+import { getAgencyCurrency, loadMoneyResolveContext } from "./money-fx-service";
 
 type AgencyMemberRateRecord = {
   userId: string;
@@ -127,10 +127,8 @@ export async function upsertMemberRate(
     ? parseIsoDateTime(input.effectiveFrom, "effectiveFrom")
     : now;
 
-  const { currency: agencyCurrency } = await getAgencyCurrency(actorUserId, {
-    teamId: input.teamId,
-  });
-  const sourceCurrency = (input.currency ?? agencyCurrency).toUpperCase();
+  const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+  const sourceCurrency = (input.currency ?? moneyCtx.agencyCurrency).toUpperCase();
 
   let costRateAmount = input.costRateAmount ?? null;
   let billableRateAmount = input.billableRateAmount ?? null;
@@ -140,26 +138,21 @@ export async function upsertMemberRate(
   let fxAsOf: Date | null = null;
 
   if (input.costRateAmount != null) {
-    const resolved = await resolveMoneyForTeam(actorUserId, {
-      teamId: input.teamId,
-      sourceAmount: input.costRateAmount,
-      sourceCurrency,
-    });
+    const resolved = moneyCtx.resolve(input.costRateAmount, sourceCurrency);
     sourceCostRateAmount = resolved.sourceAmount;
     costRateAmount = resolved.amount;
     fxRate = resolved.fxRate;
     fxAsOf = new Date(resolved.fxAsOf);
   }
   if (input.billableRateAmount != null) {
-    const resolved = await resolveMoneyForTeam(actorUserId, {
-      teamId: input.teamId,
-      sourceAmount: input.billableRateAmount,
-      sourceCurrency,
-    });
+    const resolved = moneyCtx.resolve(input.billableRateAmount, sourceCurrency);
     sourceBillableRateAmount = resolved.sourceAmount;
     billableRateAmount = resolved.amount;
     fxRate = resolved.fxRate;
     fxAsOf = new Date(resolved.fxAsOf);
+  }
+  if (input.costRateAmount != null || input.billableRateAmount != null) {
+    await moneyCtx.lock();
   }
 
   const [upserted] = await db

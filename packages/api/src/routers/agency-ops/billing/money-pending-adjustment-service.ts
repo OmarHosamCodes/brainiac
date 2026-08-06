@@ -10,7 +10,7 @@ import { createWorkspaceId } from "@orch/workspace";
 
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
-import { getAgencyCurrency, resolveMoneyForTeam } from "./money-fx-service";
+import { loadMoneyResolveContext } from "./money-fx-service";
 
 export type MoneyPendingAdjustmentRecord = {
   id: string;
@@ -103,14 +103,9 @@ export async function upsertPendingAdjustment(
 
   const now = new Date();
   const note = input.note?.trim() ?? "";
-  const { currency: agencyCurrency } = await getAgencyCurrency(actorUserId, {
-    teamId: input.teamId,
-  });
-  const money = await resolveMoneyForTeam(actorUserId, {
-    teamId: input.teamId,
-    sourceAmount: input.amount,
-    sourceCurrency: agencyCurrency,
-  });
+  const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+  const money = moneyCtx.resolve(input.amount, moneyCtx.agencyCurrency);
+  await moneyCtx.lock();
 
   if (input.id) {
     const [existing] = await db

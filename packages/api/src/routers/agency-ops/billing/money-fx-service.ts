@@ -147,32 +147,58 @@ export async function getAgencyCurrency(
   return loadAgencyCurrency(input.teamId);
 }
 
+export type MoneyResolveContext = {
+  agencyCurrency: string;
+  resolve: (sourceAmount: number, sourceCurrency?: string) => ResolvedMoneyValue;
+  lock: () => Promise<void>;
+};
+
+/**
+ * Load FX + agency currency once per write transaction.
+ * Caller must already have required team membership; actor is for the service contract only.
+ */
+export async function loadMoneyResolveContext(
+  actorUserId: string,
+  input: { teamId: string },
+): Promise<MoneyResolveContext> {
+  void actorUserId;
+  const { currency: agencyCurrency } = await loadAgencyCurrency(input.teamId);
+  const rates = await listTeamFxRateRows(input.teamId);
+  return {
+    agencyCurrency,
+    resolve(sourceAmount: number, sourceCurrency?: string) {
+      try {
+        return resolveMoneyValue({
+          sourceAmount,
+          sourceCurrency: sourceCurrency || agencyCurrency,
+          agencyCurrency,
+          rates,
+        });
+      } catch (error) {
+        if (error instanceof MoneyCurrencyError) {
+          throw new ORPCError("BAD_REQUEST", { message: error.message });
+        }
+        throw error;
+      }
+    },
+    async lock() {
+      await ensureAgencyCurrencyLocked(input.teamId);
+    },
+  };
+}
+
 /**
  * Resolve a source amount into agency currency and soft-lock team currency.
- * Caller must already have required team membership.
  */
 export async function resolveMoneyForTeam(
   actorUserId: string,
   input: { teamId: string; sourceAmount: number; sourceCurrency: string },
 ): Promise<ResolvedMoneyValue & { agencyCurrency: string }> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
-  const { currency: agencyCurrency } = await loadAgencyCurrency(input.teamId);
-  const rates = await listTeamFxRateRows(input.teamId);
-  try {
-    const resolved = resolveMoneyValue({
-      sourceAmount: input.sourceAmount,
-      sourceCurrency: input.sourceCurrency || agencyCurrency,
-      agencyCurrency,
-      rates,
-    });
-    await ensureAgencyCurrencyLocked(input.teamId);
-    return { ...resolved, agencyCurrency };
-  } catch (error) {
-    if (error instanceof MoneyCurrencyError) {
-      throw new ORPCError("BAD_REQUEST", { message: error.message });
-    }
-    throw error;
-  }
+  const ctx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+  const resolved = ctx.resolve(input.sourceAmount, input.sourceCurrency);
+  await ctx.lock();
+  return { ...resolved, agencyCurrency: ctx.agencyCurrency };
 }
 
 export async function listFxRates(
