@@ -39,6 +39,16 @@ import {
   moneyRulesSchema,
   moneySettingsRecordSchema,
 } from "./money-formula-schemas";
+import {
+  deletePendingAdjustment,
+  listPendingAdjustments,
+  upsertPendingAdjustment,
+} from "./money-pending-adjustment-service";
+import {
+  exportMoneyDocuments,
+  listPeriodMoneyObligations,
+  settleMoneyObligation,
+} from "./money-export-service";
 
 const invoiceStatusSchema = z.enum(["draft", "sent", "partial", "paid", "refunded"]);
 const invoiceBillStatusSchema = z.enum(["outstanding", "partial", "paid", "refunded"]);
@@ -58,6 +68,92 @@ const payoutBillsPartySchema = z.enum(["team", "adjustments", "all"]);
 const expenseKindSchema = z.enum(["one_time", "subscription"]);
 const expensePeriodSchema = z.enum(["weekly", "monthly", "quarterly", "yearly"]);
 const expenseStatusSchema = z.enum(["due", "partial", "paid"]);
+const moneyPartyTypeSchema = z.enum(["client", "member"]);
+const moneyPendingKindSchema = z.enum(["discount", "surcharge", "debt"]);
+const moneySettleActionSchema = z.enum(["pay", "partial", "refund"]);
+const moneyExportModeSchema = z.enum(["combine", "split"]);
+const moneyObligationKindSchema = z.enum(["ready", "invoice", "payout"]);
+
+const moneyPendingAdjustmentRecordSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  partyType: moneyPartyTypeSchema,
+  partyId: z.string().min(1),
+  periodStart: z.string().datetime().nullable(),
+  periodEnd: z.string().datetime().nullable(),
+  kind: moneyPendingKindSchema,
+  amountCents: z.number().int().positive(),
+  note: z.string(),
+  createdByUserId: z.string().min(1),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+const moneyClientObligationSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("invoice"),
+    id: z.string().min(1),
+    clientId: z.string().min(1),
+    clientName: z.string().min(1),
+    periodStart: z.string().datetime(),
+    periodEnd: z.string().datetime(),
+    isCarry: z.boolean(),
+    amountCents: z.number().int().nonnegative(),
+    receivedCents: z.number().int().nonnegative(),
+    remainingCents: z.number().int().nonnegative(),
+    wasteCents: z.number().int().nonnegative(),
+    durationSeconds: z.number().int().nonnegative(),
+    number: z.string().nullable(),
+  }),
+  z.object({
+    kind: z.literal("ready"),
+    id: z.string().min(1),
+    clientId: z.string().min(1),
+    clientName: z.string().min(1),
+    periodStart: z.string().datetime(),
+    periodEnd: z.string().datetime(),
+    isCarry: z.boolean(),
+    amountCents: z.number().int().nonnegative(),
+    receivedCents: z.literal(0),
+    remainingCents: z.number().int().nonnegative(),
+    wasteCents: z.number().int().nonnegative(),
+    durationSeconds: z.number().int().nonnegative(),
+    number: z.null(),
+  }),
+]);
+
+const moneyMemberObligationSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("payout"),
+    id: z.string().min(1),
+    userId: z.string().min(1),
+    userName: z.string().min(1),
+    userAvatar: z.string().nullable(),
+    periodStart: z.string().datetime(),
+    periodEnd: z.string().datetime(),
+    isCarry: z.boolean(),
+    amountCents: z.number().int().nonnegative(),
+    paidCents: z.number().int().nonnegative(),
+    remainingCents: z.number().int().nonnegative(),
+    wasteCents: z.number().int().nonnegative(),
+    durationSeconds: z.number().int().nonnegative(),
+  }),
+  z.object({
+    kind: z.literal("ready"),
+    id: z.string().min(1),
+    userId: z.string().min(1),
+    userName: z.string().min(1),
+    userAvatar: z.string().nullable(),
+    periodStart: z.string().datetime(),
+    periodEnd: z.string().datetime(),
+    isCarry: z.boolean(),
+    amountCents: z.number().int().nonnegative(),
+    paidCents: z.literal(0),
+    remainingCents: z.number().int().nonnegative(),
+    wasteCents: z.number().int().nonnegative(),
+    durationSeconds: z.number().int().nonnegative(),
+  }),
+]);
 
 const invoiceRecordSchema = z.object({
   id: z.string().min(1),
@@ -533,6 +629,72 @@ export const billingRouter = {
       }),
   },
 
+  periodObligations: {
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          search: z.string().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            clients: z.array(moneyClientObligationSchema),
+            members: z.array(moneyMemberObligationSchema),
+            pendingAdjustments: z.array(moneyPendingAdjustmentRecordSchema),
+          })
+          .parse(await listPeriodMoneyObligations(context.session.user.id, input));
+      }),
+  },
+
+  pendingAdjustments: {
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          partyType: moneyPartyTypeSchema.optional(),
+          partyId: z.string().min(1).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            items: z.array(moneyPendingAdjustmentRecordSchema),
+          })
+          .parse(await listPendingAdjustments(context.session.user.id, input));
+      }),
+    upsert: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          id: z.string().min(1).optional(),
+          partyType: moneyPartyTypeSchema,
+          partyId: z.string().min(1),
+          kind: moneyPendingKindSchema,
+          amountCents: z.number().int().positive(),
+          note: z.string().optional(),
+          periodStart: z.string().datetime().optional(),
+          periodEnd: z.string().datetime().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return moneyPendingAdjustmentRecordSchema.parse(
+          await upsertPendingAdjustment(context.session.user.id, input),
+        );
+      }),
+    remove: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          id: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ id: z.string().min(1) })
+          .parse(await deletePendingAdjustment(context.session.user.id, input));
+      }),
+  },
+
   money: {
     periodScoreboard: protectedProProcedure
       .input(
@@ -560,6 +722,58 @@ export const billingRouter = {
             pbcCents: z.number().int().nonnegative(),
           })
           .parse(await getPeriodScoreboard(context.session.user.id, input));
+      }),
+    settle: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          partyType: moneyPartyTypeSchema,
+          obligationId: z.string().min(1),
+          action: moneySettleActionSchema,
+          amountCents: z.number().int().nonnegative(),
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          clientId: z.string().min(1).optional(),
+          userId: z.string().min(1).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            documentId: z.string().min(1),
+            kind: z.enum(["invoice", "payout"]),
+          })
+          .parse(await settleMoneyObligation(context.session.user.id, input));
+      }),
+    exportDocuments: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          partyType: moneyPartyTypeSchema,
+          partyId: z.string().min(1),
+          mode: moneyExportModeSchema,
+          selections: z
+            .array(
+              z.object({
+                obligationId: z.string().min(1),
+                periodStart: z.string().datetime(),
+                periodEnd: z.string().datetime(),
+                kind: moneyObligationKindSchema,
+                amountCents: z.number().int().nonnegative(),
+              }),
+            )
+            .min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            documents: z.array(
+              z.object({
+                id: z.string().min(1),
+                kind: z.enum(["invoice", "payout"]),
+              }),
+            ),
+          })
+          .parse(await exportMoneyDocuments(context.session.user.id, input));
       }),
   },
 
