@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-08-05 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-08-06 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 639 |
+| golden-feature | 646 |
 | server-operation | 14 |
 | shared-infrastructure | 278 |
 | static-presentation | 15 |
@@ -33,7 +33,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 11 |
-| billing | 79 |
+| billing | 86 |
 | ci | 2 |
 | clients | 13 |
 | configuration | 3 |
@@ -179,6 +179,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/billing/money-bill-allocation.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/billing/money-bill-merged-rows.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/billing/money-bill-merged-rows.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/billing/money-bill-obligation-rows.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/billing/money-bill-obligation-rows.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/billing/money-bills-filters.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/billing/money-bills-filters.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/billing/money-bills-rows.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
@@ -760,6 +762,10 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agency-ops/billing/invoice-period-totals.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/billing/member-payable-income.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/member-payable-income.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/agency-ops/billing/money-bill-carry.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/billing/money-bill-carry.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/agency-ops/billing/money-export-service.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/billing/money-export-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-context.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-eval.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/money-formula-eval.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
@@ -768,6 +774,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agency-ops/billing/money-formula-schemas.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-templates.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-tokens.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
+| `packages/api/src/routers/agency-ops/billing/money-pending-adjustment-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-scoreboard-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-settings-helpers.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/money-settings-helpers.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |

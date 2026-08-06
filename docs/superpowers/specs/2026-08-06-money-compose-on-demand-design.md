@@ -47,14 +47,14 @@ Period Bills list each client/member as a **group** with **current-period lines*
 
 ## 6. Data & API
 
-| Concern | Approach |
-| ------- | -------- |
-| Documents | Keep `agency_ops_invoice` / payout run+line; `receivedCents` / `paidCents` counters |
+| Concern             | Approach                                                                                                                                                          |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documents           | Keep `agency_ops_invoice` / payout run+line; `receivedCents` / `paidCents` counters                                                                               |
 | Pending adjustments | `agency_ops_money_pending_adjustment` — team, partyType (`client`\|`member`), partyId, optional period, kind (`discount`\|`surcharge`\|`debt`), amountCents, note |
-| No shadow drafts | Persist only on Export or soft-export-on-pay |
-| List | Period bills payload includes current lines + carry-in + pending adjustments |
-| Export | `exportMoneyDocuments` — selected obligations, combine\|split, apply pending |
-| Adjust | Soft-export-if-Ready then existing payment recorders; pending upsert/list |
+| No shadow drafts    | Persist only on Export or soft-export-on-pay                                                                                                                      |
+| List                | Period bills payload includes current lines + carry-in + pending adjustments                                                                                      |
+| Export              | `exportMoneyDocuments` — selected obligations, combine\|split, apply pending                                                                                      |
+| Adjust              | Soft-export-if-Ready then existing payment recorders; pending upsert/list                                                                                         |
 
 ## 7. Web layers (golden file)
 
