@@ -20,9 +20,9 @@ export type MoneyBillInvoiceSource = {
   number: string;
   status: MoneyBillInvoiceStatus;
   billStatus: MoneyBillStatus;
-  amountCents: number;
-  receivedCents: number;
-  remainingCents: number;
+  amount: number;
+  receivedAmount: number;
+  remainingAmount: number;
   currency: string;
   periodStart: string;
   periodEnd: string;
@@ -32,8 +32,8 @@ export type MoneyBillClientActivitySource = {
   clientId: string;
   clientName: string;
   durationSeconds: number;
-  billableCents: number;
-  wasteCents: number;
+  billableAmount: number;
+  wasteAmount: number;
   currency: string;
 };
 
@@ -42,8 +42,8 @@ export type MoneyBillMemberActivitySource = {
   userName: string;
   userAvatar: string | null;
   durationSeconds: number;
-  payableCents: number;
-  wasteCents: number;
+  payableAmount: number;
+  wasteAmount: number;
   currency: string;
 };
 
@@ -66,9 +66,9 @@ export type MoneyBillTeamPayoutSource = {
   label: string;
   status: MoneyBillPayoutStatus;
   billStatus: Exclude<MoneyBillStatus, "refunded">;
-  amountCents: number;
-  paidCents: number;
-  remainingCents: number;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
   currency: string;
   durationSeconds: number;
   periodStart: string;
@@ -100,9 +100,9 @@ export type MoneyBillInvoiceRow = MoneyBillRowBase & {
   status: MoneyBillInvoiceStatus;
   billStatus: MoneyBillStatus;
   billStatusLabel: string;
-  amountCents: number;
-  receivedCents: number;
-  remainingCents: number;
+  amount: number;
+  receivedAmount: number;
+  remainingAmount: number;
   currency: string;
   amountLabel: string;
   receivedLabel: string;
@@ -118,8 +118,8 @@ export type MoneyBillClientActivityRow = MoneyBillRowBase & {
   clientName: string;
   durationSeconds: number;
   durationLabel: string;
-  billableCents: number;
-  wasteCents: number;
+  billableAmount: number;
+  wasteAmount: number;
   currency: string;
   amountLabel: string;
   allocation: MoneyBillAllocationView;
@@ -133,8 +133,8 @@ export type MoneyBillMemberActivityRow = MoneyBillRowBase & {
   userAvatar: string | null;
   durationSeconds: number;
   durationLabel: string;
-  payableCents: number;
-  wasteCents: number;
+  payableAmount: number;
+  wasteAmount: number;
   currency: string;
   amountLabel: string;
   allocation: MoneyBillAllocationView;
@@ -150,9 +150,9 @@ export type MoneyBillTeamPayoutRow = MoneyBillRowBase & {
   status: MoneyBillPayoutStatus;
   billStatus: Exclude<MoneyBillStatus, "refunded">;
   billStatusLabel: string;
-  amountCents: number;
-  paidCents: number;
-  remainingCents: number;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
   currency: string;
   amountLabel: string;
   paidLabel: string;
@@ -172,9 +172,9 @@ export type MoneyBillAdjustmentRow = MoneyBillRowBase & {
   status: MoneyBillPayoutStatus;
   billStatus: Exclude<MoneyBillStatus, "refunded">;
   billStatusLabel: string;
-  amountCents: number;
-  paidCents: number;
-  remainingCents: number;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
   currency: string;
   amountLabel: string;
   paidLabel: string;
@@ -216,12 +216,12 @@ export function moneyBillStatusLabel(billStatus: MoneyBillStatus): string {
   }
 }
 
-export function formatMoneyBillCents(cents: number, currency: string): string {
+export function formatMoneyAmount(amount: number, currency: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
-  }).format(cents / 100);
+  }).format(amount / 100);
 }
 
 export function formatMoneyBillPeriod(periodStart: string, periodEnd: string): string {
@@ -254,11 +254,11 @@ export function moneyBillsPartyShowsMembers(party: MoneyBillsPartyFilter): boole
 
 export function moneyBillRowFromInvoice(
   invoice: MoneyBillInvoiceSource,
-  wasteCents = 0,
+  wasteAmount = 0,
 ): MoneyBillInvoiceRow {
   const billStatusLabel = moneyBillStatusLabel(invoice.billStatus);
   const periodLabel = formatMoneyBillPeriod(invoice.periodStart, invoice.periodEnd);
-  const amountLabel = formatMoneyBillCents(invoice.amountCents, invoice.currency);
+  const amountLabel = formatMoneyAmount(invoice.amount, invoice.currency);
   return {
     kind: "invoice",
     id: invoice.id,
@@ -273,19 +273,19 @@ export function moneyBillRowFromInvoice(
     status: invoice.status,
     billStatus: invoice.billStatus,
     billStatusLabel,
-    amountCents: invoice.amountCents,
-    receivedCents: invoice.receivedCents,
-    remainingCents: invoice.remainingCents,
+    amount: invoice.amount,
+    receivedAmount: invoice.receivedAmount,
+    remainingAmount: invoice.remainingAmount,
     currency: invoice.currency,
     amountLabel,
-    receivedLabel: formatMoneyBillCents(invoice.receivedCents, invoice.currency),
-    remainingLabel: formatMoneyBillCents(invoice.remainingCents, invoice.currency),
+    receivedLabel: formatMoneyAmount(invoice.receivedAmount, invoice.currency),
+    remainingLabel: formatMoneyAmount(invoice.remainingAmount, invoice.currency),
     periodLabel,
     allocation: allocationFromInvoice({
-      amountCents: invoice.amountCents,
-      receivedCents: invoice.receivedCents,
-      remainingCents: invoice.remainingCents,
-      wasteCents,
+      amount: invoice.amount,
+      receivedAmount: invoice.receivedAmount,
+      remainingAmount: invoice.remainingAmount,
+      wasteAmount,
       currency: invoice.currency,
     }),
     canSend: invoice.status === "draft",
@@ -302,7 +302,7 @@ export function moneyBillRowFromClientActivity(
   client: MoneyBillClientActivitySource,
 ): MoneyBillClientActivityRow {
   const durationLabel = formatDuration(client.durationSeconds, "short");
-  const amountLabel = formatMoneyBillCents(client.billableCents, client.currency);
+  const amountLabel = formatMoneyAmount(client.billableAmount, client.currency);
   return {
     kind: "client-activity",
     id: `client-activity:${client.clientId}`,
@@ -315,13 +315,13 @@ export function moneyBillRowFromClientActivity(
     clientName: client.clientName,
     durationSeconds: client.durationSeconds,
     durationLabel,
-    billableCents: client.billableCents,
-    wasteCents: client.wasteCents,
+    billableAmount: client.billableAmount,
+    wasteAmount: client.wasteAmount,
     currency: client.currency,
     amountLabel,
     allocation: allocationFromReadyClient({
-      billableCents: client.billableCents,
-      wasteCents: client.wasteCents,
+      billableAmount: client.billableAmount,
+      wasteAmount: client.wasteAmount,
       currency: client.currency,
     }),
     canSend: false,
@@ -337,7 +337,7 @@ export function moneyBillRowFromMemberActivity(
   member: MoneyBillMemberActivitySource,
 ): MoneyBillMemberActivityRow {
   const durationLabel = formatDuration(member.durationSeconds, "short");
-  const amountLabel = formatMoneyBillCents(member.payableCents, member.currency);
+  const amountLabel = formatMoneyAmount(member.payableAmount, member.currency);
   return {
     kind: "member-activity",
     id: `member-activity:${member.userId}`,
@@ -351,13 +351,13 @@ export function moneyBillRowFromMemberActivity(
     userAvatar: member.userAvatar,
     durationSeconds: member.durationSeconds,
     durationLabel,
-    payableCents: member.payableCents,
-    wasteCents: member.wasteCents,
+    payableAmount: member.payableAmount,
+    wasteAmount: member.wasteAmount,
     currency: member.currency,
     amountLabel,
     allocation: allocationFromReadyMember({
-      payableCents: member.payableCents,
-      wasteCents: member.wasteCents,
+      payableAmount: member.payableAmount,
+      wasteAmount: member.wasteAmount,
       currency: member.currency,
     }),
     canSend: false,
@@ -371,11 +371,11 @@ export function moneyBillRowFromMemberActivity(
 
 export function moneyBillRowFromPayoutLine(
   payout: MoneyBillTeamPayoutSource,
-  wasteCents = 0,
+  wasteAmount = 0,
 ): MoneyBillTeamPayoutRow {
   const billStatusLabel = moneyBillStatusLabel(payout.billStatus);
   const periodLabel = formatMoneyBillPeriod(payout.periodStart, payout.periodEnd);
-  const amountLabel = formatMoneyBillCents(payout.amountCents, payout.currency);
+  const amountLabel = formatMoneyAmount(payout.amount, payout.currency);
   const durationLabel = formatDuration(payout.durationSeconds, "short");
   return {
     kind: "team-payout",
@@ -392,21 +392,21 @@ export function moneyBillRowFromPayoutLine(
     status: payout.status,
     billStatus: payout.billStatus,
     billStatusLabel,
-    amountCents: payout.amountCents,
-    paidCents: payout.paidCents,
-    remainingCents: payout.remainingCents,
+    amount: payout.amount,
+    paidAmount: payout.paidAmount,
+    remainingAmount: payout.remainingAmount,
     currency: payout.currency,
     amountLabel,
-    paidLabel: formatMoneyBillCents(payout.paidCents, payout.currency),
-    remainingLabel: formatMoneyBillCents(payout.remainingCents, payout.currency),
+    paidLabel: formatMoneyAmount(payout.paidAmount, payout.currency),
+    remainingLabel: formatMoneyAmount(payout.remainingAmount, payout.currency),
     durationSeconds: payout.durationSeconds,
     durationLabel,
     periodLabel,
     allocation: allocationFromPayout({
-      amountCents: payout.amountCents,
-      paidCents: payout.paidCents,
-      remainingCents: payout.remainingCents,
-      wasteCents,
+      amount: payout.amount,
+      paidAmount: payout.paidAmount,
+      remainingAmount: payout.remainingAmount,
+      wasteAmount,
       currency: payout.currency,
     }),
     canSend: false,
@@ -423,7 +423,7 @@ export function moneyBillRowFromAdjustmentLine(
 ): MoneyBillAdjustmentRow {
   const billStatusLabel = moneyBillStatusLabel(payout.billStatus);
   const periodLabel = formatMoneyBillPeriod(payout.periodStart, payout.periodEnd);
-  const amountLabel = formatMoneyBillCents(payout.amountCents, payout.currency);
+  const amountLabel = formatMoneyAmount(payout.amount, payout.currency);
   return {
     kind: "adjustment",
     id: payout.id,
@@ -438,13 +438,13 @@ export function moneyBillRowFromAdjustmentLine(
     status: payout.status,
     billStatus: payout.billStatus,
     billStatusLabel,
-    amountCents: payout.amountCents,
-    paidCents: payout.paidCents,
-    remainingCents: payout.remainingCents,
+    amount: payout.amount,
+    paidAmount: payout.paidAmount,
+    remainingAmount: payout.remainingAmount,
     currency: payout.currency,
     amountLabel,
-    paidLabel: formatMoneyBillCents(payout.paidCents, payout.currency),
-    remainingLabel: formatMoneyBillCents(payout.remainingCents, payout.currency),
+    paidLabel: formatMoneyAmount(payout.paidAmount, payout.currency),
+    remainingLabel: formatMoneyAmount(payout.remainingAmount, payout.currency),
     periodLabel,
     canSend: false,
     canMarkPaid: payout.status === "draft" || payout.status === "partial",
@@ -745,19 +745,19 @@ export function moneyBillsCreateFormValid(
   );
 }
 
-/** Major-unit payment string → cents; null when invalid. */
-export function parseMoneyBillPaymentCents(value: string, remainingCents: number): number | null {
+/** Major-unit payment string → minor-unit amount; null when invalid. */
+export function parseMoneyBillPaymentAmount(value: string, remainingAmount: number): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const amount = Number(trimmed);
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-  const cents = Math.round(amount * 100);
-  if (cents > remainingCents) return null;
-  return cents;
+  const major = Number(trimmed);
+  if (!Number.isFinite(major) || major <= 0) return null;
+  const amount = Math.round(major * 100);
+  if (amount > remainingAmount) return null;
+  return amount;
 }
 
-export function moneyBillsPaymentCanSubmit(value: string, remainingCents: number): boolean {
-  return parseMoneyBillPaymentCents(value, remainingCents) !== null;
+export function moneyBillsPaymentCanSubmit(value: string, remainingAmount: number): boolean {
+  return parseMoneyBillPaymentAmount(value, remainingAmount) !== null;
 }
 
 export type { MoneyBillsStatusFilter };

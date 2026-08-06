@@ -3,14 +3,14 @@ import { describe, expect, test } from "bun:test";
 import { buildPeriodScoreboard } from "./period-scoreboard";
 
 const base = {
-  salariesDueCents: 30_000,
-  expensesAmountCents: 10_000,
-  debtDiscountCents: 5_000,
-  paidVacationCents: 5_000,
-  deviceCompCents: 1_000,
-  charityCents: 500,
-  pbcCents: 250,
-  teamLossCents: 2_000,
+  salariesDueAmount: 30_000,
+  expensesAmount: 10_000,
+  debtDiscountAmount: 5_000,
+  paidVacationAmount: 5_000,
+  deviceCompAmount: 1_000,
+  charityAmount: 500,
+  pbcAmount: 250,
+  teamLossAmount: 2_000,
   currency: "USD",
 } as const;
 
@@ -18,43 +18,43 @@ describe("buildPeriodScoreboard", () => {
   test("total includes uninvoiced billable; remaining is invoiced unpaid", () => {
     const board = buildPeriodScoreboard({
       ...base,
-      billablePoolCents: 100_000,
-      receivedCents: 40_000,
-      invoicedRemainingCents: 20_000,
+      billablePoolAmount: 100_000,
+      receivedAmount: 40_000,
+      invoicedRemainingAmount: 20_000,
     });
     // Uninvoiced 40k lives inside total; remaining is not total − received.
-    expect(board.totalIncomeCents).toBe(100_000);
-    expect(board.remainingCents).toBe(20_000);
-    expect(board.teamProfitCents).toBe(50_000);
+    expect(board.totalIncomeAmount).toBe(100_000);
+    expect(board.remainingAmount).toBe(20_000);
+    expect(board.teamProfitAmount).toBe(50_000);
     expect(board.roi).toBe(0.5);
-    expect(board.profitLossShareCents).toBe(2_000);
+    expect(board.profitLossShareAmount).toBe(2_000);
   });
 
   test("over-invoice raises total to received + remaining", () => {
     const board = buildPeriodScoreboard({
       ...base,
-      billablePoolCents: 10_000,
-      receivedCents: 40_000,
-      invoicedRemainingCents: 20_000,
+      billablePoolAmount: 10_000,
+      receivedAmount: 40_000,
+      invoicedRemainingAmount: 20_000,
     });
-    expect(board.totalIncomeCents).toBe(60_000);
-    expect(board.remainingCents).toBe(20_000);
+    expect(board.totalIncomeAmount).toBe(60_000);
+    expect(board.remainingAmount).toBe(20_000);
   });
 
   test("roi is 0 when income is 0", () => {
     const board = buildPeriodScoreboard({
       ...base,
-      billablePoolCents: 0,
-      receivedCents: 0,
-      invoicedRemainingCents: 0,
-      salariesDueCents: 0,
-      expensesAmountCents: 0,
-      debtDiscountCents: 0,
-      paidVacationCents: 0,
-      deviceCompCents: 0,
-      charityCents: 0,
-      pbcCents: 0,
-      teamLossCents: 0,
+      billablePoolAmount: 0,
+      receivedAmount: 0,
+      invoicedRemainingAmount: 0,
+      salariesDueAmount: 0,
+      expensesAmount: 0,
+      debtDiscountAmount: 0,
+      paidVacationAmount: 0,
+      deviceCompAmount: 0,
+      charityAmount: 0,
+      pbcAmount: 0,
+      teamLossAmount: 0,
     });
     expect(board.roi).toBe(0);
   });

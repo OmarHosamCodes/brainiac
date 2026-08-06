@@ -62,16 +62,16 @@ export async function previewMoneyFormula(
   );
 
   const facts: MoneyFormulaPeriodFacts = {
-    totalIncomeCents: board.totalIncomeCents,
-    receivedCents: board.receivedCents,
-    salariesCents: board.salariesCents,
-    expensesCents: board.expensesCents,
-    debtDiscountCents: board.debtDiscountCents,
-    paidVacationCents: board.paidVacationCents,
-    deviceCompCents: board.deviceCompensationCents,
-    charityCents: board.charityCents,
-    pbcCents: board.pbcCents,
-    teamLossCents: board.profitLossShareCents,
+    totalIncomeAmount: board.totalIncomeAmount,
+    receivedAmount: board.receivedAmount,
+    salariesAmount: board.salariesAmount,
+    expensesAmount: board.expensesAmount,
+    debtDiscountAmount: board.debtDiscountAmount,
+    paidVacationAmount: board.paidVacationAmount,
+    deviceCompAmount: board.deviceCompensationAmount,
+    charityAmount: board.charityAmount,
+    pbcAmount: board.pbcAmount,
+    teamLossAmount: board.profitLossShareAmount,
     paidVacationHours,
   };
 
@@ -79,7 +79,7 @@ export async function previewMoneyFormula(
     const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
     const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
     const [rateRow] = await db
-      .select({ costRateCents: agencyOpsMemberRate.costRateCents })
+      .select({ costRateAmount: agencyOpsMemberRate.costRateAmount })
       .from(agencyOpsMemberRate)
       .where(
         and(
@@ -100,7 +100,7 @@ export async function previewMoneyFormula(
           lte(agencyOpsTimeEntry.startedAt, periodEnd),
         ),
       );
-    facts.memberCostRateCents = rateRow?.costRateCents ?? 0;
+    facts.memberCostRateAmount = rateRow?.costRateAmount ?? 0;
     facts.memberHours = Number(durationRow?.total ?? 0) / 3600;
   }
 

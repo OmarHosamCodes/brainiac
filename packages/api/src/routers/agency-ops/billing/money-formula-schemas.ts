@@ -17,7 +17,7 @@ export const moneyFormulaDefSchema = z.object({
   locked: z.boolean(),
   enabled: z.boolean(),
   tokens: z.array(moneyFormulaTokenSchema).min(1),
-  output: z.enum(["cents", "ratio", "hours"]),
+  output: z.enum(["amount", "ratio", "hours"]),
   metricId: z.string().min(1).nullable(),
   sectionKey: z.string().min(1).nullable(),
 });
@@ -40,6 +40,8 @@ export const moneyRulesSchema = z.object({
 
 export const moneySettingsRecordSchema = z.object({
   teamId: z.string().min(1),
+  currency: z.string().length(3),
+  currencyLockedAt: z.string().datetime().nullable(),
   rules: moneyRulesSchema,
   calcOptions: moneyCalcOptionsSchema,
   updatedAt: z.string().datetime(),

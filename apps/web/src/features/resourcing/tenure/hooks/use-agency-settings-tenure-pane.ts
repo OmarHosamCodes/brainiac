@@ -329,8 +329,9 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       return;
     }
     setRateDraft({
-      costRate: rate.costRateCents != null ? (rate.costRateCents / 100).toFixed(2) : "",
-      billableRate: rate.billableRateCents != null ? (rate.billableRateCents / 100).toFixed(2) : "",
+      costRate: rate.costRateAmount != null ? (rate.costRateAmount / 100).toFixed(2) : "",
+      billableRate:
+        rate.billableRateAmount != null ? (rate.billableRateAmount / 100).toFixed(2) : "",
       currency: rate.currency || "USD",
       effectiveFrom: rate.effectiveFrom?.slice(0, 10) ?? emptyRateDraft().effectiveFrom,
     });
@@ -389,7 +390,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
         hasEmploymentType: Boolean(member.employmentType),
         hasWorkModel: Boolean(member.workModel),
         hasContact: member.hasContact,
-        hasRate: rate?.billableRateCents != null || rate?.costRateCents != null,
+        hasRate: rate?.billableRateAmount != null || rate?.costRateAmount != null,
         tenureAwaitingFirstEntry: member.awaitingFirstEntry,
         hasTenureOverride: hasExplicitInternOverride,
         hasActiveExemption,
@@ -397,8 +398,8 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       });
       signalsList.push(signals);
       const rateLabel =
-        rate?.billableRateCents != null
-          ? `${rate.currency} ${(rate.billableRateCents / 100).toFixed(0)}/h`
+        rate?.billableRateAmount != null
+          ? `${rate.currency} ${(rate.billableRateAmount / 100).toFixed(0)}/h`
           : "No rate";
       const quarterLabel = member.currentQuarter?.status.replaceAll("_", " ") ?? "no quarter";
       const tenureLabel = member.netTenureLabel || "Tenure pending";
@@ -438,7 +439,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       hasRate: (() => {
         if (!selectedUserId) return false;
         const rate = rateByUserId.get(selectedUserId);
-        return rate?.billableRateCents != null || rate?.costRateCents != null;
+        return rate?.billableRateAmount != null || rate?.costRateAmount != null;
       })(),
       tenureAwaitingFirstEntry: summary?.awaitingFirstEntry ?? false,
       hasTenureOverride: hasExplicitInternOverride,
@@ -637,8 +638,8 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       await upsertRate({
         teamId,
         userId: selectedUserId,
-        costRateCents: Math.round(cost * 100),
-        billableRateCents: Math.round(billable * 100),
+        costRateAmount: Math.round(cost * 100),
+        billableRateAmount: Math.round(billable * 100),
         currency: rateDraft.currency,
         effectiveFrom: dateKeyToUtcIso(rateDraft.effectiveFrom),
       });
@@ -749,10 +750,10 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
         const rate = rateByUserId.get(selectedUserId);
         const empty = emptyRateDraft();
         const cost =
-          rate?.costRateCents != null ? (rate.costRateCents / 100).toFixed(2) : empty.costRate;
+          rate?.costRateAmount != null ? (rate.costRateAmount / 100).toFixed(2) : empty.costRate;
         const billable =
-          rate?.billableRateCents != null
-            ? (rate.billableRateCents / 100).toFixed(2)
+          rate?.billableRateAmount != null
+            ? (rate.billableRateAmount / 100).toFixed(2)
             : empty.billableRate;
         return (
           rateDraft.costRate !== cost ||

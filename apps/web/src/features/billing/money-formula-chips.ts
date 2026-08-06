@@ -6,7 +6,7 @@ export type MoneyFormulaToken =
   | { kind: "op"; op: "+" | "-" | "*" | "/" }
   | { kind: "paren"; value: "(" | ")" };
 
-export type MoneyFormulaOutput = "cents" | "ratio" | "hours";
+export type MoneyFormulaOutput = "amount" | "ratio" | "hours";
 
 export type MoneyFormulaDef = {
   id: string;
@@ -24,24 +24,24 @@ export type MoneyFormulaVarMeta = {
   id: string;
   label: string;
   group: "period" | "member";
-  unit: "cents" | "ratio" | "hours" | "count";
+  unit: "amount" | "ratio" | "hours" | "count";
 };
 
 export const MONEY_FORMULA_VAR_PALETTE: MoneyFormulaVarMeta[] = [
-  { id: "total_income", label: "Total income", group: "period", unit: "cents" },
-  { id: "received", label: "Received", group: "period", unit: "cents" },
-  { id: "salaries", label: "Salaries", group: "period", unit: "cents" },
-  { id: "expenses", label: "Expenses", group: "period", unit: "cents" },
-  { id: "debt_discount", label: "Debt / Discount", group: "period", unit: "cents" },
-  { id: "paid_vacation", label: "Paid vacation", group: "period", unit: "cents" },
-  { id: "device_comp", label: "Device compensation", group: "period", unit: "cents" },
-  { id: "charity", label: "Charity", group: "period", unit: "cents" },
-  { id: "pbc", label: "PBC", group: "period", unit: "cents" },
-  { id: "team_loss", label: "Team loss", group: "period", unit: "cents" },
-  { id: "team_profit", label: "Team profit", group: "period", unit: "cents" },
-  { id: "remaining", label: "Remaining", group: "period", unit: "cents" },
+  { id: "total_income", label: "Total income", group: "period", unit: "amount" },
+  { id: "received", label: "Received", group: "period", unit: "amount" },
+  { id: "salaries", label: "Salaries", group: "period", unit: "amount" },
+  { id: "expenses", label: "Expenses", group: "period", unit: "amount" },
+  { id: "debt_discount", label: "Debt / Discount", group: "period", unit: "amount" },
+  { id: "paid_vacation", label: "Paid vacation", group: "period", unit: "amount" },
+  { id: "device_comp", label: "Device compensation", group: "period", unit: "amount" },
+  { id: "charity", label: "Charity", group: "period", unit: "amount" },
+  { id: "pbc", label: "PBC", group: "period", unit: "amount" },
+  { id: "team_loss", label: "Team loss", group: "period", unit: "amount" },
+  { id: "team_profit", label: "Team profit", group: "period", unit: "amount" },
+  { id: "remaining", label: "Remaining", group: "period", unit: "amount" },
   { id: "paid_vacation_hours", label: "Paid vacation hours", group: "period", unit: "hours" },
-  { id: "member_cost_rate_cents", label: "Member cost rate", group: "member", unit: "cents" },
+  { id: "member_cost_rate_amount", label: "Member cost rate", group: "member", unit: "amount" },
   { id: "member_hours", label: "Member hours", group: "member", unit: "hours" },
   { id: "cohort_size", label: "Cohort size", group: "member", unit: "count" },
 ];
@@ -133,7 +133,7 @@ export function createCustomMoneyFormulaDraft(): MoneyFormulaDef {
     locked: false,
     enabled: true,
     tokens: [{ kind: "number", value: 0 }],
-    output: "cents",
+    output: "amount",
     metricId: null,
     sectionKey: null,
   };
@@ -183,7 +183,7 @@ export function formatMoneyFormulaPreview(
       return `${(value * 100).toFixed(1)}%`;
     case "hours":
       return `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} h`;
-    case "cents": {
+    case "amount": {
       try {
         return new Intl.NumberFormat(undefined, {
           style: "currency",
@@ -221,7 +221,7 @@ export const MONEY_FORMULA_SECTION_OPTIONS: Array<{ id: string; label: string }>
 ];
 
 const OUTPUT_LABEL: Record<MoneyFormulaOutput, string> = {
-  cents: "Money",
+  amount: "Money",
   ratio: "Ratio",
   hours: "Hours",
 };

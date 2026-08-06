@@ -3,8 +3,8 @@ import type { AgencyOpsInvoiceStatus } from "@orch/db/schema";
 /** Bills Clients chip lens (Fin-Sheet). */
 export type InvoiceBillStatus = "outstanding" | "partial" | "paid" | "refunded";
 
-export function invoiceRemainingCents(amountCents: number, receivedCents: number): number {
-  return Math.max(0, amountCents - receivedCents);
+export function invoiceRemainingAmount(amount: number, receivedAmount: number): number {
+  return Math.max(0, amount - receivedAmount);
 }
 
 export function invoiceBillStatus(status: AgencyOpsInvoiceStatus): InvoiceBillStatus {
@@ -50,14 +50,14 @@ export function invoiceStatusesForBillFilter(
  * Refunded invoices stay refunded.
  */
 export function invoiceStatusAfterReceived(
-  amountCents: number,
-  receivedCents: number,
+  amount: number,
+  receivedAmount: number,
   current: AgencyOpsInvoiceStatus,
 ): AgencyOpsInvoiceStatus {
   if (current === "refunded") return "refunded";
-  if (receivedCents <= 0) {
+  if (receivedAmount <= 0) {
     return current === "draft" ? "draft" : "sent";
   }
-  if (receivedCents >= amountCents) return "paid";
+  if (receivedAmount >= amount) return "paid";
   return "partial";
 }

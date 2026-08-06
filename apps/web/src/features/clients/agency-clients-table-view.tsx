@@ -8,7 +8,7 @@ import {
   agencyFocusRingClass,
   agencyLabelClass,
 } from "@/features/shared/agency-ui";
-import { formatRate, parseBillableRateCents } from "@/features/shared/format-rate";
+import { formatRate, parseBillableRateAmount } from "@/features/shared/format-rate";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
 import { cn } from "@/lib/utils";
@@ -206,10 +206,10 @@ export function AgencyClientsTableView({
                       <span
                         className={cn(
                           "font-mono font-bold tabular-nums",
-                          client.billableRateCents === null ? "text-dimmed" : "text-highlighted",
+                          client.billableRateAmount === null ? "text-dimmed" : "text-highlighted",
                         )}
                       >
-                        {formatRate(client.billableRateCents, client.currency, { perHour: true })}
+                        {formatRate(client.billableRateAmount, client.currency, { perHour: true })}
                       </span>
                     </td>
                     <td className="px-3 py-3">
@@ -372,7 +372,7 @@ export function AgencyClientsTableView({
                                     isClientMutationPending ||
                                     Boolean(
                                       editBillableRateDraft.trim() &&
-                                      parseBillableRateCents(editBillableRateDraft) === null,
+                                      parseBillableRateAmount(editBillableRateDraft) === null,
                                     )
                                   }
                                 >

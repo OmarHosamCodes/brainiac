@@ -4,7 +4,7 @@ import {
   moneyExpenseCanSubmit,
   moneyExpensePeriodLabel,
   moneyExpenseStatusLabel,
-  parseMoneyExpenseAmountCents,
+  parseMoneyExpenseAmount,
 } from "./money-expense-form";
 
 describe("moneyExpenseCanSubmit", () => {
@@ -23,12 +23,12 @@ describe("moneyExpenseCanSubmit", () => {
   });
 });
 
-describe("parseMoneyExpenseAmountCents", () => {
+describe("parseMoneyExpenseAmount", () => {
   test("parses major units to cents", () => {
-    expect(parseMoneyExpenseAmountCents("12.50")).toBe(1250);
-    expect(parseMoneyExpenseAmountCents("100")).toBe(10_000);
-    expect(parseMoneyExpenseAmountCents("0")).toBeNull();
-    expect(parseMoneyExpenseAmountCents("abc")).toBeNull();
+    expect(parseMoneyExpenseAmount("12.50")).toBe(1250);
+    expect(parseMoneyExpenseAmount("100")).toBe(10_000);
+    expect(parseMoneyExpenseAmount("0")).toBeNull();
+    expect(parseMoneyExpenseAmount("abc")).toBeNull();
   });
 });
 

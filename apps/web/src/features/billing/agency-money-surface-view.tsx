@@ -1,6 +1,7 @@
 import { type FormEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
+  Banknote,
   Calculator,
   CalendarClock,
   ChevronRight,
@@ -72,7 +73,7 @@ import {
   type MoneyBillPersonGroup,
 } from "./money-bill-obligation-rows";
 import {
-  formatMoneyBillCents,
+  formatMoneyAmount,
   moneyBillInitials,
   type MoneyBillAdjustmentRow,
 } from "./money-bills-rows";
@@ -305,7 +306,8 @@ function MoneySettingsDialog({
           >
             {settings.paneOptions.map((option) => {
               const isActive = settings.pane === option.id && editor == null;
-              const Icon = option.id === "rules" ? Users : Calculator;
+              const Icon =
+                option.id === "rules" ? Users : option.id === "currency" ? Banknote : Calculator;
               return (
                 <button
                   key={option.id}
@@ -577,6 +579,154 @@ function MoneySettingsDialog({
                       </li>
                     ))}
                   </ul>
+                ) : settings.pane === "currency" ? (
+                  <div className="mt-6 flex flex-col gap-6">
+                    <div className="flex flex-col gap-3 rounded-2xl border border-default p-4">
+                      <Label htmlFor="agency-currency" className={agencyFormLabelClass}>
+                        Agency currency
+                      </Label>
+                      <div className="flex flex-wrap items-end gap-2">
+                        <Select
+                          value={settings.currency.draft}
+                          onValueChange={settings.currency.onDraftChange}
+                          disabled={
+                            settings.isSaving ||
+                            !settings.canEdit ||
+                            settings.currency.lockedAt != null
+                          }
+                        >
+                          <SelectTrigger id="agency-currency" className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {settings.currency.options.map((code) => (
+                              <SelectItem key={code} value={code}>
+                                {code}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={settings.currency.onSave}
+                          disabled={
+                            settings.isSaving ||
+                            !settings.canEdit ||
+                            settings.currency.lockedAt != null ||
+                            settings.currency.draft === settings.currency.code
+                          }
+                        >
+                          Save
+                        </Button>
+                      </div>
+                      {settings.currency.lockedAt ? (
+                        <p className="text-xs text-muted-foreground">
+                          Currency is locked after money exists.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Choose the ledger currency before creating rates, bills, or expenses.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-3 rounded-2xl border border-default p-4">
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-medium text-highlighted">FX rates</p>
+                        <p className="text-xs text-muted-foreground">
+                          Convert foreign inputs into {settings.currency.code}. Suggest pulls a live
+                          rate you can edit before saving.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-end gap-2">
+                        <div className="flex flex-col gap-1.5">
+                          <Label className={agencyFormLabelClass}>From</Label>
+                          <Select
+                            value={settings.fxRates.fromCurrency}
+                            onValueChange={settings.fxRates.onFromCurrencyChange}
+                            disabled={settings.isSaving || !settings.canEdit}
+                          >
+                            <SelectTrigger className="w-28">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {settings.currency.options
+                                .filter((code) => code !== settings.currency.code)
+                                .map((code) => (
+                                  <SelectItem key={code} value={code}>
+                                    {code}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor="fx-rate" className={agencyFormLabelClass}>
+                            Rate → {settings.currency.code}
+                          </Label>
+                          <Input
+                            id="fx-rate"
+                            className={cn(agencyFormFieldClass, "w-32")}
+                            value={settings.fxRates.rateDraft}
+                            onChange={(event) =>
+                              settings.fxRates.onRateDraftChange(event.target.value)
+                            }
+                            placeholder="50.2"
+                            disabled={settings.isSaving || !settings.canEdit}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={settings.fxRates.onSuggest}
+                          disabled={settings.isSaving || !settings.canEdit}
+                        >
+                          Suggest
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={settings.fxRates.onSave}
+                          disabled={
+                            settings.isSaving ||
+                            !settings.canEdit ||
+                            settings.fxRates.rateDraft.trim().length === 0
+                          }
+                        >
+                          Save rate
+                        </Button>
+                      </div>
+                      {settings.fxRates.isLoading ? (
+                        <Skeleton className="h-10 w-full" />
+                      ) : settings.fxRates.items.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No FX rates yet.</p>
+                      ) : (
+                        <ul className="flex flex-col gap-2">
+                          {settings.fxRates.items.map((row) => (
+                            <li
+                              key={row.id}
+                              className="flex items-center justify-between gap-3 rounded-xl border border-default px-3 py-2 text-sm"
+                            >
+                              <span className="tabular-nums text-highlighted">
+                                1 {row.fromCurrency} = {row.rate} {row.toCurrency}
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => settings.fxRates.onDelete(row.id)}
+                                disabled={settings.isSaving || !settings.canEdit}
+                              >
+                                Remove
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
                 ) : settings.formulas.length === 0 ? (
                   <div className="mt-8 flex flex-col items-start gap-3 rounded-2xl border border-dashed border-default px-4 py-6">
                     <div className="flex flex-col gap-1">
@@ -747,8 +897,8 @@ function BillMetricGrid({
   receivedLabel,
   remainingLabel,
   wasteLabel,
-  wasteCents,
-  remainingCents = 0,
+  wasteAmount,
+  remainingAmount = 0,
   receivedTitle = "Received",
   ariaLabel,
   compact = false,
@@ -757,14 +907,14 @@ function BillMetricGrid({
   receivedLabel: string;
   remainingLabel: string;
   wasteLabel: string;
-  wasteCents: number;
-  remainingCents?: number;
+  wasteAmount: number;
+  remainingAmount?: number;
   receivedTitle?: string;
   ariaLabel: string;
   compact?: boolean;
 }) {
-  const showWaste = wasteCents > 0;
-  const remainingUrgent = remainingCents > 0;
+  const showWaste = wasteAmount > 0;
+  const remainingUrgent = remainingAmount > 0;
   return (
     <div
       className={cn(
@@ -864,7 +1014,7 @@ function BillAdjustmentRow({
         </div>
         <p className="mt-0.5 truncate text-xs text-muted">
           <AgencySearchHighlight text={row.subtitle} query={searchTerm} />
-          {row.paidCents > 0 && row.remainingCents > 0 ? (
+          {row.paidAmount > 0 && row.remainingAmount > 0 ? (
             <>
               <span aria-hidden> · </span>
               {row.paidLabel} paid · {row.remainingLabel} left
@@ -957,8 +1107,8 @@ function BillObligationLineRow({
         receivedLabel={line.receivedLabel}
         remainingLabel={line.remainingLabel}
         wasteLabel={line.wasteLabel}
-        wasteCents={line.wasteCents}
-        remainingCents={line.remainingCents}
+        wasteAmount={line.wasteAmount}
+        remainingAmount={line.remainingAmount}
         receivedTitle={receivedTitle}
         ariaLabel={`${line.subtitle} money breakdown`}
         compact
@@ -1012,7 +1162,7 @@ function BillPersonGroupCard({
   const priorLineCount = group.lines.filter((line) => line.isCarry).length;
   const pendingAdjLabel =
     group.pendingAdjustmentCents !== 0
-      ? formatMoneyBillCents(Math.abs(group.pendingAdjustmentCents), group.currency)
+      ? formatMoneyAmount(Math.abs(group.pendingAdjustmentCents), group.currency)
       : null;
 
   function onOpenParty() {
@@ -1070,8 +1220,8 @@ function BillPersonGroupCard({
           receivedLabel={group.receivedLabel}
           remainingLabel={group.remainingLabel}
           wasteLabel={group.wasteLabel}
-          wasteCents={group.wasteCents}
-          remainingCents={group.remainingCents}
+          wasteAmount={group.wasteAmount}
+          remainingAmount={group.remainingAmount}
           receivedTitle={receivedTitle}
           ariaLabel={`${group.title} money breakdown`}
         />

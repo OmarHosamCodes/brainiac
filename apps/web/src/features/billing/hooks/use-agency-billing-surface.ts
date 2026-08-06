@@ -16,7 +16,7 @@ export type AgencyBillingSurfaceViewModel = {
   errorMessage: string;
   anyInvoices: boolean;
   summary: {
-    outstandingCents: number;
+    outstandingAmount: number;
     draftCount: number;
     sentCount: number;
     partialCount: number;
@@ -29,9 +29,9 @@ export type AgencyBillingSurfaceViewModel = {
     id: string;
     number: string;
     clientName: string;
-    amountCents: number;
-    receivedCents: number;
-    remainingCents: number;
+    amount: number;
+    receivedAmount: number;
+    remainingAmount: number;
     currency: string;
     status: "draft" | "sent" | "partial" | "paid" | "refunded";
     billStatus: "outstanding" | "partial" | "paid" | "refunded";

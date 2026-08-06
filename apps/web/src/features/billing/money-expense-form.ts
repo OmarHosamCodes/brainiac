@@ -12,9 +12,9 @@ export type MoneyExpenseRecord = {
   kind: MoneyExpenseKind;
   period: MoneyExpensePeriod | null;
   note: string;
-  amountCents: number;
-  paidCents: number;
-  remainingCents: number;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
   currency: string;
   status: MoneyExpenseStatus;
   nextDueAt: string | null;
@@ -46,7 +46,7 @@ export function moneyExpensePeriodLabel(period: MoneyExpensePeriod | null): stri
 }
 
 /** Parse major-unit amount string → positive cents, or null if invalid. */
-export function parseMoneyExpenseAmountCents(value: string): number | null {
+export function parseMoneyExpenseAmount(value: string): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const normalized = trimmed.replace(/,/g, "");
@@ -63,17 +63,17 @@ export function moneyExpenseCanSubmit(
   amount: string,
 ): boolean {
   if (!name.trim()) return false;
-  if (parseMoneyExpenseAmountCents(amount) === null) return false;
+  if (parseMoneyExpenseAmount(amount) === null) return false;
   if (kind === "subscription") return period !== null;
   return true;
 }
 
-export function formatMoneyExpenseCents(cents: number, currency: string): string {
+export function formatMoneyExpenseAmount(amount: number, currency: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
-  }).format(cents / 100);
+  }).format(amount / 100);
 }
 
 export function moneyExpenseStatusLabel(status: MoneyExpenseStatus): string {

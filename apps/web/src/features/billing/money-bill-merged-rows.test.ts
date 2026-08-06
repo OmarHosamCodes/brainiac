@@ -18,8 +18,8 @@ describe("moneyBillRowFromMergedClient", () => {
         clientId: "c1",
         clientName: "DR El Nazzer",
         durationSeconds: 3600,
-        billableCents: 6_450_000,
-        wasteCents: 1_020_000,
+        billableAmount: 6_450_000,
+        wasteAmount: 1_020_000,
         currency: "EGP",
       },
       invoices: [
@@ -30,9 +30,9 @@ describe("moneyBillRowFromMergedClient", () => {
           number: "INV-0238",
           status: "partial",
           billStatus: "partial",
-          amountCents: 4_000_000,
-          receivedCents: 2_800_000,
-          remainingCents: 1_200_000,
+          amount: 4_000_000,
+          receivedAmount: 2_800_000,
+          remainingAmount: 1_200_000,
           currency: "EGP",
           periodStart: "2026-01-01T00:00:00.000Z",
           periodEnd: "2026-01-31T23:59:59.999Z",
@@ -43,11 +43,11 @@ describe("moneyBillRowFromMergedClient", () => {
     expect(row.kind).toBe("merged-client");
     expect(row.statusLabel).toBe("Mixed");
     expect(row.uninvoicedCents).toBe(6_450_000);
-    expect(row.receivedCents).toBe(2_800_000);
-    expect(row.remainingCents).toBe(1_200_000);
+    expect(row.receivedAmount).toBe(2_800_000);
+    expect(row.remainingAmount).toBe(1_200_000);
     expect(row.totalCents).toBe(10_450_000);
     expect(row.openCents).toBe(7_650_000);
-    expect(row.wasteCents).toBe(1_020_000);
+    expect(row.wasteAmount).toBe(1_020_000);
     expect(row.canCreateInvoice).toBe(true);
     expect(row.primaryInvoiceId).toBe("inv_1");
     expect(row.subtitle).toContain("Ready");
@@ -62,8 +62,8 @@ describe("moneyBillRowFromMergedClient", () => {
         clientId: "c1",
         clientName: "Acme",
         durationSeconds: 3661,
-        billableCents: 5000,
-        wasteCents: 0,
+        billableAmount: 5000,
+        wasteAmount: 0,
         currency: "USD",
       },
       invoices: [],
@@ -85,8 +85,8 @@ describe("moneyBillRowFromMergedMember", () => {
         userName: "Ada",
         userAvatar: null,
         durationSeconds: 7200,
-        payableCents: 50_000,
-        wasteCents: 0,
+        payableAmount: 50_000,
+        wasteAmount: 0,
         currency: "USD",
       },
       payouts: [
@@ -100,9 +100,9 @@ describe("moneyBillRowFromMergedMember", () => {
           label: "Salary · Ada",
           status: "partial",
           billStatus: "partial",
-          amountCents: 40_000,
-          paidCents: 10_000,
-          remainingCents: 30_000,
+          amount: 40_000,
+          paidAmount: 10_000,
+          remainingAmount: 30_000,
           currency: "USD",
           durationSeconds: 3600,
           periodStart: "2026-01-01T00:00:00.000Z",
@@ -129,8 +129,8 @@ describe("buildMergedMoneyBillDisplayRows", () => {
           clientId: "c1",
           clientName: "Acme",
           durationSeconds: 1800,
-          billableCents: 5000,
-          wasteCents: 100,
+          billableAmount: 5000,
+          wasteAmount: 100,
           currency: "USD",
         },
       ],
@@ -142,9 +142,9 @@ describe("buildMergedMoneyBillDisplayRows", () => {
           number: "INV-1",
           status: "sent",
           billStatus: "outstanding",
-          amountCents: 2000,
-          receivedCents: 0,
-          remainingCents: 2000,
+          amount: 2000,
+          receivedAmount: 0,
+          remainingAmount: 2000,
           currency: "USD",
           periodStart: "2026-01-01T00:00:00.000Z",
           periodEnd: "2026-01-31T23:59:59.999Z",
@@ -162,7 +162,7 @@ describe("buildMergedMoneyBillDisplayRows", () => {
     expect(rows[0]?.kind).toBe("merged-client");
     if (rows[0]?.kind === "merged-client") {
       expect(rows[0].uninvoicedCents).toBe(5000);
-      expect(rows[0].remainingCents).toBe(2000);
+      expect(rows[0].remainingAmount).toBe(2000);
       expect(rows[0].totalCents).toBe(7000);
     }
   });
@@ -174,8 +174,8 @@ describe("buildMergedMoneyBillDisplayRows", () => {
           clientId: "c1",
           clientName: "Acme",
           durationSeconds: 60,
-          billableCents: 100,
-          wasteCents: 0,
+          billableAmount: 100,
+          wasteAmount: 0,
           currency: "USD",
         },
       ],
@@ -186,8 +186,8 @@ describe("buildMergedMoneyBillDisplayRows", () => {
           userName: "Ada",
           userAvatar: null,
           durationSeconds: 60,
-          payableCents: 200,
-          wasteCents: 0,
+          payableAmount: 200,
+          wasteAmount: 0,
           currency: "USD",
         },
       ],
@@ -203,9 +203,9 @@ describe("buildMergedMoneyBillDisplayRows", () => {
           label: "Charity",
           status: "draft",
           billStatus: "outstanding",
-          amountCents: 1000,
-          paidCents: 0,
-          remainingCents: 1000,
+          amount: 1000,
+          paidAmount: 0,
+          remainingAmount: 1000,
           currency: "USD",
           durationSeconds: 0,
           periodStart: "2026-01-01T00:00:00.000Z",
@@ -233,16 +233,16 @@ describe("filterMergedRowsByClientCategory", () => {
           clientId: "ext",
           clientName: "External Co",
           durationSeconds: 60,
-          billableCents: 100,
-          wasteCents: 0,
+          billableAmount: 100,
+          wasteAmount: 0,
           currency: "USD",
         },
         {
           clientId: "int",
           clientName: "Internal Co",
           durationSeconds: 60,
-          billableCents: 100,
-          wasteCents: 0,
+          billableAmount: 100,
+          wasteAmount: 0,
           currency: "USD",
         },
       ],

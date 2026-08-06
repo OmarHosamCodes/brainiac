@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildMoneyStatsCards, centsToMajor } from "./money-stats-live";
+import { buildMoneyStatsCards, amountToMajor } from "./money-stats-live";
 
-describe("centsToMajor", () => {
+describe("amountToMajor", () => {
   test("divides by 100", () => {
-    expect(centsToMajor(12_500)).toBe(125);
+    expect(amountToMajor(12_500)).toBe(125);
   });
 });
 

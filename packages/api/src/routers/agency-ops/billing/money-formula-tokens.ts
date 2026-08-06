@@ -18,7 +18,7 @@ export const MONEY_FORMULA_VAR_IDS = [
   "team_profit",
   "remaining",
   "paid_vacation_hours",
-  "member_cost_rate_cents",
+  "member_cost_rate_amount",
   "member_hours",
   "cohort_size",
 ] as const;
@@ -29,28 +29,28 @@ export type MoneyFormulaVarMeta = {
   id: MoneyFormulaVarId;
   label: string;
   group: "period" | "member";
-  unit: "cents" | "ratio" | "hours" | "count";
+  unit: "amount" | "ratio" | "hours" | "count";
 };
 
 export const MONEY_FORMULA_VAR_META: MoneyFormulaVarMeta[] = [
-  { id: "total_income", label: "Total income", group: "period", unit: "cents" },
-  { id: "received", label: "Received", group: "period", unit: "cents" },
-  { id: "salaries", label: "Salaries", group: "period", unit: "cents" },
-  { id: "expenses", label: "Expenses", group: "period", unit: "cents" },
-  { id: "debt_discount", label: "Debt / Discount", group: "period", unit: "cents" },
-  { id: "paid_vacation", label: "Paid vacation", group: "period", unit: "cents" },
-  { id: "device_comp", label: "Device compensation", group: "period", unit: "cents" },
-  { id: "charity", label: "Charity", group: "period", unit: "cents" },
-  { id: "pbc", label: "PBC", group: "period", unit: "cents" },
-  { id: "team_loss", label: "Team loss", group: "period", unit: "cents" },
-  { id: "team_profit", label: "Team profit", group: "period", unit: "cents" },
-  { id: "remaining", label: "Remaining", group: "period", unit: "cents" },
+  { id: "total_income", label: "Total income", group: "period", unit: "amount" },
+  { id: "received", label: "Received", group: "period", unit: "amount" },
+  { id: "salaries", label: "Salaries", group: "period", unit: "amount" },
+  { id: "expenses", label: "Expenses", group: "period", unit: "amount" },
+  { id: "debt_discount", label: "Debt / Discount", group: "period", unit: "amount" },
+  { id: "paid_vacation", label: "Paid vacation", group: "period", unit: "amount" },
+  { id: "device_comp", label: "Device compensation", group: "period", unit: "amount" },
+  { id: "charity", label: "Charity", group: "period", unit: "amount" },
+  { id: "pbc", label: "PBC", group: "period", unit: "amount" },
+  { id: "team_loss", label: "Team loss", group: "period", unit: "amount" },
+  { id: "team_profit", label: "Team profit", group: "period", unit: "amount" },
+  { id: "remaining", label: "Remaining", group: "period", unit: "amount" },
   { id: "paid_vacation_hours", label: "Paid vacation hours", group: "period", unit: "hours" },
   {
-    id: "member_cost_rate_cents",
+    id: "member_cost_rate_amount",
     label: "Member cost rate",
     group: "member",
-    unit: "cents",
+    unit: "amount",
   },
   { id: "member_hours", label: "Member hours", group: "member", unit: "hours" },
   { id: "cohort_size", label: "Cohort size", group: "member", unit: "count" },
@@ -155,9 +155,9 @@ export function normalizeMoneyFormulaDef(value: unknown): AgencyOpsMoneyFormulaD
   if (tokens.length === 0) return null;
 
   const output: AgencyOpsMoneyFormulaOutput =
-    record.output === "ratio" || record.output === "hours" || record.output === "cents"
+    record.output === "ratio" || record.output === "hours" || record.output === "amount"
       ? record.output
-      : "cents";
+      : "amount";
 
   return {
     id: record.id,

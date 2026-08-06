@@ -2,12 +2,12 @@
 
 export type MoneyBillAllocationParty = "client" | "team";
 
-export type MoneyBillAllocationCents = {
+export type MoneyBillAllocationAmount = {
   totalCents: number;
-  receivedCents: number;
-  remainingCents: number;
+  receivedAmount: number;
+  remainingAmount: number;
   uninvoicedCents: number;
-  wasteCents: number;
+  wasteAmount: number;
   currency: string;
   party?: MoneyBillAllocationParty;
 };
@@ -19,7 +19,7 @@ export type MoneyBillAllocationSegment = {
   percent: number;
 };
 
-export type MoneyBillAllocationView = MoneyBillAllocationCents & {
+export type MoneyBillAllocationView = MoneyBillAllocationAmount & {
   party: MoneyBillAllocationParty;
   presentation: "document" | "activity";
   receivedTitle: string;
@@ -35,15 +35,15 @@ export type MoneyBillAllocationView = MoneyBillAllocationCents & {
   ariaLabel: string;
 };
 
-function formatCents(cents: number, currency: string): string {
+function formatAmount(amount: number, currency: string): string {
   try {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency,
       maximumFractionDigits: 0,
-    }).format(cents / 100);
+    }).format(amount / 100);
   } catch {
-    return `${(cents / 100).toFixed(0)} ${currency}`;
+    return `${(amount / 100).toFixed(0)} ${currency}`;
   }
 }
 
@@ -73,51 +73,51 @@ function titlesForParty(party: MoneyBillAllocationParty): {
 }
 
 export function buildMoneyBillAllocation(
-  input: MoneyBillAllocationCents,
+  input: MoneyBillAllocationAmount,
   presentation: "document" | "activity" = "document",
 ): MoneyBillAllocationView {
   const party = input.party ?? "client";
   const titles = titlesForParty(party);
   const totalCents = Math.max(0, input.totalCents);
-  const receivedCents = Math.max(0, input.receivedCents);
-  const remainingCents = Math.max(0, input.remainingCents);
+  const receivedAmount = Math.max(0, input.receivedAmount);
+  const remainingAmount = Math.max(0, input.remainingAmount);
   const uninvoicedCents = Math.max(0, input.uninvoicedCents);
-  const wasteCents = Math.max(0, input.wasteCents);
+  const wasteAmount = Math.max(0, input.wasteAmount);
   const currency = input.currency;
 
-  const parts: Array<{ id: MoneyBillAllocationSegmentId; cents: number }> = [
-    { id: "received", cents: receivedCents },
-    { id: "remaining", cents: remainingCents },
-    { id: "uninvoiced", cents: uninvoicedCents },
+  const parts: Array<{ id: MoneyBillAllocationSegmentId; amount: number }> = [
+    { id: "received", amount: receivedAmount },
+    { id: "remaining", amount: remainingAmount },
+    { id: "uninvoiced", amount: uninvoicedCents },
   ];
 
   const segments: MoneyBillAllocationSegment[] =
     totalCents <= 0
       ? []
       : parts
-          .filter((part) => part.cents > 0)
+          .filter((part) => part.amount > 0)
           .map((part) => ({
             id: part.id,
-            percent: Math.min(100, Math.max(0, (part.cents / totalCents) * 100)),
+            percent: Math.min(100, Math.max(0, (part.amount / totalCents) * 100)),
           }));
 
-  const receivedLabel = formatCents(receivedCents, currency);
-  const remainingLabel = formatCents(remainingCents, currency);
-  const uninvoicedLabel = formatCents(uninvoicedCents, currency);
-  const totalLabel = formatCents(totalCents, currency);
-  const wasteLabel = formatCents(wasteCents, currency);
+  const receivedLabel = formatAmount(receivedAmount, currency);
+  const remainingLabel = formatAmount(remainingAmount, currency);
+  const uninvoicedLabel = formatAmount(uninvoicedCents, currency);
+  const totalLabel = formatAmount(totalCents, currency);
+  const wasteLabel = formatAmount(wasteAmount, currency);
 
   const activityTitle = titles.uninvoicedTitle;
   const activityAria = `${activityTitle} ${uninvoicedLabel}${
-    wasteCents > 0 ? `, excluded waste ${wasteLabel}` : ""
+    wasteAmount > 0 ? `, excluded waste ${wasteLabel}` : ""
   }`;
 
   return {
     totalCents,
-    receivedCents,
-    remainingCents,
+    receivedAmount,
+    remainingAmount,
     uninvoicedCents,
-    wasteCents,
+    wasteAmount,
     currency,
     party,
     presentation,
@@ -127,29 +127,29 @@ export function buildMoneyBillAllocation(
     uninvoicedLabel,
     totalLabel,
     wasteLabel,
-    showWaste: wasteCents > 0,
+    showWaste: wasteAmount > 0,
     segments,
     ariaLabel:
       presentation === "activity"
         ? activityAria
         : `Total ${totalLabel}: ${titles.receivedTitle.toLowerCase()} ${receivedLabel}, remaining ${remainingLabel}, ${titles.uninvoicedTitle.toLowerCase()} ${uninvoicedLabel}${
-            wasteCents > 0 ? `, excluded waste ${wasteLabel}` : ""
+            wasteAmount > 0 ? `, excluded waste ${wasteLabel}` : ""
           }`,
   };
 }
 
 export function allocationFromReadyClient(input: {
-  billableCents: number;
-  wasteCents: number;
+  billableAmount: number;
+  wasteAmount: number;
   currency: string;
 }): MoneyBillAllocationView {
   const allocation = buildMoneyBillAllocation(
     {
-      totalCents: input.billableCents,
-      receivedCents: 0,
-      remainingCents: 0,
-      uninvoicedCents: input.billableCents,
-      wasteCents: input.wasteCents,
+      totalCents: input.billableAmount,
+      receivedAmount: 0,
+      remainingAmount: 0,
+      uninvoicedCents: input.billableAmount,
+      wasteAmount: input.wasteAmount,
       currency: input.currency,
       party: "client",
     },
@@ -165,35 +165,35 @@ export function allocationFromReadyClient(input: {
 }
 
 export function allocationFromInvoice(input: {
-  amountCents: number;
-  receivedCents: number;
-  remainingCents: number;
-  wasteCents: number;
+  amount: number;
+  receivedAmount: number;
+  remainingAmount: number;
+  wasteAmount: number;
   currency: string;
 }): MoneyBillAllocationView {
   return buildMoneyBillAllocation({
-    totalCents: input.amountCents,
-    receivedCents: input.receivedCents,
-    remainingCents: input.remainingCents,
+    totalCents: input.amount,
+    receivedAmount: input.receivedAmount,
+    remainingAmount: input.remainingAmount,
     uninvoicedCents: 0,
-    wasteCents: input.wasteCents,
+    wasteAmount: input.wasteAmount,
     currency: input.currency,
     party: "client",
   });
 }
 
 export function allocationFromReadyMember(input: {
-  payableCents: number;
-  wasteCents: number;
+  payableAmount: number;
+  wasteAmount: number;
   currency: string;
 }): MoneyBillAllocationView {
   const allocation = buildMoneyBillAllocation(
     {
-      totalCents: input.payableCents,
-      receivedCents: 0,
-      remainingCents: 0,
-      uninvoicedCents: input.payableCents,
-      wasteCents: input.wasteCents,
+      totalCents: input.payableAmount,
+      receivedAmount: 0,
+      remainingAmount: 0,
+      uninvoicedCents: input.payableAmount,
+      wasteAmount: input.wasteAmount,
       currency: input.currency,
       party: "team",
     },
@@ -209,18 +209,18 @@ export function allocationFromReadyMember(input: {
 }
 
 export function allocationFromPayout(input: {
-  amountCents: number;
-  paidCents: number;
-  remainingCents: number;
-  wasteCents: number;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  wasteAmount: number;
   currency: string;
 }): MoneyBillAllocationView {
   return buildMoneyBillAllocation({
-    totalCents: input.amountCents,
-    receivedCents: input.paidCents,
-    remainingCents: input.remainingCents,
+    totalCents: input.amount,
+    receivedAmount: input.paidAmount,
+    remainingAmount: input.remainingAmount,
     uninvoicedCents: 0,
-    wasteCents: input.wasteCents,
+    wasteAmount: input.wasteAmount,
     currency: input.currency,
     party: "team",
   });

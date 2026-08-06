@@ -17,11 +17,11 @@ import { createWorkspaceId } from "@orch/workspace";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
-import { payoutAmountCentsFromActivity } from "./payout-amount-from-activity";
+import { payoutAmountFromActivity } from "./payout-amount-from-activity";
 import {
   payoutBillStatus,
   payoutLineStatusAfterPaid,
-  payoutRemainingCents,
+  payoutRemainingAmount,
   payoutRunStatusFromLines,
   payoutStatusesForBillFilter,
   type PayoutBillStatus,
@@ -43,12 +43,12 @@ export type AgencyPayoutLineRecord = {
   cohortKey: string | null;
   status: AgencyOpsPayoutLineStatus;
   billStatus: PayoutBillStatus;
-  amountCents: number;
-  paidCents: number;
-  remainingCents: number;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
   currency: string;
   durationSeconds: number;
-  rateCents: number;
+  rateAmount: number;
   periodStart: string;
   periodEnd: string;
 };
@@ -71,7 +71,7 @@ function mapPayoutLineRow(input: {
   userName: string;
   userAvatar: string | null;
 }): AgencyPayoutLineRecord {
-  const paidCents = input.line.paidCents ?? 0;
+  const paidAmount = input.line.paidAmount ?? 0;
   const label = input.line.label?.trim() || "";
   const userName =
     input.line.payeeUserId == null
@@ -89,12 +89,12 @@ function mapPayoutLineRow(input: {
     cohortKey: input.line.cohortKey ?? null,
     status: input.line.status,
     billStatus: payoutBillStatus(input.line.status),
-    amountCents: input.line.amountCents,
-    paidCents,
-    remainingCents: payoutRemainingCents(input.line.amountCents, paidCents),
+    amount: input.line.amount,
+    paidAmount,
+    remainingAmount: payoutRemainingAmount(input.line.amount, paidAmount),
     currency: input.run.currency,
     durationSeconds: input.line.durationSeconds,
-    rateCents: input.line.rateCents,
+    rateAmount: input.line.rateAmount,
     periodStart: input.run.periodStart.toISOString(),
     periodEnd: input.run.periodEnd.toISOString(),
   };
@@ -335,7 +335,7 @@ export async function createPayoutLineFromMember(
 
   const [rateRow] = await db
     .select({
-      costRateCents: agencyOpsMemberRate.costRateCents,
+      costRateAmount: agencyOpsMemberRate.costRateAmount,
       currency: agencyOpsMemberRate.currency,
     })
     .from(agencyOpsMemberRate)
@@ -347,7 +347,7 @@ export async function createPayoutLineFromMember(
     )
     .limit(1);
 
-  if (rateRow?.costRateCents == null) {
+  if (rateRow?.costRateAmount == null) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Set a cost rate for this member before drafting a payout.",
     });
@@ -374,8 +374,8 @@ export async function createPayoutLineFromMember(
     });
   }
 
-  const amountCents = payoutAmountCentsFromActivity(durationSeconds, rateRow.costRateCents);
-  if (amountCents <= 0) {
+  const amount = payoutAmountFromActivity(durationSeconds, rateRow.costRateAmount);
+  if (amount <= 0) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Computed payout amount is zero. Check cost rate and tracked time.",
     });
@@ -414,11 +414,11 @@ export async function createPayoutLineFromMember(
       sectionId: run.salariesSectionId,
       payeeUserId: input.userId,
       label: `Salary · ${userName}`,
-      amountCents,
-      paidCents: 0,
+      amount,
+      paidAmount: 0,
       status: "draft",
       durationSeconds,
-      rateCents: rateRow.costRateCents,
+      rateAmount: rateRow.costRateAmount,
     })
     .returning();
 
@@ -452,7 +452,7 @@ export async function createPayoutLine(
     sectionKey: AgencyOpsPayoutSectionKey;
     payeeUserId?: string | null;
     label: string;
-    amountCents: number;
+    amount: number;
     currency?: string;
     cohortKey?: string | null;
   },
@@ -464,8 +464,10 @@ export async function createPayoutLine(
       message: "Use createFromMember for salary lines.",
     });
   }
-  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
-    throw new ORPCError("BAD_REQUEST", { message: "Amount must be a positive integer (cents)." });
+  if (!Number.isInteger(input.amount) || input.amount <= 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Amount must be a positive integer (minor units).",
+    });
   }
 
   const label = input.label.trim();
@@ -536,11 +538,11 @@ export async function createPayoutLine(
       payeeUserId,
       label: label || section.title,
       cohortKey: input.cohortKey?.trim() || null,
-      amountCents: input.amountCents,
-      paidCents: 0,
+      amount: input.amount,
+      paidAmount: 0,
       status: "draft",
       durationSeconds: 0,
-      rateCents: 0,
+      rateAmount: 0,
     })
     .returning();
 
@@ -604,11 +606,11 @@ async function loadPayoutLineForTeam(
 
 export async function recordPayoutPayment(
   actorUserId: string,
-  input: { teamId: string; lineId: string; amountCents: number },
+  input: { teamId: string; lineId: string; amount: number },
 ): Promise<AgencyPayoutLineRecord> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
-  if (input.amountCents <= 0) {
+  if (input.amount <= 0) {
     throw new ORPCError("BAD_REQUEST", { message: "Payment amount must be greater than zero." });
   }
 
@@ -621,20 +623,20 @@ export async function recordPayoutPayment(
     throw new ORPCError("BAD_REQUEST", { message: "Payout line is already paid in full." });
   }
 
-  const remaining = payoutRemainingCents(existing.line.amountCents, existing.line.paidCents);
-  if (input.amountCents > remaining) {
+  const remaining = payoutRemainingAmount(existing.line.amount, existing.line.paidAmount);
+  if (input.amount > remaining) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Payment amount exceeds remaining balance.",
     });
   }
 
-  const nextPaid = existing.line.paidCents + input.amountCents;
-  const nextStatus = payoutLineStatusAfterPaid(existing.line.amountCents, nextPaid);
+  const nextPaid = existing.line.paidAmount + input.amount;
+  const nextStatus = payoutLineStatusAfterPaid(existing.line.amount, nextPaid);
 
   const [updated] = await db
     .update(agencyOpsPayoutLine)
     .set({
-      paidCents: nextPaid,
+      paidAmount: nextPaid,
       status: nextStatus,
       updatedAt: new Date(),
     })
@@ -678,9 +680,9 @@ export async function updatePayoutLineStatus(
     updatedAt: new Date(),
   };
   if (input.status === "paid") {
-    patch.paidCents = existing.line.amountCents;
+    patch.paidAmount = existing.line.amount;
   } else {
-    patch.paidCents = 0;
+    patch.paidAmount = 0;
   }
 
   const [updated] = await db
@@ -728,8 +730,8 @@ export async function getPayoutSummary(
 
   const rows = await db
     .select({
-      amountCents: agencyOpsPayoutLine.amountCents,
-      paidCents: agencyOpsPayoutLine.paidCents,
+      amount: agencyOpsPayoutLine.amount,
+      paidAmount: agencyOpsPayoutLine.paidAmount,
       currency: agencyOpsPayoutRun.currency,
     })
     .from(agencyOpsPayoutLine)
@@ -746,8 +748,8 @@ export async function getPayoutSummary(
 
   return payoutSalariesTotalsFromRows(
     rows.map((row) => ({
-      amountCents: row.amountCents,
-      paidCents: row.paidCents ?? 0,
+      amount: row.amount,
+      paidAmount: row.paidAmount ?? 0,
       currency: row.currency,
     })),
   );
@@ -759,9 +761,9 @@ export type AgencyPayoutRunSectionAggregate = {
   title: string;
   sortOrder: number;
   lineCount: number;
-  dueCents: number;
-  paidCents: number;
-  remainingCents: number;
+  dueAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
 };
 
 export type AgencyPayoutRunDetail = AgencyPayoutRunRecord & {
@@ -787,23 +789,23 @@ export async function getPayoutRun(
   const lines = await db
     .select({
       sectionId: agencyOpsPayoutLine.sectionId,
-      amountCents: agencyOpsPayoutLine.amountCents,
-      paidCents: agencyOpsPayoutLine.paidCents,
+      amount: agencyOpsPayoutLine.amount,
+      paidAmount: agencyOpsPayoutLine.paidAmount,
     })
     .from(agencyOpsPayoutLine)
     .innerJoin(agencyOpsPayoutSection, eq(agencyOpsPayoutSection.id, agencyOpsPayoutLine.sectionId))
     .where(eq(agencyOpsPayoutSection.runId, run.id));
 
-  const bySection = new Map<string, { lineCount: number; dueCents: number; paidCents: number }>();
+  const bySection = new Map<string, { lineCount: number; dueAmount: number; paidAmount: number }>();
   for (const line of lines) {
     const current = bySection.get(line.sectionId) ?? {
       lineCount: 0,
-      dueCents: 0,
-      paidCents: 0,
+      dueAmount: 0,
+      paidAmount: 0,
     };
     current.lineCount += 1;
-    current.dueCents += line.amountCents;
-    current.paidCents += line.paidCents ?? 0;
+    current.dueAmount += line.amount;
+    current.paidAmount += line.paidAmount ?? 0;
     bySection.set(line.sectionId, current);
   }
 
@@ -812,8 +814,8 @@ export async function getPayoutRun(
     sections: sections.map((section) => {
       const agg = bySection.get(section.id) ?? {
         lineCount: 0,
-        dueCents: 0,
-        paidCents: 0,
+        dueAmount: 0,
+        paidAmount: 0,
       };
       return {
         id: section.id,
@@ -821,9 +823,9 @@ export async function getPayoutRun(
         title: section.title,
         sortOrder: section.sortOrder,
         lineCount: agg.lineCount,
-        dueCents: agg.dueCents,
-        paidCents: agg.paidCents,
-        remainingCents: payoutRemainingCents(agg.dueCents, agg.paidCents),
+        dueAmount: agg.dueAmount,
+        paidAmount: agg.paidAmount,
+        remainingAmount: payoutRemainingAmount(agg.dueAmount, agg.paidAmount),
       };
     }),
   };
@@ -843,7 +845,7 @@ export async function getPayoutSectionTotals(
   const rows = await db
     .select({
       key: agencyOpsPayoutSection.key,
-      amountCents: sum(agencyOpsPayoutLine.amountCents),
+      amount: sum(agencyOpsPayoutLine.amount),
     })
     .from(agencyOpsPayoutLine)
     .innerJoin(agencyOpsPayoutSection, eq(agencyOpsPayoutSection.id, agencyOpsPayoutLine.sectionId))
@@ -868,7 +870,7 @@ export async function getPayoutSectionTotals(
   } satisfies Record<AgencyOpsPayoutSectionKey, number>;
 
   for (const row of rows) {
-    totals[row.key] = Number(row.amountCents ?? 0);
+    totals[row.key] = Number(row.amount ?? 0);
   }
   return totals;
 }

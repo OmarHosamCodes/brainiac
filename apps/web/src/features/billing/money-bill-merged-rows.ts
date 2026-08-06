@@ -4,7 +4,7 @@ import { formatDuration } from "@/lib/utils/format-duration";
 
 import type { MoneyBillsStatusFilter } from "./money-bills-filters";
 import {
-  formatMoneyBillCents,
+  formatMoneyAmount,
   formatMoneyBillPeriod,
   moneyBillStatusLabel,
   type MoneyBillAdjustmentRow,
@@ -22,10 +22,10 @@ export type MoneyBillMergedClientRow = MoneyBillRowBase & {
   clientId: string;
   clientName: string;
   totalCents: number;
-  receivedCents: number;
-  remainingCents: number;
+  receivedAmount: number;
+  remainingAmount: number;
   uninvoicedCents: number;
-  wasteCents: number;
+  wasteAmount: number;
   openCents: number;
   currency: string;
   totalLabel: string;
@@ -44,10 +44,10 @@ export type MoneyBillMergedMemberRow = MoneyBillRowBase & {
   userName: string;
   userAvatar: string | null;
   totalCents: number;
-  receivedCents: number;
-  remainingCents: number;
+  receivedAmount: number;
+  remainingAmount: number;
   uninvoicedCents: number;
-  wasteCents: number;
+  wasteAmount: number;
   openCents: number;
   currency: string;
   totalLabel: string;
@@ -146,12 +146,12 @@ export function moneyBillRowFromMergedClient(input: {
   invoices: MoneyBillInvoiceSource[];
 }): MoneyBillMergedClientRow {
   const currency = input.activity?.currency ?? input.invoices[0]?.currency ?? "USD";
-  const uninvoicedCents = Math.max(0, input.activity?.billableCents ?? 0);
-  const wasteCents = Math.max(0, input.activity?.wasteCents ?? 0);
-  const receivedCents = input.invoices.reduce((sum, invoice) => sum + invoice.receivedCents, 0);
-  const remainingCents = input.invoices.reduce((sum, invoice) => sum + invoice.remainingCents, 0);
-  const totalCents = uninvoicedCents + receivedCents + remainingCents;
-  const openCents = uninvoicedCents + remainingCents;
+  const uninvoicedCents = Math.max(0, input.activity?.billableAmount ?? 0);
+  const wasteAmount = Math.max(0, input.activity?.wasteAmount ?? 0);
+  const receivedAmount = input.invoices.reduce((sum, invoice) => sum + invoice.receivedAmount, 0);
+  const remainingAmount = input.invoices.reduce((sum, invoice) => sum + invoice.remainingAmount, 0);
+  const totalCents = uninvoicedCents + receivedAmount + remainingAmount;
+  const openCents = uninvoicedCents + remainingAmount;
   const primary = pickPrimaryInvoice(input.invoices);
   const durationSeconds = input.activity?.durationSeconds ?? 0;
   const statusLabel = mergedClientStatusLabel({
@@ -162,7 +162,7 @@ export function moneyBillRowFromMergedClient(input: {
   const subtitleParts: string[] = [];
   // Ready-only rows already carry a Ready chip; keep the amount for Mixed only.
   if (uninvoicedCents > 0 && input.invoices.length > 0) {
-    subtitleParts.push(`Ready ${formatMoneyBillCents(uninvoicedCents, currency)}`);
+    subtitleParts.push(`Ready ${formatMoneyAmount(uninvoicedCents, currency)}`);
   } else if (durationSeconds > 0) {
     subtitleParts.push(formatDuration(durationSeconds, "short"));
   }
@@ -178,22 +178,22 @@ export function moneyBillRowFromMergedClient(input: {
     party: "client",
     title: input.clientName,
     subtitle: subtitleParts.join(" · ") || "No activity",
-    metaLabel: `${formatMoneyBillCents(openCents, currency)} open`,
+    metaLabel: `${formatMoneyAmount(openCents, currency)} open`,
     statusLabel,
     clientId: input.clientId,
     clientName: input.clientName,
     totalCents,
-    receivedCents,
-    remainingCents,
+    receivedAmount,
+    remainingAmount,
     uninvoicedCents,
-    wasteCents,
+    wasteAmount,
     openCents,
     currency,
-    totalLabel: formatMoneyBillCents(totalCents, currency),
-    receivedLabel: formatMoneyBillCents(receivedCents, currency),
-    remainingLabel: formatMoneyBillCents(remainingCents, currency),
-    wasteLabel: formatMoneyBillCents(wasteCents, currency),
-    openLabel: formatMoneyBillCents(openCents, currency),
+    totalLabel: formatMoneyAmount(totalCents, currency),
+    receivedLabel: formatMoneyAmount(receivedAmount, currency),
+    remainingLabel: formatMoneyAmount(remainingAmount, currency),
+    wasteLabel: formatMoneyAmount(wasteAmount, currency),
+    openLabel: formatMoneyAmount(openCents, currency),
     primaryInvoiceId: primary?.id ?? null,
     durationSeconds,
     canSend: primary?.status === "draft",
@@ -214,12 +214,12 @@ export function moneyBillRowFromMergedMember(input: {
   payouts: MoneyBillTeamPayoutSource[];
 }): MoneyBillMergedMemberRow {
   const currency = input.activity?.currency ?? input.payouts[0]?.currency ?? "USD";
-  const uninvoicedCents = Math.max(0, input.activity?.payableCents ?? 0);
-  const wasteCents = Math.max(0, input.activity?.wasteCents ?? 0);
-  const receivedCents = input.payouts.reduce((sum, payout) => sum + payout.paidCents, 0);
-  const remainingCents = input.payouts.reduce((sum, payout) => sum + payout.remainingCents, 0);
-  const totalCents = uninvoicedCents + receivedCents + remainingCents;
-  const openCents = uninvoicedCents + remainingCents;
+  const uninvoicedCents = Math.max(0, input.activity?.payableAmount ?? 0);
+  const wasteAmount = Math.max(0, input.activity?.wasteAmount ?? 0);
+  const receivedAmount = input.payouts.reduce((sum, payout) => sum + payout.paidAmount, 0);
+  const remainingAmount = input.payouts.reduce((sum, payout) => sum + payout.remainingAmount, 0);
+  const totalCents = uninvoicedCents + receivedAmount + remainingAmount;
+  const openCents = uninvoicedCents + remainingAmount;
   const primary = pickPrimaryPayout(input.payouts);
   const durationSeconds = input.activity?.durationSeconds ?? 0;
   const statusLabel = mergedMemberStatusLabel({
@@ -230,7 +230,7 @@ export function moneyBillRowFromMergedMember(input: {
   const subtitleParts: string[] = [];
   // Ready-only rows already carry a Ready chip; keep the amount for Mixed only.
   if (uninvoicedCents > 0 && input.payouts.length > 0) {
-    subtitleParts.push(`Ready ${formatMoneyBillCents(uninvoicedCents, currency)}`);
+    subtitleParts.push(`Ready ${formatMoneyAmount(uninvoicedCents, currency)}`);
   } else if (durationSeconds > 0) {
     subtitleParts.push(formatDuration(durationSeconds, "short"));
   }
@@ -246,23 +246,23 @@ export function moneyBillRowFromMergedMember(input: {
     party: "team",
     title: input.userName,
     subtitle: subtitleParts.join(" · ") || "No activity",
-    metaLabel: `${formatMoneyBillCents(openCents, currency)} open`,
+    metaLabel: `${formatMoneyAmount(openCents, currency)} open`,
     statusLabel,
     userId: input.userId,
     userName: input.userName,
     userAvatar: input.userAvatar,
     totalCents,
-    receivedCents,
-    remainingCents,
+    receivedAmount,
+    remainingAmount,
     uninvoicedCents,
-    wasteCents,
+    wasteAmount,
     openCents,
     currency,
-    totalLabel: formatMoneyBillCents(totalCents, currency),
-    receivedLabel: formatMoneyBillCents(receivedCents, currency),
-    remainingLabel: formatMoneyBillCents(remainingCents, currency),
-    wasteLabel: formatMoneyBillCents(wasteCents, currency),
-    openLabel: formatMoneyBillCents(openCents, currency),
+    totalLabel: formatMoneyAmount(totalCents, currency),
+    receivedLabel: formatMoneyAmount(receivedAmount, currency),
+    remainingLabel: formatMoneyAmount(remainingAmount, currency),
+    wasteLabel: formatMoneyAmount(wasteAmount, currency),
+    openLabel: formatMoneyAmount(openCents, currency),
     paidTitle: "Paid",
     primaryPayoutId: primary?.id ?? null,
     durationSeconds,

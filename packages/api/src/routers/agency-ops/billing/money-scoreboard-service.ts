@@ -33,6 +33,7 @@ export async function getPeriodScoreboard(
     ]);
 
   const currency =
+    settings.currency ||
     invoiceSummary.currency ||
     payoutSummary.currency ||
     expenseTotals.currency ||
@@ -40,17 +41,17 @@ export async function getPeriodScoreboard(
     "USD";
 
   const scoreboardInput = {
-    billablePoolCents: billablePool.billablePoolCents,
-    receivedCents: invoiceSummary.receivedCents,
-    invoicedRemainingCents: invoiceSummary.remainingCents,
-    salariesDueCents: payoutSummary.salariesDueCents || sectionTotals.salaries,
-    expensesAmountCents: expenseTotals.amountCents,
-    debtDiscountCents: sectionTotals.debt_discount,
-    paidVacationCents: sectionTotals.paid_vacation,
-    deviceCompCents: sectionTotals.device_comp,
-    charityCents: sectionTotals.charity,
-    pbcCents: sectionTotals.pbc,
-    teamLossCents: sectionTotals.team_loss,
+    billablePoolAmount: billablePool.billablePoolAmount,
+    receivedAmount: invoiceSummary.receivedAmount,
+    invoicedRemainingAmount: invoiceSummary.remainingAmount,
+    salariesDueAmount: payoutSummary.salariesDueAmount || sectionTotals.salaries,
+    expensesAmount: expenseTotals.amount,
+    debtDiscountAmount: sectionTotals.debt_discount,
+    paidVacationAmount: sectionTotals.paid_vacation,
+    deviceCompAmount: sectionTotals.device_comp,
+    charityAmount: sectionTotals.charity,
+    pbcAmount: sectionTotals.pbc,
+    teamLossAmount: sectionTotals.team_loss,
     currency,
   };
 

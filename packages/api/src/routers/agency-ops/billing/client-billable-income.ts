@@ -1,14 +1,14 @@
 /** Price tracked time for Money income (billable rates; waste tracked separately). */
 
-export function amountCentsFromDurationAndRate(durationSeconds: number, rateCents: number): number {
+export function amountFromDurationAndRate(durationSeconds: number, rateAmount: number): number {
   if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
     throw new Error("durationSeconds must be a non-negative number.");
   }
-  if (!Number.isFinite(rateCents) || rateCents < 0) {
-    throw new Error("rateCents must be a non-negative number.");
+  if (!Number.isFinite(rateAmount) || rateAmount < 0) {
+    throw new Error("rateAmount must be a non-negative number.");
   }
-  if (durationSeconds === 0 || rateCents === 0) return 0;
-  return Math.round((durationSeconds / 3600) * rateCents);
+  if (durationSeconds === 0 || rateAmount === 0) return 0;
+  return Math.round((durationSeconds / 3600) * rateAmount);
 }
 
 export type ClientBillableIncomeRow = {
@@ -18,7 +18,7 @@ export type ClientBillableIncomeRow = {
   userId: string;
   durationSeconds: number;
   isWaste: boolean;
-  billableRateCents: number | null;
+  billableRateAmount: number | null;
 };
 
 export type ClientMoneyActivity = {
@@ -27,49 +27,49 @@ export type ClientMoneyActivity = {
   category: "internal" | "external";
   /** Non-waste seconds. */
   durationSeconds: number;
-  billableCents: number;
-  wasteCents: number;
+  billableAmount: number;
+  wasteAmount: number;
 };
 
 export type ExternalBillablePool = {
-  billablePoolCents: number;
+  billablePoolAmount: number;
   clients: ClientMoneyActivity[];
 };
 
-/** Aggregate per-client billable/waste cents; pool sums external non-waste only. */
+/** Aggregate per-client billable/waste amounts; pool sums external non-waste only. */
 export function aggregateExternalBillableIncome(
   rows: ReadonlyArray<ClientBillableIncomeRow>,
 ): ExternalBillablePool {
   const byClient = new Map<string, ClientMoneyActivity>();
 
   for (const row of rows) {
-    const rate = row.billableRateCents ?? 0;
-    const cents = amountCentsFromDurationAndRate(row.durationSeconds, rate);
+    const rate = row.billableRateAmount ?? 0;
+    const lineAmount = amountFromDurationAndRate(row.durationSeconds, rate);
     const existing = byClient.get(row.clientId) ?? {
       clientId: row.clientId,
       clientName: row.clientName,
       category: row.category,
       durationSeconds: 0,
-      billableCents: 0,
-      wasteCents: 0,
+      billableAmount: 0,
+      wasteAmount: 0,
     };
 
     if (row.isWaste) {
-      existing.wasteCents += cents;
+      existing.wasteAmount += lineAmount;
     } else {
       existing.durationSeconds += row.durationSeconds;
-      existing.billableCents += cents;
+      existing.billableAmount += lineAmount;
     }
     byClient.set(row.clientId, existing);
   }
 
   const clients = [...byClient.values()].sort((a, b) => a.clientName.localeCompare(b.clientName));
-  let billablePoolCents = 0;
+  let billablePoolAmount = 0;
   for (const client of clients) {
     if (client.category === "external") {
-      billablePoolCents += client.billableCents;
+      billablePoolAmount += client.billableAmount;
     }
   }
 
-  return { billablePoolCents, clients };
+  return { billablePoolAmount, clients };
 }

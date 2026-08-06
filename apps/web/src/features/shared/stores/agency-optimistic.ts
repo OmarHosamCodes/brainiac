@@ -12,7 +12,7 @@ export type AgencyOptimisticClient = {
   teamId: string;
   name: string;
   category: "internal" | "external";
-  billableRateCents: number | null;
+  billableRateAmount: number | null;
   currency: string;
   createdAt: string;
   updatedAt: string;
@@ -321,7 +321,7 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
               teamId,
               name: patch.name ?? "",
               category: patch.category ?? "external",
-              billableRateCents: patch.billableRateCents ?? null,
+              billableRateAmount: patch.billableRateAmount ?? null,
               currency: patch.currency ?? "USD",
               createdAt: patch.createdAt ?? new Date().toISOString(),
               updatedAt: patch.updatedAt ?? new Date().toISOString(),

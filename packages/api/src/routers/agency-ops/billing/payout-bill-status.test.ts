@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   payoutBillStatus,
   payoutLineStatusAfterPaid,
-  payoutRemainingCents,
+  payoutRemainingAmount,
   payoutRunStatusFromLines,
   payoutStatusesForBillFilter,
 } from "./payout-bill-status";
@@ -19,11 +19,11 @@ describe("payoutBillStatus", () => {
   });
 });
 
-describe("payoutRemainingCents", () => {
+describe("payoutRemainingAmount", () => {
   test("clamps at zero", () => {
-    expect(payoutRemainingCents(1000, 400)).toBe(600);
-    expect(payoutRemainingCents(1000, 1000)).toBe(0);
-    expect(payoutRemainingCents(1000, 1500)).toBe(0);
+    expect(payoutRemainingAmount(1000, 400)).toBe(600);
+    expect(payoutRemainingAmount(1000, 1000)).toBe(0);
+    expect(payoutRemainingAmount(1000, 1500)).toBe(0);
   });
 });
 

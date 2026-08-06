@@ -3,49 +3,52 @@ import type { AgencyOpsMoneyFormulaDef } from "@orch/db/schema";
 import {
   evaluateMoneyFormulaTokens,
   type MoneyFormulaContext,
-  roundMoneyFormulaCents,
+  roundMoneyFormulaAmount,
 } from "./money-formula-eval";
 import type { PeriodScoreboard, PeriodScoreboardInput } from "./period-scoreboard";
 import { buildPeriodScoreboard } from "./period-scoreboard";
 
 export type MoneyFormulaPeriodFacts = {
-  totalIncomeCents: number;
-  receivedCents: number;
-  salariesCents: number;
-  expensesCents: number;
-  debtDiscountCents: number;
-  paidVacationCents: number;
-  deviceCompCents: number;
-  charityCents: number;
-  pbcCents: number;
-  teamLossCents: number;
+  totalIncomeAmount: number;
+  receivedAmount: number;
+  salariesAmount: number;
+  expensesAmount: number;
+  debtDiscountAmount: number;
+  paidVacationAmount: number;
+  deviceCompAmount: number;
+  charityAmount: number;
+  pbcAmount: number;
+  teamLossAmount: number;
   paidVacationHours: number;
-  memberCostRateCents?: number;
+  memberCostRateAmount?: number;
   memberHours?: number;
   cohortSize?: number;
 };
 
 export function buildMoneyFormulaContext(facts: MoneyFormulaPeriodFacts): MoneyFormulaContext {
-  const remaining = Math.max(0, facts.totalIncomeCents - facts.receivedCents);
+  const remaining = Math.max(0, facts.totalIncomeAmount - facts.receivedAmount);
   const teamProfit =
-    facts.totalIncomeCents -
-    (facts.salariesCents + facts.expensesCents + facts.debtDiscountCents + facts.paidVacationCents);
+    facts.totalIncomeAmount -
+    (facts.salariesAmount +
+      facts.expensesAmount +
+      facts.debtDiscountAmount +
+      facts.paidVacationAmount);
 
   return {
-    total_income: facts.totalIncomeCents,
-    received: facts.receivedCents,
-    salaries: facts.salariesCents,
-    expenses: facts.expensesCents,
-    debt_discount: facts.debtDiscountCents,
-    paid_vacation: facts.paidVacationCents,
-    device_comp: facts.deviceCompCents,
-    charity: facts.charityCents,
-    pbc: facts.pbcCents,
-    team_loss: facts.teamLossCents,
+    total_income: facts.totalIncomeAmount,
+    received: facts.receivedAmount,
+    salaries: facts.salariesAmount,
+    expenses: facts.expensesAmount,
+    debt_discount: facts.debtDiscountAmount,
+    paid_vacation: facts.paidVacationAmount,
+    device_comp: facts.deviceCompAmount,
+    charity: facts.charityAmount,
+    pbc: facts.pbcAmount,
+    team_loss: facts.teamLossAmount,
     team_profit: teamProfit,
     remaining,
     paid_vacation_hours: facts.paidVacationHours,
-    member_cost_rate_cents: facts.memberCostRateCents ?? 0,
+    member_cost_rate_amount: facts.memberCostRateAmount ?? 0,
     member_hours: facts.memberHours ?? 0,
     cohort_size: facts.cohortSize ?? 0,
   };
@@ -57,8 +60,8 @@ export function evaluateFormulaValue(
 ): number | null {
   const result = evaluateMoneyFormulaTokens(formula.tokens, context);
   if (!result.ok) return null;
-  if (formula.output === "cents" || formula.output === "hours") {
-    return roundMoneyFormulaCents(result.value);
+  if (formula.output === "amount" || formula.output === "hours") {
+    return roundMoneyFormulaAmount(result.value);
   }
   return result.value;
 }
@@ -83,16 +86,16 @@ export function applyFormulasToScoreboard(
   const byMetric = formulaByMetric(formulas);
 
   const facts: MoneyFormulaPeriodFacts = {
-    totalIncomeCents: base.totalIncomeCents,
-    receivedCents: base.receivedCents,
-    salariesCents: base.salariesCents,
-    expensesCents: base.expensesCents,
-    debtDiscountCents: base.debtDiscountCents,
-    paidVacationCents: base.paidVacationCents,
-    deviceCompCents: base.deviceCompensationCents,
-    charityCents: base.charityCents,
-    pbcCents: base.pbcCents,
-    teamLossCents: base.profitLossShareCents,
+    totalIncomeAmount: base.totalIncomeAmount,
+    receivedAmount: base.receivedAmount,
+    salariesAmount: base.salariesAmount,
+    expensesAmount: base.expensesAmount,
+    debtDiscountAmount: base.debtDiscountAmount,
+    paidVacationAmount: base.paidVacationAmount,
+    deviceCompAmount: base.deviceCompensationAmount,
+    charityAmount: base.charityAmount,
+    pbcAmount: base.pbcAmount,
+    teamLossAmount: base.profitLossShareAmount,
     paidVacationHours,
   };
 
@@ -108,55 +111,55 @@ export function applyFormulasToScoreboard(
 
   const remaining = read("remaining", context);
   if (remaining !== null) {
-    board.remainingCents = Math.max(0, roundMoneyFormulaCents(remaining));
+    board.remainingAmount = Math.max(0, roundMoneyFormulaAmount(remaining));
   }
 
   const paidVacation = read("paid-vacation", context);
   if (paidVacation !== null) {
-    board.paidVacationCents = Math.max(0, roundMoneyFormulaCents(paidVacation));
-    facts.paidVacationCents = board.paidVacationCents;
+    board.paidVacationAmount = Math.max(0, roundMoneyFormulaAmount(paidVacation));
+    facts.paidVacationAmount = board.paidVacationAmount;
   }
 
   const device = read("device-compensation", context);
   if (device !== null) {
-    board.deviceCompensationCents = Math.max(0, roundMoneyFormulaCents(device));
-    facts.deviceCompCents = board.deviceCompensationCents;
+    board.deviceCompensationAmount = Math.max(0, roundMoneyFormulaAmount(device));
+    facts.deviceCompAmount = board.deviceCompensationAmount;
   }
 
   const charity = read("charity", context);
   if (charity !== null) {
-    board.charityCents = Math.max(0, roundMoneyFormulaCents(charity));
-    facts.charityCents = board.charityCents;
+    board.charityAmount = Math.max(0, roundMoneyFormulaAmount(charity));
+    facts.charityAmount = board.charityAmount;
   }
 
   const pbc = read("pbc", context);
   if (pbc !== null) {
-    board.pbcCents = Math.max(0, roundMoneyFormulaCents(pbc));
-    facts.pbcCents = board.pbcCents;
+    board.pbcAmount = Math.max(0, roundMoneyFormulaAmount(pbc));
+    facts.pbcAmount = board.pbcAmount;
   }
 
   const profitShare = read("profit-loss-share", context);
   if (profitShare !== null) {
-    board.profitLossShareCents = roundMoneyFormulaCents(profitShare);
-    facts.teamLossCents = board.profitLossShareCents;
+    board.profitLossShareAmount = roundMoneyFormulaAmount(profitShare);
+    facts.teamLossAmount = board.profitLossShareAmount;
   }
 
   context = buildMoneyFormulaContext(facts);
 
   const teamProfit = read("team-profit", context);
   if (teamProfit !== null) {
-    board.teamProfitCents = roundMoneyFormulaCents(teamProfit);
-    context = { ...context, team_profit: board.teamProfitCents };
+    board.teamProfitAmount = roundMoneyFormulaAmount(teamProfit);
+    context = { ...context, team_profit: board.teamProfitAmount };
   } else {
-    board.teamProfitCents = context.team_profit ?? board.teamProfitCents;
-    context = { ...context, team_profit: board.teamProfitCents };
+    board.teamProfitAmount = context.team_profit ?? board.teamProfitAmount;
+    context = { ...context, team_profit: board.teamProfitAmount };
   }
 
   const roi = read("roi", context);
   if (roi !== null) {
     board.roi = Number.isFinite(roi) ? roi : 0;
   } else {
-    board.roi = board.totalIncomeCents > 0 ? board.teamProfitCents / board.totalIncomeCents : 0;
+    board.roi = board.totalIncomeAmount > 0 ? board.teamProfitAmount / board.totalIncomeAmount : 0;
   }
 
   return board;

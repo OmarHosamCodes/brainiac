@@ -17,7 +17,7 @@ import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import {
   invoiceBillStatus,
-  invoiceRemainingCents,
+  invoiceRemainingAmount,
   invoiceStatusAfterReceived,
   invoiceStatusesForBillFilter,
   type InvoiceBillStatus,
@@ -33,13 +33,14 @@ import {
   type PeriodBillClientActivity,
   type PeriodBillMemberActivity,
 } from "./period-bill-activity";
+import { getAgencyCurrency, resolveMoneyForTeam } from "./money-fx-service";
 
 type AgencyMemberRateRecord = {
   userId: string;
   userName: string;
   userEmail: string;
-  costRateCents: number | null;
-  billableRateCents: number | null;
+  costRateAmount: number | null;
+  billableRateAmount: number | null;
   currency: string;
   effectiveFrom: string | null;
 };
@@ -83,8 +84,8 @@ export async function listMemberRates(
       userId: m.userId,
       userName: m.userName ?? "Unknown",
       userEmail: m.userEmail,
-      costRateCents: rate?.costRateCents ?? null,
-      billableRateCents: rate?.billableRateCents ?? null,
+      costRateAmount: rate?.costRateAmount ?? null,
+      billableRateAmount: rate?.billableRateAmount ?? null,
       currency: rate?.currency ?? "USD",
       effectiveFrom: rate?.effectiveFrom?.toISOString() ?? null,
     };
@@ -98,8 +99,8 @@ export async function upsertMemberRate(
   input: {
     teamId: string;
     userId: string;
-    costRateCents?: number | null;
-    billableRateCents?: number | null;
+    costRateAmount?: number | null;
+    billableRateAmount?: number | null;
     currency?: string;
     effectiveFrom?: string;
   },
@@ -126,15 +127,54 @@ export async function upsertMemberRate(
     ? parseIsoDateTime(input.effectiveFrom, "effectiveFrom")
     : now;
 
+  const { currency: agencyCurrency } = await getAgencyCurrency(actorUserId, {
+    teamId: input.teamId,
+  });
+  const sourceCurrency = (input.currency ?? agencyCurrency).toUpperCase();
+
+  let costRateAmount = input.costRateAmount ?? null;
+  let billableRateAmount = input.billableRateAmount ?? null;
+  let sourceCostRateAmount: number | null = null;
+  let sourceBillableRateAmount: number | null = null;
+  let fxRate = "1";
+  let fxAsOf: Date | null = null;
+
+  if (input.costRateAmount != null) {
+    const resolved = await resolveMoneyForTeam(actorUserId, {
+      teamId: input.teamId,
+      sourceAmount: input.costRateAmount,
+      sourceCurrency,
+    });
+    sourceCostRateAmount = resolved.sourceAmount;
+    costRateAmount = resolved.amount;
+    fxRate = resolved.fxRate;
+    fxAsOf = new Date(resolved.fxAsOf);
+  }
+  if (input.billableRateAmount != null) {
+    const resolved = await resolveMoneyForTeam(actorUserId, {
+      teamId: input.teamId,
+      sourceAmount: input.billableRateAmount,
+      sourceCurrency,
+    });
+    sourceBillableRateAmount = resolved.sourceAmount;
+    billableRateAmount = resolved.amount;
+    fxRate = resolved.fxRate;
+    fxAsOf = new Date(resolved.fxAsOf);
+  }
+
   const [upserted] = await db
     .insert(agencyOpsMemberRate)
     .values({
       id: createWorkspaceId("agency-rate"),
       teamId: input.teamId,
       userId: input.userId,
-      costRateCents: input.costRateCents ?? null,
-      billableRateCents: input.billableRateCents ?? null,
-      currency: input.currency ?? "USD",
+      costRateAmount,
+      billableRateAmount,
+      currency: sourceCurrency,
+      sourceCostRateAmount,
+      sourceBillableRateAmount,
+      fxRate,
+      fxAsOf,
       effectiveFrom,
       createdAt: now,
       updatedAt: now,
@@ -142,18 +182,32 @@ export async function upsertMemberRate(
     .onConflictDoUpdate({
       target: [agencyOpsMemberRate.teamId, agencyOpsMemberRate.userId],
       set: {
-        // Only overwrite a field when the caller explicitly provided it;
-        // otherwise keep the existing value via COALESCE.
-        costRateCents:
-          input.costRateCents !== undefined
-            ? input.costRateCents
-            : sql`COALESCE(${agencyOpsMemberRate.costRateCents}, ${agencyOpsMemberRate.costRateCents})`,
-        billableRateCents:
-          input.billableRateCents !== undefined
-            ? input.billableRateCents
-            : sql`COALESCE(${agencyOpsMemberRate.billableRateCents}, ${agencyOpsMemberRate.billableRateCents})`,
+        costRateAmount:
+          input.costRateAmount !== undefined
+            ? costRateAmount
+            : sql`COALESCE(${agencyOpsMemberRate.costRateAmount}, ${agencyOpsMemberRate.costRateAmount})`,
+        billableRateAmount:
+          input.billableRateAmount !== undefined
+            ? billableRateAmount
+            : sql`COALESCE(${agencyOpsMemberRate.billableRateAmount}, ${agencyOpsMemberRate.billableRateAmount})`,
         currency:
-          input.currency !== undefined ? input.currency : sql`${agencyOpsMemberRate.currency}`,
+          input.currency !== undefined ? sourceCurrency : sql`${agencyOpsMemberRate.currency}`,
+        sourceCostRateAmount:
+          input.costRateAmount !== undefined
+            ? sourceCostRateAmount
+            : sql`${agencyOpsMemberRate.sourceCostRateAmount}`,
+        sourceBillableRateAmount:
+          input.billableRateAmount !== undefined
+            ? sourceBillableRateAmount
+            : sql`${agencyOpsMemberRate.sourceBillableRateAmount}`,
+        fxRate:
+          input.costRateAmount !== undefined || input.billableRateAmount !== undefined
+            ? fxRate
+            : sql`${agencyOpsMemberRate.fxRate}`,
+        fxAsOf:
+          input.costRateAmount !== undefined || input.billableRateAmount !== undefined
+            ? fxAsOf
+            : sql`${agencyOpsMemberRate.fxAsOf}`,
         effectiveFrom:
           input.effectiveFrom !== undefined
             ? effectiveFrom
@@ -175,8 +229,8 @@ export async function upsertMemberRate(
     userId: upserted.userId,
     userName: userRow?.name ?? "Unknown",
     userEmail: userRow?.email ?? "",
-    costRateCents: upserted.costRateCents,
-    billableRateCents: upserted.billableRateCents,
+    costRateAmount: upserted.costRateAmount,
+    billableRateAmount: upserted.billableRateAmount,
     currency: upserted.currency,
     effectiveFrom: upserted.effectiveFrom.toISOString(),
   } satisfies AgencyMemberRateRecord;
@@ -189,9 +243,9 @@ type AgencyInvoiceRecord = {
   number: string;
   status: AgencyOpsInvoiceStatus;
   billStatus: InvoiceBillStatus;
-  amountCents: number;
-  receivedCents: number;
-  remainingCents: number;
+  amount: number;
+  receivedAmount: number;
+  remainingAmount: number;
   currency: string;
   periodStart: string;
   periodEnd: string;
@@ -222,7 +276,7 @@ function mapInvoiceRow(
   row: typeof agencyOpsInvoice.$inferSelect,
   clientName: string,
 ): AgencyInvoiceRecord {
-  const receivedCents = row.receivedCents ?? 0;
+  const receivedAmount = row.receivedAmount ?? 0;
   return {
     id: row.id,
     clientId: row.clientId,
@@ -230,9 +284,9 @@ function mapInvoiceRow(
     number: row.number,
     status: row.status,
     billStatus: invoiceBillStatus(row.status),
-    amountCents: row.amountCents,
-    receivedCents,
-    remainingCents: invoiceRemainingCents(row.amountCents, receivedCents),
+    amount: row.amount,
+    receivedAmount,
+    remainingAmount: invoiceRemainingAmount(row.amount, receivedAmount),
     currency: row.currency,
     periodStart: row.periodStart.toISOString(),
     periodEnd: row.periodEnd.toISOString(),
@@ -306,8 +360,8 @@ export async function getInvoiceSummary(
     .select({
       status: agencyOpsInvoice.status,
       currency: agencyOpsInvoice.currency,
-      amountCents: sum(agencyOpsInvoice.amountCents).as("total"),
-      receivedCents: sum(agencyOpsInvoice.receivedCents).as("received"),
+      amount: sum(agencyOpsInvoice.amount).as("total"),
+      receivedAmount: sum(agencyOpsInvoice.receivedAmount).as("received"),
       count: sql<number>`count(*)`.as("count"),
     })
     .from(agencyOpsInvoice)
@@ -323,20 +377,20 @@ export async function getInvoiceSummary(
   const outstandingByCurrency: Record<string, number> = {};
   const periodRows: Array<{
     status: string;
-    amountCents: number;
-    receivedCents: number;
+    amount: number;
+    receivedAmount: number;
     currency: string;
   }> = [];
 
   for (const row of rows) {
     const count = Number(row.count ?? 0);
-    const amount = Number(row.amountCents ?? 0);
-    const received = Number(row.receivedCents ?? 0);
+    const amount = Number(row.amount ?? 0);
+    const received = Number(row.receivedAmount ?? 0);
     const remaining = Math.max(0, amount - received);
     periodRows.push({
       status: row.status,
-      amountCents: amount,
-      receivedCents: received,
+      amount: amount,
+      receivedAmount: received,
       currency: row.currency,
     });
     if (row.status === "draft") {
@@ -360,7 +414,7 @@ export async function getInvoiceSummary(
   // For backward-compat convenience: also expose the USD outstanding total
   // (or the single currency if the team uses only one).
   const currencies = Object.keys(outstandingByCurrency);
-  const outstandingCents =
+  const outstandingAmount =
     currencies.length === 1
       ? (outstandingByCurrency[currencies[0]!] ?? 0)
       : (outstandingByCurrency["USD"] ?? 0);
@@ -372,12 +426,12 @@ export async function getInvoiceSummary(
     partialCount,
     paidCount,
     refundedCount,
-    outstandingCents,
+    outstandingAmount,
     currency,
     outstandingByCurrency,
-    billedCents: periodTotals.billedCents,
-    receivedCents: periodTotals.receivedCents,
-    remainingCents: periodTotals.remainingCents,
+    billedAmount: periodTotals.billedAmount,
+    receivedAmount: periodTotals.receivedAmount,
+    remainingAmount: periodTotals.remainingAmount,
   };
 }
 
@@ -437,12 +491,12 @@ export async function createInvoice(
   const memberRateRows = await db
     .select({
       userId: agencyOpsMemberRate.userId,
-      billableRateCents: agencyOpsMemberRate.billableRateCents,
+      billableRateAmount: agencyOpsMemberRate.billableRateAmount,
     })
     .from(agencyOpsMemberRate)
     .where(eq(agencyOpsMemberRate.teamId, input.teamId));
 
-  const rateByUserId = new Map(memberRateRows.map((r) => [r.userId, r.billableRateCents]));
+  const rateByUserId = new Map(memberRateRows.map((r) => [r.userId, r.billableRateAmount]));
 
   // Check that every user who logged billable time has a rate set.
   const userIdsWithEntries = [...new Set(billableEntries.map((e) => e.userId))];
@@ -455,14 +509,14 @@ export async function createInvoice(
     });
   }
 
-  type ProjectBucket = { projectName: string; seconds: number; rateCents: number };
+  type ProjectBucket = { projectName: string; seconds: number; rateAmount: number };
   const byProject = new Map<string, ProjectBucket>();
   for (const entry of billableEntries) {
-    const rateCents = rateByUserId.get(entry.userId) ?? 0;
+    const rateAmount = rateByUserId.get(entry.userId) ?? 0;
     const existing = byProject.get(entry.projectId) ?? {
       projectName: entry.projectName,
       seconds: 0,
-      rateCents,
+      rateAmount,
     };
     existing.seconds += entry.durationSeconds;
     byProject.set(entry.projectId, existing);
@@ -470,7 +524,7 @@ export async function createInvoice(
 
   const now = new Date();
 
-  const { invoice, totalCents } = await db.transaction(async (tx) => {
+  const { invoice, totalAmount } = await db.transaction(async (tx) => {
     const invoiceNumber = await getNextInvoiceNumber(input.teamId, tx);
 
     const [inv] = await tx
@@ -481,8 +535,8 @@ export async function createInvoice(
         clientId: input.clientId,
         number: invoiceNumber,
         status: "draft",
-        amountCents: 0,
-        receivedCents: 0,
+        amount: 0,
+        receivedAmount: 0,
         currency: input.currency ?? "USD",
         periodStart,
         periodEnd,
@@ -498,17 +552,17 @@ export async function createInvoice(
 
     if (byProject.size > 0) {
       const lineItems = [...byProject.entries()].map(
-        ([projectId, { projectName, seconds, rateCents }]) => {
-          const amountCents = Math.round((seconds / 3600) * rateCents);
-          total += amountCents;
+        ([projectId, { projectName, seconds, rateAmount }]) => {
+          const amount = Math.round((seconds / 3600) * rateAmount);
+          total += amount;
           return {
             id: createWorkspaceId("agency-li"),
             invoiceId: inv.id,
             description: projectName,
             projectId,
             durationSeconds: seconds,
-            rateCents,
-            amountCents,
+            rateAmount,
+            amount,
             fromTimeEntries: true,
             createdAt: now,
           };
@@ -522,8 +576,8 @@ export async function createInvoice(
         description: "Services",
         projectId: null,
         durationSeconds: 0,
-        rateCents: 0,
-        amountCents: 0,
+        rateAmount: 0,
+        amount: 0,
         fromTimeEntries: false,
         createdAt: now,
       });
@@ -531,13 +585,13 @@ export async function createInvoice(
 
     await tx
       .update(agencyOpsInvoice)
-      .set({ amountCents: total, updatedAt: now })
+      .set({ amount: total, updatedAt: now })
       .where(eq(agencyOpsInvoice.id, inv.id));
 
-    return { invoice: inv, totalCents: total };
+    return { invoice: inv, totalAmount: total };
   });
 
-  return mapInvoiceRow({ ...invoice, amountCents: totalCents }, clientRow.name);
+  return mapInvoiceRow({ ...invoice, amount: totalAmount }, clientRow.name);
 }
 
 export async function updateInvoiceStatus(
@@ -579,7 +633,7 @@ export async function updateInvoiceStatus(
   if (input.status === "sent") patch.issuedAt = existing.invoice.issuedAt ?? now;
   if (input.status === "paid") {
     patch.paidAt = now;
-    patch.receivedCents = existing.invoice.amountCents;
+    patch.receivedAmount = existing.invoice.amount;
   }
 
   const [updated] = await db
@@ -595,11 +649,11 @@ export async function updateInvoiceStatus(
 
 export async function recordInvoicePayment(
   actorUserId: string,
-  input: { teamId: string; invoiceId: string; amountCents: number },
+  input: { teamId: string; invoiceId: string; amount: number },
 ): Promise<AgencyInvoiceRecord> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
-  if (input.amountCents <= 0) {
+  if (input.amount <= 0) {
     throw new ORPCError("BAD_REQUEST", { message: "Payment amount must be greater than zero." });
   }
 
@@ -627,15 +681,15 @@ export async function recordInvoicePayment(
   }
 
   const now = new Date();
-  const nextReceived = existing.invoice.receivedCents + input.amountCents;
+  const nextReceived = existing.invoice.receivedAmount + input.amount;
   const nextStatus = invoiceStatusAfterReceived(
-    existing.invoice.amountCents,
+    existing.invoice.amount,
     nextReceived,
     existing.invoice.status,
   );
 
   const patch: Partial<typeof agencyOpsInvoice.$inferInsert> = {
-    receivedCents: nextReceived,
+    receivedAmount: nextReceived,
     status: nextStatus,
     updatedAt: now,
   };
@@ -666,7 +720,7 @@ async function loadPeriodClientBillableRows(
       userId: agencyOpsTimeEntry.userId,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
       isWaste: agencyOpsTimeEntry.isWaste,
-      billableRateCents: agencyOpsMemberRate.billableRateCents,
+      billableRateAmount: agencyOpsMemberRate.billableRateAmount,
     })
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
@@ -694,14 +748,14 @@ async function loadPeriodClientBillableRows(
     userId: row.userId,
     durationSeconds: row.durationSeconds,
     isWaste: row.isWaste,
-    billableRateCents: row.billableRateCents,
+    billableRateAmount: row.billableRateAmount,
   }));
 }
 
 export async function sumPeriodExternalBillablePool(
   actorUserId: string,
   input: { teamId: string; periodStart: string; periodEnd: string },
-): Promise<{ billablePoolCents: number; currency: string }> {
+): Promise<{ billablePoolAmount: number; currency: string }> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
@@ -711,8 +765,9 @@ export async function sumPeriodExternalBillablePool(
   }
 
   const rows = await loadPeriodClientBillableRows(input.teamId, periodStart, periodEnd);
-  const { billablePoolCents } = aggregateExternalBillableIncome(rows);
-  return { billablePoolCents, currency: "USD" };
+  const { billablePoolAmount } = aggregateExternalBillableIncome(rows);
+  const { currency } = await getAgencyCurrency(actorUserId, { teamId: input.teamId });
+  return { billablePoolAmount, currency };
 }
 
 export async function listPeriodBillActivity(
@@ -736,7 +791,7 @@ export async function listPeriodBillActivity(
         userAvatar: user.image,
         durationSeconds: agencyOpsTimeEntry.durationSeconds,
         isWaste: agencyOpsTimeEntry.isWaste,
-        costRateCents: agencyOpsMemberRate.costRateCents,
+        costRateAmount: agencyOpsMemberRate.costRateAmount,
       })
       .from(agencyOpsTimeEntry)
       .innerJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
@@ -762,8 +817,8 @@ export async function listPeriodBillActivity(
     clientId: client.clientId,
     clientName: client.clientName,
     durationSeconds: client.durationSeconds,
-    billableCents: client.billableCents,
-    wasteCents: client.wasteCents,
+    billableAmount: client.billableAmount,
+    wasteAmount: client.wasteAmount,
   }));
 
   let members = aggregateMemberPayableIncome(
@@ -773,7 +828,7 @@ export async function listPeriodBillActivity(
       userAvatar: formatAvatarUrl(row.userAvatar),
       durationSeconds: row.durationSeconds,
       isWaste: row.isWaste,
-      costRateCents: row.costRateCents,
+      costRateAmount: row.costRateAmount,
     })),
   );
 

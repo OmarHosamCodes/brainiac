@@ -18,7 +18,7 @@ type AgencyClientRecord = {
   teamId: string;
   name: string;
   category: "internal" | "external";
-  billableRateCents: number | null;
+  billableRateAmount: number | null;
   currency: string;
   archivedAt: string | null;
   createdAt: string;
@@ -30,7 +30,7 @@ function mapClientRow(row: {
   teamId: string;
   name: string;
   category: "internal" | "external";
-  billableRateCents: number | null;
+  billableRateAmount: number | null;
   currency: string;
   archivedAt: Date | null;
   createdAt: Date;
@@ -41,7 +41,7 @@ function mapClientRow(row: {
     teamId: row.teamId,
     name: row.name,
     category: row.category,
-    billableRateCents: row.billableRateCents,
+    billableRateAmount: row.billableRateAmount,
     currency: row.currency,
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
@@ -54,7 +54,7 @@ const clientSelect = {
   teamId: agencyOpsClient.teamId,
   name: agencyOpsClient.name,
   category: agencyOpsClient.category,
-  billableRateCents: agencyOpsClient.billableRateCents,
+  billableRateAmount: agencyOpsClient.billableRateAmount,
   currency: agencyOpsClient.currency,
   archivedAt: agencyOpsClient.archivedAt,
   createdAt: agencyOpsClient.createdAt,
@@ -126,14 +126,14 @@ export type AgencyClientCommercialSummary = {
   billing: {
     canView: boolean;
     openInvoiceCount: number;
-    outstandingCents: number;
+    outstandingAmount: number;
     currency: string;
     recentInvoices: Array<{
       id: string;
       number: string;
       status: string;
-      amountCents: number;
-      remainingCents: number;
+      amount: number;
+      remainingAmount: number;
       currency: string;
       periodStart: string;
       periodEnd: string;
@@ -233,7 +233,7 @@ export async function getAgencyClientCommercialSummary(
   let monthUninvoicedDurationSeconds = monthDurationSeconds;
   const canViewBilling = role === "owner";
   let openInvoiceCount = 0;
-  let outstandingCents = 0;
+  let outstandingAmount = 0;
   let billingCurrency = client.currency;
   const recentInvoices: AgencyClientCommercialSummary["billing"]["recentInvoices"] = [];
 
@@ -243,8 +243,8 @@ export async function getAgencyClientCommercialSummary(
         id: agencyOpsInvoice.id,
         number: agencyOpsInvoice.number,
         status: agencyOpsInvoice.status,
-        amountCents: agencyOpsInvoice.amountCents,
-        receivedCents: agencyOpsInvoice.receivedCents,
+        amount: agencyOpsInvoice.amount,
+        receivedAmount: agencyOpsInvoice.receivedAmount,
         currency: agencyOpsInvoice.currency,
         periodStart: agencyOpsInvoice.periodStart,
         periodEnd: agencyOpsInvoice.periodEnd,
@@ -261,18 +261,18 @@ export async function getAgencyClientCommercialSummary(
 
     const openStatuses = new Set(["draft", "sent", "partial"]);
     for (const inv of invoiceRows) {
-      const remaining = Math.max(0, inv.amountCents - inv.receivedCents);
+      const remaining = Math.max(0, inv.amount - inv.receivedAmount);
       if (openStatuses.has(inv.status)) {
         openInvoiceCount += 1;
-        outstandingCents += remaining;
+        outstandingAmount += remaining;
         billingCurrency = inv.currency || billingCurrency;
       }
       recentInvoices.push({
         id: inv.id,
         number: inv.number,
         status: inv.status,
-        amountCents: inv.amountCents,
-        remainingCents: remaining,
+        amount: inv.amount,
+        remainingAmount: remaining,
         currency: inv.currency,
         periodStart: inv.periodStart.toISOString(),
         periodEnd: inv.periodEnd.toISOString(),
@@ -315,7 +315,7 @@ export async function getAgencyClientCommercialSummary(
     billing: {
       canView: canViewBilling,
       openInvoiceCount,
-      outstandingCents,
+      outstandingAmount,
       currency: billingCurrency,
       recentInvoices: canViewBilling ? recentInvoices : [],
     },
@@ -328,7 +328,7 @@ export async function createAgencyClient(
     teamId: string;
     name: string;
     category?: "internal" | "external";
-    billableRateCents?: number | null;
+    billableRateAmount?: number | null;
     currency?: string;
   },
 ) {
@@ -342,7 +342,7 @@ export async function createAgencyClient(
       teamId: input.teamId,
       name: input.name.trim(),
       category: input.category ?? "external",
-      billableRateCents: input.billableRateCents ?? null,
+      billableRateAmount: input.billableRateAmount ?? null,
       currency: input.currency ?? "USD",
       createdByUserId: actorUserId,
       createdAt: now,
@@ -364,7 +364,7 @@ export async function updateAgencyClient(
     clientId: string;
     name?: string;
     category?: "internal" | "external";
-    billableRateCents?: number | null;
+    billableRateAmount?: number | null;
     currency?: string;
   },
 ) {
@@ -385,7 +385,7 @@ export async function updateAgencyClient(
   const hasPatch =
     input.name !== undefined ||
     input.category !== undefined ||
-    input.billableRateCents !== undefined ||
+    input.billableRateAmount !== undefined ||
     input.currency !== undefined;
 
   if (!hasPatch) {
@@ -397,7 +397,7 @@ export async function updateAgencyClient(
     updatedAt: Date;
     name?: string;
     category?: "internal" | "external";
-    billableRateCents?: number | null;
+    billableRateAmount?: number | null;
     currency?: string;
   } = { updatedAt: now };
 
@@ -407,8 +407,8 @@ export async function updateAgencyClient(
   if (input.category !== undefined) {
     patch.category = input.category;
   }
-  if (input.billableRateCents !== undefined) {
-    patch.billableRateCents = input.billableRateCents;
+  if (input.billableRateAmount !== undefined) {
+    patch.billableRateAmount = input.billableRateAmount;
   }
   if (input.currency !== undefined) {
     patch.currency = input.currency;

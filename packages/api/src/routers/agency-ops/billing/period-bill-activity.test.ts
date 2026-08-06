@@ -14,8 +14,20 @@ describe("aggregatePeriodClientActivity", () => {
       { clientId: "c1", clientName: "Acme", durationSeconds: 25 },
     ]);
     expect(items).toEqual([
-      { clientId: "c1", clientName: "Acme", durationSeconds: 75, billableCents: 0, wasteCents: 0 },
-      { clientId: "c2", clientName: "Beta", durationSeconds: 100, billableCents: 0, wasteCents: 0 },
+      {
+        clientId: "c1",
+        clientName: "Acme",
+        durationSeconds: 75,
+        billableAmount: 0,
+        wasteAmount: 0,
+      },
+      {
+        clientId: "c2",
+        clientName: "Beta",
+        durationSeconds: 100,
+        billableAmount: 0,
+        wasteAmount: 0,
+      },
     ]);
   });
 });
@@ -32,8 +44,8 @@ describe("aggregatePeriodMemberActivity", () => {
         userName: "Ada",
         userAvatar: "https://img/a.png",
         durationSeconds: 5400,
-        payableCents: 0,
-        wasteCents: 0,
+        payableAmount: 0,
+        wasteAmount: 0,
       },
     ]);
   });
@@ -42,8 +54,20 @@ describe("aggregatePeriodMemberActivity", () => {
 describe("uninvoicedPeriodClients", () => {
   test("drops clients that already have an invoice", () => {
     const clients = [
-      { clientId: "c1", clientName: "Acme", durationSeconds: 100, billableCents: 1, wasteCents: 0 },
-      { clientId: "c2", clientName: "Beta", durationSeconds: 50, billableCents: 1, wasteCents: 0 },
+      {
+        clientId: "c1",
+        clientName: "Acme",
+        durationSeconds: 100,
+        billableAmount: 1,
+        wasteAmount: 0,
+      },
+      {
+        clientId: "c2",
+        clientName: "Beta",
+        durationSeconds: 50,
+        billableAmount: 1,
+        wasteAmount: 0,
+      },
     ];
     expect(uninvoicedPeriodClients(clients, ["c1"]).map((c) => c.clientId)).toEqual(["c2"]);
   });

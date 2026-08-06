@@ -30,7 +30,7 @@ type AgencyClient = {
   teamId: string;
   name: string;
   category: "internal" | "external";
-  billableRateCents: number | null;
+  billableRateAmount: number | null;
   currency: string;
   createdAt: string;
   updatedAt: string;
@@ -156,7 +156,7 @@ type CreateClientPayload = {
   teamId: string;
   name: string;
   category?: "internal" | "external";
-  billableRateCents?: number | null;
+  billableRateAmount?: number | null;
   currency?: string;
 };
 
@@ -165,7 +165,7 @@ type UpdateClientPayload = {
   clientId: string;
   name?: string;
   category?: "internal" | "external";
-  billableRateCents?: number | null;
+  billableRateAmount?: number | null;
   currency?: string;
 };
 
@@ -269,8 +269,8 @@ type UpsertContactPayload = {
 type UpsertRatePayload = {
   teamId: string;
   userId: string;
-  costRateCents: number | null;
-  billableRateCents: number | null;
+  costRateAmount: number | null;
+  billableRateAmount: number | null;
   currency?: string;
   effectiveFrom?: string;
 };
@@ -306,7 +306,7 @@ type CreateExpensePayload = {
   kind: "one_time" | "subscription";
   period?: "weekly" | "monthly" | "quarterly" | "yearly" | null;
   note?: string;
-  amountCents: number;
+  amount: number;
   currency?: string;
 };
 
@@ -323,7 +323,7 @@ type CreatePayoutLinePayload = {
     | "charity"
     | "pbc";
   label: string;
-  amountCents: number;
+  amount: number;
   payeeUserId?: string | null;
   currency?: string;
   cohortKey?: string | null;
@@ -694,7 +694,7 @@ function createAgencyOpsActions(
       teamId: payload.teamId,
       name: payload.name.trim(),
       category: payload.category ?? "external",
-      billableRateCents: payload.billableRateCents ?? null,
+      billableRateAmount: payload.billableRateAmount ?? null,
       currency: payload.currency ?? "USD",
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -709,7 +709,7 @@ function createAgencyOpsActions(
         teamId: payload.teamId,
         name: payload.name.trim(),
         category: payload.category,
-        billableRateCents: payload.billableRateCents,
+        billableRateAmount: payload.billableRateAmount,
         currency: payload.currency,
       })) as AgencyClient;
 
@@ -735,7 +735,7 @@ function createAgencyOpsActions(
     const hasPatch =
       payload.name !== undefined ||
       payload.category !== undefined ||
-      payload.billableRateCents !== undefined ||
+      payload.billableRateAmount !== undefined ||
       payload.currency !== undefined;
 
     if (!hasPatch) return;
@@ -751,8 +751,8 @@ function createAgencyOpsActions(
     if (payload.category !== undefined) {
       optimisticPatch.category = payload.category;
     }
-    if (payload.billableRateCents !== undefined) {
-      optimisticPatch.billableRateCents = payload.billableRateCents;
+    if (payload.billableRateAmount !== undefined) {
+      optimisticPatch.billableRateAmount = payload.billableRateAmount;
     }
     if (payload.currency !== undefined) {
       optimisticPatch.currency = payload.currency;
@@ -768,7 +768,7 @@ function createAgencyOpsActions(
         clientId: payload.clientId,
         name: payload.name?.trim(),
         category: payload.category,
-        billableRateCents: payload.billableRateCents,
+        billableRateAmount: payload.billableRateAmount,
         currency: payload.currency,
       })) as AgencyClient;
 
@@ -1456,8 +1456,8 @@ function createAgencyOpsActions(
       await orpcClient.agencyOps.rates.upsert({
         teamId: payload.teamId,
         userId: payload.userId,
-        costRateCents: payload.costRateCents,
-        billableRateCents: payload.billableRateCents,
+        costRateAmount: payload.costRateAmount,
+        billableRateAmount: payload.billableRateAmount,
         currency: payload.currency,
         effectiveFrom: payload.effectiveFrom,
       });
@@ -1766,7 +1766,7 @@ function createAgencyOpsActions(
   }
 
   async function recordInvoicePayment(
-    payload: { teamId: string; invoiceId: string; amountCents: number },
+    payload: { teamId: string; invoiceId: string; amount: number },
     callbacks?: { onSuccess?: () => void },
   ) {
     set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
@@ -1865,7 +1865,7 @@ function createAgencyOpsActions(
         sectionKey: payload.sectionKey,
         payeeUserId: payload.payeeUserId,
         label: payload.label,
-        amountCents: payload.amountCents,
+        amount: payload.amount,
         currency: payload.currency,
         cohortKey: payload.cohortKey,
       });
@@ -1931,7 +1931,7 @@ function createAgencyOpsActions(
   }
 
   async function recordPayoutPayment(
-    payload: { teamId: string; lineId: string; amountCents: number },
+    payload: { teamId: string; lineId: string; amount: number },
     callbacks?: { onSuccess?: () => void },
   ) {
     set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
@@ -1980,7 +1980,7 @@ function createAgencyOpsActions(
         kind: payload.kind,
         period: payload.period,
         note: payload.note,
-        amountCents: payload.amountCents,
+        amount: payload.amount,
         currency: payload.currency,
       });
 
@@ -2006,7 +2006,7 @@ function createAgencyOpsActions(
   }
 
   async function recordExpensePayment(
-    payload: { teamId: string; expenseId: string; amountCents: number },
+    payload: { teamId: string; expenseId: string; amount: number },
     callbacks?: { onSuccess?: () => void },
   ) {
     set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
@@ -2084,7 +2084,7 @@ function createAgencyOpsActions(
             | { kind: "op"; op: "+" | "-" | "*" | "/" }
             | { kind: "paren"; value: "(" | ")" }
           >;
-          output: "cents" | "ratio" | "hours";
+          output: "amount" | "ratio" | "hours";
           metricId: string | null;
           sectionKey: string | null;
         }>;
@@ -2118,6 +2118,107 @@ function createAgencyOpsActions(
         ...state,
         invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
       }));
+    }
+  }
+
+  async function setAgencyCurrency(
+    payload: { teamId: string; currency: string },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+    try {
+      await orpcClient.agencyOps.moneySettings.setCurrency(payload);
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.moneySettings.get.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.fxRates.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+      ]);
+      callbacks?.onSuccess?.();
+      toast.success("Agency currency updated");
+    } catch (error) {
+      toast.error("Couldn't update currency", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function upsertFxRate(
+    payload: {
+      teamId: string;
+      fromCurrency: string;
+      toCurrency: string;
+      rate: string;
+      id?: string;
+    },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+    try {
+      await orpcClient.agencyOps.fxRates.upsert(payload);
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.fxRates.list.key(),
+      });
+      callbacks?.onSuccess?.();
+      toast.success("FX rate saved");
+    } catch (error) {
+      toast.error("Couldn't save FX rate", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function deleteFxRate(
+    payload: { teamId: string; id: string },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+    try {
+      await orpcClient.agencyOps.fxRates.delete(payload);
+      await getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.fxRates.list.key(),
+      });
+      callbacks?.onSuccess?.();
+      toast.success("FX rate removed");
+    } catch (error) {
+      toast.error("Couldn't remove FX rate", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function suggestFxRate(payload: {
+    teamId: string;
+    fromCurrency: string;
+    toCurrency: string;
+  }): Promise<{ rate: string; asOf: string } | null> {
+    try {
+      return await orpcClient.agencyOps.fxRates.suggest(payload);
+    } catch (error) {
+      toast.error("Couldn't suggest FX rate", {
+        description: getErrorMessage(error, "Try again."),
+      });
+      return null;
     }
   }
 
@@ -2201,6 +2302,10 @@ function createAgencyOpsActions(
     recordExpensePayment,
     removeExpense,
     upsertMoneySettings,
+    setAgencyCurrency,
+    upsertFxRate,
+    deleteFxRate,
+    suggestFxRate,
     syncFormulaPayoutLines,
   };
 }

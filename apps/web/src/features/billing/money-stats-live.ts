@@ -26,8 +26,8 @@ export type MoneyStatsCardWithSource = Omit<MoneyStatsCardFixture, "metrics"> & 
   metrics: MoneyStatsMetricWithSource[];
 };
 
-export function centsToMajor(cents: number): number {
-  return cents / 100;
+export function amountToMajor(amount: number): number {
+  return amount / 100;
 }
 
 export function buildMoneyStatsCards(

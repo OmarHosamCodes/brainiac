@@ -3,15 +3,15 @@ import { describe, expect, test } from "bun:test";
 import {
   advanceExpenseNextDueAt,
   defaultExpenseNextDueAt,
-  expenseRemainingCents,
+  expenseRemainingAmount,
   expenseStatusAfterPaid,
 } from "./expense-helpers";
 
-describe("expenseRemainingCents", () => {
+describe("expenseRemainingAmount", () => {
   test("clamps at zero", () => {
-    expect(expenseRemainingCents(1000, 250)).toBe(750);
-    expect(expenseRemainingCents(1000, 1000)).toBe(0);
-    expect(expenseRemainingCents(1000, 1200)).toBe(0);
+    expect(expenseRemainingAmount(1000, 250)).toBe(750);
+    expect(expenseRemainingAmount(1000, 1000)).toBe(0);
+    expect(expenseRemainingAmount(1000, 1200)).toBe(0);
   });
 });
 

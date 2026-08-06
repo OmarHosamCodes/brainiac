@@ -92,9 +92,9 @@ describe("money-settings-form", () => {
       tokens: [
         { kind: "number", value: 160 },
         { kind: "op", op: "*" },
-        { kind: "var", id: "member_cost_rate_cents" },
+        { kind: "var", id: "member_cost_rate_amount" },
       ],
-      output: "cents",
+      output: "amount",
       metricId: "paid-vacation",
       sectionKey: "paid_vacation",
     });

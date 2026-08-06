@@ -2,30 +2,30 @@
 
 export type InvoicePeriodTotalsInputRow = {
   status: string;
-  amountCents: number;
-  receivedCents: number;
+  amount: number;
+  receivedAmount: number;
   currency: string;
 };
 
 export type InvoicePeriodTotals = {
-  billedCents: number;
-  receivedCents: number;
-  remainingCents: number;
+  billedAmount: number;
+  receivedAmount: number;
+  remainingAmount: number;
   currency: string;
 };
 
 export function invoicePeriodTotalsFromRows(
   rows: ReadonlyArray<InvoicePeriodTotalsInputRow>,
 ): InvoicePeriodTotals {
-  let billedCents = 0;
-  let receivedCents = 0;
+  let billedAmount = 0;
+  let receivedAmount = 0;
   const currencyCounts = new Map<string, number>();
 
   for (const row of rows) {
     if (row.status === "refunded") continue;
-    billedCents += row.amountCents;
-    receivedCents += row.receivedCents;
-    currencyCounts.set(row.currency, (currencyCounts.get(row.currency) ?? 0) + row.amountCents);
+    billedAmount += row.amount;
+    receivedAmount += row.receivedAmount;
+    currencyCounts.set(row.currency, (currencyCounts.get(row.currency) ?? 0) + row.amount);
   }
 
   let currency = "USD";
@@ -38,9 +38,9 @@ export function invoicePeriodTotalsFromRows(
   }
 
   return {
-    billedCents,
-    receivedCents,
-    remainingCents: Math.max(0, billedCents - receivedCents),
+    billedAmount,
+    receivedAmount,
+    remainingAmount: Math.max(0, billedAmount - receivedAmount),
     currency,
   };
 }

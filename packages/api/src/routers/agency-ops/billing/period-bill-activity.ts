@@ -4,8 +4,8 @@ export type PeriodBillClientActivity = {
   clientId: string;
   clientName: string;
   durationSeconds: number;
-  billableCents: number;
-  wasteCents: number;
+  billableAmount: number;
+  wasteAmount: number;
 };
 
 export type PeriodBillMemberActivity = {
@@ -13,8 +13,8 @@ export type PeriodBillMemberActivity = {
   userName: string;
   userAvatar: string | null;
   durationSeconds: number;
-  payableCents: number;
-  wasteCents: number;
+  payableAmount: number;
+  wasteAmount: number;
 };
 
 export function aggregatePeriodClientActivity(
@@ -22,8 +22,8 @@ export function aggregatePeriodClientActivity(
     clientId: string;
     clientName: string;
     durationSeconds: number;
-    billableCents?: number;
-    wasteCents?: number;
+    billableAmount?: number;
+    wasteAmount?: number;
   }>,
 ): PeriodBillClientActivity[] {
   const byClient = new Map<string, PeriodBillClientActivity>();
@@ -31,15 +31,15 @@ export function aggregatePeriodClientActivity(
     const existing = byClient.get(row.clientId);
     if (existing) {
       existing.durationSeconds += row.durationSeconds;
-      existing.billableCents += row.billableCents ?? 0;
-      existing.wasteCents += row.wasteCents ?? 0;
+      existing.billableAmount += row.billableAmount ?? 0;
+      existing.wasteAmount += row.wasteAmount ?? 0;
     } else {
       byClient.set(row.clientId, {
         clientId: row.clientId,
         clientName: row.clientName,
         durationSeconds: row.durationSeconds,
-        billableCents: row.billableCents ?? 0,
-        wasteCents: row.wasteCents ?? 0,
+        billableAmount: row.billableAmount ?? 0,
+        wasteAmount: row.wasteAmount ?? 0,
       });
     }
   }
@@ -52,8 +52,8 @@ export function aggregatePeriodMemberActivity(
     userName: string;
     userAvatar: string | null;
     durationSeconds: number;
-    payableCents?: number;
-    wasteCents?: number;
+    payableAmount?: number;
+    wasteAmount?: number;
   }>,
 ): PeriodBillMemberActivity[] {
   const byUser = new Map<string, PeriodBillMemberActivity>();
@@ -61,8 +61,8 @@ export function aggregatePeriodMemberActivity(
     const existing = byUser.get(row.userId);
     if (existing) {
       existing.durationSeconds += row.durationSeconds;
-      existing.payableCents += row.payableCents ?? 0;
-      existing.wasteCents += row.wasteCents ?? 0;
+      existing.payableAmount += row.payableAmount ?? 0;
+      existing.wasteAmount += row.wasteAmount ?? 0;
       if (!existing.userAvatar && row.userAvatar) existing.userAvatar = row.userAvatar;
     } else {
       byUser.set(row.userId, {
@@ -70,8 +70,8 @@ export function aggregatePeriodMemberActivity(
         userName: row.userName,
         userAvatar: row.userAvatar,
         durationSeconds: row.durationSeconds,
-        payableCents: row.payableCents ?? 0,
-        wasteCents: row.wasteCents ?? 0,
+        payableAmount: row.payableAmount ?? 0,
+        wasteAmount: row.wasteAmount ?? 0,
       });
     }
   }

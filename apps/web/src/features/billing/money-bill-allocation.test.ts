@@ -11,13 +11,13 @@ import {
 describe("buildMoneyBillAllocation", () => {
   test("ready client is fully uninvoiced", () => {
     const view = allocationFromReadyClient({
-      billableCents: 64_500_00,
-      wasteCents: 8_100_00,
+      billableAmount: 64_500_00,
+      wasteAmount: 8_100_00,
       currency: "EGP",
     });
     expect(view.uninvoicedCents).toBe(64_500_00);
     expect(view.segments).toEqual([{ id: "uninvoiced", percent: 100 }]);
-    expect(view.wasteCents).toBe(8_100_00);
+    expect(view.wasteAmount).toBe(8_100_00);
     expect(view.presentation).toBe("activity");
     expect(view.uninvoicedTitle).toBe("Billable");
     expect(view.showWaste).toBe(true);
@@ -26,10 +26,10 @@ describe("buildMoneyBillAllocation", () => {
 
   test("invoice splits received and remaining", () => {
     const view = allocationFromInvoice({
-      amountCents: 80_000_00,
-      receivedCents: 50_000_00,
-      remainingCents: 30_000_00,
-      wasteCents: 3_600_00,
+      amount: 80_000_00,
+      receivedAmount: 50_000_00,
+      remainingAmount: 30_000_00,
+      wasteAmount: 3_600_00,
       currency: "EGP",
     });
     expect(view.uninvoicedCents).toBe(0);
@@ -41,8 +41,8 @@ describe("buildMoneyBillAllocation", () => {
 
   test("ready member uses payable activity vocabulary", () => {
     const view = allocationFromReadyMember({
-      payableCents: 12_000_00,
-      wasteCents: 1_000_00,
+      payableAmount: 12_000_00,
+      wasteAmount: 1_000_00,
       currency: "EGP",
     });
     expect(view.presentation).toBe("activity");
@@ -52,10 +52,10 @@ describe("buildMoneyBillAllocation", () => {
 
   test("payout splits paid and remaining", () => {
     const view = allocationFromPayout({
-      amountCents: 10_000_00,
-      paidCents: 4_000_00,
-      remainingCents: 6_000_00,
-      wasteCents: 500_00,
+      amount: 10_000_00,
+      paidAmount: 4_000_00,
+      remainingAmount: 6_000_00,
+      wasteAmount: 500_00,
       currency: "EGP",
     });
     expect(view.segments).toEqual([
@@ -68,10 +68,10 @@ describe("buildMoneyBillAllocation", () => {
     expect(
       buildMoneyBillAllocation({
         totalCents: 0,
-        receivedCents: 0,
-        remainingCents: 0,
+        receivedAmount: 0,
+        remainingAmount: 0,
         uninvoicedCents: 0,
-        wasteCents: 0,
+        wasteAmount: 0,
         currency: "USD",
       }).segments,
     ).toEqual([]);
@@ -79,10 +79,10 @@ describe("buildMoneyBillAllocation", () => {
 
   test("document allocation hides an empty waste label", () => {
     const view = allocationFromInvoice({
-      amountCents: 10_000,
-      receivedCents: 0,
-      remainingCents: 10_000,
-      wasteCents: 0,
+      amount: 10_000,
+      receivedAmount: 0,
+      remainingAmount: 10_000,
+      wasteAmount: 0,
       currency: "USD",
     });
     expect(view.presentation).toBe("document");

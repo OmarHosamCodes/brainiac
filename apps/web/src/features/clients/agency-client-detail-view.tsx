@@ -17,7 +17,7 @@ import {
   agencyLabelClass,
   agencyPanelClass,
 } from "@/features/shared/agency-ui";
-import { formatRate, parseBillableRateCents } from "@/features/shared/format-rate";
+import { formatRate, parseBillableRateAmount } from "@/features/shared/format-rate";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/utils/format-duration";
@@ -152,7 +152,7 @@ export function AgencyClientDetailView({
     isClientMutationPending,
     canViewBilling,
     openInvoiceCount,
-    outstandingCents,
+    outstandingAmount,
     billingCurrency,
     recentInvoices,
     openMoney,
@@ -164,7 +164,7 @@ export function AgencyClientDetailView({
   } = viewModel;
 
   const readyToInvoice = canViewBilling && monthUninvoicedDurationSeconds > 0;
-  const rateMissing = client?.billableRateCents === null;
+  const rateMissing = client?.billableRateAmount === null;
   const contactIncomplete = contactCompleteness !== "complete";
 
   return (
@@ -440,7 +440,7 @@ export function AgencyClientDetailView({
                         isClientMutationPending ||
                         Boolean(
                           editBillableRateDraft.trim() &&
-                          parseBillableRateCents(editBillableRateDraft) === null,
+                          parseBillableRateAmount(editBillableRateDraft) === null,
                         )
                       }
                     >
@@ -452,7 +452,7 @@ export function AgencyClientDetailView({
                     <div className="flex justify-between gap-3">
                       <dt className="text-muted">Rate</dt>
                       <dd className="font-mono font-bold tabular-nums text-highlighted">
-                        {formatRate(client.billableRateCents, client.currency, { perHour: true })}
+                        {formatRate(client.billableRateAmount, client.currency, { perHour: true })}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-3">
@@ -629,7 +629,7 @@ export function AgencyClientDetailView({
                     <p className={agencyLabelClass}>Money</p>
                     <p className="mt-1 text-xs text-muted">
                       {openInvoiceCount > 0
-                        ? `${openInvoiceCount} open · ${formatMoney(outstandingCents, billingCurrency)} outstanding`
+                        ? `${openInvoiceCount} open · ${formatMoney(outstandingAmount, billingCurrency)} outstanding`
                         : "No open invoices"}
                     </p>
                   </div>
@@ -664,7 +664,7 @@ export function AgencyClientDetailView({
                         </span>
                         <span className="capitalize text-muted">{invoice.status}</span>
                         <span className="text-right font-mono font-bold tabular-nums text-highlighted">
-                          {formatMoney(invoice.amountCents, invoice.currency)}
+                          {formatMoney(invoice.amount, invoice.currency)}
                         </span>
                       </li>
                     ))}

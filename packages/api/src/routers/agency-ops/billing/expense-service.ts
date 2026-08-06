@@ -14,9 +14,10 @@ import { requireTeamMembership } from "../shared/membership";
 import {
   advanceExpenseNextDueAt,
   defaultExpenseNextDueAt,
-  expenseRemainingCents,
+  expenseRemainingAmount,
   expenseStatusAfterPaid,
 } from "./expense-helpers";
+import { getAgencyCurrency, resolveMoneyForTeam } from "./money-fx-service";
 
 export type AgencyExpenseRecord = {
   id: string;
@@ -25,9 +26,9 @@ export type AgencyExpenseRecord = {
   kind: AgencyOpsExpenseKind;
   period: AgencyOpsExpensePeriod | null;
   note: string;
-  amountCents: number;
-  paidCents: number;
-  remainingCents: number;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
   currency: string;
   status: AgencyOpsExpenseStatus;
   nextDueAt: string | null;
@@ -37,7 +38,7 @@ export type AgencyExpenseRecord = {
 };
 
 function mapExpenseRow(row: typeof agencyOpsExpense.$inferSelect): AgencyExpenseRecord {
-  const paidCents = row.paidCents ?? 0;
+  const paidAmount = row.paidAmount ?? 0;
   return {
     id: row.id,
     teamId: row.teamId,
@@ -45,9 +46,9 @@ function mapExpenseRow(row: typeof agencyOpsExpense.$inferSelect): AgencyExpense
     kind: row.kind,
     period: row.period ?? null,
     note: row.note ?? "",
-    amountCents: row.amountCents,
-    paidCents,
-    remainingCents: expenseRemainingCents(row.amountCents, paidCents),
+    amount: row.amount,
+    paidAmount,
+    remainingAmount: expenseRemainingAmount(row.amount, paidAmount),
     currency: row.currency,
     status: row.status,
     nextDueAt: row.nextDueAt?.toISOString() ?? null,
@@ -104,7 +105,7 @@ export async function createExpense(
     kind: AgencyOpsExpenseKind;
     period?: AgencyOpsExpensePeriod | null;
     note?: string;
-    amountCents: number;
+    amount: number;
     currency?: string;
     nextDueAt?: string | null;
     occurredAt?: string | null;
@@ -116,8 +117,10 @@ export async function createExpense(
   if (!name) {
     throw new ORPCError("BAD_REQUEST", { message: "Name is required." });
   }
-  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
-    throw new ORPCError("BAD_REQUEST", { message: "Amount must be a positive integer (cents)." });
+  if (!Number.isInteger(input.amount) || input.amount <= 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Amount must be a positive integer (minor units).",
+    });
   }
 
   const now = new Date();
@@ -138,7 +141,14 @@ export async function createExpense(
   }
 
   const id = createWorkspaceId("agency-expense");
-  const currency = (input.currency ?? "USD").toUpperCase();
+  const { currency: agencyCurrency } = await getAgencyCurrency(actorUserId, {
+    teamId: input.teamId,
+  });
+  const money = await resolveMoneyForTeam(actorUserId, {
+    teamId: input.teamId,
+    sourceAmount: input.amount,
+    sourceCurrency: (input.currency ?? agencyCurrency).toUpperCase(),
+  });
 
   const [row] = await db
     .insert(agencyOpsExpense)
@@ -149,10 +159,13 @@ export async function createExpense(
       kind: input.kind,
       period,
       note: (input.note ?? "").trim(),
-      amountCents: input.amountCents,
-      currency,
+      amount: money.amount,
+      currency: money.sourceCurrency,
+      sourceAmount: money.sourceAmount,
+      fxRate: money.fxRate,
+      fxAsOf: new Date(money.fxAsOf),
       status: "due",
-      paidCents: 0,
+      paidAmount: 0,
       nextDueAt,
       occurredAt,
       createdByUserId: actorUserId,
@@ -172,7 +185,7 @@ export async function updateExpense(
     expenseId: string;
     name?: string;
     note?: string;
-    amountCents?: number;
+    amount?: number;
     currency?: string;
     period?: AgencyOpsExpensePeriod | null;
     nextDueAt?: string | null;
@@ -196,9 +209,11 @@ export async function updateExpense(
     throw new ORPCError("BAD_REQUEST", { message: "Name is required." });
   }
 
-  const amountCents = input.amountCents ?? existing.amountCents;
-  if (!Number.isInteger(amountCents) || amountCents <= 0) {
-    throw new ORPCError("BAD_REQUEST", { message: "Amount must be a positive integer (cents)." });
+  const amount = input.amount ?? existing.amount;
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Amount must be a positive integer (minor units).",
+    });
   }
 
   let period = existing.period ?? null;
@@ -219,20 +234,20 @@ export async function updateExpense(
     occurredAt = input.occurredAt ? parseIsoDateTime(input.occurredAt, "occurredAt") : null;
   }
 
-  const paidCents = Math.min(existing.paidCents ?? 0, amountCents);
-  const status = expenseStatusAfterPaid(amountCents, paidCents);
+  const paidAmount = Math.min(existing.paidAmount ?? 0, amount);
+  const status = expenseStatusAfterPaid(amount, paidAmount);
 
   const [row] = await db
     .update(agencyOpsExpense)
     .set({
       name,
       note: input.note !== undefined ? input.note.trim() : existing.note,
-      amountCents,
+      amount,
       currency: input.currency !== undefined ? input.currency.toUpperCase() : existing.currency,
       period,
       nextDueAt,
       occurredAt,
-      paidCents,
+      paidAmount,
       status,
       updatedAt: new Date(),
     })
@@ -247,11 +262,11 @@ export async function updateExpense(
 
 export async function recordExpensePayment(
   actorUserId: string,
-  input: { teamId: string; expenseId: string; amountCents: number },
+  input: { teamId: string; expenseId: string; amount: number },
 ): Promise<AgencyExpenseRecord> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
-  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+  if (!Number.isInteger(input.amount) || input.amount <= 0) {
     throw new ORPCError("BAD_REQUEST", { message: "Payment amount must be a positive integer." });
   }
 
@@ -268,26 +283,26 @@ export async function recordExpensePayment(
     throw new ORPCError("BAD_REQUEST", { message: "Expense is already paid." });
   }
 
-  const remaining = expenseRemainingCents(existing.amountCents, existing.paidCents ?? 0);
-  if (input.amountCents > remaining) {
+  const remaining = expenseRemainingAmount(existing.amount, existing.paidAmount ?? 0);
+  if (input.amount > remaining) {
     throw new ORPCError("BAD_REQUEST", { message: "Payment exceeds remaining balance." });
   }
 
-  let paidCents = (existing.paidCents ?? 0) + input.amountCents;
-  let status = expenseStatusAfterPaid(existing.amountCents, paidCents);
+  let paidAmount = (existing.paidAmount ?? 0) + input.amount;
+  let status = expenseStatusAfterPaid(existing.amount, paidAmount);
   let nextDueAt = existing.nextDueAt;
 
   // Subscription fully paid → roll to next due cycle.
   if (existing.kind === "subscription" && status === "paid" && existing.period && nextDueAt) {
     nextDueAt = advanceExpenseNextDueAt(nextDueAt, existing.period);
-    paidCents = 0;
+    paidAmount = 0;
     status = "due";
   }
 
   const [row] = await db
     .update(agencyOpsExpense)
     .set({
-      paidCents,
+      paidAmount,
       status,
       nextDueAt,
       updatedAt: new Date(),
@@ -322,7 +337,7 @@ export async function removeExpense(
 export async function sumExpensesInPeriod(
   actorUserId: string,
   input: { teamId: string; periodStart: string; periodEnd: string },
-): Promise<{ amountCents: number; paidCents: number; currency: string }> {
+): Promise<{ amount: number; paidAmount: number; currency: string }> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
@@ -333,8 +348,8 @@ export async function sumExpensesInPeriod(
 
   const rows = await db
     .select({
-      amountCents: agencyOpsExpense.amountCents,
-      paidCents: agencyOpsExpense.paidCents,
+      amount: agencyOpsExpense.amount,
+      paidAmount: agencyOpsExpense.paidAmount,
       currency: agencyOpsExpense.currency,
       kind: agencyOpsExpense.kind,
       nextDueAt: agencyOpsExpense.nextDueAt,
@@ -369,13 +384,13 @@ export async function sumExpensesInPeriod(
       ),
     );
 
-  let amountCents = 0;
-  let paidCents = 0;
+  let amount = 0;
+  let paidAmount = 0;
   let currency = "USD";
   for (const row of rows) {
-    amountCents += row.amountCents;
-    paidCents += row.paidCents ?? 0;
+    amount += row.amount;
+    paidAmount += row.paidAmount ?? 0;
     currency = row.currency;
   }
-  return { amountCents, paidCents, currency };
+  return { amount, paidAmount, currency };
 }

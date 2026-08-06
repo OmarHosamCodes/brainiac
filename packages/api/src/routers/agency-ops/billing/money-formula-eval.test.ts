@@ -79,23 +79,23 @@ describe("applyFormulasToScoreboard", () => {
     );
     const board = applyFormulasToScoreboard(
       {
-        billablePoolCents: 100_00,
-        receivedCents: 40_00,
-        invoicedRemainingCents: 60_00,
-        salariesDueCents: 20_00,
-        expensesAmountCents: 10_00,
-        debtDiscountCents: 0,
-        paidVacationCents: 0,
-        deviceCompCents: 0,
-        charityCents: 0,
-        pbcCents: 0,
-        teamLossCents: 0,
+        billablePoolAmount: 100_00,
+        receivedAmount: 40_00,
+        invoicedRemainingAmount: 60_00,
+        salariesDueAmount: 20_00,
+        expensesAmount: 10_00,
+        debtDiscountAmount: 0,
+        paidVacationAmount: 0,
+        deviceCompAmount: 0,
+        charityAmount: 0,
+        pbcAmount: 0,
+        teamLossAmount: 0,
         currency: "USD",
       },
       formulas,
       200,
     );
-    expect(board.remainingCents).toBe(60_00);
+    expect(board.remainingAmount).toBe(60_00);
     expect(board.roi).toBeCloseTo(0.7);
   });
 
@@ -114,23 +114,23 @@ describe("applyFormulasToScoreboard", () => {
     );
     const board = applyFormulasToScoreboard(
       {
-        billablePoolCents: 5000,
-        receivedCents: 0,
-        invoicedRemainingCents: 0,
-        salariesDueCents: 0,
-        expensesAmountCents: 0,
-        debtDiscountCents: 0,
-        paidVacationCents: 0,
-        deviceCompCents: 0,
-        charityCents: 0,
-        pbcCents: 0,
-        teamLossCents: 0,
+        billablePoolAmount: 5000,
+        receivedAmount: 0,
+        invoicedRemainingAmount: 0,
+        salariesDueAmount: 0,
+        expensesAmount: 0,
+        debtDiscountAmount: 0,
+        paidVacationAmount: 0,
+        deviceCompAmount: 0,
+        charityAmount: 0,
+        pbcAmount: 0,
+        teamLossAmount: 0,
         currency: "USD",
       },
       formulas,
       200,
     );
-    expect(board.remainingCents).toBe(4000);
+    expect(board.remainingAmount).toBe(4000);
   });
 });
 
@@ -165,7 +165,7 @@ describe("mergeMoneyFormulas", () => {
         locked: false,
         enabled: true,
         tokens: [{ kind: "number", value: 5000 }],
-        output: "cents",
+        output: "amount",
         metricId: null,
         sectionKey: "pbc",
       },

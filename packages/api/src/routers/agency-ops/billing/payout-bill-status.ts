@@ -3,8 +3,8 @@ import type { AgencyOpsPayoutLineStatus, AgencyOpsPayoutRunStatus } from "@orch/
 /** Bills Team chip lens. */
 export type PayoutBillStatus = "outstanding" | "partial" | "paid";
 
-export function payoutRemainingCents(amountCents: number, paidCents: number): number {
-  return Math.max(0, amountCents - paidCents);
+export function payoutRemainingAmount(amount: number, paidAmount: number): number {
+  return Math.max(0, amount - paidAmount);
 }
 
 export function payoutBillStatus(status: AgencyOpsPayoutLineStatus): PayoutBillStatus {
@@ -44,11 +44,11 @@ export function payoutStatusesForBillFilter(
  * Next line status after applying a paid total.
  */
 export function payoutLineStatusAfterPaid(
-  amountCents: number,
-  paidCents: number,
+  amount: number,
+  paidAmount: number,
 ): AgencyOpsPayoutLineStatus {
-  if (paidCents <= 0) return "draft";
-  if (paidCents >= amountCents) return "paid";
+  if (paidAmount <= 0) return "draft";
+  if (paidAmount >= amount) return "paid";
   return "partial";
 }
 

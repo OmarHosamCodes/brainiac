@@ -4,7 +4,7 @@ import { formatDuration } from "@/lib/utils/format-duration";
 
 import type { MoneyBillsStatusFilter } from "./money-bills-filters";
 import {
-  formatMoneyBillCents,
+  formatMoneyAmount,
   formatMoneyBillPeriod,
   type MoneyBillAdjustmentRow,
 } from "./money-bills-rows";
@@ -17,10 +17,10 @@ export type MoneyObligationClientSource = {
   periodStart: string;
   periodEnd: string;
   isCarry: boolean;
-  amountCents: number;
-  receivedCents: number;
-  remainingCents: number;
-  wasteCents: number;
+  amount: number;
+  receivedAmount: number;
+  remainingAmount: number;
+  wasteAmount: number;
   durationSeconds: number;
   number: string | null;
   currency?: string;
@@ -35,10 +35,10 @@ export type MoneyObligationMemberSource = {
   periodStart: string;
   periodEnd: string;
   isCarry: boolean;
-  amountCents: number;
-  paidCents: number;
-  remainingCents: number;
-  wasteCents: number;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  wasteAmount: number;
   durationSeconds: number;
   currency?: string;
 };
@@ -48,7 +48,7 @@ export type MoneyPendingAdjustmentSource = {
   partyType: "client" | "member";
   partyId: string;
   kind: "discount" | "surcharge" | "debt";
-  amountCents: number;
+  amount: number;
   note: string;
   periodStart: string | null;
   periodEnd: string | null;
@@ -63,9 +63,9 @@ export type MoneyBillObligationLine = {
   subtitle: string;
   statusLabel: string;
   totalCents: number;
-  receivedCents: number;
-  remainingCents: number;
-  wasteCents: number;
+  receivedAmount: number;
+  remainingAmount: number;
+  wasteAmount: number;
   openCents: number;
   currency: string;
   totalLabel: string;
@@ -91,9 +91,9 @@ export type MoneyBillPersonGroup = {
   userAvatar?: string | null;
   lines: MoneyBillObligationLine[];
   totalCents: number;
-  receivedCents: number;
-  remainingCents: number;
-  wasteCents: number;
+  receivedAmount: number;
+  remainingAmount: number;
+  wasteAmount: number;
   openCents: number;
   currency: string;
   totalLabel: string;
@@ -108,14 +108,14 @@ export type MoneyBillComposeDisplayRow = MoneyBillPersonGroup | MoneyBillAdjustm
 
 function obligationStatusLabel(line: {
   obligationKind: "ready" | "invoice" | "payout";
-  remainingCents: number;
-  receivedCents: number;
+  remainingAmount: number;
+  receivedAmount: number;
   totalCents: number;
 }): string {
   if (line.obligationKind === "ready") return "Ready";
-  if (line.remainingCents <= 0 && line.receivedCents > 0) return "Paid";
-  if (line.receivedCents > 0 && line.remainingCents > 0) return "Part paid";
-  if (line.remainingCents > 0) return "Outstanding";
+  if (line.remainingAmount <= 0 && line.receivedAmount > 0) return "Paid";
+  if (line.receivedAmount > 0 && line.remainingAmount > 0) return "Part paid";
+  if (line.remainingAmount > 0) return "Outstanding";
   return "Paid";
 }
 
@@ -144,16 +144,16 @@ export function moneyBillLineFromClientObligation(
   source: MoneyObligationClientSource,
 ): MoneyBillObligationLine {
   const currency = source.currency ?? "USD";
-  const totalCents = source.amountCents;
-  const receivedCents = source.receivedCents;
-  const remainingCents = source.remainingCents;
-  const wasteCents = source.wasteCents;
-  const openCents = remainingCents;
+  const totalCents = source.amount;
+  const receivedAmount = source.receivedAmount;
+  const remainingAmount = source.remainingAmount;
+  const wasteAmount = source.wasteAmount;
+  const openCents = remainingAmount;
   const obligationKind = source.kind;
   const statusLabel = obligationStatusLabel({
     obligationKind,
-    remainingCents,
-    receivedCents,
+    remainingAmount,
+    receivedAmount,
     totalCents,
   });
   const subtitleParts = [
@@ -172,16 +172,16 @@ export function moneyBillLineFromClientObligation(
     subtitle: subtitleParts.join(" · "),
     statusLabel,
     totalCents,
-    receivedCents,
-    remainingCents,
-    wasteCents,
+    receivedAmount,
+    remainingAmount,
+    wasteAmount,
     openCents,
     currency,
-    totalLabel: formatMoneyBillCents(totalCents, currency),
-    receivedLabel: formatMoneyBillCents(receivedCents, currency),
-    remainingLabel: formatMoneyBillCents(remainingCents, currency),
-    wasteLabel: formatMoneyBillCents(wasteCents, currency),
-    openLabel: formatMoneyBillCents(openCents, currency),
+    totalLabel: formatMoneyAmount(totalCents, currency),
+    receivedLabel: formatMoneyAmount(receivedAmount, currency),
+    remainingLabel: formatMoneyAmount(remainingAmount, currency),
+    wasteLabel: formatMoneyAmount(wasteAmount, currency),
+    openLabel: formatMoneyAmount(openCents, currency),
     periodStart: source.periodStart,
     periodEnd: source.periodEnd,
     documentId: source.kind === "invoice" ? source.id : null,
@@ -193,16 +193,16 @@ export function moneyBillLineFromMemberObligation(
   source: MoneyObligationMemberSource,
 ): MoneyBillObligationLine {
   const currency = source.currency ?? "USD";
-  const totalCents = source.amountCents;
-  const receivedCents = source.paidCents;
-  const remainingCents = source.remainingCents;
-  const wasteCents = source.wasteCents;
-  const openCents = remainingCents;
+  const totalCents = source.amount;
+  const receivedAmount = source.paidAmount;
+  const remainingAmount = source.remainingAmount;
+  const wasteAmount = source.wasteAmount;
+  const openCents = remainingAmount;
   const obligationKind = source.kind;
   const statusLabel = obligationStatusLabel({
     obligationKind,
-    remainingCents,
-    receivedCents,
+    remainingAmount,
+    receivedAmount,
     totalCents,
   });
   const subtitleParts = [
@@ -220,16 +220,16 @@ export function moneyBillLineFromMemberObligation(
     subtitle: subtitleParts.join(" · "),
     statusLabel,
     totalCents,
-    receivedCents,
-    remainingCents,
-    wasteCents,
+    receivedAmount,
+    remainingAmount,
+    wasteAmount,
     openCents,
     currency,
-    totalLabel: formatMoneyBillCents(totalCents, currency),
-    receivedLabel: formatMoneyBillCents(receivedCents, currency),
-    remainingLabel: formatMoneyBillCents(remainingCents, currency),
-    wasteLabel: formatMoneyBillCents(wasteCents, currency),
-    openLabel: formatMoneyBillCents(openCents, currency),
+    totalLabel: formatMoneyAmount(totalCents, currency),
+    receivedLabel: formatMoneyAmount(receivedAmount, currency),
+    remainingLabel: formatMoneyAmount(remainingAmount, currency),
+    wasteLabel: formatMoneyAmount(wasteAmount, currency),
+    openLabel: formatMoneyAmount(openCents, currency),
     periodStart: source.periodStart,
     periodEnd: source.periodEnd,
     documentId: source.kind === "payout" ? source.id : null,
@@ -248,11 +248,11 @@ function sumPendingForParty(
     if (item.partyType !== partyType || item.partyId !== partyId) continue;
     switch (item.kind) {
       case "discount":
-        delta -= item.amountCents;
+        delta -= item.amount;
         break;
       case "surcharge":
       case "debt":
-        delta += item.amountCents;
+        delta += item.amount;
         break;
       default: {
         const _exhaustive: never = item.kind;
@@ -288,9 +288,9 @@ export function buildMoneyBillPersonGroups(input: {
       if (lines.length === 0) continue;
       const currency = lines[0]?.currency ?? "USD";
       const totalCents = lines.reduce((sum, line) => sum + line.totalCents, 0);
-      const receivedCents = lines.reduce((sum, line) => sum + line.receivedCents, 0);
-      const remainingCents = lines.reduce((sum, line) => sum + line.remainingCents, 0);
-      const wasteCents = lines.reduce((sum, line) => sum + line.wasteCents, 0);
+      const receivedAmount = lines.reduce((sum, line) => sum + line.receivedAmount, 0);
+      const remainingAmount = lines.reduce((sum, line) => sum + line.remainingAmount, 0);
+      const wasteAmount = lines.reduce((sum, line) => sum + line.wasteAmount, 0);
       const openCents = lines.reduce((sum, line) => sum + line.openCents, 0);
       const pendingAdjustmentCents = sumPendingForParty(
         input.pendingAdjustments,
@@ -305,16 +305,16 @@ export function buildMoneyBillPersonGroups(input: {
         clientId,
         lines,
         totalCents,
-        receivedCents,
-        remainingCents,
-        wasteCents,
+        receivedAmount,
+        remainingAmount,
+        wasteAmount,
         openCents,
         currency,
-        totalLabel: formatMoneyBillCents(totalCents, currency),
-        receivedLabel: formatMoneyBillCents(receivedCents, currency),
-        remainingLabel: formatMoneyBillCents(remainingCents, currency),
-        wasteLabel: formatMoneyBillCents(wasteCents, currency),
-        openLabel: formatMoneyBillCents(openCents, currency),
+        totalLabel: formatMoneyAmount(totalCents, currency),
+        receivedLabel: formatMoneyAmount(receivedAmount, currency),
+        remainingLabel: formatMoneyAmount(remainingAmount, currency),
+        wasteLabel: formatMoneyAmount(wasteAmount, currency),
+        openLabel: formatMoneyAmount(openCents, currency),
         pendingAdjustmentCents,
       });
     }
@@ -333,9 +333,9 @@ export function buildMoneyBillPersonGroups(input: {
       if (lines.length === 0) continue;
       const currency = lines[0]?.currency ?? "USD";
       const totalCents = lines.reduce((sum, line) => sum + line.totalCents, 0);
-      const receivedCents = lines.reduce((sum, line) => sum + line.receivedCents, 0);
-      const remainingCents = lines.reduce((sum, line) => sum + line.remainingCents, 0);
-      const wasteCents = lines.reduce((sum, line) => sum + line.wasteCents, 0);
+      const receivedAmount = lines.reduce((sum, line) => sum + line.receivedAmount, 0);
+      const remainingAmount = lines.reduce((sum, line) => sum + line.remainingAmount, 0);
+      const wasteAmount = lines.reduce((sum, line) => sum + line.wasteAmount, 0);
       const openCents = lines.reduce((sum, line) => sum + line.openCents, 0);
       const pendingAdjustmentCents = sumPendingForParty(input.pendingAdjustments, "member", userId);
       rows.push({
@@ -347,16 +347,16 @@ export function buildMoneyBillPersonGroups(input: {
         userAvatar: lines[0]?.userAvatar ?? null,
         lines,
         totalCents,
-        receivedCents,
-        remainingCents,
-        wasteCents,
+        receivedAmount,
+        remainingAmount,
+        wasteAmount,
         openCents,
         currency,
-        totalLabel: formatMoneyBillCents(totalCents, currency),
-        receivedLabel: formatMoneyBillCents(receivedCents, currency),
-        remainingLabel: formatMoneyBillCents(remainingCents, currency),
-        wasteLabel: formatMoneyBillCents(wasteCents, currency),
-        openLabel: formatMoneyBillCents(openCents, currency),
+        totalLabel: formatMoneyAmount(totalCents, currency),
+        receivedLabel: formatMoneyAmount(receivedAmount, currency),
+        remainingLabel: formatMoneyAmount(remainingAmount, currency),
+        wasteLabel: formatMoneyAmount(wasteAmount, currency),
+        openLabel: formatMoneyAmount(openCents, currency),
         pendingAdjustmentCents,
       });
     }

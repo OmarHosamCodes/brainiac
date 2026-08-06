@@ -2,67 +2,67 @@
 
 export type PeriodScoreboardInput = {
   /** External non-waste tracked value (billable rates). */
-  billablePoolCents: number;
-  receivedCents: number;
+  billablePoolAmount: number;
+  receivedAmount: number;
   /** Invoiced unpaid — not total − received. */
-  invoicedRemainingCents: number;
-  salariesDueCents: number;
-  expensesAmountCents: number;
-  debtDiscountCents: number;
-  paidVacationCents: number;
-  deviceCompCents: number;
-  charityCents: number;
-  pbcCents: number;
-  teamLossCents: number;
+  invoicedRemainingAmount: number;
+  salariesDueAmount: number;
+  expensesAmount: number;
+  debtDiscountAmount: number;
+  paidVacationAmount: number;
+  deviceCompAmount: number;
+  charityAmount: number;
+  pbcAmount: number;
+  teamLossAmount: number;
   currency: string;
 };
 
 export type PeriodScoreboard = {
   currency: string;
-  totalIncomeCents: number;
-  receivedCents: number;
-  remainingCents: number;
-  salariesCents: number;
-  expensesCents: number;
-  debtDiscountCents: number;
-  paidVacationCents: number;
-  teamProfitCents: number;
-  profitLossShareCents: number;
+  totalIncomeAmount: number;
+  receivedAmount: number;
+  remainingAmount: number;
+  salariesAmount: number;
+  expensesAmount: number;
+  debtDiscountAmount: number;
+  paidVacationAmount: number;
+  teamProfitAmount: number;
+  profitLossShareAmount: number;
   roi: number;
-  deviceCompensationCents: number;
-  charityCents: number;
-  pbcCents: number;
+  deviceCompensationAmount: number;
+  charityAmount: number;
+  pbcAmount: number;
 };
 
 export function buildPeriodScoreboard(input: PeriodScoreboardInput): PeriodScoreboard {
-  const receivedCents = input.receivedCents;
-  const remainingCents = Math.max(0, input.invoicedRemainingCents);
-  const totalIncomeCents = Math.max(
-    Math.max(0, input.billablePoolCents),
-    receivedCents + remainingCents,
+  const receivedAmount = input.receivedAmount;
+  const remainingAmount = Math.max(0, input.invoicedRemainingAmount);
+  const totalIncomeAmount = Math.max(
+    Math.max(0, input.billablePoolAmount),
+    receivedAmount + remainingAmount,
   );
-  const teamProfitCents =
-    totalIncomeCents -
-    (input.salariesDueCents +
-      input.expensesAmountCents +
-      input.debtDiscountCents +
-      input.paidVacationCents);
-  const roi = totalIncomeCents > 0 ? teamProfitCents / totalIncomeCents : 0;
+  const teamProfitAmount =
+    totalIncomeAmount -
+    (input.salariesDueAmount +
+      input.expensesAmount +
+      input.debtDiscountAmount +
+      input.paidVacationAmount);
+  const roi = totalIncomeAmount > 0 ? teamProfitAmount / totalIncomeAmount : 0;
 
   return {
     currency: input.currency,
-    totalIncomeCents,
-    receivedCents,
-    remainingCents,
-    salariesCents: input.salariesDueCents,
-    expensesCents: input.expensesAmountCents,
-    debtDiscountCents: input.debtDiscountCents,
-    paidVacationCents: input.paidVacationCents,
-    teamProfitCents,
-    profitLossShareCents: input.teamLossCents,
+    totalIncomeAmount,
+    receivedAmount,
+    remainingAmount,
+    salariesAmount: input.salariesDueAmount,
+    expensesAmount: input.expensesAmount,
+    debtDiscountAmount: input.debtDiscountAmount,
+    paidVacationAmount: input.paidVacationAmount,
+    teamProfitAmount,
+    profitLossShareAmount: input.teamLossAmount,
     roi,
-    deviceCompensationCents: input.deviceCompCents,
-    charityCents: input.charityCents,
-    pbcCents: input.pbcCents,
+    deviceCompensationAmount: input.deviceCompAmount,
+    charityAmount: input.charityAmount,
+    pbcAmount: input.pbcAmount,
   };
 }

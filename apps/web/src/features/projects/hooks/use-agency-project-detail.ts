@@ -30,8 +30,8 @@ export type AgencyProjectDetailViewModel = {
     projectId: string;
     hoursBudget: number | null;
     hoursLogged: number;
-    costBudgetCents: number | null;
-    costLoggedCents: number;
+    costBudgetAmount: number | null;
+    costLoggedAmount: number;
   } | null;
   budgetPct: number;
   budgetTone: string;
@@ -139,10 +139,10 @@ export function useAgencyProjectDetail({
         Math.round((projectBudget.hoursLogged / projectBudget.hoursBudget) * 100),
       );
     }
-    if (projectBudget.costBudgetCents && projectBudget.costBudgetCents > 0) {
+    if (projectBudget.costBudgetAmount && projectBudget.costBudgetAmount > 0) {
       return Math.min(
         100,
-        Math.round((projectBudget.costLoggedCents / projectBudget.costBudgetCents) * 100),
+        Math.round((projectBudget.costLoggedAmount / projectBudget.costBudgetAmount) * 100),
       );
     }
     return 0;

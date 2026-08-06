@@ -28,12 +28,12 @@ const LANES: Array<{ id: LaneId; label: string; copy: string }> = [
   { id: "paid", label: "Paid", copy: "Reconciled and closed." },
 ];
 
-function formatCurrency(cents: number, currency: string): string {
+function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
-  }).format(cents / 100);
+  }).format(amount / 100);
 }
 
 function formatPeriod(start: string, end: string): string {
@@ -129,10 +129,10 @@ export function AgencyBillingSurfaceView({ viewModel }: AgencyBillingSurfaceView
                 <span
                   className={cn(
                     "ml-2 font-mono tabular-nums font-bold",
-                    summary.outstandingCents > 0 ? "text-highlighted" : "text-dimmed",
+                    summary.outstandingAmount > 0 ? "text-highlighted" : "text-dimmed",
                   )}
                 >
-                  {formatCurrency(summary.outstandingCents, summary.currency)}
+                  {formatCurrency(summary.outstandingAmount, summary.currency)}
                 </span>
               </div>
               <div>
@@ -215,7 +215,7 @@ export function AgencyBillingSurfaceView({ viewModel }: AgencyBillingSurfaceView
                             {invoice.number}
                           </span>
                           <span className="font-mono text-[11px] tabular-nums text-highlighted">
-                            {formatCurrency(invoice.amountCents, invoice.currency)}
+                            {formatCurrency(invoice.amount, invoice.currency)}
                           </span>
                         </div>
                         <p className="mt-1 truncate text-[11px] text-muted">{invoice.clientName}</p>

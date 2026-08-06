@@ -586,9 +586,12 @@ export function AgencyPeopleGuidedMember({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="EGP">EGP</SelectItem>
                           <SelectItem value="EUR">EUR</SelectItem>
                           <SelectItem value="GBP">GBP</SelectItem>
                           <SelectItem value="CAD">CAD</SelectItem>
+                          <SelectItem value="SAR">SAR</SelectItem>
+                          <SelectItem value="AED">AED</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

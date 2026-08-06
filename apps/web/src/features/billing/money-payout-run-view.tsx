@@ -18,7 +18,7 @@ import {
   type MoneyPayoutRunSection,
   type MoneyPayoutRunStatus,
 } from "./money-payout-run";
-import { formatMoneyBillCents } from "./money-bills-rows";
+import { formatMoneyAmount } from "./money-bills-rows";
 
 export type MoneyPayoutRunViewModel = {
   title: string;
@@ -132,7 +132,7 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
                     </p>
                   </div>
                   <span className="shrink-0 font-mono text-sm tabular-nums text-highlighted">
-                    {formatMoneyBillCents(section.dueCents, viewModel.currency)}
+                    {formatMoneyAmount(section.dueAmount, viewModel.currency)}
                   </span>
                 </button>
 
@@ -204,7 +204,7 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
                                     </p>
                                   </div>
                                   <span className="shrink-0 font-mono text-xs tabular-nums text-highlighted">
-                                    {formatMoneyBillCents(line.amountCents, line.currency)}
+                                    {formatMoneyAmount(line.amount, line.currency)}
                                   </span>
                                   {line.canRecordPayment && viewModel.onOpenPayment ? (
                                     <Button

@@ -153,13 +153,13 @@ export async function syncFormulaPayoutLines(
       db
         .select({
           userId: agencyOpsMemberRate.userId,
-          costRateCents: agencyOpsMemberRate.costRateCents,
+          costRateAmount: agencyOpsMemberRate.costRateAmount,
         })
         .from(agencyOpsMemberRate)
         .where(eq(agencyOpsMemberRate.teamId, input.teamId)),
     ]);
 
-  const rateByUser = new Map(rates.map((row) => [row.userId, row.costRateCents ?? 0]));
+  const rateByUser = new Map(rates.map((row) => [row.userId, row.costRateAmount ?? 0]));
   const allMemberIds = members.map((member) => member.userId);
   const memberNameById = new Map(
     members.map((member) => [member.userId, member.name?.trim() || "Unknown"]),
@@ -174,16 +174,16 @@ export async function syncFormulaPayoutLines(
   })();
 
   const baseFacts: MoneyFormulaPeriodFacts = {
-    totalIncomeCents: invoiceSummary.billedCents,
-    receivedCents: invoiceSummary.receivedCents,
-    salariesCents: payoutSummary.salariesDueCents || sectionTotals.salaries,
-    expensesCents: expenseTotals.amountCents,
-    debtDiscountCents: sectionTotals.debt_discount,
-    paidVacationCents: sectionTotals.paid_vacation,
-    deviceCompCents: sectionTotals.device_comp,
-    charityCents: sectionTotals.charity,
-    pbcCents: sectionTotals.pbc,
-    teamLossCents: sectionTotals.team_loss,
+    totalIncomeAmount: invoiceSummary.billedAmount,
+    receivedAmount: invoiceSummary.receivedAmount,
+    salariesAmount: payoutSummary.salariesDueAmount || sectionTotals.salaries,
+    expensesAmount: expenseTotals.amount,
+    debtDiscountAmount: sectionTotals.debt_discount,
+    paidVacationAmount: sectionTotals.paid_vacation,
+    deviceCompAmount: sectionTotals.device_comp,
+    charityAmount: sectionTotals.charity,
+    pbcAmount: sectionTotals.pbc,
+    teamLossAmount: sectionTotals.team_loss,
     paidVacationHours,
     cohortSize: allMemberIds.length,
   };
@@ -215,7 +215,7 @@ export async function syncFormulaPayoutLines(
         sectionId: section.id,
         payeeUserId: null,
         label,
-        amountCents: Math.round(amount),
+        amount: Math.round(amount),
         cohortKey,
       });
       if (result === "skipped") skipped += 1;
@@ -239,7 +239,7 @@ export async function syncFormulaPayoutLines(
 
       const context = buildMoneyFormulaContext({
         ...baseFacts,
-        memberCostRateCents: rateByUser.get(memberId) ?? 0,
+        memberCostRateAmount: rateByUser.get(memberId) ?? 0,
         memberHours: Number(durationRow?.total ?? 0) / 3600,
         cohortSize: eligible.length,
       });
@@ -251,7 +251,7 @@ export async function syncFormulaPayoutLines(
         sectionId: section.id,
         payeeUserId: memberId,
         label,
-        amountCents: Math.round(amount),
+        amount: Math.round(amount),
         cohortKey,
       });
       if (result === "skipped") skipped += 1;
@@ -266,7 +266,7 @@ async function upsertFormulaLine(input: {
   sectionId: string;
   payeeUserId: string | null;
   label: string;
-  amountCents: number;
+  amount: number;
   cohortKey: string | null;
 }): Promise<"upserted" | "skipped"> {
   if (input.payeeUserId) {
@@ -286,7 +286,7 @@ async function upsertFormulaLine(input: {
       await db
         .update(agencyOpsPayoutLine)
         .set({
-          amountCents: input.amountCents,
+          amount: input.amount,
           label: input.label,
           cohortKey: input.cohortKey,
           updatedAt: new Date(),
@@ -312,7 +312,7 @@ async function upsertFormulaLine(input: {
       await db
         .update(agencyOpsPayoutLine)
         .set({
-          amountCents: input.amountCents,
+          amount: input.amount,
           cohortKey: input.cohortKey,
           updatedAt: new Date(),
         })
@@ -327,11 +327,11 @@ async function upsertFormulaLine(input: {
     payeeUserId: input.payeeUserId,
     label: input.label,
     cohortKey: input.cohortKey,
-    amountCents: input.amountCents,
-    paidCents: 0,
+    amount: input.amount,
+    paidAmount: 0,
     status: "draft",
     durationSeconds: 0,
-    rateCents: 0,
+    rateAmount: 0,
   });
   return "upserted";
 }

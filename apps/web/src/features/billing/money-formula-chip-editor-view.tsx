@@ -345,7 +345,7 @@ export function MoneyFormulaChipEditorView({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cents">Cents / money</SelectItem>
+                  <SelectItem value="amount">Amount / money</SelectItem>
                   <SelectItem value="ratio">Ratio</SelectItem>
                   <SelectItem value="hours">Hours</SelectItem>
                 </SelectContent>

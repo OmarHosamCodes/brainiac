@@ -35,15 +35,15 @@ const clientCommercialSummarySchema = z.object({
   billing: z.object({
     canView: z.boolean(),
     openInvoiceCount: z.number().int().nonnegative(),
-    outstandingCents: z.number().int().nonnegative(),
+    outstandingAmount: z.number().int().nonnegative(),
     currency: z.string().min(1),
     recentInvoices: z.array(
       z.object({
         id: z.string().min(1),
         number: z.string().min(1),
         status: z.string().min(1),
-        amountCents: z.number().int().nonnegative(),
-        remainingCents: z.number().int().nonnegative(),
+        amount: z.number().int().nonnegative(),
+        remainingAmount: z.number().int().nonnegative(),
         currency: z.string().min(1),
         periodStart: z.string().datetime(),
         periodEnd: z.string().datetime(),
@@ -83,7 +83,7 @@ export const clientsRouter = {
         teamScopedInputSchema.extend({
           name: z.string().trim().min(1).max(120),
           category: agencyClientCategorySchema.optional(),
-          billableRateCents: z.number().int().nonnegative().nullable().optional(),
+          billableRateAmount: z.number().int().nonnegative().nullable().optional(),
           currency: z.string().min(1).optional(),
         }),
       )
@@ -99,7 +99,7 @@ export const clientsRouter = {
           clientId: z.string().min(1),
           name: z.string().trim().min(1).max(120).optional(),
           category: agencyClientCategorySchema.optional(),
-          billableRateCents: z.number().int().nonnegative().nullable().optional(),
+          billableRateAmount: z.number().int().nonnegative().nullable().optional(),
           currency: z.string().min(1).optional(),
         }),
       )

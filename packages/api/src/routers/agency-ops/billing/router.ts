@@ -30,6 +30,13 @@ import {
   updateExpense,
 } from "./expense-service";
 import { getMoneySettings, upsertMoneySettings } from "./money-settings-service";
+import {
+  deleteFxRate,
+  listFxRates,
+  setAgencyCurrency,
+  suggestFxRate,
+  upsertFxRate,
+} from "./money-fx-service";
 import { getPeriodScoreboard } from "./money-scoreboard-service";
 import { previewMoneyFormula } from "./money-formula-preview-service";
 import { syncFormulaPayoutLines } from "./money-formula-payout-sync";
@@ -82,7 +89,7 @@ const moneyPendingAdjustmentRecordSchema = z.object({
   periodStart: z.string().datetime().nullable(),
   periodEnd: z.string().datetime().nullable(),
   kind: moneyPendingKindSchema,
-  amountCents: z.number().int().positive(),
+  amount: z.number().int().positive(),
   note: z.string(),
   createdByUserId: z.string().min(1),
   createdAt: z.string().datetime(),
@@ -98,10 +105,10 @@ const moneyClientObligationSchema = z.discriminatedUnion("kind", [
     periodStart: z.string().datetime(),
     periodEnd: z.string().datetime(),
     isCarry: z.boolean(),
-    amountCents: z.number().int().nonnegative(),
-    receivedCents: z.number().int().nonnegative(),
-    remainingCents: z.number().int().nonnegative(),
-    wasteCents: z.number().int().nonnegative(),
+    amount: z.number().int().nonnegative(),
+    receivedAmount: z.number().int().nonnegative(),
+    remainingAmount: z.number().int().nonnegative(),
+    wasteAmount: z.number().int().nonnegative(),
     durationSeconds: z.number().int().nonnegative(),
     number: z.string().nullable(),
   }),
@@ -113,10 +120,10 @@ const moneyClientObligationSchema = z.discriminatedUnion("kind", [
     periodStart: z.string().datetime(),
     periodEnd: z.string().datetime(),
     isCarry: z.boolean(),
-    amountCents: z.number().int().nonnegative(),
-    receivedCents: z.literal(0),
-    remainingCents: z.number().int().nonnegative(),
-    wasteCents: z.number().int().nonnegative(),
+    amount: z.number().int().nonnegative(),
+    receivedAmount: z.literal(0),
+    remainingAmount: z.number().int().nonnegative(),
+    wasteAmount: z.number().int().nonnegative(),
     durationSeconds: z.number().int().nonnegative(),
     number: z.null(),
   }),
@@ -132,10 +139,10 @@ const moneyMemberObligationSchema = z.discriminatedUnion("kind", [
     periodStart: z.string().datetime(),
     periodEnd: z.string().datetime(),
     isCarry: z.boolean(),
-    amountCents: z.number().int().nonnegative(),
-    paidCents: z.number().int().nonnegative(),
-    remainingCents: z.number().int().nonnegative(),
-    wasteCents: z.number().int().nonnegative(),
+    amount: z.number().int().nonnegative(),
+    paidAmount: z.number().int().nonnegative(),
+    remainingAmount: z.number().int().nonnegative(),
+    wasteAmount: z.number().int().nonnegative(),
     durationSeconds: z.number().int().nonnegative(),
   }),
   z.object({
@@ -147,10 +154,10 @@ const moneyMemberObligationSchema = z.discriminatedUnion("kind", [
     periodStart: z.string().datetime(),
     periodEnd: z.string().datetime(),
     isCarry: z.boolean(),
-    amountCents: z.number().int().nonnegative(),
-    paidCents: z.literal(0),
-    remainingCents: z.number().int().nonnegative(),
-    wasteCents: z.number().int().nonnegative(),
+    amount: z.number().int().nonnegative(),
+    paidAmount: z.literal(0),
+    remainingAmount: z.number().int().nonnegative(),
+    wasteAmount: z.number().int().nonnegative(),
     durationSeconds: z.number().int().nonnegative(),
   }),
 ]);
@@ -162,9 +169,9 @@ const invoiceRecordSchema = z.object({
   number: z.string().min(1),
   status: invoiceStatusSchema,
   billStatus: invoiceBillStatusSchema,
-  amountCents: z.number().int().nonnegative(),
-  receivedCents: z.number().int().nonnegative(),
-  remainingCents: z.number().int().nonnegative(),
+  amount: z.number().int().nonnegative(),
+  receivedAmount: z.number().int().nonnegative(),
+  remainingAmount: z.number().int().nonnegative(),
   currency: z.string().min(1),
   periodStart: z.string().datetime(),
   periodEnd: z.string().datetime(),
@@ -184,12 +191,12 @@ const payoutLineRecordSchema = z.object({
   cohortKey: z.string().nullable(),
   status: payoutLineStatusSchema,
   billStatus: payoutBillStatusSchema,
-  amountCents: z.number().int().nonnegative(),
-  paidCents: z.number().int().nonnegative(),
-  remainingCents: z.number().int().nonnegative(),
+  amount: z.number().int().nonnegative(),
+  paidAmount: z.number().int().nonnegative(),
+  remainingAmount: z.number().int().nonnegative(),
   currency: z.string().min(1),
   durationSeconds: z.number().int().nonnegative(),
-  rateCents: z.number().int().nonnegative(),
+  rateAmount: z.number().int().nonnegative(),
   periodStart: z.string().datetime(),
   periodEnd: z.string().datetime(),
 });
@@ -211,9 +218,9 @@ const expenseRecordSchema = z.object({
   kind: expenseKindSchema,
   period: expensePeriodSchema.nullable(),
   note: z.string(),
-  amountCents: z.number().int().nonnegative(),
-  paidCents: z.number().int().nonnegative(),
-  remainingCents: z.number().int().nonnegative(),
+  amount: z.number().int().nonnegative(),
+  paidAmount: z.number().int().nonnegative(),
+  remainingAmount: z.number().int().nonnegative(),
   currency: z.string().min(1),
   status: expenseStatusSchema,
   nextDueAt: z.string().datetime().nullable(),
@@ -238,9 +245,9 @@ export const billingRouter = {
                 projectId: z.string().min(1),
                 currency: z.string().min(1),
                 hoursBudget: z.number().nonnegative().nullable(),
-                costBudgetCents: z.number().int().nonnegative().nullable(),
+                costBudgetAmount: z.number().int().nonnegative().nullable(),
                 hoursLogged: z.number().nonnegative(),
-                costLoggedCents: z.number().int().nonnegative(),
+                costLoggedAmount: z.number().int().nonnegative(),
                 periodStart: z.string().datetime().nullable(),
                 periodEnd: z.string().datetime().nullable(),
               }),
@@ -259,8 +266,8 @@ export const billingRouter = {
               userId: z.string().min(1),
               userName: z.string().min(1),
               userEmail: z.email(),
-              costRateCents: z.number().int().nonnegative().nullable(),
-              billableRateCents: z.number().int().nonnegative().nullable(),
+              costRateAmount: z.number().int().nonnegative().nullable(),
+              billableRateAmount: z.number().int().nonnegative().nullable(),
               currency: z.string().min(1),
               effectiveFrom: z.string().datetime().nullable(),
             }),
@@ -272,8 +279,8 @@ export const billingRouter = {
       .input(
         teamScopedInputSchema.extend({
           userId: z.string().min(1),
-          costRateCents: z.number().int().nonnegative().nullable().optional(),
-          billableRateCents: z.number().int().nonnegative().nullable().optional(),
+          costRateAmount: z.number().int().nonnegative().nullable().optional(),
+          billableRateAmount: z.number().int().nonnegative().nullable().optional(),
           currency: z.string().length(3).optional(),
           effectiveFrom: z.string().datetime().optional(),
         }),
@@ -284,8 +291,8 @@ export const billingRouter = {
             userId: z.string().min(1),
             userName: z.string().min(1),
             userEmail: z.email(),
-            costRateCents: z.number().int().nonnegative().nullable(),
-            billableRateCents: z.number().int().nonnegative().nullable(),
+            costRateAmount: z.number().int().nonnegative().nullable(),
+            billableRateAmount: z.number().int().nonnegative().nullable(),
             currency: z.string().min(1),
             effectiveFrom: z.string().datetime().nullable(),
           })
@@ -309,12 +316,12 @@ export const billingRouter = {
             partialCount: z.number().int().nonnegative(),
             paidCount: z.number().int().nonnegative(),
             refundedCount: z.number().int().nonnegative(),
-            outstandingCents: z.number().int().nonnegative(),
+            outstandingAmount: z.number().int().nonnegative(),
             currency: z.string().min(1),
             outstandingByCurrency: z.record(z.string(), z.number().int().nonnegative()),
-            billedCents: z.number().int().nonnegative(),
-            receivedCents: z.number().int().nonnegative(),
-            remainingCents: z.number().int().nonnegative(),
+            billedAmount: z.number().int().nonnegative(),
+            receivedAmount: z.number().int().nonnegative(),
+            remainingAmount: z.number().int().nonnegative(),
           })
           .parse(await getInvoiceSummary(context.session.user.id, input));
       }),
@@ -361,7 +368,7 @@ export const billingRouter = {
       .input(
         teamScopedInputSchema.extend({
           invoiceId: z.string().min(1),
-          amountCents: z.number().int().positive(),
+          amount: z.number().int().positive(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -385,8 +392,8 @@ export const billingRouter = {
                 clientId: z.string().min(1),
                 clientName: z.string().min(1),
                 durationSeconds: z.number().int().nonnegative(),
-                billableCents: z.number().int().nonnegative(),
-                wasteCents: z.number().int().nonnegative(),
+                billableAmount: z.number().int().nonnegative(),
+                wasteAmount: z.number().int().nonnegative(),
               }),
             ),
             members: z.array(
@@ -395,8 +402,8 @@ export const billingRouter = {
                 userName: z.string().min(1),
                 userAvatar: z.string().nullable(),
                 durationSeconds: z.number().int().nonnegative(),
-                payableCents: z.number().int().nonnegative(),
-                wasteCents: z.number().int().nonnegative(),
+                payableAmount: z.number().int().nonnegative(),
+                wasteAmount: z.number().int().nonnegative(),
               }),
             ),
           })
@@ -428,9 +435,9 @@ export const billingRouter = {
       .handler(async ({ context, input }) => {
         return z
           .object({
-            salariesDueCents: z.number().int().nonnegative(),
-            salariesPaidCents: z.number().int().nonnegative(),
-            salariesRemainingCents: z.number().int().nonnegative(),
+            salariesDueAmount: z.number().int().nonnegative(),
+            salariesPaidAmount: z.number().int().nonnegative(),
+            salariesRemainingAmount: z.number().int().nonnegative(),
             currency: z.string().min(1),
           })
           .parse(await getPayoutSummary(context.session.user.id, input));
@@ -459,9 +466,9 @@ export const billingRouter = {
                 title: z.string().min(1),
                 sortOrder: z.number().int().nonnegative(),
                 lineCount: z.number().int().nonnegative(),
-                dueCents: z.number().int().nonnegative(),
-                paidCents: z.number().int().nonnegative(),
-                remainingCents: z.number().int().nonnegative(),
+                dueAmount: z.number().int().nonnegative(),
+                paidAmount: z.number().int().nonnegative(),
+                remainingAmount: z.number().int().nonnegative(),
               }),
             ),
           })
@@ -493,7 +500,7 @@ export const billingRouter = {
           sectionKey: payoutSectionKeySchema,
           payeeUserId: z.string().min(1).nullable().optional(),
           label: z.string().min(1),
-          amountCents: z.number().int().positive(),
+          amount: z.number().int().positive(),
           currency: z.string().length(3).optional(),
           cohortKey: z.string().nullable().optional(),
         }),
@@ -519,7 +526,7 @@ export const billingRouter = {
       .input(
         teamScopedInputSchema.extend({
           lineId: z.string().min(1),
-          amountCents: z.number().int().positive(),
+          amount: z.number().int().positive(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -579,7 +586,7 @@ export const billingRouter = {
           kind: expenseKindSchema,
           period: expensePeriodSchema.nullable().optional(),
           note: z.string().optional(),
-          amountCents: z.number().int().positive(),
+          amount: z.number().int().positive(),
           currency: z.string().length(3).optional(),
           nextDueAt: z.string().datetime().nullable().optional(),
           occurredAt: z.string().datetime().nullable().optional(),
@@ -594,7 +601,7 @@ export const billingRouter = {
           expenseId: z.string().min(1),
           name: z.string().min(1).optional(),
           note: z.string().optional(),
-          amountCents: z.number().int().positive().optional(),
+          amount: z.number().int().positive().optional(),
           currency: z.string().length(3).optional(),
           period: expensePeriodSchema.nullable().optional(),
           nextDueAt: z.string().datetime().nullable().optional(),
@@ -608,7 +615,7 @@ export const billingRouter = {
       .input(
         teamScopedInputSchema.extend({
           expenseId: z.string().min(1),
-          amountCents: z.number().int().positive(),
+          amount: z.number().int().positive(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -671,7 +678,7 @@ export const billingRouter = {
           partyType: moneyPartyTypeSchema,
           partyId: z.string().min(1),
           kind: moneyPendingKindSchema,
-          amountCents: z.number().int().positive(),
+          amount: z.number().int().positive(),
           note: z.string().optional(),
           periodStart: z.string().datetime().optional(),
           periodEnd: z.string().datetime().optional(),
@@ -707,19 +714,19 @@ export const billingRouter = {
         return z
           .object({
             currency: z.string().min(1),
-            totalIncomeCents: z.number().int(),
-            receivedCents: z.number().int().nonnegative(),
-            remainingCents: z.number().int().nonnegative(),
-            salariesCents: z.number().int().nonnegative(),
-            expensesCents: z.number().int().nonnegative(),
-            debtDiscountCents: z.number().int().nonnegative(),
-            paidVacationCents: z.number().int().nonnegative(),
-            teamProfitCents: z.number().int(),
-            profitLossShareCents: z.number().int(),
+            totalIncomeAmount: z.number().int(),
+            receivedAmount: z.number().int().nonnegative(),
+            remainingAmount: z.number().int().nonnegative(),
+            salariesAmount: z.number().int().nonnegative(),
+            expensesAmount: z.number().int().nonnegative(),
+            debtDiscountAmount: z.number().int().nonnegative(),
+            paidVacationAmount: z.number().int().nonnegative(),
+            teamProfitAmount: z.number().int(),
+            profitLossShareAmount: z.number().int(),
             roi: z.number(),
-            deviceCompensationCents: z.number().int().nonnegative(),
-            charityCents: z.number().int().nonnegative(),
-            pbcCents: z.number().int().nonnegative(),
+            deviceCompensationAmount: z.number().int().nonnegative(),
+            charityAmount: z.number().int().nonnegative(),
+            pbcAmount: z.number().int().nonnegative(),
           })
           .parse(await getPeriodScoreboard(context.session.user.id, input));
       }),
@@ -729,7 +736,7 @@ export const billingRouter = {
           partyType: moneyPartyTypeSchema,
           obligationId: z.string().min(1),
           action: moneySettleActionSchema,
-          amountCents: z.number().int().nonnegative(),
+          amount: z.number().int().nonnegative(),
           periodStart: z.string().datetime(),
           periodEnd: z.string().datetime(),
           clientId: z.string().min(1).optional(),
@@ -757,7 +764,7 @@ export const billingRouter = {
                 periodStart: z.string().datetime(),
                 periodEnd: z.string().datetime(),
                 kind: moneyObligationKindSchema,
-                amountCents: z.number().int().nonnegative(),
+                amount: z.number().int().nonnegative(),
               }),
             )
             .min(1),
@@ -795,13 +802,27 @@ export const billingRouter = {
           await upsertMoneySettings(context.session.user.id, input),
         );
       }),
+    setCurrency: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          currency: z.string().length(3),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            currency: z.string().length(3),
+            currencyLockedAt: z.string().datetime().nullable(),
+          })
+          .parse(await setAgencyCurrency(context.session.user.id, input));
+      }),
     preview: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
           periodStart: z.string().datetime(),
           periodEnd: z.string().datetime(),
           tokens: z.array(moneyFormulaTokenSchema).min(1),
-          output: z.enum(["cents", "ratio", "hours"]),
+          output: z.enum(["amount", "ratio", "hours"]),
           memberUserId: z.string().min(1).nullable().optional(),
         }),
       )
@@ -812,6 +833,71 @@ export const billingRouter = {
             error: z.string().nullable(),
           })
           .parse(await previewMoneyFormula(context.session.user.id, input));
+      }),
+  },
+
+  fxRates: {
+    list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
+      return z
+        .object({
+          items: z.array(
+            z.object({
+              id: z.string().min(1),
+              teamId: z.string().min(1),
+              fromCurrency: z.string().length(3),
+              toCurrency: z.string().length(3),
+              rate: z.string().min(1),
+              updatedAt: z.string().datetime(),
+            }),
+          ),
+          agencyCurrency: z.string().length(3),
+          currencyLockedAt: z.string().datetime().nullable(),
+        })
+        .parse(await listFxRates(context.session.user.id, input));
+    }),
+    upsert: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          fromCurrency: z.string().length(3),
+          toCurrency: z.string().length(3),
+          rate: z.string().min(1),
+          id: z.string().min(1).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            id: z.string().min(1),
+            teamId: z.string().min(1),
+            fromCurrency: z.string().length(3),
+            toCurrency: z.string().length(3),
+            rate: z.string().min(1),
+            updatedAt: z.string().datetime(),
+          })
+          .parse(await upsertFxRate(context.session.user.id, input));
+      }),
+    delete: protectedProProcedure
+      .input(teamScopedInputSchema.extend({ id: z.string().min(1) }))
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ ok: z.literal(true) })
+          .parse(await deleteFxRate(context.session.user.id, input));
+      }),
+    suggest: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          fromCurrency: z.string().length(3),
+          toCurrency: z.string().length(3),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            rate: z.string().min(1),
+            asOf: z.string().datetime(),
+            provider: z.literal("frankfurter"),
+          })
+          .parse(await suggestFxRate(context.session.user.id, input));
       }),
   },
 };

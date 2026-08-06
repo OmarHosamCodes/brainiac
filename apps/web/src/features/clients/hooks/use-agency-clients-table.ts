@@ -9,7 +9,7 @@ import {
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
-import { parseBillableRateCents } from "@/features/shared/format-rate";
+import { parseBillableRateAmount } from "@/features/shared/format-rate";
 import {
   selectIsClientMutationPending,
   selectIsContactMutationPending,
@@ -28,7 +28,7 @@ export type AgencyClientsTableClient = {
   id: string;
   name: string;
   category: AgencyClientCategory;
-  billableRateCents: number | null;
+  billableRateAmount: number | null;
   currency: string;
   archivedAt: string | null;
 };
@@ -182,7 +182,7 @@ export function useAgencyClientsTable({
       setEditNameDraft(client.name);
       setEditCategoryDraft(client.category);
       setEditBillableRateDraft(
-        client.billableRateCents === null ? "" : String(client.billableRateCents / 100),
+        client.billableRateAmount === null ? "" : String(client.billableRateAmount / 100),
       );
     }
     setEditClientId(clientId);
@@ -195,21 +195,21 @@ export function useAgencyClientsTable({
     const name = editNameDraft.trim();
     if (!name) return;
 
-    const billableRateCents = parseBillableRateCents(editBillableRateDraft);
-    if (editBillableRateDraft.trim() && billableRateCents === null) return;
+    const billableRateAmount = parseBillableRateAmount(editBillableRateDraft);
+    if (editBillableRateDraft.trim() && billableRateAmount === null) return;
 
     const patch: {
       teamId: string;
       clientId: string;
       name?: string;
       category?: AgencyClientCategory;
-      billableRateCents?: number | null;
+      billableRateAmount?: number | null;
     } = { teamId, clientId };
 
     if (name !== client.name) patch.name = name;
     if (editCategoryDraft !== client.category) patch.category = editCategoryDraft;
-    if (billableRateCents !== client.billableRateCents) {
-      patch.billableRateCents = billableRateCents;
+    if (billableRateAmount !== client.billableRateAmount) {
+      patch.billableRateAmount = billableRateAmount;
     }
 
     setEditClientId("");

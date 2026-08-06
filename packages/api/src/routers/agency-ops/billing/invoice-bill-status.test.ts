@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   invoiceBillStatus,
-  invoiceRemainingCents,
+  invoiceRemainingAmount,
   invoiceStatusAfterReceived,
   invoiceStatusesForBillFilter,
 } from "./invoice-bill-status";
@@ -20,11 +20,11 @@ describe("invoiceBillStatus", () => {
   });
 });
 
-describe("invoiceRemainingCents", () => {
+describe("invoiceRemainingAmount", () => {
   test("clamps at zero", () => {
-    expect(invoiceRemainingCents(1000, 400)).toBe(600);
-    expect(invoiceRemainingCents(1000, 1000)).toBe(0);
-    expect(invoiceRemainingCents(1000, 1500)).toBe(0);
+    expect(invoiceRemainingAmount(1000, 400)).toBe(600);
+    expect(invoiceRemainingAmount(1000, 1000)).toBe(0);
+    expect(invoiceRemainingAmount(1000, 1500)).toBe(0);
   });
 });
 

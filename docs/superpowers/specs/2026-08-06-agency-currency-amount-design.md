@@ -17,13 +17,13 @@ When an operator enters money in another currency, the write stores both the **s
 
 ## 2. Confirmed decisions
 
-| Decision | Choice |
-|----------|--------|
-| Dual store | Source amount + currency, plus resolved agency amount + fx rate/as-of |
-| FX rates | Agency-owned table; optional live suggest (Frankfurter) |
-| Storage | Integer minor units; API/UI name `amount` |
-| Currency change | Soft-lock once any money record exists |
-| Scope | Agency Money only (not Polar, Canvas blocks, or `costUsd`) |
+| Decision        | Choice                                                                |
+| --------------- | --------------------------------------------------------------------- |
+| Dual store      | Source amount + currency, plus resolved agency amount + fx rate/as-of |
+| FX rates        | Agency-owned table; optional live suggest (Frankfurter)               |
+| Storage         | Integer minor units; API/UI name `amount`                             |
+| Currency change | Soft-lock once any money record exists                                |
+| Scope           | Agency Money only (not Polar, Canvas blocks, or `costUsd`)            |
 
 ---
 

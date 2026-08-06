@@ -117,6 +117,6 @@ export function evaluateMoneyFormulaTokens(
   return { ok: true, value: output[0]! };
 }
 
-export function roundMoneyFormulaCents(value: number): number {
+export function roundMoneyFormulaAmount(value: number): number {
   return Math.round(value);
 }

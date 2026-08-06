@@ -16,20 +16,21 @@ import { createWorkspaceId } from "@orch/workspace";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
+import { getAgencyCurrency } from "./money-fx-service";
 import {
   buildClientObligations,
   buildMemberObligations,
-  applyPendingAdjustmentCents,
+  applyPendingAdjustmentAmount,
   type MoneyCarryClientObligation,
   type MoneyCarryMemberObligation,
 } from "./money-bill-carry";
-import { invoiceRemainingCents } from "./invoice-bill-status";
+import { invoiceRemainingAmount } from "./invoice-bill-status";
 import {
   clearPendingAdjustmentsForParty,
   listPendingAdjustments,
   type MoneyPendingAdjustmentRecord,
 } from "./money-pending-adjustment-service";
-import { payoutRemainingCents } from "./payout-bill-status";
+import { payoutRemainingAmount } from "./payout-bill-status";
 import {
   createPayoutLineFromMember,
   ensurePayoutPeriod,
@@ -74,12 +75,12 @@ async function findOverlappingClientInvoice(input: {
   clientId: string;
   periodStart: Date;
   periodEnd: Date;
-}): Promise<{ id: string; amountCents: number; receivedCents: number; status: string } | null> {
+}): Promise<{ id: string; amount: number; receivedAmount: number; status: string } | null> {
   const [row] = await db
     .select({
       id: agencyOpsInvoice.id,
-      amountCents: agencyOpsInvoice.amountCents,
-      receivedCents: agencyOpsInvoice.receivedCents,
+      amount: agencyOpsInvoice.amount,
+      receivedAmount: agencyOpsInvoice.receivedAmount,
       status: agencyOpsInvoice.status,
     })
     .from(agencyOpsInvoice)
@@ -104,11 +105,11 @@ async function softExportClientReady(
     clientId: string;
     periodStart: string;
     periodEnd: string;
-    amountCents: number;
+    amount: number;
     markSent: boolean;
     lineDescription?: string;
   },
-): Promise<{ id: string; remainingCents: number }> {
+): Promise<{ id: string; remainingAmount: number }> {
   const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
   const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
 
@@ -132,20 +133,23 @@ async function softExportClientReady(
         invoiceId: invoice.id,
         status: "sent",
       });
-      return { id: sent.id, remainingCents: sent.remainingCents };
+      return { id: sent.id, remainingAmount: sent.remainingAmount };
     }
-    return { id: invoice.id, remainingCents: invoice.remainingCents };
+    return { id: invoice.id, remainingAmount: invoice.remainingAmount };
   }
 
   // Supplemental invoice for residual Ready amount.
-  const amountCents = Math.max(0, input.amountCents);
-  if (amountCents <= 0) {
+  const amount = Math.max(0, input.amount);
+  if (amount <= 0) {
     throw new ORPCError("BAD_REQUEST", { message: "Ready residual amount must be positive." });
   }
 
   const now = new Date();
   const invoiceId = createWorkspaceId("agency-inv");
   const number = await getNextInvoiceNumber(input.teamId);
+  const { currency: agencyCurrency } = await getAgencyCurrency(actorUserId, {
+    teamId: input.teamId,
+  });
 
   await db.transaction(async (tx) => {
     await tx.insert(agencyOpsInvoice).values({
@@ -154,9 +158,12 @@ async function softExportClientReady(
       clientId: input.clientId,
       number,
       status: input.markSent ? "sent" : "draft",
-      amountCents,
-      receivedCents: 0,
-      currency: "USD",
+      amount,
+      receivedAmount: 0,
+      currency: agencyCurrency,
+      sourceAmount: amount,
+      fxRate: "1",
+      fxAsOf: now,
       periodStart,
       periodEnd,
       issuedAt: input.markSent ? now : null,
@@ -170,14 +177,14 @@ async function softExportClientReady(
       description: input.lineDescription ?? "Ready balance",
       projectId: null,
       durationSeconds: 0,
-      rateCents: 0,
-      amountCents,
+      rateAmount: 0,
+      amount,
       fromTimeEntries: false,
       createdAt: now,
     });
   });
 
-  return { id: invoiceId, remainingCents: amountCents };
+  return { id: invoiceId, remainingAmount: amount };
 }
 
 async function loadMemberSalaryLine(input: {
@@ -185,15 +192,15 @@ async function loadMemberSalaryLine(input: {
   userId: string;
   periodStart: string;
   periodEnd: string;
-}): Promise<{ id: string; amountCents: number; paidCents: number } | null> {
+}): Promise<{ id: string; amount: number; paidAmount: number } | null> {
   const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
   const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
 
   const [row] = await db
     .select({
       id: agencyOpsPayoutLine.id,
-      amountCents: agencyOpsPayoutLine.amountCents,
-      paidCents: agencyOpsPayoutLine.paidCents,
+      amount: agencyOpsPayoutLine.amount,
+      paidAmount: agencyOpsPayoutLine.paidAmount,
     })
     .from(agencyOpsPayoutLine)
     .innerJoin(agencyOpsPayoutSection, eq(agencyOpsPayoutSection.id, agencyOpsPayoutLine.sectionId))
@@ -221,7 +228,7 @@ async function softExportMemberReady(
     periodStart: string;
     periodEnd: string;
   },
-): Promise<{ id: string; remainingCents: number }> {
+): Promise<{ id: string; remainingAmount: number }> {
   await ensurePayoutPeriod(actorUserId, {
     teamId: input.teamId,
     periodStart: input.periodStart,
@@ -235,7 +242,7 @@ async function softExportMemberReady(
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
     });
-    return { id: line.id, remainingCents: line.remainingCents };
+    return { id: line.id, remainingAmount: line.remainingAmount };
   } catch (error) {
     if (!(error instanceof ORPCError) || error.code !== "CONFLICT") throw error;
     const existing = await loadMemberSalaryLine(input);
@@ -244,7 +251,7 @@ async function softExportMemberReady(
     }
     return {
       id: existing.id,
-      remainingCents: payoutRemainingCents(existing.amountCents, existing.paidCents),
+      remainingAmount: payoutRemainingAmount(existing.amount, existing.paidAmount),
     };
   }
 }
@@ -252,7 +259,7 @@ async function softExportMemberReady(
 async function refundInvoice(actorUserId: string, input: { teamId: string; invoiceId: string }) {
   const [existing] = await db
     .select({
-      receivedCents: agencyOpsInvoice.receivedCents,
+      receivedAmount: agencyOpsInvoice.receivedAmount,
       status: agencyOpsInvoice.status,
     })
     .from(agencyOpsInvoice)
@@ -262,7 +269,7 @@ async function refundInvoice(actorUserId: string, input: { teamId: string; invoi
   if (!existing) {
     throw new ORPCError("NOT_FOUND", { message: "Invoice was not found." });
   }
-  if ((existing.receivedCents ?? 0) <= 0) {
+  if ((existing.receivedAmount ?? 0) <= 0) {
     throw new ORPCError("BAD_REQUEST", { message: "Nothing to refund on this invoice." });
   }
   if (existing.status === "refunded") {
@@ -293,11 +300,11 @@ async function refundPayoutLine(actorUserId: string, input: { teamId: string; li
   if (!row) {
     throw new ORPCError("NOT_FOUND", { message: "Payout line was not found." });
   }
-  if (row.line.paidCents <= 0) {
+  if (row.line.paidAmount <= 0) {
     throw new ORPCError("BAD_REQUEST", { message: "Nothing to refund on this payout." });
   }
 
-  // Minimal refund: zero paidCents and return to draft.
+  // Minimal refund: zero paidAmount and return to draft.
   return updatePayoutLineStatus(actorUserId, {
     teamId: input.teamId,
     lineId: input.lineId,
@@ -312,7 +319,7 @@ export async function settleMoneyObligation(
     partyType: "client" | "member";
     obligationId: string;
     action: "pay" | "partial" | "refund";
-    amountCents: number;
+    amount: number;
     periodStart: string;
     periodEnd: string;
     clientId?: string;
@@ -337,7 +344,7 @@ export async function settleMoneyObligation(
     }
     case "pay":
     case "partial": {
-      if (input.amountCents <= 0 && input.action === "partial") {
+      if (input.amount <= 0 && input.action === "partial") {
         throw new ORPCError("BAD_REQUEST", { message: "Partial amount must be positive." });
       }
 
@@ -350,7 +357,7 @@ export async function settleMoneyObligation(
         }
 
         let invoiceId = input.obligationId;
-        let remainingCents = 0;
+        let remainingAmount = 0;
 
         if (isReady) {
           const exported = await softExportClientReady(actorUserId, {
@@ -358,16 +365,16 @@ export async function settleMoneyObligation(
             clientId,
             periodStart: input.periodStart,
             periodEnd: input.periodEnd,
-            amountCents: input.amountCents,
+            amount: input.amount,
             markSent: true,
           });
           invoiceId = exported.id;
-          remainingCents = exported.remainingCents;
+          remainingAmount = exported.remainingAmount;
         } else {
           const [inv] = await db
             .select({
-              amountCents: agencyOpsInvoice.amountCents,
-              receivedCents: agencyOpsInvoice.receivedCents,
+              amount: agencyOpsInvoice.amount,
+              receivedAmount: agencyOpsInvoice.receivedAmount,
               status: agencyOpsInvoice.status,
             })
             .from(agencyOpsInvoice)
@@ -383,19 +390,19 @@ export async function settleMoneyObligation(
               status: "sent",
             });
           }
-          remainingCents = invoiceRemainingCents(inv.amountCents, inv.receivedCents ?? 0);
+          remainingAmount = invoiceRemainingAmount(inv.amount, inv.receivedAmount ?? 0);
         }
 
-        const payCents =
-          input.action === "pay" ? remainingCents : Math.min(input.amountCents, remainingCents);
-        if (payCents <= 0) {
+        const payAmount =
+          input.action === "pay" ? remainingAmount : Math.min(input.amount, remainingAmount);
+        if (payAmount <= 0) {
           throw new ORPCError("BAD_REQUEST", { message: "Nothing remaining to pay." });
         }
 
         await recordInvoicePayment(actorUserId, {
           teamId: input.teamId,
           invoiceId,
-          amountCents: payCents,
+          amount: payAmount,
         });
         return { documentId: invoiceId, kind: "invoice" };
       }
@@ -406,7 +413,7 @@ export async function settleMoneyObligation(
       }
 
       let lineId = input.obligationId;
-      let remainingCents = 0;
+      let remainingAmount = 0;
 
       if (isReady) {
         const exported = await softExportMemberReady(actorUserId, {
@@ -416,12 +423,12 @@ export async function settleMoneyObligation(
           periodEnd: input.periodEnd,
         });
         lineId = exported.id;
-        remainingCents = exported.remainingCents;
+        remainingAmount = exported.remainingAmount;
       } else {
         const [row] = await db
           .select({
-            amountCents: agencyOpsPayoutLine.amountCents,
-            paidCents: agencyOpsPayoutLine.paidCents,
+            amount: agencyOpsPayoutLine.amount,
+            paidAmount: agencyOpsPayoutLine.paidAmount,
           })
           .from(agencyOpsPayoutLine)
           .innerJoin(
@@ -436,19 +443,19 @@ export async function settleMoneyObligation(
         if (!row) {
           throw new ORPCError("NOT_FOUND", { message: "Payout line was not found." });
         }
-        remainingCents = payoutRemainingCents(row.amountCents, row.paidCents);
+        remainingAmount = payoutRemainingAmount(row.amount, row.paidAmount);
       }
 
-      const payCents =
-        input.action === "pay" ? remainingCents : Math.min(input.amountCents, remainingCents);
-      if (payCents <= 0) {
+      const payAmount =
+        input.action === "pay" ? remainingAmount : Math.min(input.amount, remainingAmount);
+      if (payAmount <= 0) {
         throw new ORPCError("BAD_REQUEST", { message: "Nothing remaining to pay." });
       }
 
       await recordPayoutPayment(actorUserId, {
         teamId: input.teamId,
         lineId,
-        amountCents: payCents,
+        amount: payAmount,
       });
       return { documentId: lineId, kind: "payout" };
     }
@@ -464,7 +471,7 @@ type ExportSelection = {
   periodStart: string;
   periodEnd: string;
   kind: "ready" | "invoice" | "payout";
-  amountCents: number;
+  amount: number;
 };
 
 function groupSelectionsForExport(
@@ -512,43 +519,43 @@ async function createCombinedClientInvoice(
     description: string;
     projectId: null;
     durationSeconds: number;
-    rateCents: number;
-    amountCents: number;
+    rateAmount: number;
+    amount: number;
     fromTimeEntries: boolean;
     createdAt: Date;
   }> = [];
 
   let total = 0;
   for (const sel of input.selections) {
-    if (sel.amountCents <= 0) continue;
-    total += sel.amountCents;
+    if (sel.amount <= 0) continue;
+    total += sel.amount;
     lineItems.push({
       id: createWorkspaceId("agency-li"),
       invoiceId,
       description: `Period ${sel.periodStart.slice(0, 10)} – ${sel.periodEnd.slice(0, 10)}`,
       projectId: null,
       durationSeconds: 0,
-      rateCents: 0,
-      amountCents: sel.amountCents,
+      rateAmount: 0,
+      amount: sel.amount,
       fromTimeEntries: false,
       createdAt: now,
     });
   }
 
   for (const adj of input.adjustments) {
-    let amountCents = 0;
+    let amount = 0;
     let description = adj.note || adj.kind;
     switch (adj.kind) {
       case "discount":
-        amountCents = -adj.amountCents;
+        amount = -adj.amount;
         description = adj.note || "Discount";
         break;
       case "surcharge":
-        amountCents = adj.amountCents;
+        amount = adj.amount;
         description = adj.note || "Surcharge";
         break;
       case "debt":
-        amountCents = adj.amountCents;
+        amount = adj.amount;
         description = adj.note || "Debt";
         break;
       default: {
@@ -556,21 +563,25 @@ async function createCombinedClientInvoice(
         return _exhaustive;
       }
     }
-    total += amountCents;
+    total += amount;
     lineItems.push({
       id: createWorkspaceId("agency-li"),
       invoiceId,
       description,
       projectId: null,
       durationSeconds: 0,
-      rateCents: 0,
-      amountCents,
+      rateAmount: 0,
+      amount,
       fromTimeEntries: false,
       createdAt: now,
     });
   }
 
   total = Math.max(0, total);
+
+  const { currency: agencyCurrency } = await getAgencyCurrency(actorUserId, {
+    teamId: input.teamId,
+  });
 
   await db.transaction(async (tx) => {
     await tx.insert(agencyOpsInvoice).values({
@@ -579,9 +590,12 @@ async function createCombinedClientInvoice(
       clientId: input.clientId,
       number,
       status: "draft",
-      amountCents: total,
-      receivedCents: 0,
-      currency: "USD",
+      amount: total,
+      receivedAmount: 0,
+      currency: agencyCurrency,
+      sourceAmount: total,
+      fxRate: "1",
+      fxAsOf: now,
       periodStart: start,
       periodEnd: end,
       createdByUserId: actorUserId,
@@ -659,13 +673,13 @@ export async function exportMoneyDocuments(
         if (group.length === 0) continue;
         const first = group[0]!;
         // For split, one ready per period group; amount is sum of group.
-        const amountCents = group.reduce((sum, s) => sum + s.amountCents, 0);
+        const amount = group.reduce((sum, s) => sum + s.amount, 0);
         const adjusted =
           !adjustmentsApplied && input.mode === "split"
-            ? applyPendingAdjustmentCents(amountCents, adjustments)
+            ? applyPendingAdjustmentAmount(amount, adjustments)
             : input.mode === "combine"
-              ? applyPendingAdjustmentCents(amountCents, adjustments)
-              : amountCents;
+              ? applyPendingAdjustmentAmount(amount, adjustments)
+              : amount;
         adjustmentsApplied = true;
 
         const exported = await softExportClientReady(actorUserId, {
@@ -673,10 +687,10 @@ export async function exportMoneyDocuments(
           clientId: input.partyId,
           periodStart: first.periodStart,
           periodEnd: first.periodEnd,
-          amountCents: adjusted,
+          amount: adjusted,
           markSent: false,
           lineDescription:
-            adjustments.length > 0 && adjusted !== amountCents
+            adjustments.length > 0 && adjusted !== amount
               ? "Ready balance (with adjustments)"
               : undefined,
         });
@@ -702,8 +716,8 @@ export async function exportMoneyDocuments(
           : first.periodEnd;
 
       // Adjustments applied on client path; member v1 soft-exports activity for the period window.
-      void applyPendingAdjustmentCents(
-        group.reduce((sum, s) => sum + s.amountCents, 0),
+      void applyPendingAdjustmentAmount(
+        group.reduce((sum, s) => sum + s.amount, 0),
         adjustments,
       );
 
@@ -771,7 +785,7 @@ export async function listPeriodMoneyObligations(
             ),
             and(
               lt(agencyOpsInvoice.periodEnd, rangeStart),
-              sql`${agencyOpsInvoice.amountCents} - coalesce(${agencyOpsInvoice.receivedCents}, 0) > 0`,
+              sql`${agencyOpsInvoice.amount} - coalesce(${agencyOpsInvoice.receivedAmount}, 0) > 0`,
             ),
           ),
         ),
@@ -801,7 +815,7 @@ export async function listPeriodMoneyObligations(
             ),
             and(
               lt(agencyOpsPayoutRun.periodEnd, rangeStart),
-              sql`${agencyOpsPayoutLine.amountCents} - coalesce(${agencyOpsPayoutLine.paidCents}, 0) > 0`,
+              sql`${agencyOpsPayoutLine.amount} - coalesce(${agencyOpsPayoutLine.paidAmount}, 0) > 0`,
             ),
           ),
         ),
@@ -825,7 +839,7 @@ export async function listPeriodMoneyObligations(
   ]);
 
   const invoices = invoiceRows.map((row) => {
-    const receivedCents = row.invoice.receivedCents ?? 0;
+    const receivedAmount = row.invoice.receivedAmount ?? 0;
     return {
       id: row.invoice.id,
       clientId: row.invoice.clientId,
@@ -833,16 +847,16 @@ export async function listPeriodMoneyObligations(
       number: row.invoice.number,
       periodStart: row.invoice.periodStart.toISOString(),
       periodEnd: row.invoice.periodEnd.toISOString(),
-      amountCents: row.invoice.amountCents,
-      receivedCents,
-      remainingCents: invoiceRemainingCents(row.invoice.amountCents, receivedCents),
+      amount: row.invoice.amount,
+      receivedAmount,
+      remainingAmount: invoiceRemainingAmount(row.invoice.amount, receivedAmount),
     };
   });
 
   const payouts = payoutRows
     .filter((row) => row.line.payeeUserId)
     .map((row) => {
-      const paidCents = row.line.paidCents ?? 0;
+      const paidAmount = row.line.paidAmount ?? 0;
       return {
         id: row.line.id,
         userId: row.line.payeeUserId!,
@@ -850,9 +864,9 @@ export async function listPeriodMoneyObligations(
         userAvatar: formatAvatarUrl(row.userAvatar),
         periodStart: row.run.periodStart.toISOString(),
         periodEnd: row.run.periodEnd.toISOString(),
-        amountCents: row.line.amountCents,
-        paidCents,
-        remainingCents: payoutRemainingCents(row.line.amountCents, paidCents),
+        amount: row.line.amount,
+        paidAmount,
+        remainingAmount: payoutRemainingAmount(row.line.amount, paidAmount),
         durationSeconds: row.line.durationSeconds ?? 0,
       };
     });
@@ -863,18 +877,18 @@ export async function listPeriodMoneyObligations(
       clientName: c.clientName,
       periodStart: rangeStartIso,
       periodEnd: rangeEndIso,
-      amountCents: c.billableCents,
+      amount: c.billableAmount,
       durationSeconds: c.durationSeconds,
-      wasteCents: c.wasteCents,
+      wasteAmount: c.wasteAmount,
     })),
     ...priorActivity.clients.map((c) => ({
       clientId: c.clientId,
       clientName: c.clientName,
       periodStart: lookbackStartIso,
       periodEnd: priorEndIso,
-      amountCents: c.billableCents,
+      amount: c.billableAmount,
       durationSeconds: c.durationSeconds,
-      wasteCents: c.wasteCents,
+      wasteAmount: c.wasteAmount,
     })),
   ];
 
@@ -885,9 +899,9 @@ export async function listPeriodMoneyObligations(
       userAvatar: m.userAvatar,
       periodStart: rangeStartIso,
       periodEnd: rangeEndIso,
-      amountCents: m.payableCents,
+      amount: m.payableAmount,
       durationSeconds: m.durationSeconds,
-      wasteCents: m.wasteCents,
+      wasteAmount: m.wasteAmount,
     })),
     ...priorActivity.members.map((m) => ({
       userId: m.userId,
@@ -895,9 +909,9 @@ export async function listPeriodMoneyObligations(
       userAvatar: m.userAvatar,
       periodStart: lookbackStartIso,
       periodEnd: priorEndIso,
-      amountCents: m.payableCents,
+      amount: m.payableAmount,
       durationSeconds: m.durationSeconds,
-      wasteCents: m.wasteCents,
+      wasteAmount: m.wasteAmount,
     })),
   ];
 

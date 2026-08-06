@@ -10,6 +10,7 @@ import { createWorkspaceId } from "@orch/workspace";
 
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
+import { getAgencyCurrency, resolveMoneyForTeam } from "./money-fx-service";
 
 export type MoneyPendingAdjustmentRecord = {
   id: string;
@@ -19,7 +20,7 @@ export type MoneyPendingAdjustmentRecord = {
   periodStart: string | null;
   periodEnd: string | null;
   kind: AgencyOpsMoneyPendingAdjustmentKind;
-  amountCents: number;
+  amount: number;
   note: string;
   createdByUserId: string;
   createdAt: string;
@@ -37,7 +38,7 @@ function mapPendingAdjustmentRow(
     periodStart: row.periodStart?.toISOString() ?? null,
     periodEnd: row.periodEnd?.toISOString() ?? null,
     kind: row.kind,
-    amountCents: row.amountCents,
+    amount: row.amount,
     note: row.note ?? "",
     createdByUserId: row.createdByUserId,
     createdAt: row.createdAt.toISOString(),
@@ -80,7 +81,7 @@ export async function upsertPendingAdjustment(
     partyType: AgencyOpsMoneyPendingPartyType;
     partyId: string;
     kind: AgencyOpsMoneyPendingAdjustmentKind;
-    amountCents: number;
+    amount: number;
     note?: string;
     periodStart?: string;
     periodEnd?: string;
@@ -88,8 +89,10 @@ export async function upsertPendingAdjustment(
 ): Promise<MoneyPendingAdjustmentRecord> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
-  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
-    throw new ORPCError("BAD_REQUEST", { message: "Amount must be a positive integer (cents)." });
+  if (!Number.isInteger(input.amount) || input.amount <= 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Amount must be a positive integer (minor units).",
+    });
   }
 
   const periodStart = input.periodStart ? parseIsoDateTime(input.periodStart, "periodStart") : null;
@@ -100,6 +103,14 @@ export async function upsertPendingAdjustment(
 
   const now = new Date();
   const note = input.note?.trim() ?? "";
+  const { currency: agencyCurrency } = await getAgencyCurrency(actorUserId, {
+    teamId: input.teamId,
+  });
+  const money = await resolveMoneyForTeam(actorUserId, {
+    teamId: input.teamId,
+    sourceAmount: input.amount,
+    sourceCurrency: agencyCurrency,
+  });
 
   if (input.id) {
     const [existing] = await db
@@ -123,7 +134,11 @@ export async function upsertPendingAdjustment(
         partyType: input.partyType,
         partyId: input.partyId,
         kind: input.kind,
-        amountCents: input.amountCents,
+        amount: money.amount,
+        currency: money.sourceCurrency,
+        sourceAmount: money.sourceAmount,
+        fxRate: money.fxRate,
+        fxAsOf: new Date(money.fxAsOf),
         note,
         periodStart,
         periodEnd,
@@ -144,7 +159,11 @@ export async function upsertPendingAdjustment(
       partyType: input.partyType,
       partyId: input.partyId,
       kind: input.kind,
-      amountCents: input.amountCents,
+      amount: money.amount,
+      currency: money.sourceCurrency,
+      sourceAmount: money.sourceAmount,
+      fxRate: money.fxRate,
+      fxAsOf: new Date(money.fxAsOf),
       note,
       periodStart,
       periodEnd,

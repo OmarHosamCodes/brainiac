@@ -1,6 +1,6 @@
 /** Presentational helpers for the Money Period run shell. */
 
-import { formatMoneyBillCents } from "./money-bills-rows";
+import { formatMoneyAmount } from "./money-bills-rows";
 
 export type MoneyPayoutRunStatus = "draft" | "paying" | "paid";
 
@@ -10,9 +10,9 @@ export type MoneyPayoutRunSection = {
   title: string;
   sortOrder: number;
   lineCount: number;
-  dueCents: number;
-  paidCents: number;
-  remainingCents: number;
+  dueAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
 };
 
 export type MoneyPayoutRunLine = {
@@ -21,9 +21,9 @@ export type MoneyPayoutRunLine = {
   label: string;
   userName: string;
   cohortKey: string | null;
-  amountCents: number;
-  paidCents: number;
-  remainingCents: number;
+  amount: number;
+  paidAmount: number;
+  remainingAmount: number;
   currency: string;
   status: "draft" | "partial" | "paid";
   canRecordPayment: boolean;
@@ -77,8 +77,8 @@ export function formatPayoutRunSectionMeta(
   section: MoneyPayoutRunSection,
   currency: string,
 ): string {
-  const due = formatMoneyBillCents(section.dueCents, currency);
-  const remaining = formatMoneyBillCents(section.remainingCents, currency);
+  const due = formatMoneyAmount(section.dueAmount, currency);
+  const remaining = formatMoneyAmount(section.remainingAmount, currency);
   if (section.lineCount === 0) return "No lines";
   return `${section.lineCount} line${section.lineCount === 1 ? "" : "s"} · ${due} due · ${remaining} left`;
 }

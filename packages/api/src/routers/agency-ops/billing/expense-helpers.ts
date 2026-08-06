@@ -1,15 +1,12 @@
 import type { AgencyOpsExpensePeriod, AgencyOpsExpenseStatus } from "@orch/db/schema";
 
-export function expenseRemainingCents(amountCents: number, paidCents: number): number {
-  return Math.max(0, amountCents - paidCents);
+export function expenseRemainingAmount(amount: number, paidAmount: number): number {
+  return Math.max(0, amount - paidAmount);
 }
 
-export function expenseStatusAfterPaid(
-  amountCents: number,
-  paidCents: number,
-): AgencyOpsExpenseStatus {
-  if (paidCents <= 0) return "due";
-  if (paidCents >= amountCents) return "paid";
+export function expenseStatusAfterPaid(amount: number, paidAmount: number): AgencyOpsExpenseStatus {
+  if (paidAmount <= 0) return "due";
+  if (paidAmount >= amount) return "paid";
   return "partial";
 }
 

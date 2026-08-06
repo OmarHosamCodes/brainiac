@@ -7,17 +7,17 @@ export type MoneyCarryPeriod = {
 
 export type MoneyCarryOpenDoc = MoneyCarryPeriod & {
   id: string;
-  remainingCents: number;
-  amountCents: number;
-  receivedOrPaidCents: number;
+  remainingAmount: number;
+  amount: number;
+  receivedOrPaidAmount: number;
 };
 
 export type MoneyCarryReadySlice = MoneyCarryPeriod & {
   partyId: string;
   partyName: string;
-  amountCents: number;
+  amount: number;
   durationSeconds: number;
-  wasteCents: number;
+  wasteAmount: number;
 };
 
 export type MoneyCarryClientObligation =
@@ -29,10 +29,10 @@ export type MoneyCarryClientObligation =
       periodStart: string;
       periodEnd: string;
       isCarry: boolean;
-      amountCents: number;
-      receivedCents: number;
-      remainingCents: number;
-      wasteCents: number;
+      amount: number;
+      receivedAmount: number;
+      remainingAmount: number;
+      wasteAmount: number;
       durationSeconds: number;
       number: string | null;
     }
@@ -44,10 +44,10 @@ export type MoneyCarryClientObligation =
       periodStart: string;
       periodEnd: string;
       isCarry: boolean;
-      amountCents: number;
-      receivedCents: 0;
-      remainingCents: number;
-      wasteCents: number;
+      amount: number;
+      receivedAmount: 0;
+      remainingAmount: number;
+      wasteAmount: number;
       durationSeconds: number;
       number: null;
     };
@@ -62,10 +62,10 @@ export type MoneyCarryMemberObligation =
       periodStart: string;
       periodEnd: string;
       isCarry: boolean;
-      amountCents: number;
-      paidCents: number;
-      remainingCents: number;
-      wasteCents: number;
+      amount: number;
+      paidAmount: number;
+      remainingAmount: number;
+      wasteAmount: number;
       durationSeconds: number;
     }
   | {
@@ -77,10 +77,10 @@ export type MoneyCarryMemberObligation =
       periodStart: string;
       periodEnd: string;
       isCarry: boolean;
-      amountCents: number;
-      paidCents: 0;
-      remainingCents: number;
-      wasteCents: number;
+      amount: number;
+      paidAmount: 0;
+      remainingAmount: number;
+      wasteAmount: number;
       durationSeconds: number;
     };
 
@@ -101,7 +101,7 @@ export function selectOpenPriorDocs<T extends MoneyCarryOpenDoc>(
   rangeStartIso: string,
 ): T[] {
   return docs.filter(
-    (doc) => doc.remainingCents > 0 && periodEndsBefore(doc.periodEnd, rangeStartIso),
+    (doc) => doc.remainingAmount > 0 && periodEndsBefore(doc.periodEnd, rangeStartIso),
   );
 }
 
@@ -126,7 +126,7 @@ export function selectUncoveredReadySlices<T extends MoneyCarryReadySlice>(
 ): T[] {
   return slices.filter(
     (slice) =>
-      slice.amountCents > 0 &&
+      slice.amount > 0 &&
       !coveringDocs.some((doc) =>
         periodsOverlap(doc.periodStart, doc.periodEnd, slice.periodStart, slice.periodEnd),
       ),
@@ -143,18 +143,18 @@ export function buildClientObligations(input: {
     number: string;
     periodStart: string;
     periodEnd: string;
-    amountCents: number;
-    receivedCents: number;
-    remainingCents: number;
+    amount: number;
+    receivedAmount: number;
+    remainingAmount: number;
   }>;
   readySlices: Array<{
     clientId: string;
     clientName: string;
     periodStart: string;
     periodEnd: string;
-    amountCents: number;
+    amount: number;
     durationSeconds: number;
-    wasteCents: number;
+    wasteAmount: number;
   }>;
 }): MoneyCarryClientObligation[] {
   const out: MoneyCarryClientObligation[] = [];
@@ -167,8 +167,8 @@ export function buildClientObligations(input: {
       input.rangeStart,
       input.rangeEnd,
     );
-    if (!inCurrent && !(isCarry && invoice.remainingCents > 0)) continue;
-    if (isCarry && invoice.remainingCents <= 0) continue;
+    if (!inCurrent && !(isCarry && invoice.remainingAmount > 0)) continue;
+    if (isCarry && invoice.remainingAmount <= 0) continue;
 
     out.push({
       kind: "invoice",
@@ -178,10 +178,10 @@ export function buildClientObligations(input: {
       periodStart: invoice.periodStart,
       periodEnd: invoice.periodEnd,
       isCarry: isCarry && !inCurrent,
-      amountCents: invoice.amountCents,
-      receivedCents: invoice.receivedCents,
-      remainingCents: invoice.remainingCents,
-      wasteCents: 0,
+      amount: invoice.amount,
+      receivedAmount: invoice.receivedAmount,
+      remainingAmount: invoice.remainingAmount,
+      wasteAmount: 0,
       durationSeconds: 0,
       number: invoice.number,
     });
@@ -189,8 +189,8 @@ export function buildClientObligations(input: {
 
   // Ready = residual activity after overlapping invoice amounts for that slice.
   for (const slice of input.readySlices) {
-    if (slice.amountCents <= 0) continue;
-    const invoicedCents = input.invoices
+    if (slice.amount <= 0) continue;
+    const invoicedAmount = input.invoices
       .filter(
         (invoice) =>
           invoice.clientId === slice.clientId &&
@@ -201,9 +201,9 @@ export function buildClientObligations(input: {
             slice.periodEnd,
           ),
       )
-      .reduce((sum, invoice) => sum + invoice.amountCents, 0);
-    const readyCents = Math.max(0, slice.amountCents - invoicedCents);
-    if (readyCents <= 0) continue;
+      .reduce((sum, invoice) => sum + invoice.amount, 0);
+    const readyAmount = Math.max(0, slice.amount - invoicedAmount);
+    if (readyAmount <= 0) continue;
 
     const isCarry = periodEndsBefore(slice.periodEnd, input.rangeStart);
     const inCurrent = periodsOverlap(
@@ -222,10 +222,10 @@ export function buildClientObligations(input: {
       periodStart: slice.periodStart,
       periodEnd: slice.periodEnd,
       isCarry,
-      amountCents: readyCents,
-      receivedCents: 0,
-      remainingCents: readyCents,
-      wasteCents: slice.wasteCents,
+      amount: readyAmount,
+      receivedAmount: 0,
+      remainingAmount: readyAmount,
+      wasteAmount: slice.wasteAmount,
       durationSeconds: slice.durationSeconds,
       number: null,
     });
@@ -248,9 +248,9 @@ export function buildMemberObligations(input: {
     userAvatar: string | null;
     periodStart: string;
     periodEnd: string;
-    amountCents: number;
-    paidCents: number;
-    remainingCents: number;
+    amount: number;
+    paidAmount: number;
+    remainingAmount: number;
     durationSeconds: number;
   }>;
   readySlices: Array<{
@@ -259,9 +259,9 @@ export function buildMemberObligations(input: {
     userAvatar: string | null;
     periodStart: string;
     periodEnd: string;
-    amountCents: number;
+    amount: number;
     durationSeconds: number;
-    wasteCents: number;
+    wasteAmount: number;
   }>;
 }): MoneyCarryMemberObligation[] {
   const out: MoneyCarryMemberObligation[] = [];
@@ -274,8 +274,8 @@ export function buildMemberObligations(input: {
       input.rangeStart,
       input.rangeEnd,
     );
-    if (!inCurrent && !(isCarry && payout.remainingCents > 0)) continue;
-    if (isCarry && payout.remainingCents <= 0) continue;
+    if (!inCurrent && !(isCarry && payout.remainingAmount > 0)) continue;
+    if (isCarry && payout.remainingAmount <= 0) continue;
 
     out.push({
       kind: "payout",
@@ -286,25 +286,25 @@ export function buildMemberObligations(input: {
       periodStart: payout.periodStart,
       periodEnd: payout.periodEnd,
       isCarry: isCarry && !inCurrent,
-      amountCents: payout.amountCents,
-      paidCents: payout.paidCents,
-      remainingCents: payout.remainingCents,
-      wasteCents: 0,
+      amount: payout.amount,
+      paidAmount: payout.paidAmount,
+      remainingAmount: payout.remainingAmount,
+      wasteAmount: 0,
       durationSeconds: payout.durationSeconds,
     });
   }
 
   for (const slice of input.readySlices) {
-    if (slice.amountCents <= 0) continue;
-    const paidOutCents = input.payouts
+    if (slice.amount <= 0) continue;
+    const paidOutAmount = input.payouts
       .filter(
         (payout) =>
           payout.userId === slice.userId &&
           periodsOverlap(payout.periodStart, payout.periodEnd, slice.periodStart, slice.periodEnd),
       )
-      .reduce((sum, payout) => sum + payout.amountCents, 0);
-    const readyCents = Math.max(0, slice.amountCents - paidOutCents);
-    if (readyCents <= 0) continue;
+      .reduce((sum, payout) => sum + payout.amount, 0);
+    const readyAmount = Math.max(0, slice.amount - paidOutAmount);
+    if (readyAmount <= 0) continue;
 
     const isCarry = periodEndsBefore(slice.periodEnd, input.rangeStart);
     const inCurrent = periodsOverlap(
@@ -324,10 +324,10 @@ export function buildMemberObligations(input: {
       periodStart: slice.periodStart,
       periodEnd: slice.periodEnd,
       isCarry,
-      amountCents: readyCents,
-      paidCents: 0,
-      remainingCents: readyCents,
-      wasteCents: slice.wasteCents,
+      amount: readyAmount,
+      paidAmount: 0,
+      remainingAmount: readyAmount,
+      wasteAmount: slice.wasteAmount,
       durationSeconds: slice.durationSeconds,
     });
   }
@@ -359,19 +359,19 @@ export function groupObligationsForExport(
 export type MoneyPendingAdjustmentKind = "discount" | "surcharge" | "debt";
 
 /** Apply pending Adjust deltas: discount reduces, surcharge/debt increase. */
-export function applyPendingAdjustmentCents(
-  baseCents: number,
-  adjustments: ReadonlyArray<{ kind: MoneyPendingAdjustmentKind; amountCents: number }>,
+export function applyPendingAdjustmentAmount(
+  baseAmount: number,
+  adjustments: ReadonlyArray<{ kind: MoneyPendingAdjustmentKind; amount: number }>,
 ): number {
-  let total = baseCents;
+  let total = baseAmount;
   for (const adj of adjustments) {
     switch (adj.kind) {
       case "discount":
-        total -= adj.amountCents;
+        total -= adj.amount;
         break;
       case "surcharge":
       case "debt":
-        total += adj.amountCents;
+        total += adj.amount;
         break;
       default: {
         const _exhaustive: never = adj.kind;

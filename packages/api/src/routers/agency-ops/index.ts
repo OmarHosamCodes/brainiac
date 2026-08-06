@@ -34,6 +34,7 @@ export const agencyOpsRouter = {
   expenses: billingRouter.expenses,
   money: billingRouter.money,
   moneySettings: billingRouter.moneySettings,
+  fxRates: billingRouter.fxRates,
   periodObligations: billingRouter.periodObligations,
   pendingAdjustments: billingRouter.pendingAdjustments,
   capacity: resourcingRouter.capacity,

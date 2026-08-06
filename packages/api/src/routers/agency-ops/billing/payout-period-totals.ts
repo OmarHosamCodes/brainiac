@@ -1,35 +1,35 @@
 /** Pure salaries period totals for Money Deductions card. */
 
 export type PayoutPeriodTotalsInputRow = {
-  amountCents: number;
-  paidCents: number;
+  amount: number;
+  paidAmount: number;
   currency: string;
 };
 
 export type PayoutPeriodTotals = {
-  salariesDueCents: number;
-  salariesPaidCents: number;
-  salariesRemainingCents: number;
+  salariesDueAmount: number;
+  salariesPaidAmount: number;
+  salariesRemainingAmount: number;
   currency: string;
 };
 
 export function payoutSalariesTotalsFromRows(
   rows: ReadonlyArray<PayoutPeriodTotalsInputRow>,
 ): PayoutPeriodTotals {
-  let salariesDueCents = 0;
-  let salariesPaidCents = 0;
+  let salariesDueAmount = 0;
+  let salariesPaidAmount = 0;
   let currency = "USD";
 
   for (const row of rows) {
-    salariesDueCents += row.amountCents;
-    salariesPaidCents += row.paidCents;
+    salariesDueAmount += row.amount;
+    salariesPaidAmount += row.paidAmount;
     currency = row.currency || currency;
   }
 
   return {
-    salariesDueCents,
-    salariesPaidCents,
-    salariesRemainingCents: Math.max(0, salariesDueCents - salariesPaidCents),
+    salariesDueAmount,
+    salariesPaidAmount,
+    salariesRemainingAmount: Math.max(0, salariesDueAmount - salariesPaidAmount),
     currency,
   };
 }

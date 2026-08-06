@@ -43,6 +43,8 @@ function defaultCalc(): AgencyOpsMoneyCalcOptionsJson {
 
 export type AgencyMoneySettingsRecord = {
   teamId: string;
+  currency: string;
+  currencyLockedAt: string | null;
   rules: AgencyOpsMoneyRulesJson;
   calcOptions: AgencyOpsMoneyCalcOptionsJson;
   updatedAt: string;
@@ -109,6 +111,8 @@ export async function getMoneySettings(
   if (!row) {
     return {
       teamId: input.teamId,
+      currency: "USD",
+      currencyLockedAt: null,
       rules: DEFAULT_RULES,
       calcOptions: defaultCalc(),
       updatedAt: new Date(0).toISOString(),
@@ -117,6 +121,8 @@ export async function getMoneySettings(
 
   return {
     teamId: row.teamId,
+    currency: row.currency,
+    currencyLockedAt: row.currencyLockedAt?.toISOString() ?? null,
     rules: normalizeRules(row.rulesJson),
     calcOptions: normalizeCalc(row.calcOptionsJson),
     updatedAt: row.updatedAt.toISOString(),
@@ -167,6 +173,8 @@ export async function upsertMoneySettings(
 
   return {
     teamId: input.teamId,
+    currency: row?.currency ?? "USD",
+    currencyLockedAt: row?.currencyLockedAt?.toISOString() ?? null,
     rules,
     calcOptions,
     updatedAt: (row?.updatedAt ?? now).toISOString(),

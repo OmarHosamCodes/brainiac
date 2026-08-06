@@ -62,15 +62,13 @@ export function lookupFxMultiplier(
 
   const direct = rates.find(
     (r) =>
-      normalizeCurrencyCode(r.fromCurrency) === from &&
-      normalizeCurrencyCode(r.toCurrency) === to,
+      normalizeCurrencyCode(r.fromCurrency) === from && normalizeCurrencyCode(r.toCurrency) === to,
   );
   if (direct) return direct.rate;
 
   const inverse = rates.find(
     (r) =>
-      normalizeCurrencyCode(r.fromCurrency) === to &&
-      normalizeCurrencyCode(r.toCurrency) === from,
+      normalizeCurrencyCode(r.fromCurrency) === to && normalizeCurrencyCode(r.toCurrency) === from,
   );
   if (inverse) {
     const inv = parseRate(inverse.rate);
@@ -108,9 +106,7 @@ export function resolveMoneyValue(input: {
 
   const fxRate = lookupFxMultiplier(input.rates, sourceCurrency, agencyCurrency);
   if (fxRate == null) {
-    throw new MoneyCurrencyError(
-      `Add an FX rate for ${sourceCurrency}→${agencyCurrency}`,
-    );
+    throw new MoneyCurrencyError(`Add an FX rate for ${sourceCurrency}→${agencyCurrency}`);
   }
 
   const multiplier = parseRate(fxRate);

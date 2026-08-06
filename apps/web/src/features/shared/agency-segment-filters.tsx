@@ -44,7 +44,7 @@ import { useAgencyTimeRangeFilters } from "@/features/shared/use-agency-time-ran
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { parseBillableRateCents } from "@/features/shared/format-rate";
+import { parseBillableRateAmount } from "@/features/shared/format-rate";
 import {
   selectIsClientMutationPending,
   useAgencyOpsStore,
@@ -363,8 +363,8 @@ function ClientsFiltersRoot({
     const name = newClientName.trim();
     if (!name || !teamId) return;
 
-    const billableRateCents = parseBillableRateCents(newClientBillableRate);
-    if (newClientBillableRate.trim() && billableRateCents === null) return;
+    const billableRateAmount = parseBillableRateAmount(newClientBillableRate);
+    if (newClientBillableRate.trim() && billableRateAmount === null) return;
 
     resetNewClientForm();
     setNewClientOpen(false);
@@ -372,7 +372,7 @@ function ClientsFiltersRoot({
       teamId,
       name,
       category: newClientCategory,
-      billableRateCents,
+      billableRateAmount,
     });
   }
 
@@ -449,7 +449,7 @@ function ClientsFiltersRoot({
                             isClientMutationPending ||
                             Boolean(
                               newClientBillableRate.trim() &&
-                              parseBillableRateCents(newClientBillableRate) === null,
+                              parseBillableRateAmount(newClientBillableRate) === null,
                             )
                           }
                         >

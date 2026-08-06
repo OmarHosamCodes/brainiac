@@ -2,12 +2,12 @@ import { describe, expect, test } from "bun:test";
 
 import {
   aggregateExternalBillableIncome,
-  amountCentsFromDurationAndRate,
+  amountFromDurationAndRate,
 } from "./client-billable-income";
 
-describe("amountCentsFromDurationAndRate", () => {
+describe("amountFromDurationAndRate", () => {
   test("prices whole hours", () => {
-    expect(amountCentsFromDurationAndRate(3600, 10_000)).toBe(10_000);
+    expect(amountFromDurationAndRate(3600, 10_000)).toBe(10_000);
   });
 });
 
@@ -21,7 +21,7 @@ describe("aggregateExternalBillableIncome", () => {
         userId: "u1",
         durationSeconds: 3600,
         isWaste: false,
-        billableRateCents: 10_000,
+        billableRateAmount: 10_000,
       },
       {
         clientId: "c1",
@@ -30,7 +30,7 @@ describe("aggregateExternalBillableIncome", () => {
         userId: "u1",
         durationSeconds: 1800,
         isWaste: true,
-        billableRateCents: 10_000,
+        billableRateAmount: 10_000,
       },
       {
         clientId: "c2",
@@ -39,15 +39,15 @@ describe("aggregateExternalBillableIncome", () => {
         userId: "u1",
         durationSeconds: 3600,
         isWaste: false,
-        billableRateCents: 10_000,
+        billableRateAmount: 10_000,
       },
     ]);
 
-    expect(result.billablePoolCents).toBe(10_000);
+    expect(result.billablePoolAmount).toBe(10_000);
     expect(result.clients).toHaveLength(2);
     const acme = result.clients.find((c) => c.clientId === "c1");
-    expect(acme?.billableCents).toBe(10_000);
-    expect(acme?.wasteCents).toBe(5_000);
+    expect(acme?.billableAmount).toBe(10_000);
+    expect(acme?.wasteAmount).toBe(5_000);
     expect(acme?.durationSeconds).toBe(3600);
   });
 });

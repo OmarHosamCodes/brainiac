@@ -729,8 +729,8 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
         id: createWorkspaceId("agency-rate"),
         teamId,
         userId: member.userId,
-        costRateCents: costRate,
-        billableRateCents: billableRate,
+        costRateAmount: costRate,
+        billableRateAmount: billableRate,
         currency: "USD",
         effectiveFrom: now,
         createdAt: now,
@@ -738,7 +738,7 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
       })
       .onConflictDoUpdate({
         target: [agencyOpsMemberRate.teamId, agencyOpsMemberRate.userId],
-        set: { costRateCents: costRate, billableRateCents: billableRate, updatedAt: now },
+        set: { costRateAmount: costRate, billableRateAmount: billableRate, updatedAt: now },
       });
   }
 
@@ -790,7 +790,7 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
     const invoiceNumber = `INV-${String(ci + 1).padStart(4, "0")}`;
 
     const avgRate = ctx.members[0] ? 10000 : 10000;
-    const amountCents = Math.round((totalSeconds / 3600) * avgRate);
+    const amount = Math.round((totalSeconds / 3600) * avgRate);
 
     await db.insert(agencyOpsInvoice).values({
       id: invoiceId,
@@ -798,8 +798,8 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
       clientId: client.id,
       number: invoiceNumber,
       status,
-      amountCents,
-      receivedCents: status === "paid" ? amountCents : 0,
+      amount,
+      receivedAmount: status === "paid" ? amount : 0,
       currency: "USD",
       periodStart: invoicePeriodStart,
       periodEnd: invoicePeriodEnd,
@@ -823,8 +823,8 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
         description: `${proj.name} — time entries`,
         projectId: proj.id,
         durationSeconds: projSeconds,
-        rateCents: avgRate,
-        amountCents: projAmount,
+        rateAmount: avgRate,
+        amount: projAmount,
         fromTimeEntries: true,
         createdAt: invoicePeriodEnd,
       });
@@ -840,10 +840,10 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
       kind: "subscription",
       period: "monthly",
       note: "Team workspace",
-      amountCents: 2_000,
+      amount: 2_000,
       currency: "USD",
       status: "due",
-      paidCents: 0,
+      paidAmount: 0,
       nextDueAt: shiftDate(now, { days: 12 }),
       occurredAt: null,
       createdByUserId: ownerId,
@@ -857,10 +857,10 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
       kind: "one_time",
       period: null,
       note: "Printer paper + toner",
-      amountCents: 8_500,
+      amount: 8_500,
       currency: "USD",
       status: "paid",
-      paidCents: 8_500,
+      paidAmount: 8_500,
       nextDueAt: null,
       occurredAt: shiftDate(now, { days: -3 }),
       createdByUserId: ownerId,
@@ -913,11 +913,11 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
     payeeUserId: null,
     label: "Local food bank",
     cohortKey: null,
-    amountCents: 15_000,
-    paidCents: 0,
+    amount: 15_000,
+    paidAmount: 0,
     status: "draft",
     durationSeconds: 0,
-    rateCents: 0,
+    rateAmount: 0,
     createdAt: now,
     updatedAt: now,
   });

@@ -27,7 +27,7 @@ export type MoneyCalcOptionFixture = {
   defaultValue?: number;
 };
 
-export type MoneyCohortPane = "rules" | "formulas";
+export type MoneyCohortPane = "rules" | "formulas" | "currency";
 
 export const MONEY_COHORT_PANE_OPTIONS: ReadonlyArray<{
   id: MoneyCohortPane;
@@ -43,6 +43,11 @@ export const MONEY_COHORT_PANE_OPTIONS: ReadonlyArray<{
     id: "formulas",
     label: "Formulas",
     description: "How much each allocation is — scoreboard and payout amounts",
+  },
+  {
+    id: "currency",
+    label: "Currency",
+    description: "Agency ledger currency and FX rates for foreign inputs",
   },
 ];
 

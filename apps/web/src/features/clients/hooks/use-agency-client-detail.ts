@@ -8,7 +8,7 @@ import {
 } from "@/features/clients/client-contact-completeness";
 import { agencyManagementHref } from "@/features/shared/agency-management-sections";
 import { useAgencyClientsQuery, useAgencyProjectsQuery } from "@/features/shared/agency-queries";
-import { parseBillableRateCents } from "@/features/shared/format-rate";
+import { parseBillableRateAmount } from "@/features/shared/format-rate";
 import {
   selectIsClientMutationPending,
   selectIsContactMutationPending,
@@ -28,8 +28,8 @@ export type AgencyClientDetailInvoice = {
   id: string;
   number: string;
   status: string;
-  amountCents: number;
-  remainingCents: number;
+  amount: number;
+  remainingAmount: number;
   currency: string;
   periodStart: string;
   periodEnd: string;
@@ -47,7 +47,7 @@ export type AgencyClientDetailViewModel = {
     id: string;
     name: string;
     category: "internal" | "external";
-    billableRateCents: number | null;
+    billableRateAmount: number | null;
     currency: string;
     archivedAt: string | null;
   } | null;
@@ -78,7 +78,7 @@ export type AgencyClientDetailViewModel = {
   isClientMutationPending: boolean;
   canViewBilling: boolean;
   openInvoiceCount: number;
-  outstandingCents: number;
+  outstandingAmount: number;
   billingCurrency: string;
   recentInvoices: AgencyClientDetailInvoice[];
   openMoney: () => void;
@@ -90,7 +90,7 @@ export type AgencyClientDetailViewModel = {
     id: string;
     name: string;
     category: "internal" | "external";
-    billableRateCents: number | null;
+    billableRateAmount: number | null;
     currency: string;
     archivedAt: string | null;
   }>;
@@ -164,7 +164,7 @@ export function useAgencyClientDetail({
     setEditNameDraft(client.name);
     setEditCategoryDraft(client.category);
     setEditBillableRateDraft(
-      client.billableRateCents === null ? "" : String(client.billableRateCents / 100),
+      client.billableRateAmount === null ? "" : String(client.billableRateAmount / 100),
     );
   }, [client]);
 
@@ -207,21 +207,21 @@ export function useAgencyClientDetail({
     if (!client || !teamId) return;
     const name = editNameDraft.trim();
     if (!name) return;
-    const billableRateCents = parseBillableRateCents(editBillableRateDraft);
-    if (editBillableRateDraft.trim() && billableRateCents === null) return;
+    const billableRateAmount = parseBillableRateAmount(editBillableRateDraft);
+    if (editBillableRateDraft.trim() && billableRateAmount === null) return;
 
     const patch: {
       teamId: string;
       clientId: string;
       name?: string;
       category?: "internal" | "external";
-      billableRateCents?: number | null;
+      billableRateAmount?: number | null;
     } = { teamId, clientId: client.id };
 
     if (name !== client.name) patch.name = name;
     if (editCategoryDraft !== client.category) patch.category = editCategoryDraft;
-    if (billableRateCents !== client.billableRateCents) {
-      patch.billableRateCents = billableRateCents;
+    if (billableRateAmount !== client.billableRateAmount) {
+      patch.billableRateAmount = billableRateAmount;
     }
     if (Object.keys(patch).length === 2) return;
     void agencyOps.updateClient(patch).then(() => {
@@ -303,7 +303,7 @@ export function useAgencyClientDetail({
     isClientMutationPending,
     canViewBilling: summary?.billing.canView ?? false,
     openInvoiceCount: summary?.billing.openInvoiceCount ?? 0,
-    outstandingCents: summary?.billing.outstandingCents ?? 0,
+    outstandingAmount: summary?.billing.outstandingAmount ?? 0,
     billingCurrency: summary?.billing.currency ?? client?.currency ?? "USD",
     recentInvoices: summary?.billing.recentInvoices ?? [],
     openMoney: () => {

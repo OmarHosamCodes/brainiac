@@ -11,7 +11,7 @@ describe("aggregateMemberPayableIncome", () => {
         userAvatar: null,
         durationSeconds: 3600,
         isWaste: false,
-        costRateCents: 8_000,
+        costRateAmount: 8_000,
       },
       {
         userId: "u1",
@@ -19,7 +19,7 @@ describe("aggregateMemberPayableIncome", () => {
         userAvatar: "https://img/a.png",
         durationSeconds: 1800,
         isWaste: true,
-        costRateCents: 8_000,
+        costRateAmount: 8_000,
       },
     ]);
     expect(items).toEqual([
@@ -28,8 +28,8 @@ describe("aggregateMemberPayableIncome", () => {
         userName: "Ada",
         userAvatar: "https://img/a.png",
         durationSeconds: 3600,
-        payableCents: 8_000,
-        wasteCents: 4_000,
+        payableAmount: 8_000,
+        wasteAmount: 4_000,
       },
     ]);
   });

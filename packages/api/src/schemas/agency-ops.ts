@@ -34,7 +34,7 @@ export const agencyClientSchema = z.object({
   teamId: z.string().min(1),
   name: z.string().min(1),
   category: agencyClientCategorySchema,
-  billableRateCents: z.number().int().nonnegative().nullable(),
+  billableRateAmount: z.number().int().nonnegative().nullable(),
   currency: z.string().min(1),
   archivedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
