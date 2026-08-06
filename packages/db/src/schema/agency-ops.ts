@@ -36,8 +36,13 @@ export const agencyOpsClient = pgTable(
       .references(() => workspaceTeam.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     category: text("category").$type<AgencyOpsClientCategory>().notNull().default("external"),
-    billableRateCents: integer("billable_rate_cents"),
+    /** Agency-currency hourly rate (integer minor units). */
+    billableRateAmount: integer("billable_rate_amount"),
+    /** Source currency for the rate input. */
     currency: text("currency").notNull().default("USD"),
+    sourceBillableRateAmount: integer("source_billable_rate_amount"),
+    fxRate: text("fx_rate").notNull().default("1"),
+    fxAsOf: timestamp("fx_as_of"),
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -485,11 +490,16 @@ export const agencyOpsMemberRate = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    /** Cost to the agency per hour, in the team's currency minor units (cents). */
-    costRateCents: integer("cost_rate_cents"),
-    /** Rate billed to clients per hour, in minor units. */
-    billableRateCents: integer("billable_rate_cents"),
+    /** Cost to the agency per hour (agency currency, integer minor units). */
+    costRateAmount: integer("cost_rate_amount"),
+    /** Rate billed to clients per hour (agency currency, integer minor units). */
+    billableRateAmount: integer("billable_rate_amount"),
+    /** Source currency for rate inputs. */
     currency: text("currency").notNull().default("USD"),
+    sourceCostRateAmount: integer("source_cost_rate_amount"),
+    sourceBillableRateAmount: integer("source_billable_rate_amount"),
+    fxRate: text("fx_rate").notNull().default("1"),
+    fxAsOf: timestamp("fx_as_of"),
     effectiveFrom: timestamp("effective_from").defaultNow().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -557,11 +567,15 @@ export const agencyOpsInvoice = pgTable(
     /** Human-readable invoice number, e.g. INV-0001. Unique per team. */
     number: text("number").notNull(),
     status: text("status").$type<AgencyOpsInvoiceStatus>().notNull().default("draft"),
-    /** Total in minor currency units. Derived from line items. */
-    amountCents: integer("amount_cents").notNull().default(0),
-    /** Cash collected toward this invoice (minor units). Remaining = amount − received. */
-    receivedCents: integer("received_cents").notNull().default(0),
+    /** Total in agency currency (integer minor units). Derived from line items. */
+    amount: integer("amount").notNull().default(0),
+    /** Cash collected toward this invoice (agency minor units). Remaining = amount − received. */
+    receivedAmount: integer("received_amount").notNull().default(0),
+    /** Source currency when composed from foreign inputs (usually agency currency). */
     currency: text("currency").notNull().default("USD"),
+    sourceAmount: integer("source_amount"),
+    fxRate: text("fx_rate").notNull().default("1"),
+    fxAsOf: timestamp("fx_as_of"),
     periodStart: timestamp("period_start").notNull(),
     periodEnd: timestamp("period_end").notNull(),
     issuedAt: timestamp("issued_at"),
@@ -600,8 +614,8 @@ export const agencyOpsInvoiceLineItem = pgTable(
     projectId: text("project_id").references(() => agencyOpsProject.id, { onDelete: "set null" }),
     /** Duration in seconds (stored as integer seconds; divide by 3600 to get hours). */
     durationSeconds: integer("hours_seconds").notNull().default(0),
-    rateCents: integer("rate_cents").notNull().default(0),
-    amountCents: integer("amount_cents").notNull().default(0),
+    rateAmount: integer("rate_amount").notNull().default(0),
+    amount: integer("amount").notNull().default(0),
     /** Whether this line item was auto-generated from time entries. */
     fromTimeEntries: boolean("from_time_entries").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -630,7 +644,12 @@ export const agencyOpsMoneyPendingAdjustment = pgTable(
     periodStart: timestamp("period_start"),
     periodEnd: timestamp("period_end"),
     kind: text("kind").$type<AgencyOpsMoneyPendingAdjustmentKind>().notNull(),
-    amountCents: integer("amount_cents").notNull(),
+    /** Agency-currency amount (integer minor units). */
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull().default("USD"),
+    sourceAmount: integer("source_amount"),
+    fxRate: text("fx_rate").notNull().default("1"),
+    fxAsOf: timestamp("fx_as_of"),
     note: text("note").notNull().default(""),
     createdByUserId: text("created_by_user_id")
       .notNull()
@@ -661,7 +680,7 @@ export type AgencyOpsMoneyFormulaToken =
   | { kind: "op"; op: "+" | "-" | "*" | "/" }
   | { kind: "paren"; value: "(" | ")" };
 
-export type AgencyOpsMoneyFormulaOutput = "cents" | "ratio" | "hours";
+export type AgencyOpsMoneyFormulaOutput = "amount" | "ratio" | "hours";
 
 export type AgencyOpsMoneyFormulaDef = {
   id: string;
@@ -757,13 +776,13 @@ export const agencyOpsPayoutLine = pgTable(
     label: text("label").notNull().default(""),
     /** Optional cohort bucket label (Money settings rules). */
     cohortKey: text("cohort_key"),
-    amountCents: integer("amount_cents").notNull().default(0),
-    paidCents: integer("paid_cents").notNull().default(0),
+    amount: integer("amount").notNull().default(0),
+    paidAmount: integer("paid_amount").notNull().default(0),
     status: text("status").$type<AgencyOpsPayoutLineStatus>().notNull().default("draft"),
     /** Snapshot of tracked seconds used to derive amount (hours × cost). */
     durationSeconds: integer("duration_seconds").notNull().default(0),
-    /** Snapshot of member cost rate (cents/hour) at draft time. */
-    rateCents: integer("rate_cents").notNull().default(0),
+    /** Snapshot of member cost rate (agency minor units/hour) at draft time. */
+    rateAmount: integer("rate_amount").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -813,6 +832,9 @@ export const agencyOpsMoneySettings = pgTable("agency_ops_money_settings", {
   teamId: text("team_id")
     .primaryKey()
     .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+  /** Agency ledger currency (ISO 4217). Soft-locked after money exists. */
+  currency: text("currency").notNull().default("USD"),
+  currencyLockedAt: timestamp("currency_locked_at"),
   rulesJson: jsonb("rules_json")
     .$type<AgencyOpsMoneyRulesJson>()
     .notNull()
@@ -827,6 +849,37 @@ export const agencyOpsMoneySettings = pgTable("agency_ops_money_settings", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// FX rates (agency-owned; optional live suggest from Frankfurter)
+// ---------------------------------------------------------------------------
+
+export const agencyOpsFxRate = pgTable(
+  "agency_ops_fx_rate",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    fromCurrency: text("from_currency").notNull(),
+    toCurrency: text("to_currency").notNull(),
+    /** Decimal string: 1 fromCurrency = rate toCurrency */
+    rate: text("rate").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_fx_rate_team_idx").on(table.teamId),
+    uniqueIndex("agency_ops_fx_rate_team_pair_unique").on(
+      table.teamId,
+      table.fromCurrency,
+      table.toCurrency,
+    ),
+  ],
+);
 
 // ---------------------------------------------------------------------------
 // Ops expenses (vendor / subscription spend — Money Expenses card)
@@ -847,10 +900,14 @@ export const agencyOpsExpense = pgTable(
     kind: text("kind").$type<AgencyOpsExpenseKind>().notNull(),
     period: text("period").$type<AgencyOpsExpensePeriod>(),
     note: text("note").notNull().default(""),
-    amountCents: integer("amount_cents").notNull().default(0),
+    /** Agency-currency amount (integer minor units). */
+    amount: integer("amount").notNull().default(0),
     currency: text("currency").notNull().default("USD"),
+    sourceAmount: integer("source_amount"),
+    fxRate: text("fx_rate").notNull().default("1"),
+    fxAsOf: timestamp("fx_as_of"),
     status: text("status").$type<AgencyOpsExpenseStatus>().notNull().default("due"),
-    paidCents: integer("paid_cents").notNull().default(0),
+    paidAmount: integer("paid_amount").notNull().default(0),
     /** Next due date for subscriptions. */
     nextDueAt: timestamp("next_due_at"),
     /** Spend date for one-time expenses. */

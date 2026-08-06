@@ -323,6 +323,13 @@
       "when": 1787900000022,
       "tag": "0045_notification_productivity",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1787900000023,
+      "tag": "0046_agency_currency_amount",
+      "breakpoints": true
     }
   ]
 }
