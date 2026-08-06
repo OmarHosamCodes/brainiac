@@ -1,6 +1,7 @@
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
@@ -14,6 +15,10 @@ import {
   resolveMemberProfileHeatLayout,
   type MemberProfileHeatLayout,
 } from "@/features/member-profile/member-profile-heat-layout";
+import {
+  resolveMemberProfileRosterNav,
+  type MemberProfileRosterMember,
+} from "@/features/member-profile/member-profile-roster-nav";
 import {
   resolveAgencyRangeFromPreset,
   startOfWeekUtc,
@@ -43,6 +48,19 @@ export type AgencyMemberProfileViewModel = {
   subjectUserId: string;
   loading: boolean;
   error: string | null;
+  memberNav: {
+    members: MemberProfileRosterMember[];
+    current: MemberProfileRosterMember | null;
+    previous: MemberProfileRosterMember | null;
+    next: MemberProfileRosterMember | null;
+    indexLabel: string | null;
+    canGoPrevious: boolean;
+    canGoNext: boolean;
+    loading: boolean;
+    onGoPrevious: () => void;
+    onGoNext: () => void;
+    onSelectMember: (userId: string) => void;
+  };
   period: {
     rangePreset: RangePreset;
     onRangePresetChange: (preset: RangePreset) => void;
@@ -398,6 +416,7 @@ function rangePresetDisplayLabel(
 
 export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfileViewModel {
   const session = authClient.useSession();
+  const navigate = useNavigate();
   const { currentAgencyTeamId } = useCurrentAgencyTeam();
   const selectedTeamId = useTeamStore((s) => s.selectedTeamId);
   const teamId = currentAgencyTeamId || selectedTeamId || "";
@@ -406,6 +425,12 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const queryClient = useQueryClient();
   const store = useAgencyMemberProfileStore();
   const now = useMemo(() => new Date(), []);
+  const serverUrl = getServerUrl();
+
+  const membersQuery = useQuery({
+    ...orpc.team.members.list.queryOptions({ input: { teamId } }),
+    enabled: Boolean(teamId && session.data?.user),
+  });
 
   const tenurePolicyQuery = useQuery({
     ...orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
@@ -603,7 +628,6 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     },
   });
 
-  const serverUrl = getServerUrl();
   const periodLabel = rangePresetDisplayLabel(
     effectiveRangePreset,
     tenurePeriodLabel,
@@ -874,6 +898,60 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const clampedDefaultDate =
     today < rangeStartKey ? rangeStartKey : today > rangeEndKey ? rangeEndKey : today;
 
+  const rosterMembers = useMemo<MemberProfileRosterMember[]>(
+    () =>
+      (membersQuery.data?.items ?? []).map((member) => ({
+        userId: member.userId,
+        userName: member.userName,
+        userAvatarUrl: member.userAvatar ?? null,
+      })),
+    [membersQuery.data?.items],
+  );
+
+  const rosterNav = useMemo(
+    () => resolveMemberProfileRosterNav(rosterMembers, subjectUserId),
+    [rosterMembers, subjectUserId],
+  );
+
+  const memberNav = useMemo(() => {
+    const goTo = (userId: string) => {
+      if (!userId || userId === subjectUserId) return;
+      navigate(`/agency/members/${encodeURIComponent(userId)}`);
+    };
+    return {
+      members: rosterNav.members,
+      current: rosterNav.current,
+      previous: rosterNav.previous,
+      next: rosterNav.next,
+      indexLabel:
+        rosterNav.index >= 0 && rosterNav.total > 0
+          ? `${rosterNav.index + 1} of ${rosterNav.total}`
+          : null,
+      canGoPrevious: Boolean(rosterNav.previous),
+      canGoNext: Boolean(rosterNav.next),
+      loading: membersQuery.isPending,
+      onGoPrevious() {
+        if (rosterNav.previous) goTo(rosterNav.previous.userId);
+      },
+      onGoNext() {
+        if (rosterNav.next) goTo(rosterNav.next.userId);
+      },
+      onSelectMember(userId: string) {
+        goTo(userId);
+      },
+    };
+  }, [
+    membersQuery.isPending,
+    navigate,
+    rosterNav.current,
+    rosterNav.index,
+    rosterNav.members,
+    rosterNav.next,
+    rosterNav.previous,
+    rosterNav.total,
+    subjectUserId,
+  ]);
+
   return {
     teamId,
     subjectUserId,
@@ -883,6 +961,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         ? profileQuery.error.message
         : "Couldn't load profile"
       : store.error,
+    memberNav,
     period: {
       rangePreset: effectiveRangePreset,
       onRangePresetChange: setRangePreset,

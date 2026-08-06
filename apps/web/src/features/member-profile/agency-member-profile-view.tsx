@@ -20,6 +20,7 @@ import {
 } from "@/features/member-profile/member-profile-leave-range-picker";
 import type { AgencyMemberProfileViewModel } from "@/features/member-profile/hooks/use-agency-member-profile";
 import { MemberProfileAlertsPanel } from "@/features/member-profile/member-profile-alerts-view";
+import { MemberProfileRosterSwitcher } from "@/features/member-profile/member-profile-roster-switcher";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import {
   agencyEmptyPanelClass,
@@ -216,6 +217,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
               </div>
             </div>
           ) : null}
+          <MemberProfileRosterSwitcher memberNav={viewModel.memberNav} />
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)_minmax(17.5rem,20rem)] lg:items-start">

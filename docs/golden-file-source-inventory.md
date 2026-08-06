@@ -19,8 +19,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 646 |
-| server-operation | 14 |
+| golden-feature | 655 |
+| server-operation | 15 |
 | shared-infrastructure | 278 |
 | static-presentation | 15 |
 
@@ -28,12 +28,12 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Domain | Artifacts |
 | --- | ---: |
-| agency-shared | 83 |
+| agency-shared | 85 |
 | agent | 85 |
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 11 |
-| billing | 86 |
+| billing | 91 |
 | ci | 2 |
 | clients | 13 |
 | configuration | 3 |
@@ -43,7 +43,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | environment | 5 |
 | integrations | 2 |
 | marketing | 16 |
-| member-profile | 32 |
+| member-profile | 35 |
 | notifications | 33 |
 | performance | 8 |
 | projects | 24 |
@@ -94,10 +94,10 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/server/src/operations/local-seed-school-marketing-profiles.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: database access, process or filesystem tooling, environment contract; structure: source role and exported behavior |
 | `apps/server/src/operations/local-seed-visual-notifications.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/local-timer-smoke.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: database access, process or filesystem tooling, environment contract; structure: source role and exported behavior |
-| `apps/server/src/operations/migrate-agency-money-amounts.ts` | agency-shared | server-operation | server-operation | agency-platform | Deliberate agency-shared operation with isolated runtime side effects. | content: database access, process or filesystem tooling, environment contract; structure: source role and exported behavior |
 | `apps/server/src/operations/maintenance/cleanup-agency-operator-nodes.ts` | agency-shared | server-operation | server-operation | agency-platform | Deliberate agency-shared operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/maintenance/clear-team-data.ts` | team | server-operation | server-operation | team-domain | Deliberate team operation with isolated runtime side effects. | content: database access, process or filesystem tooling, package or task configuration; structure: source role and exported behavior |
 | `apps/server/src/operations/maintenance/grant-lifetime-pro.ts` | billing | server-operation | server-operation | billing-domain | Deliberate billing operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
+| `apps/server/src/operations/migrate-agency-money-amounts.ts` | agency-shared | server-operation | server-operation | agency-platform | Deliberate agency-shared operation with isolated runtime side effects. | content: database access, process or filesystem tooling, environment contract; structure: source role and exported behavior |
 | `apps/server/src/operations/seeds/seed-agency.ts` | agency-shared | server-operation | server-operation | agency-platform | Deliberate agency-shared operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/seeds/seed-massive.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/seeds/seed.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
@@ -169,7 +169,6 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/billing/agency-billing-surface-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/billing/agency-billing-surface.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/billing/agency-money-surface-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
-| `apps/web/src/features/billing/money-currency-settings-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/billing/agency-money-surface.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/billing/agency-pro-upsell.tsx` | billing | web-query | golden-feature | billing-domain | Feature-owned billing artifact in the canonical web-query layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/billing/billing-queries.ts` | billing | web-query | golden-feature | billing-domain | Feature-owned billing artifact in the canonical web-query layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: source role and exported behavior |
@@ -188,6 +187,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/billing/money-bills-rows.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/billing/money-bills-rows.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/billing/money-cohort-allocations-fixture.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/billing/money-currency-settings-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/billing/money-expense-form.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/billing/money-expense-form.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/billing/money-formula-chip-editor-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -236,6 +236,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/member-profile/member-profile-heat-strip-fill.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/member-profile/member-profile-heat-strip-fill.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/member-profile/member-profile-leave-range-picker.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/member-profile/member-profile-roster-nav.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/member-profile/member-profile-roster-nav.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/member-profile/member-profile-roster-switcher.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/stores/agency-member-profile.ts` | member-profile | client-state | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical client-state layer. | content: oRPC procedures or clients, Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/notifications/agency-notifications-view.tsx` | notifications | presentational-view | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/notifications/agency-notifications.tsx` | notifications | presentational-view | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -770,8 +773,6 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agency-ops/billing/money-currency.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/billing/money-export-service.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/money-export-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
-| `packages/api/src/routers/agency-ops/billing/money-fx-service.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
-| `packages/api/src/routers/agency-ops/billing/money-fx-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-context.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-eval.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/money-formula-eval.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
@@ -780,6 +781,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agency-ops/billing/money-formula-schemas.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-templates.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-formula-tokens.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
+| `packages/api/src/routers/agency-ops/billing/money-fx-service.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/billing/money-fx-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-pending-adjustment-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-scoreboard-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/money-settings-helpers.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
