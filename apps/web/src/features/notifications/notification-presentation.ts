@@ -1,5 +1,7 @@
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
 
+import { buildMemberProfileAlertHref } from "@/features/member-profile/member-profile-alert-href";
+
 export type NotificationSection = {
   label: "Needs action" | "Updates";
   items: NotificationRecord[];
@@ -76,6 +78,7 @@ export function buildNotificationSearchParams(notification: NotificationRecord) 
       params.set("section", "reports");
       break;
     case "member.alert":
+      // Profile route owns focus/alertId/day — no agency section params.
       break;
     default: {
       const _exhaustive: never = notification.type;
@@ -88,7 +91,12 @@ export function buildNotificationSearchParams(notification: NotificationRecord) 
 
 export function notificationHref(notification: NotificationRecord): string | null {
   if (notification.type === "member.alert" && notification.payload.subjectUserId) {
-    return `/agency/members/${encodeURIComponent(notification.payload.subjectUserId)}`;
+    return buildMemberProfileAlertHref({
+      subjectUserId: notification.payload.subjectUserId,
+      alertId: notification.payload.alertId,
+      dateKey: notification.payload.dateKey,
+      periodKey: notification.payload.periodKey,
+    });
   }
   return null;
 }

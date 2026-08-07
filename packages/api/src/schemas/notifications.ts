@@ -34,6 +34,11 @@ export const notificationPayloadSchema = z.object({
   alertId: z.string().min(1).optional(),
   alertTitle: z.string().min(1).optional(),
   notePreview: z.string().optional(),
+  dateKey: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  periodKey: z.string().optional(),
 });
 
 export const notificationRecordSchema = z.object({

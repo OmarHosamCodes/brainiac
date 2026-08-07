@@ -31,6 +31,8 @@ export type NotificationPayload = {
   alertId?: string;
   alertTitle?: string;
   notePreview?: string;
+  dateKey?: string;
+  periodKey?: string;
 };
 
 export const notification = pgTable(
