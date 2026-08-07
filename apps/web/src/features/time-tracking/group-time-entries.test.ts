@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import {
   flattenCollapsedGroupsForBulkEdit,
+  flattenTimeEntryWeeksForVirtualization,
   type CollapsedEntryGroup,
   type TimeEntryRecord,
+  type TimeEntryWeekGroup,
 } from "@/features/time-tracking/group-time-entries";
 
 function makeEntry(
@@ -65,5 +67,33 @@ describe("flattenCollapsedGroupsForBulkEdit", () => {
     expect(flattened.map((row) => row.totalSeconds)).toEqual([1_800, 900]);
     expect(flattened[0]?.collapseKey).toContain("e1");
     expect(flattened[1]?.collapseKey).toContain("e2");
+  });
+});
+
+describe("flattenTimeEntryWeeksForVirtualization", () => {
+  test("keeps each week header on its first virtual day", () => {
+    const day = {
+      dateKey: "2026-07-16",
+      totalSeconds: 3_600,
+      groups: [makeGroup([makeEntry({ id: "e1" })])],
+    };
+    const weeks: TimeEntryWeekGroup[] = [
+      {
+        weekStartKey: "2026-07-13",
+        label: "This week",
+        totalSeconds: 5_400,
+        days: [day, { ...day, dateKey: "2026-07-15" }],
+      },
+    ];
+
+    const virtualDays = flattenTimeEntryWeeksForVirtualization(weeks);
+
+    expect(virtualDays).toHaveLength(2);
+    expect(virtualDays[0]?.week).toEqual({
+      weekStartKey: "2026-07-13",
+      label: "This week",
+      totalSeconds: 5_400,
+    });
+    expect(virtualDays[1]?.week).toBeNull();
   });
 });
