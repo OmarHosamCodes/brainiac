@@ -333,12 +333,17 @@ export const billingRouter = {
           periodStart: z.string().datetime().optional(),
           periodEnd: z.string().datetime().optional(),
           search: z.string().optional(),
+          page: z.number().int().positive().optional(),
+          pageSize: z.number().int().positive().max(200).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return z
           .object({
             items: z.array(invoiceRecordSchema),
+            page: z.number().int().positive(),
+            pageSize: z.number().int().nonnegative(),
+            total: z.number().int().nonnegative(),
           })
           .parse(await listInvoices(context.session.user.id, input));
       }),
@@ -483,12 +488,17 @@ export const billingRouter = {
           search: z.string().optional(),
           sectionKey: payoutSectionKeySchema.optional(),
           billsParty: payoutBillsPartySchema.optional(),
+          page: z.number().int().positive().optional(),
+          pageSize: z.number().int().positive().max(200).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return z
           .object({
             items: z.array(payoutLineRecordSchema),
+            page: z.number().int().positive(),
+            pageSize: z.number().int().nonnegative(),
+            total: z.number().int().nonnegative(),
           })
           .parse(await listPayoutLines(context.session.user.id, input));
       }),
@@ -570,12 +580,17 @@ export const billingRouter = {
         teamScopedInputSchema.extend({
           periodStart: z.string().datetime().optional(),
           periodEnd: z.string().datetime().optional(),
+          page: z.number().int().positive().optional(),
+          pageSize: z.number().int().positive().max(200).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return z
           .object({
             items: z.array(expenseRecordSchema),
+            page: z.number().int().positive(),
+            pageSize: z.number().int().nonnegative(),
+            total: z.number().int().nonnegative(),
           })
           .parse(await listExpenses(context.session.user.id, input));
       }),

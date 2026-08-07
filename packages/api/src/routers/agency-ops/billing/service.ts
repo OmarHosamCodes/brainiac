@@ -34,6 +34,7 @@ import {
   type PeriodBillMemberActivity,
 } from "./period-bill-activity";
 import { getAgencyCurrency, loadMoneyResolveContext } from "./money-fx-service";
+import { paginateItems, type PaginatedItems } from "./list-pagination";
 
 type AgencyMemberRateRecord = {
   userId: string;
@@ -297,8 +298,10 @@ export async function listInvoices(
     periodStart?: string;
     periodEnd?: string;
     search?: string;
+    page?: number;
+    pageSize?: number;
   },
-): Promise<{ items: AgencyInvoiceRecord[] }> {
+): Promise<PaginatedItems<AgencyInvoiceRecord>> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const filters = [eq(agencyOpsInvoice.teamId, input.teamId)];
@@ -332,7 +335,10 @@ export async function listInvoices(
     .where(and(...filters))
     .orderBy(desc(agencyOpsInvoice.createdAt));
 
-  return { items: rows.map((r) => mapInvoiceRow(r.invoice, r.clientName)) };
+  return paginateItems(
+    rows.map((r) => mapInvoiceRow(r.invoice, r.clientName)),
+    input,
+  );
 }
 
 export async function getInvoiceSummary(
@@ -834,6 +840,7 @@ export async function listPeriodBillActivity(
   return { clients, members };
 }
 
+/** Empty stub until project budgets ship; Projects UI still queries this. */
 export async function listBudgetsStub(actorUserId: string, input: { teamId: string }) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   return { items: [] as const };

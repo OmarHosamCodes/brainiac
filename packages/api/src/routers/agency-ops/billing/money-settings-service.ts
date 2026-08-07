@@ -12,8 +12,16 @@ import {
   normalizeStringArrayRecord,
   normalizeStringRecord,
 } from "./money-settings-helpers";
+import {
+  getCachedMoneySettings,
+  invalidateMoneySettingsCache,
+  setCachedMoneySettings,
+  type AgencyMoneySettingsRecord,
+} from "./money-settings-cache";
 import { defaultMoneyFormulas, mergeMoneyFormulas } from "./money-formula-templates";
 import { validateMoneyFormulaTokens } from "./money-formula-tokens";
+
+export type { AgencyMoneySettingsRecord } from "./money-settings-cache";
 
 const DEFAULT_RULES: AgencyOpsMoneyRulesJson = {
   enabledRuleIds: ["profit-loss-share", "rent-allowance"],
@@ -40,15 +48,6 @@ function defaultCalc(): AgencyOpsMoneyCalcOptionsJson {
     formulas,
   };
 }
-
-export type AgencyMoneySettingsRecord = {
-  teamId: string;
-  currency: string;
-  currencyLockedAt: string | null;
-  rules: AgencyOpsMoneyRulesJson;
-  calcOptions: AgencyOpsMoneyCalcOptionsJson;
-  updatedAt: string;
-};
 
 function normalizeRules(value: unknown): AgencyOpsMoneyRulesJson {
   if (!value || typeof value !== "object") return DEFAULT_RULES;
@@ -102,6 +101,9 @@ export async function getMoneySettings(
 ): Promise<AgencyMoneySettingsRecord> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
+  const cached = getCachedMoneySettings(input.teamId);
+  if (cached) return cached;
+
   const [row] = await db
     .select()
     .from(agencyOpsMoneySettings)
@@ -109,7 +111,7 @@ export async function getMoneySettings(
     .limit(1);
 
   if (!row) {
-    return {
+    const value = {
       teamId: input.teamId,
       currency: "USD",
       currencyLockedAt: null,
@@ -117,9 +119,11 @@ export async function getMoneySettings(
       calcOptions: defaultCalc(),
       updatedAt: new Date(0).toISOString(),
     };
+    setCachedMoneySettings(input.teamId, value);
+    return value;
   }
 
-  return {
+  const value = {
     teamId: row.teamId,
     currency: row.currency,
     currencyLockedAt: row.currencyLockedAt?.toISOString() ?? null,
@@ -127,6 +131,8 @@ export async function getMoneySettings(
     calcOptions: normalizeCalc(row.calcOptionsJson),
     updatedAt: row.updatedAt.toISOString(),
   };
+  setCachedMoneySettings(input.teamId, value);
+  return value;
 }
 
 export async function upsertMoneySettings(
@@ -171,6 +177,7 @@ export async function upsertMoneySettings(
     })
     .returning();
 
+  invalidateMoneySettingsCache(input.teamId);
   return {
     teamId: input.teamId,
     currency: row?.currency ?? "USD",

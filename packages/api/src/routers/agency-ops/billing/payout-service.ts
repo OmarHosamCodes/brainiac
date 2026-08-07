@@ -17,7 +17,8 @@ import { createWorkspaceId } from "@orch/workspace";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
-import { payoutAmountFromActivity } from "./payout-amount-from-activity";
+import { amountFromDurationAndRate } from "./client-billable-income";
+import { paginateItems, type PaginatedItems } from "./list-pagination";
 import {
   payoutBillStatus,
   payoutLineStatusAfterPaid,
@@ -237,8 +238,10 @@ export async function listPayoutLines(
     search?: string;
     sectionKey?: AgencyOpsPayoutSectionKey;
     billsParty?: "team" | "adjustments" | "all";
+    page?: number;
+    pageSize?: number;
   },
-): Promise<{ items: AgencyPayoutLineRecord[] }> {
+): Promise<PaginatedItems<AgencyPayoutLineRecord>> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
@@ -303,7 +306,7 @@ export async function listPayoutLines(
     )
     .sort((a, b) => a.userName.localeCompare(b.userName));
 
-  return { items };
+  return paginateItems(items, input);
 }
 
 export async function createPayoutLineFromMember(
@@ -374,7 +377,7 @@ export async function createPayoutLineFromMember(
     });
   }
 
-  const amount = payoutAmountFromActivity(durationSeconds, rateRow.costRateAmount);
+  const amount = amountFromDurationAndRate(durationSeconds, rateRow.costRateAmount);
   if (amount <= 0) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Computed payout amount is zero. Check cost rate and tracked time.",

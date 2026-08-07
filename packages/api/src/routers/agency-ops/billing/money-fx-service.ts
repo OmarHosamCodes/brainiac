@@ -21,6 +21,7 @@ import {
   type MoneyFxRateRow,
   type ResolvedMoneyValue,
 } from "./money-currency";
+import { invalidateMoneySettingsCache } from "./money-settings-cache";
 
 const ISO_CURRENCY = /^[A-Z]{3}$/;
 
@@ -124,6 +125,7 @@ async function ensureAgencyCurrencyLocked(teamId: string): Promise<void> {
         updatedAt: now,
       },
     });
+  invalidateMoneySettingsCache(teamId);
 }
 
 async function listTeamFxRateRows(teamId: string): Promise<MoneyFxRateRow[]> {
@@ -329,6 +331,7 @@ export async function setAgencyCurrency(
       },
     });
 
+  invalidateMoneySettingsCache(input.teamId);
   return { currency, currencyLockedAt: null };
 }
 
