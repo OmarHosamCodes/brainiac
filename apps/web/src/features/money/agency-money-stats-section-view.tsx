@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 import {
   agencyErrorPanelClass,
@@ -175,13 +175,22 @@ function StatsCard({
       ) : null}
 
       {card.secondary.length > 0 ? (
-        <Collapsible className="border-t border-default pt-3">
+        <Collapsible className="group/details border-t border-default pt-3">
           <CollapsibleTrigger asChild>
-            <Button type="button" variant="ghost" size="sm" className="-ml-2 h-8 px-2 text-xs">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="-ml-2 h-8 gap-1 px-2 text-xs"
+            >
               Details
+              <ChevronDown
+                className="size-3.5 opacity-70 transition-transform duration-150 ease-out motion-reduce:transition-none group-data-[state=open]/details:rotate-180"
+                aria-hidden
+              />
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="overflow-hidden motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:slide-in-from-top-1 motion-safe:data-[state=open]:duration-180">
             <ul
               className={cn(
                 "flex flex-col gap-0.5 pt-1",

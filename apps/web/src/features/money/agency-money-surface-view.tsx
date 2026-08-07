@@ -1,3 +1,4 @@
+import { MotionConfig, motion } from "motion/react";
 import { Settings } from "lucide-react";
 
 import { RangePresetChooser } from "@/features/shared/command-bar/range-preset-chooser";
@@ -17,6 +18,7 @@ import { BillsSection } from "./agency-money-bills-section-view";
 import { ExpensesSection } from "./agency-money-expenses-section-view";
 import { MoneySettingsDialog } from "./agency-money-settings-dialog-view";
 import { MoneyStatsSection } from "./agency-money-stats-section-view";
+import { moneySectionItemVariants } from "./money-motion";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 
 type AgencyMoneySurfaceViewProps = {
@@ -123,24 +125,44 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
           </p>
         </section>
       ) : (
-        <>
-          <MoneyStatsSection
-            status={scoreboardStatus}
-            errorMessage={scoreboardErrorMessage}
-            statsCards={statsCards}
-            onSelectMetric={onSelectMetric}
-            onRetry={onRetryScoreboard}
-          />
+        <MotionConfig reducedMotion="user">
+          <motion.div
+            custom={0}
+            variants={moneySectionItemVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <MoneyStatsSection
+              status={scoreboardStatus}
+              errorMessage={scoreboardErrorMessage}
+              statsCards={statsCards}
+              onSelectMetric={onSelectMetric}
+              onRetry={onRetryScoreboard}
+            />
+          </motion.div>
 
-          <MoneyPayoutRunView viewModel={payoutRun} />
+          <motion.div
+            custom={1}
+            variants={moneySectionItemVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <MoneyPayoutRunView viewModel={payoutRun} />
+          </motion.div>
 
-          <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]">
+          <motion.div
+            custom={2}
+            variants={moneySectionItemVariants}
+            initial="hidden"
+            animate="show"
+            className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]"
+          >
             <BillsSection bills={bills} />
             <ExpensesSection expenses={expenses} />
-          </div>
+          </motion.div>
 
           <MoneySettingsDialog settings={moneySettings} />
-        </>
+        </MotionConfig>
       )}
     </div>
   );
