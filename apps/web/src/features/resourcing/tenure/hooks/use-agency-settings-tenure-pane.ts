@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";
@@ -108,6 +109,7 @@ function profileRange() {
 }
 
 export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySettingsTenurePaneProps) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const upsertRate = useAgencyOpsStore((state) => state.upsertRate);
   const upsertHrProfile = useAgencyMemberProfileStore((state) => state.upsertHrProfile);
@@ -817,6 +819,10 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     setActiveStepId("identity");
   }
 
+  function openProfile(userId: string) {
+    navigate(`/agency/members/${encodeURIComponent(userId)}`);
+  }
+
   function clearSelectedMember() {
     setSelectedUserId(null);
     setActiveStepId("identity");
@@ -919,6 +925,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     memberCount: members.length,
     selectedUserId,
     selectMember,
+    openProfile,
     clearSelectedMember,
     guidedSteps,
     activeStepId,

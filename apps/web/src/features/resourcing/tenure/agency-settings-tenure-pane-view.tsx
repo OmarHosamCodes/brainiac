@@ -46,6 +46,7 @@ export function AgencySettingsTenurePaneView({
           activeStepId={viewModel.activeStepId}
           onActiveStepChange={viewModel.setActiveStepId}
           onBack={viewModel.clearSelectedMember}
+          onOpenProfile={() => viewModel.openProfile(viewModel.selectedUserId!)}
           canEditHr={viewModel.canEditHr}
           canEditRates={viewModel.isOwner}
           canEditTenure={viewModel.isOwner}
@@ -86,6 +87,7 @@ export function AgencySettingsTenurePaneView({
           canReviewDefaults
           onReviewDefaults={() => viewModel.setDefaultsOpen(true)}
           onSelectMember={viewModel.selectMember}
+          onOpenProfile={viewModel.openProfile}
           isLoadError={viewModel.isSummaryError}
           isStaleLoadError={viewModel.isSummaryStaleError}
           loadErrorMessage={viewModel.summaryErrorMessage}
