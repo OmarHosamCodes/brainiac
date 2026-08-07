@@ -37,3 +37,17 @@ export function advanceExpenseNextDueAt(from: Date, period: AgencyOpsExpensePeri
 export function defaultExpenseNextDueAt(createdAt: Date, period: AgencyOpsExpensePeriod): Date {
   return advanceExpenseNextDueAt(createdAt, period);
 }
+
+/**
+ * Subscriptions appear while their next due is on/before periodEnd (overdue or due this period).
+ * After a full pay advances nextDueAt past periodEnd, they stay hidden until that due arrives.
+ */
+export function isSubscriptionVisibleInPeriod(
+  nextDueAt: Date | null,
+  periodStart: Date | null,
+  periodEnd: Date | null,
+): boolean {
+  if (!periodStart || !periodEnd) return true;
+  if (!nextDueAt) return true;
+  return nextDueAt.getTime() <= periodEnd.getTime();
+}
