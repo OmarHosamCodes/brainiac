@@ -18,7 +18,17 @@ import {
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { requireTeamMembership } from "../shared/membership";
-import { computeProjectShareMetrics, isReportEntryWaste } from "./project-share-metrics";
+import {
+  buildReportEntryFilters,
+  queryDailyProjectBuckets,
+  queryLatestCompletedEntryByMember,
+  queryMemberProjectBreakdown,
+  queryProjectShareMetrics,
+  queryReportTotals,
+  querySecondsByClient,
+  querySecondsByMember,
+  querySecondsByProject,
+} from "./aggregate-queries";
 
 type AgencyReportSummary = {
   totalHours: number;
@@ -217,147 +227,72 @@ export async function getAgencyReportsSummary(
     to: string;
   },
 ) {
-  const { rows } = await getReportRows(actorUserId, input);
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
 
-  const distributionByClient = new Map<
-    string,
-    { clientId: string; clientName: string; seconds: number }
-  >();
-  const distributionByProject = new Map<
-    string,
-    {
-      projectId: string;
-      projectName: string;
-      clientId: string;
-      clientName: string;
-      seconds: number;
-      wasteSeconds: number;
-    }
-  >();
-  const teamActivity = new Map<
-    string,
-    {
-      userId: string;
-      userName: string;
-      userEmail: string;
-      seconds: number;
-      wasteSeconds: number;
-    }
-  >();
-
-  let totalSeconds = 0;
-  let wasteSeconds = 0;
-
-  for (const row of rows) {
-    totalSeconds += row.durationSeconds;
-    const rowIsWaste = isReportEntryWaste(
-      row.taskIsWaste,
-      row.taskTitle,
-      row.projectName,
-      row.isWaste,
-    );
-    if (rowIsWaste) wasteSeconds += row.durationSeconds;
-
-    const clientEntry = distributionByClient.get(row.clientId) ?? {
-      clientId: row.clientId,
-      clientName: row.clientName,
-      seconds: 0,
-    };
-    clientEntry.seconds += row.durationSeconds;
-    distributionByClient.set(row.clientId, clientEntry);
-
-    const projectEntry = distributionByProject.get(row.projectId) ?? {
-      projectId: row.projectId,
-      projectName: row.projectName,
-      clientId: row.clientId,
-      clientName: row.clientName,
-      seconds: 0,
-      wasteSeconds: 0,
-    };
-    projectEntry.seconds += row.durationSeconds;
-    if (rowIsWaste) projectEntry.wasteSeconds += row.durationSeconds;
-    distributionByProject.set(row.projectId, projectEntry);
-
-    const memberEntry = teamActivity.get(row.memberEmail) ?? {
-      userId: row.memberEmail,
-      userName: row.memberName,
-      userEmail: row.memberEmail,
-      seconds: 0,
-      wasteSeconds: 0,
-    };
-    memberEntry.seconds += row.durationSeconds;
-    if (rowIsWaste) memberEntry.wasteSeconds += row.durationSeconds;
-    teamActivity.set(row.memberEmail, memberEntry);
+  const from = parseIsoDateTime(input.from, "from");
+  const to = parseIsoDateTime(input.to, "to");
+  if (from > to) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "from must be before or equal to to.",
+    });
   }
 
-  const share = computeProjectShareMetrics(
-    rows.map((row) => ({
-      durationSeconds: row.durationSeconds,
-      clientCategory: row.clientCategory,
-      taskIsWaste: row.taskIsWaste,
-      taskTitle: row.taskTitle,
-      projectName: row.projectName,
-      isBillable: row.isBillable,
-      isWaste: row.isWaste,
-    })),
-  );
+  const filters = buildReportEntryFilters(input.teamId, from, to, input);
+  const [totals, byClient, byProject, byMember, share] = await Promise.all([
+    queryReportTotals(filters),
+    querySecondsByClient(filters),
+    querySecondsByProject(filters),
+    querySecondsByMember(filters),
+    queryProjectShareMetrics(filters),
+  ]);
 
   const summary: AgencyReportSummary = {
-    totalHours: Number((totalSeconds / 3_600).toFixed(2)),
-    totalEntries: rows.length,
-    timeDistributionByClient: [...distributionByClient.values()]
-      .map((entry) => ({
-        clientId: entry.clientId,
-        clientName: entry.clientName,
-        hours: Number((entry.seconds / 3_600).toFixed(2)),
-      }))
-      .sort((left, right) => right.hours - left.hours),
-    timeDistributionByProject: [...distributionByProject.values()]
-      .map((entry) => ({
-        projectId: entry.projectId,
-        projectName: entry.projectName,
-        clientId: entry.clientId,
-        clientName: entry.clientName,
-        hours: Number((entry.seconds / 3_600).toFixed(2)),
-      }))
-      .sort((left, right) => right.hours - left.hours),
-    teamActivity: [...teamActivity.values()]
-      .map((entry) => ({
-        userId: entry.userId,
-        userName: entry.userName,
-        userEmail: entry.userEmail,
-        hours: Number((entry.seconds / 3_600).toFixed(2)),
-      }))
-      .sort((left, right) => right.hours - left.hours),
+    totalHours: Number((totals.totalSeconds / 3_600).toFixed(2)),
+    totalEntries: totals.totalEntries,
+    timeDistributionByClient: byClient.map((entry) => ({
+      clientId: entry.clientId,
+      clientName: entry.clientName,
+      hours: Number((entry.seconds / 3_600).toFixed(2)),
+    })),
+    timeDistributionByProject: byProject.map((entry) => ({
+      projectId: entry.projectId,
+      projectName: entry.projectName,
+      clientId: entry.clientId,
+      clientName: entry.clientName,
+      hours: Number((entry.seconds / 3_600).toFixed(2)),
+    })),
+    // Preserve prior API quirk: teamActivity.userId was the member email.
+    teamActivity: byMember.map((entry) => ({
+      userId: entry.userEmail,
+      userName: entry.userName ?? "Unknown",
+      userEmail: entry.userEmail,
+      hours: Number((entry.seconds / 3_600).toFixed(2)),
+    })),
   };
 
   return {
     summary,
     composition: {
       paidSeconds: share.paidSeconds,
-      wasteSeconds,
+      wasteSeconds: totals.wasteSeconds,
       internalSeconds: share.internalSeconds,
-      totalSeconds,
+      totalSeconds: totals.totalSeconds,
     },
-    byProjectDetail: [...distributionByProject.values()]
-      .map((entry) => ({
-        projectId: entry.projectId,
-        projectName: entry.projectName,
-        clientName: entry.clientName,
-        seconds: entry.seconds,
-        wasteSeconds: entry.wasteSeconds,
-        nonWasteSeconds: Math.max(0, entry.seconds - entry.wasteSeconds),
-      }))
-      .sort((left, right) => right.seconds - left.seconds),
-    byMemberDetail: [...teamActivity.values()]
-      .map((entry) => ({
-        userId: entry.userId,
-        userName: entry.userName,
-        seconds: entry.seconds,
-        wasteSeconds: entry.wasteSeconds,
-        nonWasteSeconds: Math.max(0, entry.seconds - entry.wasteSeconds),
-      }))
-      .sort((left, right) => right.seconds - left.seconds),
+    byProjectDetail: byProject.map((entry) => ({
+      projectId: entry.projectId,
+      projectName: entry.projectName,
+      clientName: entry.clientName,
+      seconds: entry.seconds,
+      wasteSeconds: entry.wasteSeconds,
+      nonWasteSeconds: Math.max(0, entry.seconds - entry.wasteSeconds),
+    })),
+    byMemberDetail: byMember.map((entry) => ({
+      userId: entry.userEmail,
+      userName: entry.userName ?? "Unknown",
+      seconds: entry.seconds,
+      wasteSeconds: entry.wasteSeconds,
+      nonWasteSeconds: Math.max(0, entry.seconds - entry.wasteSeconds),
+    })),
   };
 }
 
@@ -369,139 +304,114 @@ export async function getAgencyDashboardSummary(
     to: string;
   },
 ) {
-  const { rows } = await getReportRows(actorUserId, input);
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
 
-  const members = await db
-    .select({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      image: user.image,
-    })
-    .from(workspaceTeamMember)
-    .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
-    .where(eq(workspaceTeamMember.teamId, input.teamId))
-    .orderBy(asc(user.name));
+  const from = parseIsoDateTime(input.from, "from");
+  const to = parseIsoDateTime(input.to, "to");
+  if (from > to) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "from must be before or equal to to.",
+    });
+  }
 
-  const activeTimers = await db
-    .select({
-      userId: agencyOpsActiveTimer.userId,
-      projectName: agencyOpsProject.name,
-      clientName: agencyOpsClient.name,
-      description: agencyOpsActiveTimer.description,
-      startedAt: agencyOpsActiveTimer.startedAt,
-    })
-    .from(agencyOpsActiveTimer)
-    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
-    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-    .where(eq(agencyOpsActiveTimer.teamId, input.teamId));
+  const filters = buildReportEntryFilters(input.teamId, from, to, input);
+
+  const [
+    totals,
+    byClient,
+    byProject,
+    byMember,
+    share,
+    dailyRows,
+    latestRows,
+    memberProjectRows,
+    members,
+    activeTimers,
+  ] = await Promise.all([
+    queryReportTotals(filters),
+    querySecondsByClient(filters),
+    querySecondsByProject(filters),
+    querySecondsByMember(filters),
+    queryProjectShareMetrics(filters),
+    queryDailyProjectBuckets(filters),
+    queryLatestCompletedEntryByMember(filters),
+    queryMemberProjectBreakdown(filters),
+    db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      })
+      .from(workspaceTeamMember)
+      .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
+      .where(eq(workspaceTeamMember.teamId, input.teamId))
+      .orderBy(asc(user.name)),
+    db
+      .select({
+        userId: agencyOpsActiveTimer.userId,
+        projectName: agencyOpsProject.name,
+        clientName: agencyOpsClient.name,
+        description: agencyOpsActiveTimer.description,
+        startedAt: agencyOpsActiveTimer.startedAt,
+      })
+      .from(agencyOpsActiveTimer)
+      .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+      .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+      .where(eq(agencyOpsActiveTimer.teamId, input.teamId)),
+  ]);
 
   const activeTimerByUser = new Map(activeTimers.map((timer) => [timer.userId, timer]));
-  const clientSeconds = new Map<
-    string,
-    { clientId: string; clientName: string; seconds: number }
-  >();
-  const projectSeconds = new Map<
-    string,
-    {
-      projectId: string;
-      projectName: string;
-      clientId: string;
-      clientName: string;
-      seconds: number;
-    }
-  >();
-  const memberSeconds = new Map<string, number>();
-  const memberProjectSeconds = new Map<
-    string,
-    Map<string, { projectId: string; projectName: string; clientName: string; seconds: number }>
-  >();
-  const latestEntryByMember = new Map<
-    string,
-    { projectName: string; clientName: string; description: string; startedAt: string }
-  >();
-  const dailyBuckets = new Map<
-    string,
-    Map<string, { projectId: string; projectName: string; clientName: string; seconds: number }>
-  >();
-
-  let totalSeconds = 0;
-
-  for (const row of rows) {
-    totalSeconds += row.durationSeconds;
-
-    const clientEntry = clientSeconds.get(row.clientId) ?? {
-      clientId: row.clientId,
-      clientName: row.clientName,
-      seconds: 0,
-    };
-    clientEntry.seconds += row.durationSeconds;
-    clientSeconds.set(row.clientId, clientEntry);
-
-    const projectEntry = projectSeconds.get(row.projectId) ?? {
-      projectId: row.projectId,
-      projectName: row.projectName,
-      clientId: row.clientId,
-      clientName: row.clientName,
-      seconds: 0,
-    };
-    projectEntry.seconds += row.durationSeconds;
-    projectSeconds.set(row.projectId, projectEntry);
-
-    memberSeconds.set(
-      row.memberEmail,
-      (memberSeconds.get(row.memberEmail) ?? 0) + row.durationSeconds,
-    );
-
-    const memberProjects = memberProjectSeconds.get(row.memberEmail) ?? new Map();
-    const memberProjectEntry = memberProjects.get(row.projectId) ?? {
-      projectId: row.projectId,
-      projectName: row.projectName,
-      clientName: row.clientName,
-      seconds: 0,
-    };
-    memberProjectEntry.seconds += row.durationSeconds;
-    memberProjects.set(row.projectId, memberProjectEntry);
-    memberProjectSeconds.set(row.memberEmail, memberProjects);
-
-    if (!latestEntryByMember.has(row.memberEmail)) {
-      latestEntryByMember.set(row.memberEmail, {
+  const memberSeconds = new Map(byMember.map((row) => [row.userEmail, row.seconds]));
+  const latestEntryByMember = new Map(
+    latestRows.map((row) => [
+      row.userEmail,
+      {
         projectName: row.projectName,
         clientName: row.clientName,
         description: row.description,
         startedAt: row.startedAt.toISOString(),
-      });
-    }
-
-    const dateKey = formatUtcDateKey(row.startedAt);
-    const dayProjects = dailyBuckets.get(dateKey) ?? new Map();
-    const dayProjectEntry = dayProjects.get(row.projectId) ?? {
+      },
+    ]),
+  );
+  const memberProjectSeconds = new Map<
+    string,
+    Array<{ projectId: string; projectName: string; clientName: string; seconds: number }>
+  >();
+  for (const row of memberProjectRows) {
+    const list = memberProjectSeconds.get(row.userEmail) ?? [];
+    list.push({
       projectId: row.projectId,
       projectName: row.projectName,
       clientName: row.clientName,
-      seconds: 0,
-    };
-    dayProjectEntry.seconds += row.durationSeconds;
-    dayProjects.set(row.projectId, dayProjectEntry);
-    dailyBuckets.set(dateKey, dayProjects);
+      seconds: row.seconds,
+    });
+    memberProjectSeconds.set(row.userEmail, list);
   }
 
-  const topClient =
-    [...clientSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
-  const topProject =
-    [...projectSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
-  const fromDate = parseIsoDateTime(input.from, "from");
-  const toDate = parseIsoDateTime(input.to, "to");
+  const dailyBucketsMap = new Map<
+    string,
+    Map<string, { projectId: string; projectName: string; clientName: string; seconds: number }>
+  >();
+  for (const row of dailyRows) {
+    const dayProjects = dailyBucketsMap.get(row.date) ?? new Map();
+    dayProjects.set(row.projectId, {
+      projectId: row.projectId,
+      projectName: row.projectName,
+      clientName: row.clientName,
+      seconds: row.seconds,
+    });
+    dailyBucketsMap.set(row.date, dayProjects);
+  }
+
   const filledDailyBuckets = [];
   for (
-    let cursor = new Date(
-      Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate()),
-    );
-    cursor <= toDate && filledDailyBuckets.length < 370;
+    let cursor = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()));
+    cursor <= to && filledDailyBuckets.length < 370;
     cursor = addDaysUtc(cursor, 1)
   ) {
     const date = formatUtcDateKey(cursor);
-    const projects = dailyBuckets.get(date) ?? new Map();
+    const projects = dailyBucketsMap.get(date) ?? new Map();
     filledDailyBuckets.push({
       date,
       totalSeconds: [...projects.values()].reduce(
@@ -512,48 +422,49 @@ export async function getAgencyDashboardSummary(
     });
   }
 
+  const topClient = byClient[0]
+    ? {
+        clientId: byClient[0].clientId,
+        clientName: byClient[0].clientName,
+        seconds: byClient[0].seconds,
+      }
+    : null;
+  const topProject = byProject[0]
+    ? {
+        projectId: byProject[0].projectId,
+        projectName: byProject[0].projectName,
+        clientId: byProject[0].clientId,
+        clientName: byProject[0].clientName,
+        seconds: byProject[0].seconds,
+      }
+    : null;
+
   const summary: AgencyDashboardSummary = {
-    totalHours: Number((totalSeconds / 3_600).toFixed(2)),
-    totalSeconds,
-    projectShareMetrics: computeProjectShareMetrics(
-      rows.map((row) => ({
-        durationSeconds: row.durationSeconds,
-        clientCategory: row.clientCategory,
-        taskIsWaste: row.taskIsWaste,
-        taskTitle: row.taskTitle,
-        projectName: row.projectName,
-        isBillable: row.isBillable,
-        isWaste: row.isWaste,
-      })),
-    ),
-    totalEntries: rows.length,
+    totalHours: Number((totals.totalSeconds / 3_600).toFixed(2)),
+    totalSeconds: totals.totalSeconds,
+    projectShareMetrics: share,
+    totalEntries: totals.totalEntries,
     activeTimerCount: activeTimers.length,
     topClient,
     topProject,
-    timeDistributionByClient: [...clientSeconds.values()]
-      .map((entry) => ({
-        clientId: entry.clientId,
-        clientName: entry.clientName,
-        hours: Number((entry.seconds / 3_600).toFixed(2)),
-      }))
-      .sort((left, right) => right.hours - left.hours),
-    timeDistributionByProject: [...projectSeconds.values()]
-      .map((entry) => ({
-        projectId: entry.projectId,
-        projectName: entry.projectName,
-        clientId: entry.clientId,
-        clientName: entry.clientName,
-        hours: Number((entry.seconds / 3_600).toFixed(2)),
-      }))
-      .sort((left, right) => right.hours - left.hours),
-    teamActivity: [...memberSeconds.entries()]
-      .map(([userEmail, seconds]) => ({
-        userId: userEmail,
-        userName: members.find((member) => member.email === userEmail)?.name ?? "Unknown",
-        userEmail,
-        hours: Number((seconds / 3_600).toFixed(2)),
-      }))
-      .sort((left, right) => right.hours - left.hours),
+    timeDistributionByClient: byClient.map((entry) => ({
+      clientId: entry.clientId,
+      clientName: entry.clientName,
+      hours: Number((entry.seconds / 3_600).toFixed(2)),
+    })),
+    timeDistributionByProject: byProject.map((entry) => ({
+      projectId: entry.projectId,
+      projectName: entry.projectName,
+      clientId: entry.clientId,
+      clientName: entry.clientName,
+      hours: Number((entry.seconds / 3_600).toFixed(2)),
+    })),
+    teamActivity: byMember.map((entry) => ({
+      userId: entry.userEmail,
+      userName: entry.userName ?? "Unknown",
+      userEmail: entry.userEmail,
+      hours: Number((entry.seconds / 3_600).toFixed(2)),
+    })),
     dailyBuckets: filledDailyBuckets,
     teamMembers: members
       .map((member) => {
@@ -565,7 +476,6 @@ export async function getAgencyDashboardSummary(
           avatar: formatAvatarUrl(member.image),
           isActive: Boolean(activeTimer),
           totalSeconds: memberSeconds.get(member.email) ?? 0,
-          // Prefer the live timer over the last completed entry in-range.
           latestEntry: activeTimer
             ? {
                 projectName: activeTimer.projectName,
@@ -574,7 +484,7 @@ export async function getAgencyDashboardSummary(
                 startedAt: activeTimer.startedAt.toISOString(),
               }
             : (latestEntryByMember.get(member.email) ?? null),
-          projectBreakdown: [...(memberProjectSeconds.get(member.email)?.values() ?? [])].sort(
+          projectBreakdown: [...(memberProjectSeconds.get(member.email) ?? [])].sort(
             (left, right) => right.seconds - left.seconds,
           ),
         };
