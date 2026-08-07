@@ -5,6 +5,7 @@ import {
   defaultExpenseNextDueAt,
   expenseRemainingAmount,
   expenseStatusAfterPaid,
+  isSubscriptionVisibleInPeriod,
 } from "./expense-helpers";
 
 describe("expenseRemainingAmount", () => {
@@ -40,6 +41,28 @@ describe("defaultExpenseNextDueAt", () => {
     const created = new Date("2026-03-01T00:00:00.000Z");
     expect(defaultExpenseNextDueAt(created, "monthly").toISOString()).toBe(
       "2026-04-01T00:00:00.000Z",
+    );
+  });
+});
+
+describe("isSubscriptionVisibleInPeriod", () => {
+  test("hides subscriptions whose next due is after the period", () => {
+    const periodStart = new Date("2026-08-01T00:00:00.000Z");
+    const periodEnd = new Date("2026-08-31T23:59:59.999Z");
+    expect(
+      isSubscriptionVisibleInPeriod(new Date("2026-08-15T00:00:00.000Z"), periodStart, periodEnd),
+    ).toBe(true);
+    expect(
+      isSubscriptionVisibleInPeriod(new Date("2026-07-01T00:00:00.000Z"), periodStart, periodEnd),
+    ).toBe(true);
+    expect(
+      isSubscriptionVisibleInPeriod(new Date("2026-09-15T00:00:00.000Z"), periodStart, periodEnd),
+    ).toBe(false);
+  });
+
+  test("shows when period bounds are missing", () => {
+    expect(isSubscriptionVisibleInPeriod(new Date("2026-09-15T00:00:00.000Z"), null, null)).toBe(
+      true,
     );
   });
 });

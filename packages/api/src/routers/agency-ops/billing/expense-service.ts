@@ -16,6 +16,7 @@ import {
   defaultExpenseNextDueAt,
   expenseRemainingAmount,
   expenseStatusAfterPaid,
+  isSubscriptionVisibleInPeriod,
 } from "./expense-helpers";
 import { paginateItems, type PaginatedItems } from "./list-pagination";
 import { loadMoneyResolveContext } from "./money-fx-service";
@@ -32,6 +33,7 @@ export type AgencyExpenseRecord = {
   remainingAmount: number;
   currency: string;
   status: AgencyOpsExpenseStatus;
+  startsAt: string | null;
   nextDueAt: string | null;
   occurredAt: string | null;
   createdAt: string;
@@ -52,6 +54,7 @@ function mapExpenseRow(row: typeof agencyOpsExpense.$inferSelect): AgencyExpense
     remainingAmount: expenseRemainingAmount(row.amount, paidAmount),
     currency: row.currency,
     status: row.status,
+    startsAt: row.startsAt?.toISOString() ?? null,
     nextDueAt: row.nextDueAt?.toISOString() ?? null,
     occurredAt: row.occurredAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
@@ -90,7 +93,9 @@ export async function listExpenses(
 
   const items = rows
     .filter((row) => {
-      if (row.kind === "subscription") return true;
+      if (row.kind === "subscription") {
+        return isSubscriptionVisibleInPeriod(row.nextDueAt, periodStart, periodEnd);
+      }
       if (!periodStart || !periodEnd) return true;
       const occurred = row.occurredAt ?? row.createdAt;
       return occurred >= periodStart && occurred < periodEnd;
@@ -110,6 +115,7 @@ export async function createExpense(
     note?: string;
     amount: number;
     currency?: string;
+    startsAt?: string | null;
     nextDueAt?: string | null;
     occurredAt?: string | null;
   },
@@ -128,6 +134,7 @@ export async function createExpense(
 
   const now = new Date();
   let period: AgencyOpsExpensePeriod | null = null;
+  let startsAt: Date | null = null;
   let nextDueAt: Date | null = null;
   let occurredAt: Date | null = null;
 
@@ -136,9 +143,14 @@ export async function createExpense(
       throw new ORPCError("BAD_REQUEST", { message: "Subscription expenses require a period." });
     }
     period = input.period;
-    nextDueAt = input.nextDueAt
-      ? parseIsoDateTime(input.nextDueAt, "nextDueAt")
-      : defaultExpenseNextDueAt(now, period);
+    startsAt = input.startsAt ? parseIsoDateTime(input.startsAt, "startsAt") : null;
+    if (input.nextDueAt) {
+      nextDueAt = parseIsoDateTime(input.nextDueAt, "nextDueAt");
+    } else if (startsAt) {
+      nextDueAt = startsAt;
+    } else {
+      nextDueAt = defaultExpenseNextDueAt(now, period);
+    }
   } else {
     occurredAt = input.occurredAt ? parseIsoDateTime(input.occurredAt, "occurredAt") : now;
   }
@@ -167,6 +179,7 @@ export async function createExpense(
       fxAsOf: new Date(money.fxAsOf),
       status: "due",
       paidAmount: 0,
+      startsAt,
       nextDueAt,
       occurredAt,
       createdByUserId: actorUserId,
@@ -189,6 +202,7 @@ export async function updateExpense(
     amount?: number;
     currency?: string;
     period?: AgencyOpsExpensePeriod | null;
+    startsAt?: string | null;
     nextDueAt?: string | null;
     occurredAt?: string | null;
   },
@@ -237,6 +251,7 @@ export async function updateExpense(
   }
 
   let period = existing.period ?? null;
+  let startsAt = existing.startsAt;
   let nextDueAt = existing.nextDueAt;
   let occurredAt = existing.occurredAt;
 
@@ -247,8 +262,13 @@ export async function updateExpense(
       }
       period = input.period;
     }
+    if (input.startsAt !== undefined) {
+      startsAt = input.startsAt ? parseIsoDateTime(input.startsAt, "startsAt") : null;
+    }
     if (input.nextDueAt !== undefined) {
       nextDueAt = input.nextDueAt ? parseIsoDateTime(input.nextDueAt, "nextDueAt") : null;
+    } else if (input.startsAt !== undefined && startsAt && !existing.nextDueAt) {
+      nextDueAt = startsAt;
     }
   } else if (input.occurredAt !== undefined) {
     occurredAt = input.occurredAt ? parseIsoDateTime(input.occurredAt, "occurredAt") : null;
@@ -268,6 +288,7 @@ export async function updateExpense(
       fxRate: money.fxRate,
       fxAsOf: new Date(money.fxAsOf),
       period,
+      startsAt,
       nextDueAt,
       occurredAt,
       paidAmount,
@@ -313,11 +334,12 @@ export async function recordExpensePayment(
 
   let paidAmount = (existing.paidAmount ?? 0) + input.amount;
   let status = expenseStatusAfterPaid(existing.amount, paidAmount);
-  let nextDueAt = existing.nextDueAt;
+  let nextDueAt = existing.nextDueAt ?? existing.startsAt;
 
-  // Subscription fully paid → roll to next due cycle.
-  if (existing.kind === "subscription" && status === "paid" && existing.period && nextDueAt) {
-    nextDueAt = advanceExpenseNextDueAt(nextDueAt, existing.period);
+  // Subscription fully paid → roll to next due cycle and clear this period's balance.
+  if (existing.kind === "subscription" && status === "paid" && existing.period) {
+    const from = nextDueAt ?? new Date();
+    nextDueAt = advanceExpenseNextDueAt(from, existing.period);
     paidAmount = 0;
     status = "due";
   }
