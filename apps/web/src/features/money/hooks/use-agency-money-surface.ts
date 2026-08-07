@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
-import { rangePresetLabel } from "@/features/dashboard/agency-dashboard-command-bar";
+import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";
+import { rangePresetLabel } from "@/features/shared/command-bar/range-preset-chooser";
 import {
   agencyManagementPaneLabel,
   agencyManagementPaneSubtitle,
@@ -39,7 +39,7 @@ import {
   type MoneyExpenseKind,
   type MoneyExpensePeriod,
   type MoneyExpenseRecord,
-} from "../money-expense-form";
+} from "@/features/billing/money-expense-form";
 import {
   moneyBillsActiveFilterSummary,
   moneyBillsEmptyCopy,
@@ -49,14 +49,14 @@ import {
   type MoneyBillsClientCategoryFilter,
   type MoneyBillsPartyFilter,
   type MoneyBillsStatusFilter,
-} from "../money-bills-filters";
+} from "@/features/billing/money-bills-filters";
 import {
   buildMoneyBillPersonGroups,
   filterComposeRowsByClientCategory,
   type MoneyBillObligationLine,
   type MoneyBillPersonGroup,
   type MoneyPendingAdjustmentSource,
-} from "../money-bill-obligation-rows";
+} from "@/features/billing/money-bill-obligation-rows";
 import {
   formatMoneyAmount,
   moneyBillClientHref,
@@ -71,17 +71,17 @@ import {
   moneyBillsPaymentCanSubmit,
   parseMoneyBillPaymentAmount,
   type MoneyBillPayoutSectionKey,
-} from "../money-bills-rows";
+} from "@/features/billing/money-bills-rows";
 import {
   MONEY_COHORT_PANE_OPTIONS,
   MONEY_COHORT_RULES_FIXTURE,
   type MoneyCohortPane,
-} from "../money-cohort-allocations-fixture";
+} from "@/features/billing/money-cohort-allocations-fixture";
 import {
   formatMoneyFormulaPreview,
   validateMoneyFormulaTokensClient,
   type MoneyFormulaDef,
-} from "../money-formula-chips";
+} from "@/features/billing/money-formula-chips";
 import {
   applyFormulaDraft,
   applyRuleDraft,
@@ -95,17 +95,17 @@ import {
   resolveRuleMemberCount,
   resolveRuleSupportsMemberPick,
   type MoneySettingsEditorDraft,
-} from "../money-settings-form";
+} from "@/features/billing/money-settings-form";
 import {
   type MoneyStatsCardId,
   type MoneyStatsMetricFixture,
   type MoneyStatsMetricId,
-} from "../money-stats-fixtures";
+} from "@/features/billing/money-stats-fixtures";
 import {
   buildMoneyStatsCards,
   amountToMajor,
   type MoneyStatsCardWithSource,
-} from "../money-stats-live";
+} from "@/features/billing/money-stats-live";
 
 const BILL_CREATE_FORM_ID = "agency-money-bill-create";
 const BILL_PAYMENT_FORM_ID = "agency-money-bill-payment";

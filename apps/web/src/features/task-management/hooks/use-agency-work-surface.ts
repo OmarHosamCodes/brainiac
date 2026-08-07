@@ -6,7 +6,6 @@ import type { AgencyWorkSurfaceView } from "@/features/task-management/agency-wo
 import { normalizeAgencyWorkSurfaceQueryParams } from "@/features/task-management/agency-work";
 import { useAgencyProjectsQuery } from "@/features/shared/agency-queries";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { useAgencyJourneyLiveSync } from "@/features/task-management/hooks/use-agency-journey-live-sync";
 
 type UseAgencyWorkSurfaceOptions = {
   teamId: string;
@@ -17,7 +16,6 @@ export function useAgencyWorkSurface({
   teamId,
   onSegmentChange,
 }: UseAgencyWorkSurfaceOptions): AgencyWorkSurfaceView {
-  useAgencyJourneyLiveSync({ teamId });
   const [searchParams, setSearchParams] = useSearchParams();
 
   const projectsQuery = useAgencyProjectsQuery(teamId);

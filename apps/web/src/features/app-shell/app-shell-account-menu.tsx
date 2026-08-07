@@ -1,4 +1,4 @@
-import { LogIn, Settings, UserRound } from "lucide-react";
+import { Bell, LogIn, Settings, UserRound } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -151,6 +151,13 @@ export function AppShellAccountMenu({ variant = "icon" }: AppShellAccountMenuPro
             <Link to="/agency/me">
               <UserRound className="size-4" aria-hidden />
               Profile
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link to="/agency/me?focus=alerts">
+              <Bell className="size-4" aria-hidden />
+              Alerts
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />

@@ -1,10 +1,10 @@
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
-import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
+import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";
 import {
   useMemberProfileAlerts,
   type MemberProfileAlertsViewModel,
@@ -417,6 +417,7 @@ function rangePresetDisplayLabel(
 export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfileViewModel {
   const session = authClient.useSession();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentAgencyTeamId } = useCurrentAgencyTeam();
   const selectedTeamId = useTeamStore((s) => s.selectedTeamId);
   const teamId = currentAgencyTeamId || selectedTeamId || "";
@@ -426,6 +427,13 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const store = useAgencyMemberProfileStore();
   const now = useMemo(() => new Date(), []);
   const serverUrl = getServerUrl();
+
+  useEffect(() => {
+    if (searchParams.get("focus") !== "alerts") return;
+    const node = document.getElementById("member-profile-alerts");
+    if (!node) return;
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [searchParams, subjectUserId]);
 
   const membersQuery = useQuery({
     ...orpc.team.members.list.queryOptions({ input: { teamId } }),
