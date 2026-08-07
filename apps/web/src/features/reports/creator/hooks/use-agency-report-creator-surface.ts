@@ -18,7 +18,11 @@ import { useAgencyReportCreator } from "@/features/reports/use-agency-report-cre
 import { useAgencyReportLabelContext } from "@/features/reports/use-agency-report-label-context";
 import { draftToIsoRange, type TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
 import { orpcClient } from "@/lib/orpc";
-import { invalidateAgencyTeamQueries } from "@/features/shared/agency-queries";
+import {
+  invalidateAgencyDashboardQueries,
+  invalidateAgencyEntriesQueries,
+  invalidateAgencyReportsQueries,
+} from "@/features/shared/agency-queries";
 import {
   exportAgencyReportXlsx,
   exportAgencyReportXlsxPerClient,
@@ -233,8 +237,11 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
         });
         creator.setTaskWaste(entry.id, entry.taskId ?? "", nextIsWaste);
         autosave.queueActivity({ action: "waste_toggled", payload: { isWaste: nextIsWaste } });
-        void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
-        void invalidateAgencyTeamQueries(teamId);
+        void Promise.all([
+          invalidateAgencyEntriesQueries(teamId),
+          invalidateAgencyReportsQueries(teamId),
+          invalidateAgencyDashboardQueries(teamId),
+        ]);
       } catch (error) {
         toast.error("Couldn't update entry", {
           description: getErrorMessage(error, "Try again."),

@@ -10,9 +10,9 @@ export type ReportEntryFilters = {
   memberUserIds?: string[];
 };
 
-const ENTRIES_PAGE_SIZE = 100;
+// Single bulk page when possible; only loops if the range exceeds 5k entries.
+const ENTRIES_PAGE_SIZE = 5_000;
 
-// ponytail: sequential page fetches; upgrade path is a bulk reports.entries endpoint.
 export async function fetchAllReportEntries(
   teamId: string,
   range: { from: string; to: string },
