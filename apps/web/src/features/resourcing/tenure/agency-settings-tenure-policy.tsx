@@ -1,7 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import { useId } from "react";
 
-import { MemberProfileDatePicker } from "@/features/member-profile/member-profile-date-picker";
+import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
 import { FISCAL_MONTHS, type FiscalMonth } from "@/features/resourcing/tenure-utils";
 import {
   agencyFormFieldClass,

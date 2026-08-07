@@ -1,4 +1,4 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
@@ -31,6 +31,12 @@ import {
   useAgencyOptimisticStore,
 } from "@/features/shared/stores/agency-optimistic";
 import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
+import {
+  findProjectTaskInCache,
+  isAgencyActiveMembersQueryKey,
+  isAgencyActiveTimerQueryKey,
+  isAgencyTimeEntriesListQueryKey,
+} from "@/features/shared/agency-query-cache";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
 
 export type AgencyProjectTaskStatus = "open" | "in_progress" | "done" | "archived";
@@ -135,12 +141,49 @@ export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string
   void ensureAgencyWorkBootQueries(getQueryClient(), teamId, assigneeUserId);
 }
 
-export async function invalidateAgencyTeamQueries(teamId: string) {
-  if (!teamId) return;
+function isAgencyReportsOrpcQueryKey(queryKey: QueryKey, teamId: string, endpoint?: "dashboard") {
+  const path = queryKey[0];
+  if (
+    !Array.isArray(path) ||
+    path[0] !== "agencyOps" ||
+    path[1] !== "reports" ||
+    (endpoint ? path[2] !== endpoint : path[2] === "dashboard")
+  ) {
+    return false;
+  }
+  const meta = queryKey[1] as { input?: { teamId?: string } } | undefined;
+  return meta?.input?.teamId === teamId;
+}
 
-  const queryClient = getQueryClient();
-  await queryClient.invalidateQueries({
-    predicate: (query) => JSON.stringify(query.queryKey).includes(teamId),
+export async function invalidateAgencyEntriesQueries(teamId: string) {
+  if (!teamId) return;
+  await getQueryClient().invalidateQueries({
+    predicate: (query) => isAgencyTimeEntriesListQueryKey(query.queryKey, teamId),
+  });
+}
+
+export async function invalidateAgencyReportsQueries(teamId: string) {
+  if (!teamId) return;
+  await getQueryClient().invalidateQueries({
+    predicate: (query) =>
+      isAgencyReportsOrpcQueryKey(query.queryKey, teamId) ||
+      (query.queryKey[0] === "agency-reports" && query.queryKey.includes(teamId)),
+  });
+}
+
+export async function invalidateAgencyDashboardQueries(teamId: string) {
+  if (!teamId) return;
+  await getQueryClient().invalidateQueries({
+    predicate: (query) => isAgencyReportsOrpcQueryKey(query.queryKey, teamId, "dashboard"),
+  });
+}
+
+export async function invalidateAgencyTimerQueries(teamId: string) {
+  if (!teamId) return;
+  await getQueryClient().invalidateQueries({
+    predicate: (query) =>
+      isAgencyActiveTimerQueryKey(query.queryKey, teamId) ||
+      isAgencyActiveMembersQueryKey(query.queryKey, teamId),
   });
 }
 
@@ -439,7 +482,9 @@ export function useAgencyProjectTasksInfiniteQuery(
     (filters.projectId === undefined || Boolean(filters.projectId)) &&
     (filters.assigneeUserId === undefined || Boolean(filters.assigneeUserId)) &&
     (filters.delegatedByUserId === undefined || Boolean(filters.delegatedByUserId)) &&
-    (filters.journeyDiscoveryForUserId === undefined || Boolean(filters.journeyDiscoveryForUserId));
+    (filters.journeyDiscoveryForUserId === undefined ||
+      Boolean(filters.journeyDiscoveryForUserId)) &&
+    (filters.enabled === undefined || filters.enabled);
 
   const queryKey = useMemo(
     () =>
@@ -557,36 +602,71 @@ export function useAgencyProjectTasksInfiniteQuery(
 
 const TASK_CHOOSER_PAGE_SIZE = 100;
 
-/** Loads every page for task picker UIs. ponytail: sequential fetches; upgrade path is a dedicated unpaginated endpoint. */
 export function useAgencyProjectTasksForChooserQuery(
   teamId: string,
   filters: Omit<AgencyProjectTasksFilters, "page" | "pageSize"> = {},
+  options: { selectedTaskIds?: readonly string[] } = {},
 ) {
-  const infiniteQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
-    ...filters,
+  const { search, ...catalogFilters } = filters;
+  const catalogQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
+    ...catalogFilters,
     pageSize: TASK_CHOOSER_PAGE_SIZE,
   });
+  const normalizedSearch = search?.trim() ?? "";
+  const searchQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
+    ...catalogFilters,
+    search: normalizedSearch || "__chooser_search_disabled__",
+    enabled: Boolean(normalizedSearch) && (filters.enabled === undefined || filters.enabled),
+    pageSize: TASK_CHOOSER_PAGE_SIZE,
+  });
+  const selectedTaskIdsKey = options.selectedTaskIds?.filter(Boolean).join(",") ?? "";
+  const selectedTaskIds = useMemo(
+    () => [...new Set(selectedTaskIdsKey.split(",").filter(Boolean))],
+    [selectedTaskIdsKey],
+  );
+  const missingSelectedTaskIds = selectedTaskIds.filter(
+    (taskId) => !catalogQuery.items.some((task) => task.id === taskId),
+  );
+  const missingSelectedTaskIdsKey = missingSelectedTaskIds.join(",");
 
   useEffect(() => {
-    if (!teamId || !infiniteQuery.hasNextPage || infiniteQuery.isFetchingNextPage) return;
-    void infiniteQuery.fetchNextPage();
+    if (
+      !teamId ||
+      missingSelectedTaskIds.length === 0 ||
+      !catalogQuery.hasNextPage ||
+      catalogQuery.isFetchingNextPage
+    ) {
+      return;
+    }
+    void catalogQuery.fetchNextPage({ cancelRefetch: false });
   }, [
     teamId,
-    infiniteQuery.hasNextPage,
-    infiniteQuery.isFetchingNextPage,
-    infiniteQuery.fetchNextPage,
-    infiniteQuery.data?.pages.length,
+    missingSelectedTaskIdsKey,
+    catalogQuery.hasNextPage,
+    catalogQuery.isFetchingNextPage,
+    catalogQuery.fetchNextPage,
+    catalogQuery.data?.pages.length,
   ]);
 
-  const isFetchingAll = infiniteQuery.isFetchingNextPage || Boolean(infiniteQuery.hasNextPage);
+  const items = useMemo(() => {
+    const byId = new Map(catalogQuery.items.map((task) => [task.id, task]));
+    for (const task of searchQuery.items) byId.set(task.id, task);
+    for (const taskId of selectedTaskIds) {
+      const cachedTask = findProjectTaskInCache(teamId, taskId);
+      if (cachedTask) byId.set(cachedTask.id, cachedTask);
+    }
+    return [...byId.values()];
+  }, [catalogQuery.items, searchQuery.items, selectedTaskIds, teamId]);
+  const activeQuery = normalizedSearch ? searchQuery : catalogQuery;
+  const isPending = catalogQuery.isPending && items.length === 0;
 
   return {
-    ...infiniteQuery,
-    items: infiniteQuery.items,
-    total: infiniteQuery.total,
-    isPending: infiniteQuery.isPending,
-    isLoading: infiniteQuery.isPending,
-    isFetchingAll,
+    ...activeQuery,
+    items,
+    total: activeQuery.total,
+    isPending,
+    isLoading: isPending,
+    isFetchingAll: catalogQuery.isFetchingNextPage && missingSelectedTaskIds.length > 0,
   };
 }
 

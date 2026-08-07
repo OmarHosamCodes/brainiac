@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import {
-  SHELL_BOOT_TIMEOUT_MS,
   isShellAnimationReady,
   resetShellBoot,
   startShellBoot,
@@ -35,7 +34,6 @@ export function useAgencyBootGate({
   searchParams,
 }: UseAgencyBootGateOptions) {
   const queryClient = useQueryClient();
-  const [segmentBootDone, setSegmentBootDone] = useState(false);
   const [animationReady, setAnimationReady] = useState(() => isShellAnimationReady());
 
   const isTeamReady = teamsCount === 0 || Boolean(teamId);
@@ -47,51 +45,14 @@ export function useAgencyBootGate({
   }, []);
 
   useEffect(() => {
-    if (!isPageReady) {
-      setSegmentBootDone(false);
-      return;
-    }
-
-    if (skipSegmentBoot) {
-      setSegmentBootDone(true);
-      return;
-    }
-
-    let cancelled = false;
-    setSegmentBootDone(false);
-
-    const timeoutId = window.setTimeout(() => {
-      if (!cancelled) setSegmentBootDone(true);
-    }, SHELL_BOOT_TIMEOUT_MS);
-
+    if (!isPageReady || skipSegmentBoot) return;
     void ensureAgencySegmentBootQueries(queryClient, {
       segment,
       teamId,
       userId,
       searchParams,
-    })
-      .then(() => {
-        if (!cancelled) setSegmentBootDone(true);
-      })
-      .catch(() => {
-        if (!cancelled) setSegmentBootDone(true);
-      })
-      .finally(() => window.clearTimeout(timeoutId));
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [
-    agencyEnabled,
-    isPageReady,
-    queryClient,
-    searchParams.toString(),
-    segment,
-    skipSegmentBoot,
-    teamId,
-    userId,
-  ]);
+    }).catch(() => undefined);
+  }, [isPageReady, queryClient, searchParams.toString(), segment, skipSegmentBoot, teamId, userId]);
 
   useEffect(() => {
     if (animationReady) return;
@@ -107,7 +68,7 @@ export function useAgencyBootGate({
 
   useEffect(() => resetShellBoot, []);
 
-  const isBooting = !(isPageReady && segmentBootDone && animationReady);
+  const isBooting = !(isPageReady && animationReady);
 
   return { isBooting };
 }

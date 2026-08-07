@@ -18,6 +18,10 @@ import {
   reconcileCreatedProjectTaskInCache,
   refetchAgencyProjectTaskListQueries,
 } from "@/features/shared/agency-query-cache";
+import {
+  toggleAgencyFavorite,
+  type ToggleFavoritePayload,
+} from "@/features/shared/stores/agency-favorites";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 import type { AgencyProjectJourney } from "@orch/api/schemas/agency-ops";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -179,13 +183,6 @@ type CreateProjectPayload = {
   templateId?: string;
 };
 
-type ToggleFavoritePayload = {
-  teamId: string;
-  kind: "project" | "task";
-  projectId?: string;
-  taskId?: string;
-};
-
 type CreateProjectWithJourneyMilestonePayload = {
   title: string;
   assigneeUserIds: string[];
@@ -331,7 +328,7 @@ type CreatePayoutLinePayload = {
 
 type AgencyOpsActions = ReturnType<typeof createAgencyOpsActions>;
 
-type AgencyOpsState = {
+export type AgencyOpsState = {
   clientMutationCount: number;
   projectMutationCount: number;
   isCreatingTask: boolean;
@@ -838,67 +835,7 @@ function createAgencyOpsActions(
   }
 
   async function toggleFavorite(payload: ToggleFavoritePayload): Promise<boolean> {
-    if (!payload.teamId) return false;
-    if (payload.kind === "project" && !payload.projectId) return false;
-    if (payload.kind === "task" && !payload.taskId) return false;
-
-    const queryClient = getQueryClient();
-    const queryKey = orpc.agencyOps.favorites.list.queryOptions({
-      input: { teamId: payload.teamId },
-    }).queryKey;
-    const previous = queryClient.getQueryData<{ projectIds: string[]; taskIds: string[] }>(
-      queryKey,
-    );
-
-    const nextProjectIds = new Set(previous?.projectIds ?? []);
-    const nextTaskIds = new Set(previous?.taskIds ?? []);
-    let favorited = false;
-
-    if (payload.kind === "project" && payload.projectId) {
-      if (nextProjectIds.has(payload.projectId)) {
-        nextProjectIds.delete(payload.projectId);
-      } else {
-        nextProjectIds.add(payload.projectId);
-        favorited = true;
-      }
-    }
-    if (payload.kind === "task" && payload.taskId) {
-      if (nextTaskIds.has(payload.taskId)) {
-        nextTaskIds.delete(payload.taskId);
-      } else {
-        nextTaskIds.add(payload.taskId);
-        favorited = true;
-      }
-    }
-
-    queryClient.setQueryData(queryKey, {
-      projectIds: [...nextProjectIds],
-      taskIds: [...nextTaskIds],
-    });
-
-    try {
-      const result = await orpcClient.agencyOps.favorites.toggle({
-        teamId: payload.teamId,
-        kind: payload.kind,
-        projectId: payload.projectId,
-        taskId: payload.taskId,
-      });
-      queryClient.setQueryData(queryKey, {
-        projectIds: result.projectIds,
-        taskIds: result.taskIds,
-      });
-      return result.favorited;
-    } catch (error) {
-      if (previous) {
-        queryClient.setQueryData(queryKey, previous);
-      } else {
-        queryClient.removeQueries({ queryKey });
-      }
-      toast.error("Couldn't update favorite", {
-        description: getErrorMessage(error, "Try again."),
-      });
-      return favorited;
-    }
+    return toggleAgencyFavorite(payload);
   }
 
   function buildOptimisticJourneyTask(
@@ -2323,14 +2260,19 @@ export const useAgencyOpsStore = create<AgencyOpsState>((set, get) => ({
   ...createAgencyOpsActions(set, get),
 }));
 
-export const selectIsClientMutationPending = (s: AgencyOpsState) => s.clientMutationCount > 0;
-export const selectIsProjectMutationPending = (s: AgencyOpsState) => s.projectMutationCount > 0;
-export const selectIsCreatingTask = (s: AgencyOpsState) => s.isCreatingTask;
-export const selectIsTaskRowPending = (taskId: string) => (s: AgencyOpsState) =>
-  s.pendingTaskIds.includes(taskId);
-export const selectIsTaskMutationPending = (s: AgencyOpsState) =>
-  s.isCreatingTask || s.pendingTaskIds.length > 0;
-export const selectIsContactMutationPending = (s: AgencyOpsState) => s.contactMutationCount > 0;
-export const selectIsRateMutationPending = (s: AgencyOpsState) => s.rateMutationCount > 0;
-export const selectIsCapacityMutationPending = (s: AgencyOpsState) => s.capacityMutationCount > 0;
-export const selectIsInvoiceMutationPending = (s: AgencyOpsState) => s.invoiceMutationCount > 0;
+export {
+  selectIsCapacityMutationPending,
+  selectIsClientMutationPending,
+  selectIsContactMutationPending,
+  selectIsCreatingTask,
+  selectIsInvoiceMutationPending,
+  selectIsProjectMutationPending,
+  selectIsRateMutationPending,
+  selectIsTaskMutationPending,
+  selectIsTaskRowPending,
+} from "@/features/shared/stores/agency-ops-selectors";
+
+export {
+  toggleAgencyFavorite,
+  type ToggleFavoritePayload,
+} from "@/features/shared/stores/agency-favorites";

@@ -1,7 +1,7 @@
 import { ArrowLeft, Check } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { MemberProfileDatePicker } from "@/features/member-profile/member-profile-date-picker";
+import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import {
   agencyFocusRingClass,
