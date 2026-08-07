@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAtMs": 1785980300437,
+  "updatedAtMs": 1786138692250,
   "transcriptsDir": "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts",
   "transcripts": {
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/d3277e7c-fb69-4c39-8526-4189fa42797b/d3277e7c-fb69-4c39-8526-4189fa42797b.jsonl": {
@@ -904,8 +904,8 @@
       "size": 5728
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/1351143a-dfae-4669-b12c-1b358aec23cf/1351143a-dfae-4669-b12c-1b358aec23cf.jsonl": {
-      "mtimeMs": 1785977741524.1387,
-      "size": 2042066
+      "mtimeMs": 1785987345066.3171,
+      "size": 2140724
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/9a67f3f8-dcde-41e8-9427-21ca8311f147/9a67f3f8-dcde-41e8-9427-21ca8311f147.jsonl": {
       "mtimeMs": 1785956642938.4753,
@@ -2652,8 +2652,8 @@
       "size": 2050
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/4e962841-3099-45e8-9403-3e6a5440ee80/4e962841-3099-45e8-9403-3e6a5440ee80.jsonl": {
-      "mtimeMs": 1785980149835.5393,
-      "size": 52801
+      "mtimeMs": 1785980361102.2046,
+      "size": 58969
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/4e962841-3099-45e8-9403-3e6a5440ee80/subagents/beb73ed8-aab3-41d7-a7ab-3ac3b7a4063c.jsonl": {
       "mtimeMs": 1785977944731.666,
@@ -2680,8 +2680,8 @@
       "size": 21493
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/4e962841-3099-45e8-9403-3e6a5440ee80/subagents/8ae8e22f-abce-4058-bb8e-b74e0ea92675.jsonl": {
-      "mtimeMs": 1785980170493.7021,
-      "size": 1597
+      "mtimeMs": 1785980310093.8025,
+      "size": 30580
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/1351143a-dfae-4669-b12c-1b358aec23cf/subagents/fd2bed20-db08-492a-97f0-ec74a781c4b3.jsonl": {
       "mtimeMs": 1785973471790.6663,
@@ -2698,6 +2698,46 @@
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/1351143a-dfae-4669-b12c-1b358aec23cf/subagents/36209831-b8bb-46b1-96be-336c30c5ec4b.jsonl": {
       "mtimeMs": 1785977411981.6619,
       "size": 134801
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/10f7819c-6607-4ff4-b639-857a836c3736/10f7819c-6607-4ff4-b639-857a836c3736.jsonl": {
+      "mtimeMs": 1785983165233.2417,
+      "size": 7208
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/5a3b182b-b4de-43e2-afee-1935dad71020/5a3b182b-b4de-43e2-afee-1935dad71020.jsonl": {
+      "mtimeMs": 1786138607176.5198,
+      "size": 180340
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/5a3b182b-b4de-43e2-afee-1935dad71020/subagents/0898be30-838b-48f2-979d-ad9fe93e4f06.jsonl": {
+      "mtimeMs": 1786138681391.8704,
+      "size": 86780
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/5a3b182b-b4de-43e2-afee-1935dad71020/subagents/171472d9-5690-4e72-bd34-41609ece8def.jsonl": {
+      "mtimeMs": 1786137416117.154,
+      "size": 31583
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/5a3b182b-b4de-43e2-afee-1935dad71020/subagents/4417df59-7894-4e85-95ee-1c20f4a66b6e.jsonl": {
+      "mtimeMs": 1786138012965.2246,
+      "size": 34312
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/5a3b182b-b4de-43e2-afee-1935dad71020/subagents/4bb452a9-8f16-42e6-bfe6-14de707c78ca.jsonl": {
+      "mtimeMs": 1786138625297.6936,
+      "size": 2831
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/5a3b182b-b4de-43e2-afee-1935dad71020/subagents/5b94f699-8078-4f74-b2ce-93232698e42d.jsonl": {
+      "mtimeMs": 1786138342688.0256,
+      "size": 75140
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/5a3b182b-b4de-43e2-afee-1935dad71020/subagents/8ee76bbd-b767-4ecb-8613-20db38a2035e.jsonl": {
+      "mtimeMs": 1786137397952.0,
+      "size": 24292
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/5a3b182b-b4de-43e2-afee-1935dad71020/subagents/bcfdd757-eb33-4648-9b63-892726ec98c8.jsonl": {
+      "mtimeMs": 1786137404368.0544,
+      "size": 25317
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/5a3b182b-b4de-43e2-afee-1935dad71020/subagents/e8bb6af4-2b8d-4372-9217-d51954592d3f.jsonl": {
+      "mtimeMs": 1786138427286.795,
+      "size": 32347
     }
   }
 }
