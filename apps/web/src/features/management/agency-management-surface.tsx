@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { AgencyMoneySurface } from "@/features/billing/agency-money-surface";
+import { AgencyMoneySurface } from "@/features/money/agency-money-surface";
 import { AgencyResourcingSurface } from "@/features/resourcing/agency-resourcing-surface";
-import { AgencySettingsTenurePane } from "@/features/resourcing/tenure/agency-settings-tenure-pane";
+import { AgencySettingsTenurePane } from "@/features/people/agency-settings-tenure-pane";
 import {
   agencyManagementPaneLabel,
   isAgencyManagementPaneId,

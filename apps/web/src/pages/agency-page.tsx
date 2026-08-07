@@ -13,7 +13,7 @@ import {
 import { AgencyProUpsell } from "@/features/billing/agency-pro-upsell";
 import { useBilling } from "@/features/billing/billing-queries";
 import { AgencyReportCreatorSurface } from "@/features/reports/creator/agency-report-creator-surface";
-import { AgencyManagementSurface } from "@/features/settings/agency-management-surface";
+import { AgencyManagementSurface } from "@/features/management/agency-management-surface";
 import {
   managementPaneForLegacySection,
   type AgencyManagementPaneId,
