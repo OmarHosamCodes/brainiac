@@ -908,6 +908,8 @@ export const agencyOpsExpense = pgTable(
     fxAsOf: timestamp("fx_as_of"),
     status: text("status").$type<AgencyOpsExpenseStatus>().notNull().default("due"),
     paidAmount: integer("paid_amount").notNull().default(0),
+    /** Billing anchor / first charge date for subscriptions. */
+    startsAt: timestamp("starts_at"),
     /** Next due date for subscriptions. */
     nextDueAt: timestamp("next_due_at"),
     /** Spend date for one-time expenses. */
