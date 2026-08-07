@@ -84,6 +84,8 @@ type UseAgencyTimeRangeFiltersOptions = {
   includeClientFilter?: boolean;
   includeFieldsFilter?: boolean;
   fetchEntries?: boolean;
+  /** Seed custom period from URL handoff (Dashboard → Reports). */
+  initialCustomRange?: { from: string; to: string } | null;
   initialFieldIds?: AgencyReportFieldId[];
   initialShowWaste?: AgencyReportShowWaste;
   initialMergeSameTaskNames?: boolean;
@@ -185,6 +187,7 @@ export function useAgencyTimeRangeFilters({
   includeClientFilter = false,
   includeFieldsFilter = false,
   fetchEntries = false,
+  initialCustomRange = null,
   initialFieldIds,
   initialShowWaste,
   initialMergeSameTaskNames,
@@ -197,6 +200,7 @@ export function useAgencyTimeRangeFilters({
   const startingMergeSameTaskNames =
     initialMergeSameTaskNames ?? DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES;
   const now = useMemo(() => new Date(), []);
+  const seededCustomRange = initialCustomRange;
   const viewOptionsRef = useRef({
     fieldIds: startingFieldIds,
     showWaste: startingShowWaste,
@@ -231,12 +235,16 @@ export function useAgencyTimeRangeFilters({
     [now, tenurePolicy],
   );
 
-  const [appliedRangePreset, setAppliedRangePreset] = useState<RangePreset | null>(null);
+  const [appliedRangePreset, setAppliedRangePreset] = useState<RangePreset | null>(
+    seededCustomRange ? "custom" : null,
+  );
   const effectiveAppliedRangePreset = appliedRangePreset ?? defaultRangePreset;
   const [appliedCustomFromDate, setAppliedCustomFromDate] = useState(
-    toDateInputValue(startOfWeekUtc(weekStartsOn, now)),
+    seededCustomRange?.from ?? toDateInputValue(startOfWeekUtc(weekStartsOn, now)),
   );
-  const [appliedCustomToDate, setAppliedCustomToDate] = useState(toDateInputValue(now));
+  const [appliedCustomToDate, setAppliedCustomToDate] = useState(
+    seededCustomRange?.to ?? toDateInputValue(now),
+  );
   const [appliedClientIds, setAppliedClientIds] = useState<string[]>([]);
   const [appliedProjectIds, setAppliedProjectIds] = useState<string[]>([]);
   const [appliedMemberUserIds, setAppliedMemberUserIds] = useState<string[]>([]);
@@ -250,12 +258,16 @@ export function useAgencyTimeRangeFilters({
   const [appliedTenureMonthIndexes, setAppliedTenureMonthIndexes] = useState<number[] | null>(null);
   const effectiveAppliedTenureMonthIndexes = appliedTenureMonthIndexes ?? defaultTenureMonthIndexes;
 
-  const [draftRangePreset, setDraftRangePreset] = useState<RangePreset | null>(null);
+  const [draftRangePreset, setDraftRangePreset] = useState<RangePreset | null>(
+    seededCustomRange ? "custom" : null,
+  );
   const effectiveDraftRangePreset = draftRangePreset ?? defaultRangePreset;
   const [draftCustomFromDate, setDraftCustomFromDate] = useState(
-    toDateInputValue(startOfWeekUtc(weekStartsOn, now)),
+    seededCustomRange?.from ?? toDateInputValue(startOfWeekUtc(weekStartsOn, now)),
   );
-  const [draftCustomToDate, setDraftCustomToDate] = useState(toDateInputValue(now));
+  const [draftCustomToDate, setDraftCustomToDate] = useState(
+    seededCustomRange?.to ?? toDateInputValue(now),
+  );
   const [draftClientIds, setDraftClientIds] = useState<string[]>([]);
   const [draftProjectIds, setDraftProjectIds] = useState<string[]>([]);
   const [draftMemberUserIds, setDraftMemberUserIds] = useState<string[]>([]);

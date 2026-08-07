@@ -11,7 +11,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { AgencyDashboardCommandBar } from "@/features/dashboard/agency-dashboard-command-bar";
+import { AgencyTimeRangeCommandBar } from "@/features/shared/command-bar/agency-time-range-command-bar";
 import { AgencyListFilterCommandBar } from "@/features/shared/command-bar/agency-list-filter-command-bar";
 import { AgencyProjectCreateDialog } from "@/features/projects/agency-project-create-dialog";
 import { AgencyReportHistoryMenu } from "@/features/reports/creator/agency-report-history-menu";
@@ -42,6 +42,11 @@ import { useAgencyListFilters } from "@/features/shared/use-agency-list-filters"
 import type { AgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
 import { useAgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
+import {
+  buildAgencyMoneyPeriodHref,
+  buildAgencyReportsPeriodHref,
+  parseAgencyPeriodQuery,
+} from "@/features/shared/agency-period-query";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { parseBillableRateAmount } from "@/features/shared/format-rate";
@@ -105,6 +110,7 @@ function DashboardFiltersRoot({
   showBar: boolean;
   children: ReactNode;
 }) {
+  const navigate = useNavigate();
   const timeRange = useAgencyTimeRangeFilters({
     teamId,
     includeClientFilter: true,
@@ -117,7 +123,33 @@ function DashboardFiltersRoot({
           timeRange.isLoading ? (
             <CommandBarSkeleton />
           ) : (
-            <AgencyDashboardCommandBar {...timeRange.barProps} />
+            <AgencyTimeRangeCommandBar
+              {...timeRange.barProps}
+              trailingActions={
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigate(buildAgencyReportsPeriodHref(timeRange.applied.range));
+                    }}
+                  >
+                    Open Reports
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigate(buildAgencyMoneyPeriodHref(timeRange.applied.range));
+                    }}
+                  >
+                    Open Money
+                  </Button>
+                </>
+              }
+            />
           )
         ) : null}
         {children}
@@ -152,6 +184,11 @@ function ReportsFiltersRoot({
   );
   const initialMergeSameTaskNames = useMemo(
     () => parseMergeSameTaskNamesParam(searchParams.get(AGENCY_REPORT_MERGE_TASKS_PARAM)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once from the landing URL
+    [],
+  );
+  const initialCustomRange = useMemo(
+    () => parseAgencyPeriodQuery(searchParams),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once from the landing URL
     [],
   );
@@ -205,6 +242,7 @@ function ReportsFiltersRoot({
     includeClientFilter: true,
     includeFieldsFilter: true,
     fetchEntries: true,
+    initialCustomRange,
     initialFieldIds,
     initialShowWaste,
     initialMergeSameTaskNames,
@@ -297,7 +335,7 @@ function ReportsFiltersRoot({
           timeRange.isLoading ? (
             <CommandBarSkeleton />
           ) : (
-            <AgencyDashboardCommandBar
+            <AgencyTimeRangeCommandBar
               {...timeRange.barProps}
               shellClassName="rounded-dense"
               trailingActions={
