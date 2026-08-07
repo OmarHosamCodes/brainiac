@@ -90,6 +90,35 @@ function mergedBillStatusChipClass(statusLabel: string): string {
   }
 }
 
+function ActiveBillFilterChip({
+  label,
+  clearLabel,
+  onClear,
+}: {
+  label: string;
+  clearLabel: string;
+  onClear: () => void;
+}) {
+  return (
+    <span className="inline-flex h-7 items-center gap-0.5 rounded-full bg-elevated py-0 pl-2.5 pr-0.5 text-xs font-medium text-highlighted ring-1 ring-border">
+      <span className="max-w-40 truncate">{label}</span>
+      <button
+        type="button"
+        className={cn(
+          "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-muted transition-colors duration-150",
+          "hover:bg-default hover:text-highlighted",
+          "motion-reduce:transition-none",
+          agencyFocusRingClass,
+        )}
+        onClick={onClear}
+        aria-label={clearLabel}
+      >
+        <X className="size-3" aria-hidden />
+      </button>
+    </span>
+  );
+}
+
 function BillMetricCell({
   label,
   value,
@@ -496,6 +525,14 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
   const sections = groupMoneyBillComposeDisplayRows(bills.rows);
   const insight = moneyBillComposeListInsight(bills.rows);
   const showSectionHeaders = sections.length > 1;
+  const activeFilterChipCount =
+    (bills.partyFilter !== "all" ? 1 : 0) +
+    (bills.statusFilter ? 1 : 0) +
+    (bills.clientCategoryFilter === "external" ? 1 : 0);
+  const statusFilterLabel = bills.statusFilter
+    ? (bills.statusOptions.find((option) => option.id === bills.statusFilter)?.label ??
+      bills.statusFilter)
+    : null;
 
   return (
     <section
@@ -506,11 +543,6 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
             <h2 className={cn(agencyWorkTitleClass, "text-balance")}>Bills</h2>
-            {bills.activeFilterSummary ? (
-              <span className="text-xs text-muted" aria-live="polite">
-                Showing {bills.activeFilterSummary}
-              </span>
-            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-48 flex-1 sm:max-w-72 sm:flex-none">
@@ -569,67 +601,43 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             className="flex flex-wrap items-center gap-1.5"
             role="group"
             aria-label="Active bill filters"
+            aria-live="polite"
           >
             {bills.partyFilter !== "all" ? (
-              <span className="inline-flex min-h-9 items-center gap-1 rounded-full bg-elevated px-2.5 text-xs font-medium text-highlighted ring-1 ring-border">
-                {bills.partyOptions.find((option) => option.id === bills.partyFilter)?.label}
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex min-h-9 min-w-9 items-center justify-center rounded-full p-2 text-muted transition-colors",
-                    "hover:bg-default hover:text-highlighted",
-                    agencyFocusRingClass,
-                  )}
-                  onClick={() => bills.onPartyFilterChange("all")}
-                  aria-label="Clear party filter"
-                >
-                  <X className="size-3" aria-hidden />
-                </button>
-              </span>
+              <ActiveBillFilterChip
+                label={
+                  bills.partyOptions.find((option) => option.id === bills.partyFilter)?.label ??
+                  bills.partyFilter
+                }
+                clearLabel="Clear party filter"
+                onClear={() => bills.onPartyFilterChange("all")}
+              />
             ) : null}
-            {bills.statusFilter ? (
-              <span className="inline-flex min-h-9 items-center gap-1 rounded-full bg-elevated px-2.5 text-xs font-medium text-highlighted ring-1 ring-border">
-                {bills.statusFilter}
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex min-h-9 min-w-9 items-center justify-center rounded-full p-2 text-muted transition-colors",
-                    "hover:bg-default hover:text-highlighted",
-                    agencyFocusRingClass,
-                  )}
-                  onClick={bills.onClearStatusFilter}
-                  aria-label="Clear status filter"
-                >
-                  <X className="size-3" aria-hidden />
-                </button>
-              </span>
+            {statusFilterLabel ? (
+              <ActiveBillFilterChip
+                label={statusFilterLabel}
+                clearLabel="Clear status filter"
+                onClear={bills.onClearStatusFilter}
+              />
             ) : null}
             {bills.clientCategoryFilter === "external" ? (
-              <span className="inline-flex min-h-9 items-center gap-1 rounded-full bg-elevated px-2.5 text-xs font-medium text-highlighted ring-1 ring-border">
-                External
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex min-h-9 min-w-9 items-center justify-center rounded-full p-2 text-muted transition-colors",
-                    "hover:bg-default hover:text-highlighted",
-                    agencyFocusRingClass,
-                  )}
-                  onClick={bills.onClearClientCategoryFilter}
-                  aria-label="Show internal clients too"
-                >
-                  <X className="size-3" aria-hidden />
-                </button>
-              </span>
+              <ActiveBillFilterChip
+                label="External"
+                clearLabel="Show internal clients too"
+                onClear={bills.onClearClientCategoryFilter}
+              />
             ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-9 px-2 text-xs text-muted"
-              onClick={bills.onClearAllFilters}
-            >
-              Clear all
-            </Button>
+            {activeFilterChipCount > 1 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted hover:text-highlighted"
+                onClick={bills.onClearAllFilters}
+              >
+                Clear all
+              </Button>
+            ) : null}
           </div>
         ) : null}
 
