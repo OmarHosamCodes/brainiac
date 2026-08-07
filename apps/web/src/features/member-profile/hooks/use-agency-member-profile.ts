@@ -11,6 +11,7 @@ import {
 } from "@/features/member-profile/hooks/use-member-profile-alerts";
 import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/agency-member-profile";
 import type { AlertPeriodTarget } from "@/features/member-profile/member-profile-alert-period";
+import { resolveAlertPeriodTarget } from "@/features/member-profile/member-profile-alert-period";
 import {
   resolveMemberProfileHeatLayout,
   type MemberProfileHeatLayout,
@@ -33,6 +34,7 @@ import {
 } from "@/features/resourcing/tenure-utils";
 import { useCurrentAgencyTeam } from "@/features/time-tracking/stores/agency-timer";
 import { useTeamStore } from "@/features/team/team-store";
+import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
 import { orpc } from "@/lib/orpc";
@@ -74,6 +76,7 @@ export type AgencyMemberProfileViewModel = {
     tenureQuarterMonths: TenureQuarterMonth[];
     tenureMonthIndexes: number[];
     onTenureMonthIndexesChange: (monthIndexes: number[]) => void;
+    weekStartsOn: number;
     label: string;
   };
   profile: {
@@ -245,6 +248,8 @@ export type AgencyMemberProfileViewModel = {
   focusDay: (date: string) => void;
   /** Activity day briefly shimmer-highlighted after an alert period jump. */
   highlightedActivityDate: string | null;
+  /** Expand workspace agent with a member-scoped Ask prompt. */
+  askOrchAboutMember: () => void;
   retry: () => void;
   submitLeave: () => Promise<void>;
   submitReview: () => Promise<void>;
@@ -601,6 +606,29 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     utcOffsetMinutes,
     onOpenPeriod: openAlertPeriod,
   });
+
+  const alertDeepLinkHandledRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (searchParams.get("focus") !== "alerts") return;
+    const alertId = searchParams.get("alertId");
+    const day = searchParams.get("day");
+    const periodKey = searchParams.get("period");
+    const linkKey = `${alertId ?? ""}:${day ?? ""}:${periodKey ?? ""}`;
+    if (alertDeepLinkHandledRef.current === linkKey) return;
+    alertDeepLinkHandledRef.current = linkKey;
+
+    if (alertId) {
+      alerts.setExpandedAlertId(alertId);
+    }
+    const target = resolveAlertPeriodTarget({
+      dateKey: day ?? undefined,
+      periodKey: periodKey ?? undefined,
+    });
+    if (target) {
+      openAlertPeriod(target);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- consume landing URL once per subject/params
+  }, [searchParams, subjectUserId]);
 
   useEffect(() => {
     const date = pendingFocusDateRef.current;
@@ -983,6 +1011,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       tenureQuarterMonths,
       tenureMonthIndexes: effectiveTenureMonthIndexes,
       onTenureMonthIndexesChange: setTenureMonthIndexes,
+      weekStartsOn,
       label: periodLabel,
     },
     profile,
@@ -1068,6 +1097,15 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       scrollToActivityDay(date);
     },
     highlightedActivityDate,
+    askOrchAboutMember() {
+      const name = profile?.userName?.trim() || "this member";
+      useWorkspaceAgentStore
+        .getState()
+        .setDraft(
+          `Summarize ${name}'s hours, attendance, and waste for the current profile period. Call out anything that needs attention.`,
+        );
+      useWorkspaceAgentStore.getState().setExpanded(true);
+    },
     retry() {
       void profileQuery.refetch();
       alerts.refetch();
