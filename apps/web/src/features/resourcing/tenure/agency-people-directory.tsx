@@ -1,4 +1,4 @@
-import { SlidersHorizontal } from "lucide-react";
+import { ExternalLink, SlidersHorizontal } from "lucide-react";
 
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import {
@@ -37,6 +37,7 @@ type AgencyPeopleDirectoryProps = {
   canReviewDefaults: boolean;
   onReviewDefaults: () => void;
   onSelectMember: (userId: string) => void;
+  onOpenProfile: (userId: string) => void;
   isLoadError?: boolean;
   loadErrorMessage?: string | null;
   onRetryLoad?: () => void;
@@ -62,6 +63,7 @@ export function AgencyPeopleDirectory({
   canReviewDefaults,
   onReviewDefaults,
   onSelectMember,
+  onOpenProfile,
   isLoadError = false,
   loadErrorMessage = null,
   onRetryLoad,
@@ -223,58 +225,74 @@ export function AgencyPeopleDirectory({
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {cards.map((card) => (
-                  <button
+                  <article
                     key={card.userId}
-                    type="button"
-                    onClick={() => onSelectMember(card.userId)}
                     className={cn(
                       agencyPanelClass,
-                      agencyFocusRingClass,
-                      "flex min-h-11 flex-col items-stretch gap-3 p-4 text-start",
-                      "transition-colors duration-150 ease-out",
-                      "hover:bg-elevated/70 active:bg-elevated",
+                      "flex min-h-11 flex-col items-stretch gap-3 p-4",
                     )}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <AgencyMemberAvatar
-                        name={card.userName}
-                        userId={card.userId}
-                        avatarUrl={card.userAvatar}
-                        size="md"
-                        alt={card.userName}
-                        className="size-11 rounded-2xl"
-                      />
-                      {card.badge ? (
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
-                            badgeClass(card.badge),
-                          )}
-                        >
-                          {card.badge}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="truncate text-sm font-semibold text-highlighted">
-                        {card.userName}
-                      </h3>
-                      <p className="text-muted truncate text-xs">{card.subtitle}</p>
-                      <p className="text-muted mt-1 truncate text-xs">{card.detail}</p>
-                    </div>
-                    <div className="mt-auto space-y-1.5">
-                      <p className="text-muted text-xs">
-                        <span className="font-mono tabular-nums text-highlighted">
-                          {card.completionPercent}%
-                        </span>{" "}
-                        configured
-                      </p>
-                      <PeopleConfigProgress
-                        value={card.completionPercent}
-                        label={`${card.userName} configuration progress`}
-                      />
-                    </div>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => onSelectMember(card.userId)}
+                      className={cn(
+                        agencyFocusRingClass,
+                        "flex flex-col items-stretch gap-3 text-start",
+                        "rounded-xl transition-colors duration-150 ease-out",
+                        "hover:bg-elevated/70 active:bg-elevated",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <AgencyMemberAvatar
+                          name={card.userName}
+                          userId={card.userId}
+                          avatarUrl={card.userAvatar}
+                          size="md"
+                          alt={card.userName}
+                          className="size-11 rounded-2xl"
+                        />
+                        {card.badge ? (
+                          <span
+                            className={cn(
+                              "inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
+                              badgeClass(card.badge),
+                            )}
+                          >
+                            {card.badge}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold text-highlighted">
+                          {card.userName}
+                        </h3>
+                        <p className="text-muted truncate text-xs">{card.subtitle}</p>
+                        <p className="text-muted mt-1 truncate text-xs">{card.detail}</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-muted text-xs">
+                          <span className="font-mono tabular-nums text-highlighted">
+                            {card.completionPercent}%
+                          </span>{" "}
+                          configured
+                        </p>
+                        <PeopleConfigProgress
+                          value={card.completionPercent}
+                          label={`${card.userName} configuration progress`}
+                        />
+                      </div>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted hover:text-highlighted h-8 gap-1.5 self-start px-2"
+                      onClick={() => onOpenProfile(card.userId)}
+                    >
+                      <ExternalLink className="size-3.5" aria-hidden="true" />
+                      Open profile
+                    </Button>
+                  </article>
                 ))}
               </div>
             )}

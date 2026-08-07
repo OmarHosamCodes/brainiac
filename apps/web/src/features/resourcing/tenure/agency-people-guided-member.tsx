@@ -1,4 +1,4 @@
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
@@ -79,6 +79,7 @@ type AgencyPeopleGuidedMemberProps = {
   activeStepId: PeopleConfigStepId;
   onActiveStepChange: (stepId: PeopleConfigStepId) => void;
   onBack: () => void;
+  onOpenProfile: () => void;
   canEditHr: boolean;
   canEditRates: boolean;
   canEditTenure: boolean;
@@ -122,6 +123,7 @@ export function AgencyPeopleGuidedMember({
   activeStepId,
   onActiveStepChange,
   onBack,
+  onOpenProfile,
   canEditHr,
   canEditRates,
   canEditTenure,
@@ -187,12 +189,29 @@ export function AgencyPeopleGuidedMember({
               {userEmail || "Loading…"} · joined {joinedLabel}
             </p>
           </div>
-          <div className="min-w-[10rem] space-y-1.5">
-            <p className="text-muted text-xs">
-              <span className="font-mono tabular-nums text-highlighted">{completionPercent}%</span>{" "}
-              configured
-            </p>
-            <PeopleConfigProgress value={completionPercent} label="Member configuration progress" />
+          <div className="flex flex-wrap items-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={onOpenProfile}
+            >
+              <ExternalLink className="size-3.5" aria-hidden="true" />
+              Open profile
+            </Button>
+            <div className="min-w-[10rem] space-y-1.5">
+              <p className="text-muted text-xs">
+                <span className="font-mono tabular-nums text-highlighted">
+                  {completionPercent}%
+                </span>{" "}
+                configured
+              </p>
+              <PeopleConfigProgress
+                value={completionPercent}
+                label="Member configuration progress"
+              />
+            </div>
           </div>
         </div>
       </header>
