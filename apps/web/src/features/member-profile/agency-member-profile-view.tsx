@@ -22,6 +22,7 @@ import type { AgencyMemberProfileViewModel } from "@/features/member-profile/hoo
 import { MemberProfileAlertsPanel } from "@/features/member-profile/member-profile-alerts-view";
 import { MemberProfileRosterSwitcher } from "@/features/member-profile/member-profile-roster-switcher";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
+import { MemberProfileHeatMap } from "@/features/shared/heat/member-profile-heat-map";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -197,25 +198,18 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
             onTenureMonthIndexesChange={period.onTenureMonthIndexesChange}
           />
           {period.rangePreset === "custom" ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="w-[11.5rem]">
-                <MemberProfileDatePicker
-                  id="profile-period-from"
-                  aria-label="From date"
-                  value={period.customFromDate}
-                  onChange={period.onCustomFromChange}
-                />
-              </div>
-              <span className="text-xs text-muted-foreground">to</span>
-              <div className="w-[11.5rem]">
-                <MemberProfileDatePicker
-                  id="profile-period-to"
-                  aria-label="To date"
-                  value={period.customToDate}
-                  onChange={period.onCustomToChange}
-                />
-              </div>
-            </div>
+            <MemberProfileLeaveRangePicker
+              triggerId="profile-period-custom-range"
+              startDate={period.customFromDate}
+              endDate={period.customToDate}
+              emptyLabel="Select period dates"
+              ariaLabel="Custom period date range"
+              triggerClassName="h-9 min-h-9 w-auto max-w-[22rem] py-1.5 text-xs font-semibold"
+              onRangeChange={(next) => {
+                period.onCustomFromChange(next.startDate);
+                period.onCustomToChange(next.endDate);
+              }}
+            />
           ) : null}
           <MemberProfileRosterSwitcher memberNav={viewModel.memberNav} />
         </div>
@@ -246,12 +240,12 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                             size="icon-sm"
                             className={agencyFocusRingClass}
                             onClick={() => viewModel.setHrDialogOpen(true)}
-                            aria-label="Edit profile"
+                            aria-label="Edit contact details"
                           >
                             <Pencil className="size-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom">Edit profile</TooltipContent>
+                        <TooltipContent side="bottom">Edit contact details</TooltipContent>
                       </Tooltip>
                     ) : null}
                     {profile.canManageLeave ? (
@@ -383,6 +377,18 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                 />
               ))}
             </div>
+
+            <section className={cn(profilePanelClass, "p-4 sm:p-5")}>
+              <h2 className={agencyWorkTitleClass}>Contribution</h2>
+              <div className="mt-4">
+                <MemberProfileHeatMap
+                  heatMap={profile.heatMap}
+                  layout={profile.heatLayout}
+                  onFocusDay={viewModel.focusDay}
+                  weekStartsOn={period.weekStartsOn}
+                />
+              </div>
+            </section>
 
             <section className={cn(profilePanelClass, "p-4 sm:p-5")}>
               <div className="flex flex-wrap items-end justify-between gap-3">
@@ -560,14 +566,24 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
 
             <section
               className={cn(profilePanelClass, "p-4")}
-              aria-labelledby="member-profile-ai-overview"
+              aria-labelledby="member-profile-ask-orch"
             >
-              <h2 id="member-profile-ai-overview" className={agencyWorkTitleClass}>
-                AI overview
+              <h2 id="member-profile-ask-orch" className={agencyWorkTitleClass}>
+                Ask Orch
               </h2>
               <p className={cn(agencyWorkMetaClass, "mt-2 text-pretty")}>
-                Period insights on hours, attendance, and waste will land here.
+                Get a quick read on this member’s hours, attendance, and waste for the selected
+                period.
               </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={viewModel.askOrchAboutMember}
+              >
+                Ask about this member
+              </Button>
             </section>
           </aside>
         </div>
@@ -694,8 +710,17 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
       <Dialog open={viewModel.hrDialogOpen} onOpenChange={viewModel.setHrDialogOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit profile</DialogTitle>
-            <DialogDescription>Employment details and contact info.</DialogDescription>
+            <DialogTitle>Contact & employment</DialogTitle>
+            <DialogDescription>
+              Light edits for day-to-day contact. Configure rates, tenure, and schedule in{" "}
+              <a
+                href="/agency?section=management&manage=tenure"
+                className="font-medium text-foreground underline-offset-2 hover:underline"
+              >
+                People
+              </a>
+              .
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
             <div className={agencyFormFieldClass}>
