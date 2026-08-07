@@ -62,7 +62,8 @@ export const reportsRouter = {
       .input(
         reportsInputSchema.extend({
           page: z.number().int().min(1).optional(),
-          pageSize: z.number().int().min(1).max(100).optional(),
+          // ponytail: 5k bulk page for Reports table paint; upgrade path is server-side grouping.
+          pageSize: z.number().int().min(1).max(5_000).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
