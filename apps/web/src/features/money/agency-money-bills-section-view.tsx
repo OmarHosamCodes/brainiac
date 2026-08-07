@@ -33,6 +33,7 @@ import {
   moneyBillInitials,
   type MoneyBillAdjustmentRow,
 } from "@/features/billing/money-bills-rows";
+import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import {
@@ -46,6 +47,7 @@ import {
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Separator } from "@/ui/separator";
 import { Skeleton } from "@/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Textarea } from "@/ui/textarea";
@@ -1087,125 +1089,183 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
       </Dialog>
 
       <Dialog open={adjust.open} onOpenChange={adjust.onOpenChange}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Adjust {adjust.partyTitle}</DialogTitle>
-            <DialogDescription>
-              {adjust.lineSubtitle || "Settlement and ledger adjustments"}
-              {adjust.statusLabel ? ` · ${adjust.statusLabel}` : null}
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <DialogHeader className="space-y-2 border-b border-default px-5 py-4 pr-14 text-left">
+            <div className="flex flex-wrap items-center gap-2">
+              <DialogTitle className="text-base font-bold text-highlighted">
+                Adjust {adjust.partyTitle}
+              </DialogTitle>
+              <Badge variant="secondary">{adjust.partyType === "client" ? "Collect" : "Pay"}</Badge>
+              {adjust.statusLabel ? <Badge variant="outline">{adjust.statusLabel}</Badge> : null}
+            </div>
+            <DialogDescription className="text-xs text-muted text-pretty">
+              {adjust.lineSubtitle ||
+                (adjust.partyType === "client"
+                  ? "Settle what this client still owes"
+                  : "Settle what the team is owed")}
             </DialogDescription>
           </DialogHeader>
-          {adjust.isReady ? (
-            <div className="rounded-lg border border-default bg-elevated/40 px-3 py-2 text-xs text-muted">
-              Ready lines create the original-period document first, then record payment.
-            </div>
-          ) : null}
-          <Tabs
-            value={adjust.tab}
-            onValueChange={(value) => adjust.onTabChange(value as typeof adjust.tab)}
-          >
-            <TabsList className="h-9 w-full flex-wrap">
-              <TabsTrigger value="pay" className="flex-1">
-                Pay
-              </TabsTrigger>
-              <TabsTrigger value="partial" className="flex-1">
-                Partial
-              </TabsTrigger>
-              <TabsTrigger value="refund" className="flex-1">
-                Refund
-              </TabsTrigger>
-              <TabsTrigger value="adjustments" className="flex-1">
-                Adjustments
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="pay" className="mt-4 flex flex-col gap-3">
-              <p className="text-sm text-muted">
-                Pay remaining{" "}
-                <span className="font-mono text-highlighted">{adjust.remainingLabel}</span>.
-              </p>
-            </TabsContent>
-            <TabsContent value="partial" className="mt-4 flex flex-col gap-3">
-              <div className={agencyFormFieldClass}>
-                <Label htmlFor="money-adjust-amount" className={agencyFormLabelClass}>
-                  Amount ({adjust.currency})
-                </Label>
-                <Input
-                  id="money-adjust-amount"
-                  inputMode="decimal"
-                  value={adjust.amount}
-                  onChange={(event) => adjust.onAmountChange(event.target.value)}
-                  className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
-                />
+
+          <div className="flex flex-col gap-4 px-5 py-4">
+            {adjust.isReady ? (
+              <div className="rounded-xl border border-default bg-muted/30 px-3 py-2.5 text-xs text-muted text-pretty">
+                Ready lines export the original-period document first, then{" "}
+                {adjust.partyType === "client" ? "record the collection" : "record the payment"}.
               </div>
-            </TabsContent>
-            <TabsContent value="refund" className="mt-4">
-              <p className="text-sm text-muted">
-                Refund this obligation. This changes its bill status.
-              </p>
-            </TabsContent>
-            <TabsContent value="adjustments" className="mt-4 flex flex-col gap-3">
-              <div className={agencyFormFieldClass}>
-                <Label htmlFor="money-adjust-kind" className={agencyFormLabelClass}>
-                  Kind
-                </Label>
-                <Select
-                  value={adjust.kind}
-                  onValueChange={(value) => adjust.onKindChange(value as typeof adjust.kind)}
-                >
-                  <SelectTrigger
-                    id="money-adjust-kind"
-                    className="h-9 w-full rounded-xl border-default bg-default"
+            ) : null}
+
+            <Tabs
+              value={adjust.tab}
+              onValueChange={(value) => adjust.onTabChange(value as typeof adjust.tab)}
+            >
+              <TabsList className="h-9 w-full">
+                <TabsTrigger value="pay" className="flex-1">
+                  {adjust.partyType === "client" ? "Collect" : "Pay"}
+                </TabsTrigger>
+                <TabsTrigger value="partial" className="flex-1">
+                  Partial
+                </TabsTrigger>
+                <TabsTrigger value="refund" className="flex-1">
+                  Refund
+                </TabsTrigger>
+                <TabsTrigger value="adjustments" className="flex-1">
+                  Adjust
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="pay" className="mt-4">
+                <div className="rounded-xl border border-default bg-muted/25 px-4 py-5 text-center">
+                  <p className="text-xs text-muted">
+                    {adjust.partyType === "client" ? "Amount to collect" : "Amount to pay"}
+                  </p>
+                  <p
+                    className={cn(
+                      agencyMetricClass,
+                      "mt-1 font-mono text-2xl font-semibold tabular-nums text-highlighted",
+                    )}
                   >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="discount">Discount</SelectItem>
-                    <SelectItem value="surcharge">Surcharge</SelectItem>
-                    <SelectItem value="debt">Debt</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className={agencyFormFieldClass}>
-                <Label htmlFor="money-adjust-adj-amount" className={agencyFormLabelClass}>
-                  Amount ({adjust.currency})
-                </Label>
-                <Input
-                  id="money-adjust-adj-amount"
-                  inputMode="decimal"
-                  value={adjust.amount}
-                  onChange={(event) => adjust.onAmountChange(event.target.value)}
-                  placeholder="0.00"
-                  className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
-                />
-              </div>
-              <div className={agencyFormFieldClass}>
-                <Label htmlFor="money-adjust-note" className={agencyFormLabelClass}>
-                  Note
-                </Label>
-                <Textarea
-                  id="money-adjust-note"
-                  value={adjust.note}
-                  onChange={(event) => adjust.onNoteChange(event.target.value)}
-                  placeholder="Shown on the next export"
-                  className="min-h-20 rounded-xl border-default bg-default text-sm"
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => adjust.onOpenChange(false)}>
+                    {adjust.remainingLabel}
+                  </p>
+                  <p className="mt-2 text-[11px] text-muted">
+                    Settles the full open balance in one step.
+                  </p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="partial" className="mt-4 flex flex-col gap-3">
+                <div className="flex items-baseline justify-between gap-2 text-xs text-muted">
+                  <span>{adjust.partyType === "client" ? "Still to collect" : "Still to pay"}</span>
+                  <span className="font-mono tabular-nums text-highlighted">
+                    {adjust.remainingLabel}
+                  </span>
+                </div>
+                <Separator />
+                <div className={agencyFormFieldClass}>
+                  <Label htmlFor="money-adjust-amount" className={agencyFormLabelClass}>
+                    Amount ({adjust.currency})
+                  </Label>
+                  <Input
+                    id="money-adjust-amount"
+                    inputMode="decimal"
+                    value={adjust.amount}
+                    onChange={(event) => adjust.onAmountChange(event.target.value)}
+                    className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
+                    autoFocus
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="refund" className="mt-4">
+                <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-pretty">
+                  <p className="font-medium text-highlighted">Refund this obligation</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Marks the line refunded and updates bill status. This cannot be undone from
+                    here.
+                  </p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="adjustments" className="mt-4 flex flex-col gap-3">
+                <div className={agencyFormFieldClass}>
+                  <Label htmlFor="money-adjust-kind" className={agencyFormLabelClass}>
+                    Kind
+                  </Label>
+                  <Select
+                    value={adjust.kind}
+                    onValueChange={(value) => adjust.onKindChange(value as typeof adjust.kind)}
+                  >
+                    <SelectTrigger
+                      id="money-adjust-kind"
+                      className="h-9 w-full rounded-xl border-default bg-default"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="discount">Discount</SelectItem>
+                      <SelectItem value="surcharge">Surcharge</SelectItem>
+                      <SelectItem value="debt">Debt</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className={agencyFormFieldClass}>
+                  <Label htmlFor="money-adjust-adj-amount" className={agencyFormLabelClass}>
+                    Amount ({adjust.currency})
+                  </Label>
+                  <Input
+                    id="money-adjust-adj-amount"
+                    inputMode="decimal"
+                    value={adjust.amount}
+                    onChange={(event) => adjust.onAmountChange(event.target.value)}
+                    placeholder="0.00"
+                    className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
+                  />
+                </div>
+                <div className={agencyFormFieldClass}>
+                  <Label htmlFor="money-adjust-note" className={agencyFormLabelClass}>
+                    Note <span className="font-normal text-muted">(optional)</span>
+                  </Label>
+                  <Textarea
+                    id="money-adjust-note"
+                    value={adjust.note}
+                    onChange={(event) => adjust.onNoteChange(event.target.value)}
+                    placeholder="Shown on the next export"
+                    className="min-h-20 rounded-xl border-default bg-default text-sm"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => adjust.onOpenChange(false)}
+              disabled={bills.isMutationPending}
+            >
               Cancel
             </Button>
             <Button
               type="button"
+              size="sm"
+              variant={adjust.tab === "refund" ? "destructive" : "default"}
               disabled={!adjust.canSubmit || bills.isMutationPending}
               onClick={adjust.onSubmit}
             >
-              {adjust.tab === "adjustments"
-                ? "Save"
-                : adjust.tab === "refund"
-                  ? "Confirm refund"
-                  : "Record"}
+              {bills.isMutationPending
+                ? "Working…"
+                : adjust.tab === "adjustments"
+                  ? "Save"
+                  : adjust.tab === "refund"
+                    ? "Confirm refund"
+                    : adjust.tab === "pay"
+                      ? adjust.partyType === "client"
+                        ? "Collect"
+                        : "Pay"
+                      : adjust.partyType === "client"
+                        ? "Collect partial"
+                        : "Record partial"}
             </Button>
           </DialogFooter>
         </DialogContent>

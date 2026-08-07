@@ -17,6 +17,7 @@ export type MoneyExpenseRecord = {
   remainingAmount: number;
   currency: string;
   status: MoneyExpenseStatus;
+  startsAt: string | null;
   nextDueAt: string | null;
   occurredAt: string | null;
   createdAt: string;
@@ -89,4 +90,28 @@ export function moneyExpenseStatusLabel(status: MoneyExpenseStatus): string {
       return _exhaustive;
     }
   }
+}
+
+export function formatMoneyExpenseDueDate(iso: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+export function moneyExpenseSubscriptionMeta(record: {
+  period: MoneyExpensePeriod | null;
+  nextDueAt: string | null;
+  startsAt: string | null;
+}): string {
+  const periodLabel = moneyExpensePeriodLabel(record.period) ?? "Subscription";
+  const nextDue = formatMoneyExpenseDueDate(record.nextDueAt);
+  if (nextDue) return `${periodLabel} · Next ${nextDue}`;
+  const starts = formatMoneyExpenseDueDate(record.startsAt);
+  if (starts) return `${periodLabel} · Starts ${starts}`;
+  return periodLabel;
 }

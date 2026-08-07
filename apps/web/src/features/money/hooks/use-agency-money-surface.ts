@@ -1,38 +1,23 @@
-import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
-import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";
-import { rangePresetLabel } from "@/features/shared/command-bar/range-preset-chooser";
 import {
   agencyManagementPaneLabel,
   agencyManagementPaneSubtitle,
 } from "@/features/shared/agency-management-sections";
+import { parseAgencyPeriodQuery } from "@/features/shared/agency-period-query";
 import {
   selectIsInvoiceMutationPending,
   useAgencyOpsStore,
 } from "@/features/shared/stores/agency-ops";
-import {
-  resolveAgencyRangeFromPreset,
-  startOfWeekUtc,
-  toDateInputValue,
-} from "@/features/shared/use-agency-time-range-filters";
-import {
-  getCurrentTenurePeriodRange,
-  getCurrentTenureQuarterMonths,
-  resolveDefaultDashboardRangePreset,
-  resolveDefaultTenureMonthIndexes,
-} from "@/features/resourcing/tenure-utils";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { orpc, orpcClient } from "@/lib/orpc";
-
+import { useAgencyPeriodState } from "@/features/shared/use-agency-period-state";
 import {
   formatMoneyExpenseAmount,
   moneyExpenseCanSubmit,
-  moneyExpensePeriodLabel,
   moneyExpenseStatusLabel,
+  moneyExpenseSubscriptionMeta,
   parseMoneyExpenseAmount,
   MONEY_EXPENSE_KIND_OPTIONS,
   MONEY_EXPENSE_PERIOD_OPTIONS,
@@ -40,6 +25,7 @@ import {
   type MoneyExpensePeriod,
   type MoneyExpenseRecord,
 } from "@/features/billing/money-expense-form";
+import { dateInputToIso, toDateInputValue } from "@/features/shared/use-agency-time-range-filters";
 import {
   moneyBillsActiveFilterSummary,
   moneyBillsEmptyCopy,
@@ -106,6 +92,8 @@ import {
   amountToMajor,
   type MoneyStatsCardWithSource,
 } from "@/features/billing/money-stats-live";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { orpc, orpcClient } from "@/lib/orpc";
 
 const BILL_CREATE_FORM_ID = "agency-money-bill-create";
 const BILL_PAYMENT_FORM_ID = "agency-money-bill-payment";
@@ -122,13 +110,12 @@ function expenseCountLabel(count: number, singular: string, plural: string): str
 
 function toExpenseRow(record: MoneyExpenseRecord) {
   const kindMeta =
-    record.kind === "subscription"
-      ? (moneyExpensePeriodLabel(record.period) ?? "Subscription")
-      : "One-time";
+    record.kind === "subscription" ? moneyExpenseSubscriptionMeta(record) : "One-time";
   const amountLabel = formatMoneyExpenseAmount(record.amount, record.currency);
   return {
     id: record.id,
     name: record.name,
+    kind: record.kind,
     meta: kindMeta,
     amountLabel,
     statusLabel: moneyExpenseStatusLabel(record.status),
@@ -231,40 +218,37 @@ function buildCardViewModel(card: MoneyStatsCardWithSource): MoneyStatsCardViewM
 }
 
 export function useAgencyMoneySurface(teamId: string) {
-  const now = useMemo(() => new Date(), []);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialPeriodSeed = useMemo(
+    () => parseAgencyPeriodQuery(searchParams),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once from the landing URL
+    [],
+  );
   const queryClient = useQueryClient();
   const agencyOps = useAgencyOpsStore();
   const isInvoiceMutationPending = useAgencyOpsStore(selectIsInvoiceMutationPending);
 
-  const tenurePolicyQuery = useQuery({
-    ...orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId),
+  const periodState = useAgencyPeriodState({
+    teamId,
+    initialCustomRange: initialPeriodSeed,
   });
-  const tenurePolicy = tenurePolicyQuery.data?.policy ?? null;
-
-  const defaultRangePreset = useMemo(
-    () => resolveDefaultDashboardRangePreset(tenurePolicy),
-    [tenurePolicy],
-  );
-  const defaultTenureMonthIndexes = useMemo(
-    () => resolveDefaultTenureMonthIndexes(tenurePolicy, now),
-    [now, tenurePolicy],
-  );
-  const tenureQuarterMonths = useMemo(
-    () => getCurrentTenureQuarterMonths(tenurePolicy, now) ?? [],
-    [now, tenurePolicy],
-  );
-
-  const [rangePreset, setRangePreset] = useState<RangePreset | null>(null);
-  const effectiveRangePreset = rangePreset ?? defaultRangePreset;
-  const weekStartsOn = tenurePolicy?.weekStartsOn ?? DEFAULT_WORK_SCHEDULE.weekStartsOn;
-  const [customFromDate, setCustomFromDate] = useState(
-    toDateInputValue(startOfWeekUtc(weekStartsOn)),
-  );
-  const [customToDate, setCustomToDate] = useState(toDateInputValue(now));
-  const [tenureMonthIndexes, setTenureMonthIndexes] = useState<number[] | null>(null);
-  const effectiveTenureMonthIndexes = tenureMonthIndexes ?? defaultTenureMonthIndexes;
+  const {
+    range: periodRange,
+    label: periodLabel,
+    rangePreset: effectiveRangePreset,
+    onRangePresetChange: setRangePreset,
+    customFromDate,
+    onCustomFromChange: setCustomFromDate,
+    customToDate,
+    onCustomToChange: setCustomToDate,
+    tenureAvailable,
+    tenurePeriodLabel,
+    tenureQuarterLabel,
+    tenureQuarterMonths,
+    tenureMonthIndexes: effectiveTenureMonthIndexes,
+    onTenureMonthIndexesChange: setTenureMonthIndexes,
+  } = periodState;
 
   const [partyFilter, setPartyFilter] = useState<MoneyBillsPartyFilter>("all");
   const [statusFilter, setStatusFilter] = useState<MoneyBillsStatusFilter | null>(null);
@@ -306,9 +290,9 @@ export function useAgencyMoneySurface(teamId: string) {
   const [expensePeriod, setExpensePeriod] = useState<MoneyExpensePeriod | null>(null);
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseNote, setExpenseNote] = useState("");
+  const [expenseStartsAt, setExpenseStartsAt] = useState("");
   const [expensePaymentId, setExpensePaymentId] = useState<string | null>(null);
   const [expensePaymentAmount, setExpensePaymentAmount] = useState("");
-  const [selectedRunSectionId, setSelectedRunSectionId] = useState<string | null>(null);
   const [moneySettingsOpen, setMoneySettingsOpen] = useState(false);
   const [cohortPane, setCohortPane] = useState<MoneyCohortPane>("rules");
   const [moneySettingsDraft, setMoneySettingsDraft] = useState<MoneySettingsEditorDraft | null>(
@@ -330,41 +314,6 @@ export function useAgencyMoneySurface(teamId: string) {
     const result = validateMoneyFormulaTokensClient(moneySettingsDraft.formula.tokens);
     return result.ok ? null : result.error;
   }, [moneySettingsDraft]);
-
-  const tenurePeriodLabel = useMemo(
-    () =>
-      getCurrentTenurePeriodRange(tenurePolicy, now, effectiveTenureMonthIndexes)?.simpleLabel ??
-      null,
-    [effectiveTenureMonthIndexes, now, tenurePolicy],
-  );
-  const tenureQuarterLabel = useMemo(
-    () => getCurrentTenurePeriodRange(tenurePolicy, now)?.simpleLabel ?? null,
-    [now, tenurePolicy],
-  );
-
-  const periodLabel = rangePresetLabel(effectiveRangePreset, tenurePeriodLabel);
-
-  const periodRange = useMemo(
-    () =>
-      resolveAgencyRangeFromPreset(
-        effectiveRangePreset,
-        customFromDate,
-        customToDate,
-        tenurePolicy,
-        now,
-        effectiveTenureMonthIndexes,
-        weekStartsOn,
-      ),
-    [
-      customFromDate,
-      customToDate,
-      effectiveRangePreset,
-      effectiveTenureMonthIndexes,
-      now,
-      tenurePolicy,
-      weekStartsOn,
-    ],
-  );
 
   const teamQuery = useQuery({
     ...orpc.team.get.queryOptions({ input: { teamId } }),
@@ -556,33 +505,6 @@ export function useAgencyMoneySurface(teamId: string) {
     teamId,
   ]);
 
-  const payoutRunQuery = useQuery({
-    ...orpc.agencyOps.payouts.getRun.queryOptions({
-      input: {
-        teamId,
-        periodStart: periodRange.from,
-        periodEnd: periodRange.to,
-      },
-    }),
-    enabled: Boolean(teamId) && isOwner,
-  });
-
-  const selectedRunSection = payoutRunQuery.data?.sections.find(
-    (section) => section.id === selectedRunSectionId,
-  );
-
-  const runSectionLinesQuery = useQuery({
-    ...orpc.agencyOps.payouts.list.queryOptions({
-      input: {
-        teamId,
-        periodStart: periodRange.from,
-        periodEnd: periodRange.to,
-        sectionKey: selectedRunSection?.key,
-      },
-    }),
-    enabled: Boolean(teamId) && isOwner && Boolean(selectedRunSection?.key),
-  });
-
   const expenseRecords = (expensesQuery.data?.items ?? []) as MoneyExpenseRecord[];
   const expensesStatus = expensesQuery.isPending
     ? "loading"
@@ -752,10 +674,7 @@ export function useAgencyMoneySurface(teamId: string) {
   const resolvePaymentTarget = useMemo(
     () =>
       (rowId: string): MoneyPaymentTarget | null => {
-        const payoutLine = [
-          ...(runSectionLinesQuery.data?.items ?? []),
-          ...(payoutsQuery.data?.items ?? []),
-        ].find((line) => line.id === rowId);
+        const payoutLine = (payoutsQuery.data?.items ?? []).find((line) => line.id === rowId);
         if (payoutLine) {
           const kind =
             payoutLine.sectionKey === "debt_discount" ||
@@ -792,7 +711,7 @@ export function useAgencyMoneySurface(teamId: string) {
 
         return null;
       },
-    [invoicesQuery.data?.items, payoutsQuery.data?.items, runSectionLinesQuery.data?.items],
+    [invoicesQuery.data?.items, payoutsQuery.data?.items],
   );
 
   const paymentRow = useMemo(
@@ -1002,22 +921,6 @@ export function useAgencyMoneySurface(teamId: string) {
     );
   }
 
-  function onSyncFormulaLines() {
-    if (
-      !window.confirm(
-        "Sync enabled formula amounts to unpaid draft lines? Paid lines will remain unchanged.",
-      )
-    ) {
-      return;
-    }
-    void agencyOps.syncFormulaPayoutLines({
-      teamId,
-      periodStart: periodRange.from,
-      periodEnd: periodRange.to,
-      refreshSnapshot: true,
-    });
-  }
-
   function onPartyFilterChange(next: MoneyBillsPartyFilter) {
     setPartyFilter(next);
     setStatusFilter((current) =>
@@ -1217,11 +1120,16 @@ export function useAgencyMoneySurface(teamId: string) {
         userId: partyType === "member" ? partyId : undefined,
       });
       await invalidateMoneyComposeQueries();
+      const isClient = partyType === "client";
       const label =
         input.action === "pay"
-          ? "Payment recorded"
+          ? isClient
+            ? "Collection recorded"
+            : "Payment recorded"
           : input.action === "partial"
-            ? "Partial payment recorded"
+            ? isClient
+              ? "Partial collection recorded"
+              : "Partial payment recorded"
             : "Refund recorded";
       toast.success(label);
       onAdjustOpenChange(false);
@@ -1453,6 +1361,7 @@ export function useAgencyMoneySurface(teamId: string) {
     setExpensePeriod(null);
     setExpenseAmount("");
     setExpenseNote("");
+    setExpenseStartsAt("");
   }
 
   function onExpenseCreateOpenChange(open: boolean) {
@@ -1462,7 +1371,10 @@ export function useAgencyMoneySurface(teamId: string) {
 
   function onExpenseKindChange(next: MoneyExpenseKind) {
     setExpenseKind(next);
-    if (next === "one_time") setExpensePeriod(null);
+    if (next === "one_time") {
+      setExpensePeriod(null);
+      setExpenseStartsAt("");
+    }
   }
 
   function onExpensePaymentOpenChange(open: boolean) {
@@ -1491,6 +1403,10 @@ export function useAgencyMoneySurface(teamId: string) {
         period: expensePeriod,
         note: expenseNote,
         amount,
+        startsAt:
+          expenseKind === "subscription" && expenseStartsAt
+            ? dateInputToIso(expenseStartsAt)
+            : undefined,
       },
       { onSuccess: () => onExpenseCreateOpenChange(false) },
     );
@@ -1542,34 +1458,6 @@ export function useAgencyMoneySurface(teamId: string) {
     }
   })();
 
-  const selectedRunSectionLines = useMemo(
-    () =>
-      (runSectionLinesQuery.data?.items ?? []).map((line) => ({
-        id: line.id,
-        sectionKey: line.sectionKey,
-        label: line.label,
-        userName: line.userName,
-        cohortKey: line.cohortKey,
-        amount: line.amount,
-        paidAmount: line.paidAmount,
-        remainingAmount: line.remainingAmount,
-        currency: line.currency,
-        status: line.status,
-        canRecordPayment: line.status === "draft" || line.status === "partial",
-        canMarkPaid: line.status === "draft" || line.status === "partial",
-      })),
-    [runSectionLinesQuery.data?.items],
-  );
-  const payoutLinesStatus: "loading" | "error" | "ready" | "idle" = !selectedRunSection
-    ? "idle"
-    : runSectionLinesQuery.isPending
-      ? "loading"
-      : runSectionLinesQuery.isError
-        ? "error"
-        : runSectionLinesQuery.isSuccess
-          ? "ready"
-          : "idle";
-
   return {
     teamId,
     isOwner,
@@ -1584,7 +1472,7 @@ export function useAgencyMoneySurface(teamId: string) {
       onCustomFromChange: setCustomFromDate,
       customToDate,
       onCustomToChange: setCustomToDate,
-      tenureAvailable: Boolean(tenurePolicy?.enabled),
+      tenureAvailable,
       tenurePeriodLabel,
       tenureQuarterLabel,
       tenureQuarterMonths,
@@ -1597,45 +1485,6 @@ export function useAgencyMoneySurface(teamId: string) {
     scoreboardErrorMessage,
     onRetryScoreboard: () => void periodScoreboardQuery.refetch(),
     onSelectMetric,
-    payoutRun: {
-      title: periodLabel ? `Payout run for ${periodLabel}` : "Payout run",
-      subtitle: "Team and adjustment lines for this period",
-      status: payoutRunQuery.data?.status ?? "draft",
-      currency: payoutRunQuery.data?.currency ?? "USD",
-      periodLabel,
-      sections: payoutRunQuery.data?.sections ?? [],
-      selectedSectionId: selectedRunSectionId,
-      onSelectSection: setSelectedRunSectionId,
-      selectedSectionLines: selectedRunSectionLines,
-      isLoading: payoutRunQuery.isPending,
-      isError: payoutRunQuery.isError,
-      errorMessage: getErrorMessage(payoutRunQuery.error, "Try refreshing the payout run."),
-      onRetry: () => {
-        void payoutRunQuery.refetch();
-        if (selectedRunSection) void runSectionLinesQuery.refetch();
-      },
-      linesStatus: payoutLinesStatus,
-      onOpenPayment: isOwner ? onOpenPayment : null,
-      onMarkPaid: isOwner ? onMarkBillPaid : null,
-      onAddLine: (() => {
-        if (!isOwner) return null;
-        const sectionKey = selectedRunSection?.key;
-        if (sectionKey !== "debt_discount" && sectionKey !== "charity" && sectionKey !== "pbc") {
-          return null;
-        }
-        return () => {
-          setAdjustmentSectionKey(sectionKey);
-          setPartyFilter("adjustments");
-          onAdjustmentCreateOpenChange(true);
-        };
-      })(),
-      onOpenTeamBills: () => setPartyFilter("team"),
-      onSyncFormulaLines:
-        isOwner && (payoutRunQuery.data?.status === "draft" || payoutRunQuery.data == null)
-          ? onSyncFormulaLines
-          : null,
-      isMutationPending: isInvoiceMutationPending,
-    },
     moneySettings: {
       open: moneySettingsOpen,
       onOpenChange: onMoneySettingsOpenChange,
@@ -1845,6 +1694,7 @@ export function useAgencyMoneySurface(teamId: string) {
       adjust: {
         open: adjustOpen,
         onOpenChange: onAdjustOpenChange,
+        partyType: adjustTarget?.partyType ?? "client",
         partyTitle: adjustTarget?.partyTitle ?? "",
         lineSubtitle: adjustTarget?.line.subtitle ?? "",
         statusLabel: adjustTarget?.line.statusLabel ?? "",
@@ -1947,6 +1797,8 @@ export function useAgencyMoneySurface(teamId: string) {
         period: expensePeriod,
         periodOptions: MONEY_EXPENSE_PERIOD_OPTIONS,
         onPeriodChange: setExpensePeriod,
+        startsAt: expenseStartsAt,
+        onStartsAtChange: setExpenseStartsAt,
         amount: expenseAmount,
         onAmountChange: setExpenseAmount,
         note: expenseNote,
@@ -1958,6 +1810,7 @@ export function useAgencyMoneySurface(teamId: string) {
         open: Boolean(expensePaymentRow),
         onOpenChange: onExpensePaymentOpenChange,
         formId: "agency-money-expense-payment",
+        kind: expensePaymentRow?.kind ?? "one_time",
         name: expensePaymentRow?.name ?? "",
         remainingLabel: expensePaymentRow?.remainingLabel ?? "",
         currency: expensePaymentRow?.currency ?? "USD",
@@ -1970,9 +1823,9 @@ export function useAgencyMoneySurface(teamId: string) {
       upcoming: {
         id: "upcoming" as const,
         title: "Upcoming subscriptions",
-        hint: "Next due",
+        hint: "Due this period",
         emptyTitle: "Nothing due soon",
-        emptyBody: "Recurring charges will appear here before they hit.",
+        emptyBody: "Paid subscriptions stay hidden until their next due date.",
         count: upcomingExpenses.length,
         countLabel: expenseCountLabel(upcomingExpenses.length, "due", "due"),
         items: upcomingExpenses,

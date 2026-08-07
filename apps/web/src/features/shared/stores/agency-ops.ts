@@ -305,6 +305,7 @@ type CreateExpensePayload = {
   note?: string;
   amount: number;
   currency?: string;
+  startsAt?: string | null;
 };
 
 type CreatePayoutLinePayload = {
@@ -1919,6 +1920,7 @@ function createAgencyOpsActions(
         note: payload.note,
         amount: payload.amount,
         currency: payload.currency,
+        startsAt: payload.startsAt,
       });
 
       await Promise.all([
@@ -1956,9 +1958,9 @@ function createAgencyOpsActions(
       });
 
       callbacks?.onSuccess?.();
-      toast.success("Expense payment recorded");
+      toast.success("Payment recorded");
     } catch (error) {
-      toast.error("Couldn't record expense payment", {
+      toast.error("Couldn't record payment", {
         description: getErrorMessage(error, "Try again."),
       });
     } finally {
