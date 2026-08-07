@@ -7,10 +7,13 @@ import { fetchAllReportEntries } from "@/features/reports/fetch-report-entries";
 import type { AgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
 import { orpcClient } from "@/lib/orpc";
 import {
-  invalidateAgencyTeamQueries,
+  invalidateAgencyDashboardQueries,
+  invalidateAgencyEntriesQueries,
+  invalidateAgencyReportsQueries,
   useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
 } from "@/features/shared/agency-queries";
+import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import type { AggregatedReportRow } from "@/features/reports/agency-report-grouping";
 import {
   groupEntriesForDisplay,
@@ -106,7 +109,8 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
 
   const taskChangeMutation = useMutation({
     mutationFn: async ({ row, taskId }: { row: AggregatedReportRow; taskId: string }) => {
-      const task = tasks.find((item) => item.id === taskId);
+      const task =
+        tasks.find((item) => item.id === taskId) ?? findProjectTaskInCache(teamId, taskId);
       const project = task ? projects.find((item) => item.id === task.projectId) : null;
       if (!task || !project) {
         throw new Error("Task not found.");
@@ -220,8 +224,11 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
             }),
           ),
         );
-        void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
-        void invalidateAgencyTeamQueries(teamId);
+        void Promise.all([
+          invalidateAgencyEntriesQueries(teamId),
+          invalidateAgencyReportsQueries(teamId),
+          invalidateAgencyDashboardQueries(teamId),
+        ]);
         flashSavedRow(row.key);
       } catch (error) {
         toast.error("Couldn't update entry", {
