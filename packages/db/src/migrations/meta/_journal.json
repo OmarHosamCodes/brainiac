@@ -330,6 +330,13 @@
       "when": 1787900000023,
       "tag": "0046_agency_currency_amount",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1787900000024,
+      "tag": "0047_agency_expense_starts_at",
+      "breakpoints": true
     }
   ]
 }
