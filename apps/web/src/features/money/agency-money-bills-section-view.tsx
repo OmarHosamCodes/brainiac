@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { FileText, Plus, Receipt, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { MemberProfileLeaveRangePicker } from "@/features/shared/date/member-profile-leave-range-picker";
@@ -53,6 +54,7 @@ import { cn } from "@/lib/utils";
 
 import { MoneyListGhostPreview } from "./agency-money-shared-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
+import { moneyNestItemVariants } from "./money-motion";
 
 function BillClientMark({ title, hueId }: { title: string; hueId: string }) {
   return (
@@ -125,18 +127,21 @@ function BillMetricCell({
   valueClassName,
   align = "start",
   showLabel = true,
+  compact = false,
 }: {
   label: string;
   value: string;
   valueClassName?: string;
   align?: "start" | "end";
   showLabel?: boolean;
+  compact?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "min-w-0 px-1.5 sm:px-3",
-        showLabel ? "py-2" : "flex items-center justify-end py-1.5",
+        "min-w-0",
+        compact ? "px-1.5 sm:px-2" : "px-1.5 sm:px-3",
+        showLabel ? (compact ? "py-1.5" : "py-2") : "flex items-center justify-end py-1.5",
         align === "end" && "text-end",
       )}
     >
@@ -186,10 +191,13 @@ function BillMetricGrid({
   return (
     <div
       className={cn(
-        "grid min-w-0 divide-x divide-border overflow-hidden rounded-lg border border-default bg-elevated/30",
+        "grid min-w-0 divide-x divide-border overflow-hidden rounded-lg border border-default",
         showWasteColumn ? "grid-cols-4" : "grid-cols-3",
-        compact && "bg-transparent",
-        !showLabels && "border-transparent bg-transparent",
+        showLabels
+          ? compact
+            ? "bg-transparent"
+            : "bg-elevated/30"
+          : "border-transparent bg-transparent",
       )}
       aria-label={ariaLabel}
     >
@@ -198,18 +206,21 @@ function BillMetricGrid({
         value={totalLabel}
         align="end"
         showLabel={showLabels}
+        compact={compact}
       />
       <BillMetricCell
         label={receivedTitle}
         value={receivedLabel}
         align="end"
         showLabel={showLabels}
+        compact={compact}
       />
       <BillMetricCell
         label="Remaining"
         value={remainingLabel}
         align="end"
         showLabel={showLabels}
+        compact={compact}
         valueClassName={remainingUrgent ? "text-warning" : "text-muted"}
       />
       {showWasteColumn ? (
@@ -218,6 +229,7 @@ function BillMetricGrid({
           value={hasWaste ? wasteLabel : "—"}
           align="end"
           showLabel={showLabels}
+          compact={compact}
           valueClassName={hasWaste ? "text-destructive/80" : "text-muted"}
         />
       ) : null}
@@ -236,7 +248,7 @@ function BillIconAction({
   onClick: () => void;
   disabled?: boolean;
   children: ReactNode;
-  /** Secondary actions: visible on group hover / focus-within. */
+  /** Secondary actions: soft at rest, full on row hover / focus-within. */
   quiet?: boolean;
 }) {
   return (
@@ -248,9 +260,11 @@ function BillIconAction({
             variant="ghost"
             size="icon-sm"
             className={cn(
-              "size-9 rounded-lg text-muted hover:text-highlighted",
+              "size-8 rounded-lg text-muted transition-[opacity,color,background-color] duration-150 ease-out",
+              "hover:bg-elevated hover:text-highlighted",
+              "motion-reduce:transition-none",
               quiet &&
-                "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 sm:group-hover/line:opacity-100 sm:group-focus-within/line:opacity-100 sm:focus-visible:opacity-100",
+                "opacity-100 sm:opacity-45 sm:group-hover/card:opacity-100 sm:group-focus-within/card:opacity-100 sm:group-hover/line:opacity-100 sm:group-focus-within/line:opacity-100 sm:focus-visible:opacity-100",
             )}
             disabled={disabled}
             onClick={onClick}
@@ -344,6 +358,7 @@ function BillAdjustmentRow({
 function BillObligationLineRow({
   group,
   line,
+  index,
   searchTerm,
   isMutationPending,
   showWasteColumn,
@@ -353,6 +368,7 @@ function BillObligationLineRow({
 }: {
   group: MoneyBillPersonGroup;
   line: MoneyBillObligationLine;
+  index: number;
   searchTerm: string;
   isMutationPending: boolean;
   showWasteColumn: boolean;
@@ -362,10 +378,20 @@ function BillObligationLineRow({
 }) {
   const receivedTitle = group.party === "team" ? "Paid" : "Received";
   return (
-    <li
+    <motion.li
+      layout={false}
+      custom={index}
+      variants={moneyNestItemVariants}
+      initial="hidden"
+      animate="show"
+      exit="exit"
       className={cn(
-        "group/line grid items-center gap-3 px-3 py-2 transition-colors hover:bg-elevated/30 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto]",
-        line.isCarry && "bg-elevated/20",
+        "group/line grid items-center gap-2 rounded-lg border px-2.5 py-2 transition-[background-color,border-color] duration-150 ease-out",
+        "md:grid-cols-[minmax(8.5rem,0.85fr)_minmax(0,1.8fr)_auto]",
+        "motion-reduce:transition-none",
+        line.isCarry
+          ? "border-dashed border-default/70 bg-elevated/25 hover:border-default hover:bg-elevated/40"
+          : "border-default/80 bg-default/80 hover:border-default hover:bg-elevated/35",
       )}
     >
       <div className="flex min-w-0 items-start gap-2">
@@ -376,7 +402,7 @@ function BillObligationLineRow({
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="min-w-0 truncate text-sm font-medium text-highlighted">
+            <span className="min-w-0 truncate text-xs font-medium text-highlighted sm:text-sm">
               <AgencySearchHighlight text={line.subtitle} query={searchTerm} />
             </span>
             <span
@@ -407,10 +433,9 @@ function BillObligationLineRow({
         <BillIconAction
           label={group.party === "team" ? "Preview payslip" : "Preview invoice"}
           disabled={isMutationPending}
-          quiet
           onClick={() => onOpenPreviewLine(group, line)}
         >
-          <FileText className="size-4" aria-hidden />
+          <FileText className="size-3.5" aria-hidden />
         </BillIconAction>
         <BillIconAction
           label="Adjust"
@@ -418,10 +443,10 @@ function BillObligationLineRow({
           quiet
           onClick={() => onOpenAdjustLine(group, line)}
         >
-          <SlidersHorizontal className="size-4" aria-hidden />
+          <SlidersHorizontal className="size-3.5" aria-hidden />
         </BillIconAction>
       </div>
-    </li>
+    </motion.li>
   );
 }
 
@@ -495,11 +520,11 @@ function BillPersonGroupCard({
   // Single obligation: one row. Parent+child grids were identical and doubled scan cost.
   if (soleLine) {
     return (
-      <li className="group overflow-hidden">
+      <li className="group/card overflow-hidden">
         <div
           className={cn(
-            "grid items-center gap-3 px-3 py-3 transition-colors hover:bg-elevated/30 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto]",
-            soleLine.isCarry && "bg-elevated/20",
+            "grid items-center gap-3 px-3 py-3 transition-colors duration-150 hover:bg-elevated/25 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto] motion-reduce:transition-none",
+            soleLine.isCarry && "bg-elevated/15",
           )}
         >
           <div className="flex min-w-0 items-center gap-3">
@@ -563,8 +588,8 @@ function BillPersonGroupCard({
   }
 
   return (
-    <li className="group overflow-hidden">
-      <div className="grid items-center gap-3 border-b border-default bg-default/40 px-3 py-3 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto]">
+    <li className="group/card overflow-hidden">
+      <div className="grid items-center gap-3 bg-default/40 px-3 py-3 transition-colors duration-150 hover:bg-elevated/25 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto] motion-reduce:transition-none">
         <div className="flex min-w-0 items-center gap-3">
           {partyMark}
           <div className="min-w-0 flex-1">
@@ -617,21 +642,29 @@ function BillPersonGroupCard({
           </BillIconAction>
         </div>
       </div>
-      <ul className="divide-y divide-border">
-        {group.lines.map((line) => (
-          <BillObligationLineRow
-            key={line.id}
-            group={group}
-            line={line}
-            searchTerm={searchTerm}
-            isMutationPending={isMutationPending}
-            showWasteColumn={showWasteColumn}
-            showMetricLabels={false}
-            onOpenPreviewLine={onOpenPreviewLine}
-            onOpenAdjustLine={onOpenAdjustLine}
-          />
-        ))}
-      </ul>
+      {group.lines.length > 0 ? (
+        <ul
+          className="flex flex-col gap-2 border-t border-default/60 bg-elevated/10 py-2.5 pr-3 pl-3 sm:pl-14"
+          aria-label={`${group.title} invoices`}
+        >
+          <AnimatePresence initial={false}>
+            {group.lines.map((line, index) => (
+              <BillObligationLineRow
+                key={line.id}
+                group={group}
+                line={line}
+                index={index}
+                searchTerm={searchTerm}
+                isMutationPending={isMutationPending}
+                showWasteColumn={showWasteColumn}
+                showMetricLabels={false}
+                onOpenPreviewLine={onOpenPreviewLine}
+                onOpenAdjustLine={onOpenAdjustLine}
+              />
+            ))}
+          </AnimatePresence>
+        </ul>
+      ) : null}
     </li>
   );
 }
@@ -850,7 +883,11 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                 return false;
               });
               return (
-                <section key={section.id} className="flex flex-col gap-2" aria-label={section.title}>
+                <section
+                  key={section.id}
+                  className="flex flex-col gap-2"
+                  aria-label={section.title}
+                >
                   {showSectionHeaders ? (
                     <div className="flex items-baseline justify-between gap-2 px-1">
                       <h3 className="text-sm font-medium text-highlighted">{section.title}</h3>
