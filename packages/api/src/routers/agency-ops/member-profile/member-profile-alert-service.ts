@@ -382,6 +382,12 @@ export async function sendMemberProfileAlert(
       alertId: updated.id,
       alertTitle: updated.title,
       notePreview: note.slice(0, 160),
+      dateKey:
+        typeof updated.contextJson?.dateKey === "string" ? updated.contextJson.dateKey : undefined,
+      periodKey:
+        typeof updated.contextJson?.periodKey === "string"
+          ? updated.contextJson.periodKey
+          : undefined,
     },
   });
 
