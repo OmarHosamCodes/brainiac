@@ -4,7 +4,7 @@ import {
   rotateWeekdayLabels,
 } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 
-import type { MemberProfileHeatMapData } from "@/features/member-profile/member-profile-heat-map";
+import type { MemberProfileHeatMapData } from "@/features/shared/heat/member-profile-heat-map";
 
 export type PresenceMember = {
   userId: string;

@@ -5,7 +5,7 @@ import {
   startOfWeekUtc as startOfWeekUtcShared,
 } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 
-import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
+import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";
 import type { AgencyFilterOptionGroup } from "@/features/shared/filters/agency-multi-select-filter";
 import {
   allAgencyReportFieldIds,

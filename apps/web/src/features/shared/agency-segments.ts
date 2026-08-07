@@ -30,14 +30,14 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
     label: "Tracker",
     icon: "i-lucide-timer",
     shortcutKey: "t",
-    subtitle: "Tasks, threads, and time in one place.",
+    subtitle: "Track time as you work — start, edit, and log entries.",
   },
   {
     id: "dashboard",
     label: "Dashboard",
     icon: "i-lucide-layout-dashboard",
     shortcutKey: "d",
-    subtitle: "Team activity, time allocation, and project distribution.",
+    subtitle: "Live pulse: team activity and project share.",
   },
   {
     id: "clients",
@@ -51,21 +51,21 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
     label: "Projects",
     icon: "i-lucide-folder-kanban",
     shortcutKey: "p",
-    subtitle: "Project pipeline, delivery health, and activity.",
+    subtitle: "Project pipeline, journey, tasks, and delivery activity.",
   },
   {
     id: "reports",
     label: "Reports",
     icon: "i-lucide-bar-chart-3",
     shortcutKey: "r",
-    subtitle: "Hours and breakdowns across teams and clients.",
+    subtitle: "Inspect hours, edit rows, and create exports.",
   },
   {
     id: "management",
     label: "Management",
     icon: "i-lucide-sliders-horizontal",
     shortcutKey: "m",
-    subtitle: "Capacity, money, and tenure policy.",
+    subtitle: "Capacity, people, and money.",
   },
 ] as const;
 

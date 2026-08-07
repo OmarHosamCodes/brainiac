@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { MemberProfileHeatMapData } from "@/features/member-profile/member-profile-heat-map";
+import type { MemberProfileHeatMapData } from "@/features/shared/heat/member-profile-heat-map";
 import {
   buildPresenceCalendarDays,
   buildPresenceOverview,

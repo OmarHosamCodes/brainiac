@@ -1,4 +1,4 @@
-/** Agency management panes — Operations + Commercial hubs under Management. */
+/** Agency management panes under Management. */
 
 export type AgencyManagementPaneId = "resourcing" | "tenure" | "money";
 
@@ -13,12 +13,6 @@ export type AgencyManagementPane = {
   hub: AgencyManagementHubId;
 };
 
-export type AgencyManagementHub = {
-  id: AgencyManagementHubId;
-  label: string;
-  panes: readonly AgencyManagementPane[];
-};
-
 export const AGENCY_MANAGEMENT_PANES: readonly AgencyManagementPane[] = [
   { id: "resourcing", label: "Resourcing", icon: "i-lucide-users", hub: "operations" },
   { id: "tenure", label: "People", icon: "i-lucide-contact", hub: "operations" },
@@ -28,19 +22,6 @@ export const AGENCY_MANAGEMENT_PANES: readonly AgencyManagementPane[] = [
     subtitle: "Client invoices, payroll, and cash in one place.",
     icon: "i-lucide-wallet",
     hub: "commercial",
-  },
-] as const;
-
-export const AGENCY_MANAGEMENT_HUBS: readonly AgencyManagementHub[] = [
-  {
-    id: "operations",
-    label: "Operations",
-    panes: AGENCY_MANAGEMENT_PANES.filter((pane) => pane.hub === "operations"),
-  },
-  {
-    id: "commercial",
-    label: "Commercial",
-    panes: AGENCY_MANAGEMENT_PANES.filter((pane) => pane.hub === "commercial"),
   },
 ] as const;
 

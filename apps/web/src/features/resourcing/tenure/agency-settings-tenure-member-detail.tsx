@@ -2,7 +2,7 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 
-import { MemberProfileDatePicker } from "@/features/member-profile/member-profile-date-picker";
+import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
 import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
 import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
 import { Button } from "@/ui/button";

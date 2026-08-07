@@ -1,7 +1,7 @@
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
-import { MemberProfileLeaveRangePicker } from "@/features/member-profile/member-profile-leave-range-picker";
+import { MemberProfileLeaveRangePicker } from "@/features/shared/date/member-profile-leave-range-picker";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import {
   agencyFormFieldClass,

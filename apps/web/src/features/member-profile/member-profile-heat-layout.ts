@@ -1,4 +1,4 @@
-import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
+import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";
 
 export type MemberProfileHeatLayout = "compact" | "strip";
 
