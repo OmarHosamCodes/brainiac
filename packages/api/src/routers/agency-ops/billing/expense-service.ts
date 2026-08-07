@@ -17,6 +17,7 @@ import {
   expenseRemainingAmount,
   expenseStatusAfterPaid,
 } from "./expense-helpers";
+import { paginateItems, type PaginatedItems } from "./list-pagination";
 import { loadMoneyResolveContext } from "./money-fx-service";
 
 export type AgencyExpenseRecord = {
@@ -64,8 +65,10 @@ export async function listExpenses(
     teamId: string;
     periodStart?: string;
     periodEnd?: string;
+    page?: number;
+    pageSize?: number;
   },
-): Promise<{ items: AgencyExpenseRecord[] }> {
+): Promise<PaginatedItems<AgencyExpenseRecord>> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const periodStart = input.periodStart ? parseIsoDateTime(input.periodStart, "periodStart") : null;
@@ -94,7 +97,7 @@ export async function listExpenses(
     })
     .map(mapExpenseRow);
 
-  return { items };
+  return paginateItems(items, input);
 }
 
 export async function createExpense(
