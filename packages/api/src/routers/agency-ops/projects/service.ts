@@ -272,7 +272,6 @@ async function buildAgencyProjectJourneyRecord(
   actorUserId?: string,
 ): Promise<AgencyProjectJourneyRecord> {
   const journey = await getJourneyRowForProject(teamId, projectId);
-  await syncJourneyStepStatuses(teamId, projectId);
 
   const stepRows = await db
     .select({

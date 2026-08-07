@@ -812,7 +812,7 @@ export async function updateAgencyProjectTask(
     throw new ORPCError("NOT_FOUND");
   }
 
-  if (input.status === "done") {
+  if (input.status !== undefined) {
     await maybeSyncJourneyForTask(input.teamId, input.taskId);
   }
 

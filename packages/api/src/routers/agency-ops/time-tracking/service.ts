@@ -540,8 +540,10 @@ async function emitTimerStoppedNotification(
   });
 }
 
-async function fetchAgencyTimeEntryRecord(entryId: string) {
-  const [row] = await db
+async function fetchAgencyTimeEntryRecords(entryIds: string[]) {
+  if (entryIds.length === 0) return [];
+
+  const rows = await db
     .select({
       id: agencyOpsTimeEntry.id,
       teamId: agencyOpsTimeEntry.teamId,
@@ -569,14 +571,23 @@ async function fetchAgencyTimeEntryRecord(entryId: string) {
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
     .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
-    .where(eq(agencyOpsTimeEntry.id, entryId))
-    .limit(1);
+    .where(inArray(agencyOpsTimeEntry.id, entryIds));
 
-  if (!row) {
-    return null;
+  const tagsByEntryId = await listTagsByTimeEntryIds(rows.map((row) => row.id));
+  const recordsById = new Map(
+    rows.map((row) => [row.id, mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? [])]),
+  );
+  const records: AgencyTimeEntryRecord[] = [];
+  for (const entryId of entryIds) {
+    const record = recordsById.get(entryId);
+    if (record) records.push(record);
   }
+  return records;
+}
 
-  return mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id));
+async function fetchAgencyTimeEntryRecord(entryId: string) {
+  const [record] = await fetchAgencyTimeEntryRecords([entryId]);
+  return record ?? null;
 }
 
 export async function stopAgencyTimer(
@@ -979,8 +990,6 @@ export async function listMyAgencyTimeEntries(
   const [countRow] = await db
     .select({ count: sql<number>`count(*)` })
     .from(agencyOpsTimeEntry)
-    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
-    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
     .where(
       and(
         eq(agencyOpsTimeEntry.teamId, input.teamId),
@@ -1378,7 +1387,6 @@ export async function updateMyAgencyTimeEntriesBulk(
   const entries = await db
     .select({
       id: agencyOpsTimeEntry.id,
-      taskId: agencyOpsTimeEntry.taskId,
     })
     .from(agencyOpsTimeEntry)
     .where(
@@ -1396,15 +1404,11 @@ export async function updateMyAgencyTimeEntriesBulk(
     });
   }
 
+  const journeyStepId =
+    taskId === undefined ? undefined : await resolveJourneyStepIdForTask(input.teamId, taskId);
   const now = new Date();
   await db.transaction(async (tx) => {
     for (const entry of entries) {
-      const nextTaskId = taskId === undefined ? entry.taskId : taskId;
-      const journeyStepId =
-        taskId === undefined
-          ? undefined
-          : await resolveJourneyStepIdForTask(input.teamId, nextTaskId);
-
       await tx
         .update(agencyOpsTimeEntry)
         .set({
@@ -1433,12 +1437,12 @@ export async function updateMyAgencyTimeEntriesBulk(
     }
   });
 
-  const items = await Promise.all(entryIds.map((entryId) => fetchAgencyTimeEntryRecord(entryId)));
-  if (items.some((entry) => entry === null)) {
+  const items = await fetchAgencyTimeEntryRecords(entryIds);
+  if (items.length !== entryIds.length) {
     throw new ORPCError("NOT_FOUND");
   }
 
-  return { items: items as AgencyTimeEntryRecord[] };
+  return { items };
 }
 
 export async function deleteMyAgencyTimeEntry(
@@ -1611,7 +1615,8 @@ export async function listAllAgencyTimeEntries(
   }
 
   const page = Math.max(1, input.page ?? 1);
-  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 25));
+  // Reports bulk fetch allows up to 5k; Tracker/other callers pass ≤100.
+  const pageSize = Math.min(5_000, Math.max(1, input.pageSize ?? 25));
   const offset = (page - 1) * pageSize;
 
   const filters = [
@@ -1663,7 +1668,6 @@ export async function listAllAgencyTimeEntries(
     .select({ count: sql<number>`count(*)` })
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
-    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
     .where(and(...filters));
 
   const parsedTotal = Number(countRow?.count ?? 0);
