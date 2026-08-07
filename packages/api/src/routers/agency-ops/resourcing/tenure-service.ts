@@ -29,6 +29,7 @@ import {
   type TenureQuarterStatus,
 } from "./tenure-engine";
 import { requireTeamMembership } from "../shared/membership";
+import { invalidateTeamWorkScheduleCache } from "./load-team-work-schedule";
 
 type TenurePolicyRecord = {
   fiscalYearStartMonth: number;
@@ -270,15 +271,19 @@ async function loadFirstTrackedAtByUser(teamId: string, userIds: string[]) {
   );
 }
 
-async function loadLoggedHoursByQuarter(
+async function loadLoggedHoursByQuarterByUser(
   teamId: string,
-  userId: string,
+  userIds: string[],
   policy: TenurePolicyInput,
   from: Date,
   to: Date,
 ) {
+  const byUserId = new Map<string, Map<string, number>>();
+  if (userIds.length === 0) return byUserId;
+
   const entries = await db
     .select({
+      userId: agencyOpsTimeEntry.userId,
       startedAt: agencyOpsTimeEntry.startedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
     })
@@ -286,23 +291,23 @@ async function loadLoggedHoursByQuarter(
     .where(
       and(
         eq(agencyOpsTimeEntry.teamId, teamId),
-        eq(agencyOpsTimeEntry.userId, userId),
+        inArray(agencyOpsTimeEntry.userId, userIds),
         isNull(agencyOpsTimeEntry.deletedAt),
         gte(agencyOpsTimeEntry.startedAt, from),
         lt(agencyOpsTimeEntry.startedAt, to),
       ),
     );
 
-  const byQuarter = new Map<string, number>();
-
   for (const entry of entries) {
     const ref = getFiscalQuarterForDate(entry.startedAt, toFiscalCalendar(policy));
     const key = `${ref.fiscalYear}-${ref.fiscalQuarter}`;
     const hours = entry.durationSeconds / 3600;
+    const byQuarter = byUserId.get(entry.userId) ?? new Map<string, number>();
     byQuarter.set(key, (byQuarter.get(key) ?? 0) + hours);
+    byUserId.set(entry.userId, byQuarter);
   }
 
-  return byQuarter;
+  return byUserId;
 }
 
 type MemberHrSummary = {
@@ -357,8 +362,7 @@ async function loadMemberHrSummaries(
   return byUserId;
 }
 
-async function computeMemberSummary(input: {
-  teamId: string;
+function computeMemberSummary(input: {
   member: {
     userId: string;
     userName: string | null;
@@ -369,17 +373,11 @@ async function computeMemberSummary(input: {
   profileRow: typeof agencyOpsMemberTenureProfile.$inferSelect | undefined;
   exemptions: TenureExemptionInput[];
   firstTrackedAt: Date | null;
+  loggedHoursByQuarterKey: Map<string, number>;
   now: Date;
   hr?: MemberHrSummary | null;
-}): Promise<MemberTenureSummaryRecord> {
+}): MemberTenureSummaryRecord {
   const profile = toProfileInput(input.profileRow);
-  const loggedHoursByQuarterKey = await loadLoggedHoursByQuarter(
-    input.teamId,
-    input.member.userId,
-    input.policy,
-    input.policy.policyEffectiveFrom,
-    input.now,
-  );
 
   const result = computeMemberTenure({
     policy: input.policy,
@@ -387,7 +385,7 @@ async function computeMemberSummary(input: {
     userId: input.member.userId,
     teamJoinDate: input.member.joinedAt,
     firstTrackedAt: input.firstTrackedAt,
-    loggedHoursByQuarterKey,
+    loggedHoursByQuarterKey: input.loggedHoursByQuarterKey,
     exemptions: input.exemptions,
     now: input.now,
   });
@@ -523,6 +521,8 @@ export async function upsertTenurePolicy(
   if (!upserted) {
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
+
+  invalidateTeamWorkScheduleCache(input.teamId);
 
   return {
     policy: toPolicyRecord(upserted),
@@ -929,19 +929,24 @@ export async function listTenureSummary(
   const exemptionRows = await loadExemptionRows(input.teamId);
   const exemptions = exemptionRows.map(toExemptionInput);
   const firstTracked = await loadFirstTrackedAtByUser(input.teamId, userIds);
+  const loggedHoursByUserId = await loadLoggedHoursByQuarterByUser(
+    input.teamId,
+    userIds,
+    policy,
+    policy.policyEffectiveFrom,
+    now,
+  );
 
-  const items = await Promise.all(
-    visibleMembers.map((member) => {
-      return computeMemberSummary({
-        teamId: input.teamId,
-        member,
-        policy,
-        profileRow: profileByUserId.get(member.userId),
-        exemptions,
-        firstTrackedAt: firstTracked.get(member.userId) ?? null,
-        now,
-        hr: hrByUserId.get(member.userId) ?? null,
-      });
+  const items = visibleMembers.map((member) =>
+    computeMemberSummary({
+      member,
+      policy,
+      profileRow: profileByUserId.get(member.userId),
+      exemptions,
+      firstTrackedAt: firstTracked.get(member.userId) ?? null,
+      loggedHoursByQuarterKey: loggedHoursByUserId.get(member.userId) ?? new Map(),
+      now,
+      hr: hrByUserId.get(member.userId) ?? null,
     }),
   );
 
@@ -976,13 +981,14 @@ export async function getTenureMember(
     input.userId,
   );
 
-  const loggedHoursByQuarterKey = await loadLoggedHoursByQuarter(
+  const loggedHoursByUserId = await loadLoggedHoursByQuarterByUser(
     input.teamId,
-    input.userId,
+    [input.userId],
     policy,
     policy.policyEffectiveFrom,
     now,
   );
+  const loggedHoursByQuarterKey = loggedHoursByUserId.get(input.userId) ?? new Map();
 
   const result = computeMemberTenure({
     policy,
@@ -996,13 +1002,13 @@ export async function getTenureMember(
   });
 
   const hr = (await loadMemberHrSummaries(input.teamId, [input.userId])).get(input.userId) ?? null;
-  const summary = await computeMemberSummary({
-    teamId: input.teamId,
+  const summary = computeMemberSummary({
     member,
     policy,
     profileRow,
     exemptions,
     firstTrackedAt: firstTrackedAt ?? null,
+    loggedHoursByQuarterKey,
     now,
     hr,
   });
