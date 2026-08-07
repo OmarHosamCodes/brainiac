@@ -53,6 +53,31 @@ export type TimeEntryWeekGroup = {
   days: TimeEntryDayGroup[];
 };
 
+export type VirtualTimeEntryDay = {
+  key: string;
+  day: TimeEntryDayGroup;
+  week: Pick<TimeEntryWeekGroup, "weekStartKey" | "label" | "totalSeconds"> | null;
+};
+
+export function flattenTimeEntryWeeksForVirtualization(
+  weeks: TimeEntryWeekGroup[],
+): VirtualTimeEntryDay[] {
+  return weeks.flatMap((week) =>
+    week.days.map((day, index) => ({
+      key: `${week.weekStartKey}:${day.dateKey}`,
+      day,
+      week:
+        index === 0
+          ? {
+              weekStartKey: week.weekStartKey,
+              label: week.label,
+              totalSeconds: week.totalSeconds,
+            }
+          : null,
+    })),
+  );
+}
+
 function collapseKeyFor(entry: TimeEntryRecord): string {
   const taskKey = entry.taskId ?? `project-only:${entry.projectId}`;
   return `${taskKey}||${entry.description ?? ""}`;

@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 
-import { AgencyTimeEntryWeekGroupView } from "@/features/time-tracking/entries/agency-time-entry-week-group-view";
+import { AgencyTimeEntryDayGroupView } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
+import { AgencyTimeEntryWeekHeaderView } from "@/features/time-tracking/entries/agency-time-entry-week-group-view";
 import { AgencyWorkSurfacePaginationFooter } from "@/features/task-management/work-surface/agency-work-surface-pagination-footer";
 import { Button } from "@/ui/button";
 import type { AgencyTimeEntriesLogViewModel } from "@/features/time-tracking/hooks/use-agency-time-entries-log";
@@ -8,7 +9,6 @@ import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/e
 import {
   agencyMetricClass,
   agencyTimeLogSkeletonClass,
-  agencyTimeWeekStackClass,
   agencyWorkTableBodyScrollClass,
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
@@ -73,33 +73,55 @@ export function AgencyTimeEntriesLogView({ view, renderGroupRow }: AgencyTimeEnt
             </Button>
           </div>
         ) : (
-          <div className={agencyTimeWeekStackClass}>
-            {view.weekGroups.map((week) => (
-              <AgencyTimeEntryWeekGroupView
-                key={week.weekStartKey}
-                teamId={view.teamId}
-                week={week}
-                highlightedEntryId={view.highlightedEntryId}
-                renderGroupRow={renderGroupRow}
-                selectedEntryIds={view.selectedEntryIds}
-                bulkEditDayKey={view.bulkEditDayKey}
-                bulkFieldEditOpen={view.bulkFieldEditOpen}
-                bulkDraft={view.bulkDraft}
-                onBulkDraftChange={view.onBulkDraftChange}
-                onToggleEntrySelected={view.onToggleEntrySelected}
-                onToggleDayBulkEdit={view.onToggleDayBulkEdit}
-                onToggleBulkFieldEdit={view.onToggleBulkFieldEdit}
-                onDeleteSelected={view.onDeleteSelected}
-                onMarkSelectedAsWaste={view.onMarkSelectedAsWaste}
-                onApplyBulk={view.onApplyBulk}
-                onCreateTag={view.onCreateTag}
-                tagCreatePending={view.tagCreatePending}
-                tags={view.tags}
-                projects={view.projects}
-                tasks={view.tasks}
-                wastePending={view.wastePending}
-              />
-            ))}
+          <div
+            className="relative min-h-full bg-background"
+            style={{ height: `${view.virtualTotalSize}px` }}
+          >
+            {view.virtualItems.map((virtualItem) => {
+              const item = view.virtualDays[virtualItem.index];
+              if (!item) return null;
+              return (
+                <div
+                  key={virtualItem.key}
+                  ref={view.measureVirtualDay}
+                  data-index={virtualItem.index}
+                  className="absolute top-0 left-0 w-full pb-[20px]"
+                  style={{ transform: `translateY(${virtualItem.start}px)` }}
+                >
+                  {item.week ? (
+                    <AgencyTimeEntryWeekHeaderView
+                      label={item.week.label}
+                      totalSeconds={item.week.totalSeconds}
+                    />
+                  ) : null}
+                  <AgencyTimeEntryDayGroupView
+                    teamId={view.teamId}
+                    day={item.day}
+                    highlightedEntryId={view.highlightedEntryId}
+                    renderGroupRow={renderGroupRow}
+                    selectedEntryIds={view.selectedEntryIds}
+                    bulkEditActive={view.bulkEditDayKey === item.day.dateKey}
+                    bulkFieldEditOpen={
+                      view.bulkFieldEditOpen && view.bulkEditDayKey === item.day.dateKey
+                    }
+                    bulkDraft={view.bulkDraft}
+                    onBulkDraftChange={view.onBulkDraftChange}
+                    onToggleEntrySelected={view.onToggleEntrySelected}
+                    onToggleDayBulkEdit={view.onToggleDayBulkEdit}
+                    onToggleBulkFieldEdit={view.onToggleBulkFieldEdit}
+                    onDeleteSelected={view.onDeleteSelected}
+                    onMarkSelectedAsWaste={view.onMarkSelectedAsWaste}
+                    onApplyBulk={view.onApplyBulk}
+                    onCreateTag={view.onCreateTag}
+                    tagCreatePending={view.tagCreatePending}
+                    tags={view.tags}
+                    projects={view.projects}
+                    tasks={view.tasks}
+                    wastePending={view.wastePending}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
         {view.showPagination ? (

@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type RefObject,
+} from "react";
 
 import type {
   AgencyProject,
@@ -13,6 +21,7 @@ import {
 } from "@/features/shared/choosers/agency-chooser-shell";
 import {
   useAgencyFavoritesQuery,
+  useAgencyProjectTasksForChooserQuery,
   useAgencyProjectTemplatesQuery,
 } from "@/features/shared/agency-queries";
 import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
@@ -105,6 +114,9 @@ export type AgencyTaskChooserViewModel = {
   onToggleClient: (clientName: string) => void;
   onToggleProjectFavorite: (projectId: string) => void;
   onToggleTaskFavorite: (taskId: string) => void;
+  hasMoreTasks: boolean;
+  loadingMoreTasks: boolean;
+  onLoadMoreTasks: () => void;
   highlightSearch: boolean;
   bestMatchTaskId: string | null;
   activeOptionKey: string | null;
@@ -157,6 +169,17 @@ export function useAgencyTaskChooser(
     controlledOpen,
     onOpenChange,
   });
+  const deferredSearch = useDeferredValue(searchTerm.trim());
+  const chooserTasksQuery = useAgencyProjectTasksForChooserQuery(
+    teamId,
+    { search: deferredSearch || undefined },
+    { selectedTaskIds: value && !fallbackTaskTitle ? [value] : [] },
+  );
+  const taskCatalog = useMemo(() => {
+    const byId = new Map(tasks.map((task) => [task.id, task]));
+    for (const task of chooserTasksQuery.items) byId.set(task.id, task);
+    return [...byId.values()];
+  }, [chooserTasksQuery.items, tasks]);
 
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [createTaskProjectId, setCreateTaskProjectId] = useState("");
@@ -177,14 +200,14 @@ export function useAgencyTaskChooser(
 
   const chooserTasks = useMemo(() => {
     const seen = new Set<string>();
-    return tasks.filter((task) => {
+    return taskCatalog.filter((task) => {
       if (task.status === "archived") return false;
       if (filterProjectId && task.projectId !== filterProjectId) return false;
       if (seen.has(task.id)) return false;
       seen.add(task.id);
       return true;
     });
-  }, [tasks, filterProjectId]);
+  }, [taskCatalog, filterProjectId]);
 
   const chooserProjects = useMemo(() => {
     if (!filterProjectId) return projects;
@@ -197,8 +220,8 @@ export function useAgencyTaskChooser(
   );
 
   const selectedTask = useMemo(
-    () => tasks.find((task) => task.id === value) ?? null,
-    [tasks, value],
+    () => taskCatalog.find((task) => task.id === value) ?? null,
+    [taskCatalog, value],
   );
 
   const selectedProject = useMemo(
@@ -231,8 +254,9 @@ export function useAgencyTaskChooser(
   );
 
   const bestMatchTask = useMemo(
-    () => (bestMatchTaskId ? (tasks.find((task) => task.id === bestMatchTaskId) ?? null) : null),
-    [bestMatchTaskId, tasks],
+    () =>
+      bestMatchTaskId ? (taskCatalog.find((task) => task.id === bestMatchTaskId) ?? null) : null,
+    [bestMatchTaskId, taskCatalog],
   );
 
   useEffect(() => {
@@ -454,7 +478,7 @@ export function useAgencyTaskChooser(
     value,
     teamId,
     disabled,
-    loading,
+    loading: loading || (chooserTasksQuery.isPending && taskCatalog.length === 0),
     placeholder,
     required,
     searchPlaceholder,
@@ -483,6 +507,9 @@ export function useAgencyTaskChooser(
     onToggleClient: handleToggleClient,
     onToggleProjectFavorite: handleToggleProjectFavorite,
     onToggleTaskFavorite: handleToggleTaskFavorite,
+    hasMoreTasks: Boolean(chooserTasksQuery.hasNextPage),
+    loadingMoreTasks: chooserTasksQuery.isFetchingNextPage,
+    onLoadMoreTasks: () => void chooserTasksQuery.fetchNextPage(),
     highlightSearch,
     bestMatchTaskId: bestMatchTaskId || null,
     activeOptionKey,

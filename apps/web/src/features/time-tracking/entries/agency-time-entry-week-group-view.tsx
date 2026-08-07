@@ -39,6 +39,23 @@ type AgencyTimeEntryWeekGroupViewProps = {
   wastePending?: boolean;
 };
 
+export function AgencyTimeEntryWeekHeaderView({
+  label,
+  totalSeconds,
+}: Pick<TimeEntryWeekGroup, "label" | "totalSeconds">) {
+  return (
+    <header className={agencyTimeWeekGroupHeaderClass}>
+      <h2 className={agencyWorkWeekLabelClass}>{label}</h2>
+      <p className={cn("inline-flex items-baseline gap-2", agencyWorkWeekLabelClass)}>
+        <span>Week total:</span>
+        <span className={cn("font-mono tabular-nums", agencyWorkWeekLabelClass)}>
+          {formatDuration(totalSeconds, "clock")}
+        </span>
+      </p>
+    </header>
+  );
+}
+
 export function AgencyTimeEntryWeekGroupView({
   teamId,
   week,
@@ -64,15 +81,7 @@ export function AgencyTimeEntryWeekGroupView({
 }: AgencyTimeEntryWeekGroupViewProps) {
   return (
     <section className={agencyTimeWeekGroupClass}>
-      <header className={agencyTimeWeekGroupHeaderClass}>
-        <h2 className={agencyWorkWeekLabelClass}>{week.label}</h2>
-        <p className={cn("inline-flex items-baseline gap-2", agencyWorkWeekLabelClass)}>
-          <span>Week total:</span>
-          <span className={cn("font-mono tabular-nums", agencyWorkWeekLabelClass)}>
-            {formatDuration(week.totalSeconds, "clock")}
-          </span>
-        </p>
-      </header>
+      <AgencyTimeEntryWeekHeaderView label={week.label} totalSeconds={week.totalSeconds} />
 
       <div className={agencyTimeWeekGroupBodyClass}>
         {week.days.map((day) => (

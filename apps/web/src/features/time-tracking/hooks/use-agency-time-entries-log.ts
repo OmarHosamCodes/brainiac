@@ -1,3 +1,4 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -12,9 +13,11 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
 import {
+  flattenTimeEntryWeeksForVirtualization,
   groupEntriesByWeek,
   type CollapsedEntryGroup,
   type TimeEntryWeekGroup,
+  type VirtualTimeEntryDay,
 } from "@/features/time-tracking/group-time-entries";
 import {
   draftToIsoRange,
@@ -34,6 +37,10 @@ import type { AgencyDayBulkDraft } from "@/features/time-tracking/entries/agency
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500] as const;
 const HIGHLIGHT_CLEAR_MS = 2_500;
+const ESTIMATED_ENTRY_ROW_HEIGHT = 56;
+const ESTIMATED_DAY_HEADER_HEIGHT = 48;
+const WEEK_HEADER_HEIGHT = 40;
+const DAY_GAP = 20;
 
 type UseAgencyTimeEntriesLogOptions = {
   teamId: string;
@@ -48,6 +55,10 @@ export type AgencyTimeEntriesLogViewModel = {
   isLoading: boolean;
   entriesEmpty: boolean;
   weekGroups: TimeEntryWeekGroup[];
+  virtualDays: VirtualTimeEntryDay[];
+  virtualItems: Array<{ index: number; key: string | number | bigint; start: number }>;
+  virtualTotalSize: number;
+  measureVirtualDay: (element: HTMLDivElement | null) => void;
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
   tags: AgencyTagOption[];
@@ -175,6 +186,30 @@ export function useAgencyTimeEntriesLog({
       return { ...week, days, totalSeconds: summary.totalSeconds };
     });
   }, [entries, weekSummaries, weekSummary, workSchedule.weekStartsOn]);
+  const virtualDays = useMemo(
+    () => flattenTimeEntryWeeksForVirtualization(weekGroups),
+    [weekGroups],
+  );
+  const virtualizer = useVirtualizer({
+    count: virtualDays.length,
+    getScrollElement: () => scrollContainerRef.current,
+    getItemKey: (index) => virtualDays[index]?.key ?? index,
+    estimateSize: (index) => {
+      const item = virtualDays[index];
+      if (!item) return ESTIMATED_DAY_HEADER_HEIGHT + ESTIMATED_ENTRY_ROW_HEIGHT + DAY_GAP;
+      const displayGroupCount =
+        bulkEditDayKey === item.day.dateKey
+          ? item.day.groups.reduce((count, group) => count + group.entries.length, 0)
+          : item.day.groups.length;
+      return (
+        (item.week ? WEEK_HEADER_HEIGHT : 0) +
+        ESTIMATED_DAY_HEADER_HEIGHT +
+        displayGroupCount * ESTIMATED_ENTRY_ROW_HEIGHT +
+        DAY_GAP
+      );
+    },
+    overscan: 3,
+  });
 
   const maxPage = useMemo(() => {
     if (pageSize <= 0) return 1;
@@ -195,19 +230,28 @@ export function useAgencyTimeEntriesLog({
   useEffect(() => {
     if (!lastHighlightedEntryId) return;
 
-    const row = scrollContainerRef.current?.querySelector(
-      `[data-entry-id="${lastHighlightedEntryId}"]`,
+    const virtualDayIndex = virtualDays.findIndex((item) =>
+      item.day.groups.some((group) =>
+        group.entries.some((entry) => entry.id === lastHighlightedEntryId),
+      ),
     );
-    if (row) {
-      row.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
+    if (virtualDayIndex >= 0) virtualizer.scrollToIndex(virtualDayIndex, { align: "auto" });
+
+    const frame = requestAnimationFrame(() => {
+      scrollContainerRef.current
+        ?.querySelector(`[data-entry-id="${lastHighlightedEntryId}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
 
     const clearHandle = setTimeout(() => {
       clearHighlightedEntry();
     }, HIGHLIGHT_CLEAR_MS);
 
-    return () => clearTimeout(clearHandle);
-  }, [lastHighlightedEntryId, clearHighlightedEntry, entries]);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(clearHandle);
+    };
+  }, [lastHighlightedEntryId, clearHighlightedEntry, entries, virtualDays, virtualizer]);
 
   const logQueryError = entriesQuery.error ?? projectsQuery.error ?? null;
 
@@ -436,6 +480,10 @@ export function useAgencyTimeEntriesLog({
     isLoading: entriesQuery.isPending && entries.length === 0,
     entriesEmpty: entries.length === 0,
     weekGroups,
+    virtualDays,
+    virtualItems: virtualizer.getVirtualItems(),
+    virtualTotalSize: virtualizer.getTotalSize(),
+    measureVirtualDay: virtualizer.measureElement,
     projects,
     tasks,
     tags,
