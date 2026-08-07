@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 
 import {
   agencyLabelClass,
@@ -115,16 +115,19 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
                 <button
                   type="button"
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-elevated/50",
+                    "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-elevated/50 motion-reduce:transition-none",
                     open && "bg-elevated/40",
                   )}
+                  aria-expanded={open}
                   onClick={() => viewModel.onSelectSection(open ? null : section.id)}
                 >
-                  {open ? (
-                    <ChevronDown className="size-4 shrink-0 text-muted" aria-hidden />
-                  ) : (
-                    <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
-                  )}
+                  <ChevronDown
+                    className={cn(
+                      "size-4 shrink-0 text-muted transition-transform duration-150 ease-out motion-reduce:transition-none",
+                      open ? "rotate-0" : "-rotate-90",
+                    )}
+                    aria-hidden
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-highlighted">{section.title}</p>
                     <p className="truncate text-[11px] text-muted">
@@ -137,7 +140,7 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
                 </button>
 
                 {open && selected ? (
-                  <div className="border-t border-default px-3 py-3">
+                  <div className="border-t border-default px-3 py-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-180">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <p className={cn(agencyLabelClass, "text-muted")}>
                         {selected.key === "salaries" ? "Estimated from hours × cost rate" : "Lines"}
@@ -193,7 +196,7 @@ export function MoneyPayoutRunView({ viewModel }: { viewModel: MoneyPayoutRunVie
                               {group.lines.map((line) => (
                                 <li
                                   key={line.id}
-                                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-elevated/40"
+                                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-elevated/40 motion-reduce:transition-none"
                                 >
                                   <div className="min-w-0 flex-1">
                                     <p className="truncate text-sm text-highlighted">

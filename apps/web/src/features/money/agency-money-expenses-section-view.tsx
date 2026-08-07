@@ -32,7 +32,6 @@ import { Textarea } from "@/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-import { MoneyListGhostPreview } from "./agency-money-shared-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 
 type ExpensesGroupViewModel =
@@ -98,14 +97,12 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
             <ExpensesGroup
               group={expenses.upcoming}
               icon={<CalendarClock className="size-4 text-muted" aria-hidden />}
-              ghostRows={2}
               onOpenDetails={expenses.onOpenDetails}
             />
             <div className="mx-5 border-t border-default" />
             <ExpensesGroup
               group={expenses.recent}
               icon={<History className="size-4 text-muted" aria-hidden />}
-              ghostRows={2}
               grow
               onOpenDetails={expenses.onOpenDetails}
             />
@@ -405,13 +402,11 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
 function ExpensesGroup({
   group,
   icon,
-  ghostRows,
   grow,
   onOpenDetails,
 }: {
   group: ExpensesGroupViewModel;
   icon: ReactNode;
-  ghostRows: number;
   grow?: boolean;
   onOpenDetails: () => void;
 }) {
@@ -438,7 +433,7 @@ function ExpensesGroup({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  className="size-7 rounded-lg text-muted"
+                  className="size-7 rounded-lg text-muted transition-colors duration-150 hover:text-highlighted motion-reduce:transition-none"
                   onClick={onOpenDetails}
                   aria-label={`View all expenses from ${group.title}`}
                 >
@@ -456,7 +451,7 @@ function ExpensesGroup({
           {group.items.map((item) => (
             <li
               key={item.id}
-              className="flex items-start gap-3 rounded-xl border border-default bg-elevated/30 px-3 py-2.5"
+              className="flex items-start gap-3 rounded-xl border border-default bg-elevated/30 px-3 py-2.5 transition-colors duration-150 hover:bg-elevated/50 motion-reduce:transition-none"
             >
               <span className="mt-0.5 size-7 shrink-0 rounded-full bg-muted/40" aria-hidden />
               <div className="min-w-0 flex-1">
@@ -475,15 +470,9 @@ function ExpensesGroup({
           ))}
         </ul>
       ) : (
-        <div className="relative flex flex-col">
-          <MoneyListGhostPreview rows={ghostRows} />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-linear-to-b from-default to-transparent" />
-          <div className="relative z-10 -mt-1 flex items-start gap-3 rounded-2xl border border-default bg-default px-3.5 py-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-highlighted">{group.emptyTitle}</p>
-              <p className="mt-0.5 text-xs text-muted text-balance">{group.emptyBody}</p>
-            </div>
-          </div>
+        <div className="rounded-2xl border border-dashed border-default px-3.5 py-4">
+          <p className="text-sm font-semibold text-highlighted">{group.emptyTitle}</p>
+          <p className="mt-0.5 text-xs text-muted text-balance">{group.emptyBody}</p>
         </div>
       )}
     </div>
