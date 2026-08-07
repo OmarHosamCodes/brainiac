@@ -43,11 +43,16 @@ function MoneySettingsDialog({
         <DialogTitle className="sr-only">{settings.title}</DialogTitle>
         <DialogDescription className="sr-only">{settings.description}</DialogDescription>
 
-        <div className="flex h-[min(36rem,90vh)] overflow-hidden">
+        <div
+          className={cn(
+            "flex overflow-hidden",
+            editingFormula ? "h-[min(40rem,92vh)]" : "h-[min(36rem,90vh)]",
+          )}
+        >
           <nav
             className={cn(
               "flex w-48 shrink-0 flex-col gap-1 overflow-y-auto border-r border-border bg-muted/30 p-3",
-              editingFormula && "hidden sm:flex",
+              editingFormula && "hidden",
             )}
             aria-label="Money settings sections"
           >

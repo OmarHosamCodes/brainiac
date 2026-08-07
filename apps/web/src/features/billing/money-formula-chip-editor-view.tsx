@@ -1,3 +1,4 @@
+import { type ReactNode } from "react";
 import { ArrowLeft, Lock, X } from "lucide-react";
 
 import { agencyMetricClass } from "@/features/shared/agency-ui";
@@ -48,7 +49,7 @@ function Chip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md px-2 py-1 font-mono text-xs transition-colors duration-150 ease-out motion-reduce:transition-none",
+        "group/chip inline-flex items-center gap-0.5 rounded-md py-1 pr-0.5 pl-2 font-mono text-xs transition-colors duration-150 ease-out motion-reduce:transition-none",
         isVar && "bg-muted text-foreground",
         isOp &&
           "min-w-7 justify-center border border-border bg-background px-2 text-muted-foreground",
@@ -58,7 +59,7 @@ function Chip({
       {moneyFormulaTokenLabel(token)}
       <button
         type="button"
-        className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+        className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground opacity-50 transition-opacity duration-150 ease-out hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 motion-reduce:transition-none sm:opacity-0 sm:group-hover/chip:opacity-70 sm:group-focus-within/chip:opacity-70"
         onClick={onRemove}
         disabled={disabled}
         aria-label={`Remove ${moneyFormulaTokenLabel(token)}`}
@@ -88,7 +89,7 @@ function PaletteButton({
       size="sm"
       variant="ghost"
       className={cn(
-        "h-7 border border-border/70 bg-background px-2 text-[11px] text-foreground hover:bg-muted",
+        "h-7 border border-border/60 bg-background px-2 text-[11px] text-foreground transition-colors duration-150 ease-out hover:bg-muted motion-reduce:transition-none",
         mono && "font-mono",
         compact && "w-8 px-0",
       )}
@@ -97,6 +98,15 @@ function PaletteButton({
     >
       {label}
     </Button>
+  );
+}
+
+function PaletteSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <div className="flex flex-wrap gap-1.5">{children}</div>
+    </div>
   );
 }
 
@@ -138,7 +148,7 @@ export function MoneyFormulaChipEditorView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-col gap-3 pb-4">
+      <header className="flex shrink-0 flex-col gap-2.5 pb-3">
         {onBack ? (
           <Button
             type="button"
@@ -159,7 +169,7 @@ export function MoneyFormulaChipEditorView({
                 <Lock className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
               ) : null}
               {formula.locked ? (
-                <h2 className="text-xl font-semibold tracking-tight text-foreground text-balance">
+                <h2 className="text-xl font-semibold tracking-tight text-balance text-foreground">
                   {formula.label}
                 </h2>
               ) : (
@@ -183,7 +193,7 @@ export function MoneyFormulaChipEditorView({
                 : "Compose the amount. Who receives it stays in Rules."}
             </p>
           </div>
-          <label className="flex shrink-0 items-center gap-2.5 pt-1 text-sm text-foreground">
+          <label className="inline-flex shrink-0 items-center gap-2 pt-1 text-xs font-medium text-foreground">
             <Checkbox
               checked={formula.enabled}
               onCheckedChange={(checked) => onChange({ ...formula, enabled: checked === true })}
@@ -193,85 +203,64 @@ export function MoneyFormulaChipEditorView({
             Enabled
           </label>
         </div>
+      </header>
 
-        <div
-          className={cn(
-            "overflow-hidden rounded-lg border",
-            validationError ? "border-destructive/60" : "border-border",
-          )}
-        >
-          <div className="flex items-baseline justify-between gap-2 border-b border-border/70 px-3 pt-2.5 pb-1.5">
-            <Label id="money-formula-expression-label" className="text-xs text-muted-foreground">
-              Expression
-            </Label>
-          </div>
-          <div
-            role="list"
-            aria-labelledby="money-formula-expression-label"
-            className="flex min-h-12 flex-wrap items-center gap-1.5 bg-background px-3 py-2.5"
-          >
-            {formula.tokens.length === 0 ? (
-              <span className="text-sm text-muted-foreground">
-                Add a period value, then math and numbers
-              </span>
-            ) : (
-              formula.tokens.map((token, index) =>
-                token.kind === "number" ? (
-                  <span
-                    key={`${token.kind}-${index}`}
-                    role="listitem"
-                    className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/50 px-1.5 py-0.5 font-mono text-xs"
-                  >
-                    <Input
-                      type="number"
-                      value={token.value}
-                      onChange={(event) => updateNumberAt(index, Number(event.target.value) || 0)}
-                      disabled={isSaving}
-                      className="h-6 w-20 border-0 bg-transparent px-1 py-0 font-mono text-xs shadow-none focus-visible:ring-0"
-                      aria-label={`Number chip ${index + 1}`}
-                    />
-                    <button
-                      type="button"
-                      className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-sm p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      onClick={() => removeTokenAt(index)}
-                      disabled={isSaving}
-                      aria-label={`Remove number ${token.value}`}
-                    >
-                      <X className="size-3" aria-hidden />
-                    </button>
-                  </span>
-                ) : (
-                  <span key={`${token.kind}-${index}`} role="listitem">
-                    <Chip token={token} onRemove={() => removeTokenAt(index)} disabled={isSaving} />
-                  </span>
-                ),
-              )
-            )}
-          </div>
-          <div
-            className="flex items-center justify-between gap-3 border-t border-border/70 bg-muted/30 px-3.5 py-2.5"
-            aria-live="polite"
-            aria-busy={previewPending}
-          >
-            <p className="text-xs text-muted-foreground">This period</p>
-            <p
-              className={cn(
-                agencyMetricClass,
-                "shrink-0 text-right text-base font-semibold tracking-tight transition-opacity duration-150 ease-out motion-reduce:transition-none",
-                previewPending && "opacity-70",
-              )}
-            >
-              {previewPending ? "Computing…" : previewLabel}
-            </p>
-          </div>
+      <div
+        className={cn(
+          "flex shrink-0 flex-col overflow-hidden rounded-xl border bg-muted/20",
+          validationError ? "border-destructive/60" : "border-border",
+        )}
+      >
+        <div className="flex items-baseline justify-between gap-2 px-3.5 pt-2.5 pb-1">
+          <Label id="money-formula-expression-label" className="text-xs text-muted-foreground">
+            Expression
+          </Label>
         </div>
-        {validationError ? (
-          <p className="text-xs text-destructive" role="alert">
-            {validationError}
-          </p>
-        ) : null}
+        <div
+          role="list"
+          aria-labelledby="money-formula-expression-label"
+          className="flex max-h-28 min-h-11 flex-wrap items-center gap-1.5 overflow-y-auto overscroll-contain bg-background/60 px-3.5 py-2.5"
+        >
+          {formula.tokens.length === 0 ? (
+            <span className="text-sm text-muted-foreground">
+              Add a period value, then math and numbers
+            </span>
+          ) : (
+            formula.tokens.map((token, index) =>
+              token.kind === "number" ? (
+                <span
+                  key={`${token.kind}-${index}`}
+                  role="listitem"
+                  className="group/chip inline-flex items-center gap-0.5 rounded-md border border-border/70 bg-muted/50 py-0.5 pr-0.5 pl-1.5 font-mono text-xs"
+                >
+                  <Input
+                    type="number"
+                    value={token.value}
+                    onChange={(event) => updateNumberAt(index, Number(event.target.value) || 0)}
+                    disabled={isSaving}
+                    className="h-6 w-20 border-0 bg-transparent px-1 py-0 font-mono text-xs shadow-none focus-visible:ring-0"
+                    aria-label={`Number chip ${index + 1}`}
+                  />
+                  <button
+                    type="button"
+                    className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground opacity-50 transition-opacity duration-150 ease-out hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:opacity-0 sm:group-hover/chip:opacity-70 sm:group-focus-within/chip:opacity-70"
+                    onClick={() => removeTokenAt(index)}
+                    disabled={isSaving}
+                    aria-label={`Remove number ${token.value}`}
+                  >
+                    <X className="size-3" aria-hidden />
+                  </button>
+                </span>
+              ) : (
+                <span key={`${token.kind}-${index}`} role="listitem">
+                  <Chip token={token} onRemove={() => removeTokenAt(index)} disabled={isSaving} />
+                </span>
+              ),
+            )
+          )}
+        </div>
 
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1 border-t border-border/70 px-3 py-2">
           <span className="mr-1 text-[11px] font-medium text-muted-foreground">Math</span>
           {MONEY_FORMULA_OPS.map((item) => (
             <PaletteButton
@@ -300,35 +289,52 @@ export function MoneyFormulaChipEditorView({
             onClick={() => appendToken({ kind: "number", value: 0 })}
           />
         </div>
+
+        <div
+          className="flex items-center justify-between gap-3 border-t border-border/70 bg-muted/40 px-3.5 py-3"
+          aria-live="polite"
+          aria-busy={previewPending}
+        >
+          <p className="text-xs text-muted-foreground">This period</p>
+          <p
+            className={cn(
+              agencyMetricClass,
+              "shrink-0 text-right text-lg font-semibold tracking-tight transition-opacity duration-150 ease-out motion-reduce:transition-none",
+              previewPending && "opacity-70",
+            )}
+          >
+            {previewPending ? "Computing…" : previewLabel}
+          </p>
+        </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pr-1 pb-2">
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-muted-foreground">Period values</p>
-          <div className="flex flex-wrap gap-1">
-            {periodVars.map((item) => (
-              <PaletteButton
-                key={item.id}
-                label={item.label}
-                disabled={isSaving}
-                onClick={() => appendToken({ kind: "var", id: item.id })}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-muted-foreground">Member values</p>
-          <div className="flex flex-wrap gap-1">
-            {memberVars.map((item) => (
-              <PaletteButton
-                key={item.id}
-                label={item.label}
-                disabled={isSaving}
-                onClick={() => appendToken({ kind: "var", id: item.id })}
-              />
-            ))}
-          </div>
-        </div>
+      {validationError ? (
+        <p className="mt-2 text-xs text-destructive" role="alert">
+          {validationError}
+        </p>
+      ) : null}
+
+      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain pr-1 pb-1">
+        <PaletteSection title="Period values">
+          {periodVars.map((item) => (
+            <PaletteButton
+              key={item.id}
+              label={item.label}
+              disabled={isSaving}
+              onClick={() => appendToken({ kind: "var", id: item.id })}
+            />
+          ))}
+        </PaletteSection>
+        <PaletteSection title="Member values">
+          {memberVars.map((item) => (
+            <PaletteButton
+              key={item.id}
+              label={item.label}
+              disabled={isSaving}
+              onClick={() => appendToken({ kind: "var", id: item.id })}
+            />
+          ))}
+        </PaletteSection>
 
         {formula.locked ? null : (
           <div className="grid gap-3 sm:grid-cols-3">
@@ -405,7 +411,7 @@ export function MoneyFormulaChipEditorView({
         )}
       </div>
 
-      <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border bg-background pt-4">
+      <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border pt-4">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSaving}>
           Cancel
         </Button>
