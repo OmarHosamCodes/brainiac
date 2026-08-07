@@ -182,11 +182,12 @@ export async function queryDailyProjectBuckets(
 export async function queryLatestCompletedEntryByMember(
   filters: ReturnType<typeof buildReportEntryFilters>,
 ) {
+  // Subquery must alias both `name` columns — Postgres rejects duplicate names in FROM.
   const ranked = db
     .select({
       userEmail: user.email,
-      projectName: agencyOpsProject.name,
-      clientName: agencyOpsClient.name,
+      projectName: sql<string>`${agencyOpsProject.name}`.as("project_name"),
+      clientName: sql<string>`${agencyOpsClient.name}`.as("client_name"),
       description: agencyOpsTimeEntry.description,
       startedAt: agencyOpsTimeEntry.startedAt,
       rn: sql<number>`row_number() over (partition by ${user.email} order by ${agencyOpsTimeEntry.startedAt} desc)`.as(
