@@ -1,14 +1,10 @@
 import { AlertTriangle, BarChart2 } from "lucide-react";
 
 import { AgencyReportsTable } from "@/features/reports/agency-reports-table";
+import { AgencyHourBreakdownCompactStrip } from "@/features/shared/agency-hour-breakdown-compact-strip";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
-import {
-  agencyEmptyPanelClass,
-  agencyErrorPanelClass,
-  agencyMetricClass,
-} from "@/features/shared/agency-ui";
-import { formatDuration } from "@/lib/utils/format-duration";
+import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/features/shared/agency-ui";
 import type { AgencyReportsSurfaceViewModel } from "./hooks/use-agency-reports-surface";
 
 export type AgencyReportsSurfaceViewProps = {
@@ -69,14 +65,13 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
 
   return (
     <div className="space-y-4">
-      <p className="px-1 text-xs text-muted">
-        Total in filtered range{" "}
-        <span className={agencyMetricClass}>{formatDuration(vm.totalSeconds, "clock")}</span>
-        {" − "}
-        <span className={agencyMetricClass}>{formatDuration(vm.wasteSeconds, "clock")}</span> waste
-        {" = "}
-        <span className={agencyMetricClass}>{formatDuration(vm.paidSeconds, "clock")}</span> paid
-      </p>
+      <AgencyHourBreakdownCompactStrip
+        totalSeconds={vm.totalSeconds}
+        externalSeconds={vm.totalSeconds}
+        internalSeconds={0}
+        internalBillableSeconds={0}
+        paidSeconds={vm.paidSeconds}
+      />
       <AgencyReportsTable
         teamId={vm.teamId}
         entries={vm.entries}
