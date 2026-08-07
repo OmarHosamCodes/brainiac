@@ -124,20 +124,30 @@ function BillMetricCell({
   value,
   valueClassName,
   align = "start",
+  showLabel = true,
 }: {
   label: string;
   value: string;
   valueClassName?: string;
   align?: "start" | "end";
+  showLabel?: boolean;
 }) {
   return (
-    <div className={cn("min-w-0 px-1.5 py-2 sm:px-3", align === "end" && "text-end")}>
-      <div className="text-[0.6875rem] font-medium text-muted">{label}</div>
+    <div
+      className={cn(
+        "min-w-0 px-1.5 sm:px-3",
+        showLabel ? "py-2" : "flex items-center justify-end py-1.5",
+        align === "end" && "text-end",
+      )}
+    >
+      {showLabel ? <div className="text-[0.6875rem] font-medium text-muted">{label}</div> : null}
       <div
         className={cn(
-          "mt-1 truncate font-mono text-xs font-medium tabular-nums text-highlighted",
+          "truncate font-mono text-xs font-medium tabular-nums text-highlighted",
+          showLabel && "mt-1",
           valueClassName,
         )}
+        aria-label={showLabel ? undefined : `${label} ${value}`}
       >
         {value}
       </div>
@@ -155,6 +165,8 @@ function BillMetricGrid({
   receivedTitle = "Received",
   ariaLabel,
   compact = false,
+  showLabels = true,
+  showWasteColumn = true,
 }: {
   totalLabel: string;
   receivedLabel: string;
@@ -165,31 +177,50 @@ function BillMetricGrid({
   receivedTitle?: string;
   ariaLabel: string;
   compact?: boolean;
+  showLabels?: boolean;
+  /** When false, omit the Waste column entirely (section has no waste). */
+  showWasteColumn?: boolean;
 }) {
-  const showWaste = wasteAmount > 0;
+  const hasWaste = wasteAmount > 0;
   const remainingUrgent = remainingAmount > 0;
   return (
     <div
       className={cn(
-        "grid min-w-0 grid-cols-4 divide-x divide-border overflow-hidden rounded-lg border border-default bg-elevated/30",
+        "grid min-w-0 divide-x divide-border overflow-hidden rounded-lg border border-default bg-elevated/30",
+        showWasteColumn ? "grid-cols-4" : "grid-cols-3",
         compact && "bg-transparent",
+        !showLabels && "border-transparent bg-transparent",
       )}
       aria-label={ariaLabel}
     >
-      <BillMetricCell label="Total" value={totalLabel} align="end" />
-      <BillMetricCell label={receivedTitle} value={receivedLabel} align="end" />
+      <BillMetricCell
+        label="Total"
+        value={totalLabel}
+        align="end"
+        showLabel={showLabels}
+      />
+      <BillMetricCell
+        label={receivedTitle}
+        value={receivedLabel}
+        align="end"
+        showLabel={showLabels}
+      />
       <BillMetricCell
         label="Remaining"
         value={remainingLabel}
         align="end"
+        showLabel={showLabels}
         valueClassName={remainingUrgent ? "text-warning" : "text-muted"}
       />
-      <BillMetricCell
-        label="Waste"
-        value={showWaste ? wasteLabel : "—"}
-        align="end"
-        valueClassName={showWaste ? "text-destructive/80" : "text-muted"}
-      />
+      {showWasteColumn ? (
+        <BillMetricCell
+          label="Waste"
+          value={hasWaste ? wasteLabel : "—"}
+          align="end"
+          showLabel={showLabels}
+          valueClassName={hasWaste ? "text-destructive/80" : "text-muted"}
+        />
+      ) : null}
     </div>
   );
 }
@@ -315,6 +346,8 @@ function BillObligationLineRow({
   line,
   searchTerm,
   isMutationPending,
+  showWasteColumn,
+  showMetricLabels,
   onOpenPreviewLine,
   onOpenAdjustLine,
 }: {
@@ -322,6 +355,8 @@ function BillObligationLineRow({
   line: MoneyBillObligationLine;
   searchTerm: string;
   isMutationPending: boolean;
+  showWasteColumn: boolean;
+  showMetricLabels: boolean;
   onOpenPreviewLine: (group: MoneyBillPersonGroup, line: MoneyBillObligationLine) => void;
   onOpenAdjustLine: (group: MoneyBillPersonGroup, line: MoneyBillObligationLine) => void;
 }) {
@@ -329,7 +364,7 @@ function BillObligationLineRow({
   return (
     <li
       className={cn(
-        "group/line grid items-center gap-3 px-3 py-2.5 transition-colors hover:bg-elevated/30 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto]",
+        "group/line grid items-center gap-3 px-3 py-2 transition-colors hover:bg-elevated/30 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto]",
         line.isCarry && "bg-elevated/20",
       )}
     >
@@ -365,6 +400,8 @@ function BillObligationLineRow({
         receivedTitle={receivedTitle}
         ariaLabel={`${line.subtitle} money breakdown`}
         compact
+        showLabels={showMetricLabels}
+        showWasteColumn={showWasteColumn}
       />
       <div className="flex shrink-0 items-center justify-end gap-0.5">
         <BillIconAction
@@ -392,6 +429,8 @@ function BillPersonGroupCard({
   group,
   searchTerm,
   isMutationPending,
+  showWasteColumn,
+  showMetricLabels = true,
   onOpenClient,
   onOpenMember,
   onOpenPreview,
@@ -402,6 +441,8 @@ function BillPersonGroupCard({
   group: MoneyBillPersonGroup;
   searchTerm: string;
   isMutationPending: boolean;
+  showWasteColumn: boolean;
+  showMetricLabels?: boolean;
   onOpenClient: (clientId: string) => void;
   onOpenMember: (userId: string) => void;
   onOpenPreview: (group: MoneyBillPersonGroup) => void;
@@ -413,6 +454,7 @@ function BillPersonGroupCard({
   const receivedTitle = group.party === "team" ? "Paid" : "Received";
   const previewLabel = group.party === "team" ? "Preview payslip" : "Preview invoice";
   const priorLineCount = group.lines.filter((line) => line.isCarry).length;
+  const soleLine = group.lines.length === 1 ? group.lines[0] : null;
   const pendingAdjLabel =
     group.pendingAdjustmentCents !== 0
       ? formatMoneyAmount(Math.abs(group.pendingAdjustmentCents), group.currency)
@@ -423,33 +465,110 @@ function BillPersonGroupCard({
     else if (group.party === "team" && group.userId) onOpenMember(group.userId);
   }
 
+  const partyMark =
+    group.party === "team" ? (
+      <AgencyMemberAvatar
+        name={group.title}
+        userId={group.userId ?? group.id}
+        avatarUrl={group.userAvatar}
+        size="md"
+        className="size-9"
+      />
+    ) : hueId ? (
+      <BillClientMark title={group.title} hueId={hueId} />
+    ) : null;
+
+  const partyTitle = (
+    <button
+      type="button"
+      onClick={onOpenParty}
+      className={cn(
+        "min-w-0 truncate text-left text-sm font-medium text-highlighted hover:underline",
+        agencyFocusRingClass,
+        "rounded-sm",
+      )}
+    >
+      <AgencySearchHighlight text={group.title} query={searchTerm} />
+    </button>
+  );
+
+  // Single obligation: one row. Parent+child grids were identical and doubled scan cost.
+  if (soleLine) {
+    return (
+      <li className="group overflow-hidden">
+        <div
+          className={cn(
+            "grid items-center gap-3 px-3 py-3 transition-colors hover:bg-elevated/30 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto]",
+            soleLine.isCarry && "bg-elevated/20",
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            {partyMark}
+            <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                {partyTitle}
+                <span
+                  className={cn(
+                    "inline-flex h-5 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
+                    mergedBillStatusChipClass(soleLine.statusLabel),
+                  )}
+                >
+                  {soleLine.statusLabel}
+                </span>
+              </div>
+              <p className="mt-0.5 truncate text-xs text-muted">
+                <AgencySearchHighlight text={soleLine.subtitle} query={searchTerm} />
+                {pendingAdjLabel ? (
+                  <>
+                    <span aria-hidden> · </span>
+                    {group.pendingAdjustmentCents > 0 ? "+" : "−"}
+                    {pendingAdjLabel} pending
+                  </>
+                ) : null}
+              </p>
+            </div>
+          </div>
+          <BillMetricGrid
+            totalLabel={soleLine.totalLabel}
+            receivedLabel={soleLine.receivedLabel}
+            remainingLabel={soleLine.remainingLabel}
+            wasteLabel={soleLine.wasteLabel}
+            wasteAmount={soleLine.wasteAmount}
+            remainingAmount={soleLine.remainingAmount}
+            receivedTitle={receivedTitle}
+            ariaLabel={`${group.title} money breakdown`}
+            showLabels={showMetricLabels}
+            showWasteColumn={showWasteColumn}
+          />
+          <div className="flex shrink-0 items-center justify-end gap-0.5">
+            <BillIconAction
+              label={previewLabel}
+              disabled={isMutationPending}
+              onClick={() => onOpenPreviewLine(group, soleLine)}
+            >
+              <FileText className="size-4" aria-hidden />
+            </BillIconAction>
+            <BillIconAction
+              label="Adjust"
+              disabled={isMutationPending}
+              quiet
+              onClick={() => onOpenAdjustLine(group, soleLine)}
+            >
+              <SlidersHorizontal className="size-4" aria-hidden />
+            </BillIconAction>
+          </div>
+        </div>
+      </li>
+    );
+  }
+
   return (
     <li className="group overflow-hidden">
       <div className="grid items-center gap-3 border-b border-default bg-default/40 px-3 py-3 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto]">
         <div className="flex min-w-0 items-center gap-3">
-          {group.party === "team" ? (
-            <AgencyMemberAvatar
-              name={group.title}
-              userId={group.userId ?? group.id}
-              avatarUrl={group.userAvatar}
-              size="md"
-              className="size-9"
-            />
-          ) : hueId ? (
-            <BillClientMark title={group.title} hueId={hueId} />
-          ) : null}
+          {partyMark}
           <div className="min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={onOpenParty}
-              className={cn(
-                "min-w-0 truncate text-left text-sm font-medium text-highlighted hover:underline",
-                agencyFocusRingClass,
-                "rounded-sm",
-              )}
-            >
-              <AgencySearchHighlight text={group.title} query={searchTerm} />
-            </button>
+            {partyTitle}
             <p className="mt-0.5 text-xs text-muted">
               <span className="font-mono tabular-nums">{group.openLabel}</span> open
               {priorLineCount > 0 ? (
@@ -477,6 +596,8 @@ function BillPersonGroupCard({
           remainingAmount={group.remainingAmount}
           receivedTitle={receivedTitle}
           ariaLabel={`${group.title} money breakdown`}
+          showLabels={showMetricLabels}
+          showWasteColumn={showWasteColumn}
         />
         <div className="flex shrink-0 items-center justify-end gap-0.5">
           <BillIconAction
@@ -504,6 +625,8 @@ function BillPersonGroupCard({
             line={line}
             searchTerm={searchTerm}
             isMutationPending={isMutationPending}
+            showWasteColumn={showWasteColumn}
+            showMetricLabels={false}
             onOpenPreviewLine={onOpenPreviewLine}
             onOpenAdjustLine={onOpenAdjustLine}
           />
@@ -714,63 +837,92 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
         ) : null}
 
         {!bills.isLoading && !bills.isError && bills.rows.length > 0 ? (
-          <div className="flex flex-col gap-4 px-4 pt-4" aria-label="Bill list">
+          <div className="flex flex-col gap-3 px-4 pt-4" aria-label="Bill list">
             {insight ? (
-              <div className="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-2">
-                <Receipt className="size-3.5 shrink-0 text-muted" aria-hidden />
-                <p className="text-xs text-muted">{insight}</p>
-              </div>
+              <p className="px-1 text-xs text-muted" aria-live="polite">
+                {insight}
+              </p>
             ) : null}
 
-            {sections.map((section) => (
-              <section key={section.id} className="flex flex-col gap-2" aria-label={section.title}>
-                {showSectionHeaders ? (
-                  <div className="flex items-baseline justify-between gap-2 px-1">
-                    <h3 className="text-sm font-medium text-highlighted">{section.title}</h3>
-                    <span className="text-xs text-muted">{section.hint}</span>
-                  </div>
-                ) : null}
-                {section.id === "adjustments" ? (
-                  <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
-                    {section.rows.map((row) => {
-                      if (row.kind !== "adjustment") return null;
-                      const pending = bills.pendingActionInvoiceId === row.id;
-                      return (
-                        <BillAdjustmentRow
-                          key={row.id}
-                          row={row}
-                          searchTerm={bills.searchTerm}
-                          pending={pending}
-                          isMutationPending={bills.isMutationPending}
-                          onOpenPayment={bills.onOpenPayment}
-                          onMarkPaid={bills.onMarkPaid}
-                        />
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
-                    {section.rows.map((row) => {
-                      if (row.kind !== "person-group") return null;
-                      return (
-                        <BillPersonGroupCard
-                          key={row.id}
-                          group={row}
-                          searchTerm={bills.searchTerm}
-                          isMutationPending={bills.isMutationPending}
-                          onOpenClient={bills.onOpenClient}
-                          onOpenMember={bills.onOpenMember}
-                          onOpenPreview={bills.onOpenPreview}
-                          onOpenPreviewLine={bills.onOpenPreviewLine}
-                          onOpenAdjust={bills.onOpenAdjust}
-                          onOpenAdjustLine={bills.onOpenAdjustLine}
-                        />
-                      );
-                    })}
-                  </ul>
-                )}
-              </section>
-            ))}
+            {sections.map((section) => {
+              const showWasteColumn = section.rows.some((row) => {
+                if (row.kind === "person-group") return row.wasteAmount > 0;
+                return false;
+              });
+              return (
+                <section key={section.id} className="flex flex-col gap-2" aria-label={section.title}>
+                  {showSectionHeaders ? (
+                    <div className="flex items-baseline justify-between gap-2 px-1">
+                      <h3 className="text-sm font-medium text-highlighted">{section.title}</h3>
+                      {!insight && section.hint ? (
+                        <span className="text-xs text-muted">{section.hint}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {section.id === "adjustments" ? (
+                    <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
+                      {section.rows.map((row) => {
+                        if (row.kind !== "adjustment") return null;
+                        const pending = bills.pendingActionInvoiceId === row.id;
+                        return (
+                          <BillAdjustmentRow
+                            key={row.id}
+                            row={row}
+                            searchTerm={bills.searchTerm}
+                            pending={pending}
+                            isMutationPending={bills.isMutationPending}
+                            onOpenPayment={bills.onOpenPayment}
+                            onMarkPaid={bills.onMarkPaid}
+                          />
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
+                      <li
+                        className="grid grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto] items-center gap-3 border-b border-default bg-elevated/20 px-3 py-1.5"
+                        aria-hidden
+                      >
+                        <span className="text-[0.6875rem] font-medium text-muted">Account</span>
+                        <div
+                          className={cn(
+                            "grid min-w-0 divide-x divide-border text-end text-[0.6875rem] font-medium text-muted",
+                            showWasteColumn ? "grid-cols-4" : "grid-cols-3",
+                          )}
+                        >
+                          <span className="px-1.5 sm:px-3">Total</span>
+                          <span className="px-1.5 sm:px-3">
+                            {section.id === "team" ? "Paid" : "Received"}
+                          </span>
+                          <span className="px-1.5 sm:px-3">Remaining</span>
+                          {showWasteColumn ? <span className="px-1.5 sm:px-3">Waste</span> : null}
+                        </div>
+                        <span className="w-18" />
+                      </li>
+                      {section.rows.map((row) => {
+                        if (row.kind !== "person-group") return null;
+                        return (
+                          <BillPersonGroupCard
+                            key={row.id}
+                            group={row}
+                            searchTerm={bills.searchTerm}
+                            isMutationPending={bills.isMutationPending}
+                            showWasteColumn={showWasteColumn}
+                            showMetricLabels={false}
+                            onOpenClient={bills.onOpenClient}
+                            onOpenMember={bills.onOpenMember}
+                            onOpenPreview={bills.onOpenPreview}
+                            onOpenPreviewLine={bills.onOpenPreviewLine}
+                            onOpenAdjust={bills.onOpenAdjust}
+                            onOpenAdjustLine={bills.onOpenAdjustLine}
+                          />
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
           </div>
         ) : null}
 
