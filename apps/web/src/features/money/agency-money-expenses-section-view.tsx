@@ -2,6 +2,12 @@ import { type FormEvent, type ReactNode } from "react";
 import { CalendarClock, History, List, Plus } from "lucide-react";
 
 import {
+  moneyExpensePeriodLabel,
+  type MoneyExpenseKind,
+  type MoneyExpensePeriod,
+} from "@/features/billing/money-expense-form";
+import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
+import {
   agencyErrorPanelClass,
   agencyFormFieldClass,
   agencyFormLabelClass,
@@ -11,10 +17,7 @@ import {
   agencyPanelClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
-import {
-  type MoneyExpenseKind,
-  type MoneyExpensePeriod,
-} from "@/features/billing/money-expense-form";
+import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
   Dialog,
@@ -27,6 +30,7 @@ import {
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Separator } from "@/ui/separator";
 import { Skeleton } from "@/ui/skeleton";
 import { Textarea } from "@/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
@@ -37,6 +41,18 @@ import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surfa
 type ExpensesGroupViewModel =
   | AgencyMoneySurfaceViewModel["expenses"]["upcoming"]
   | AgencyMoneySurfaceViewModel["expenses"]["recent"];
+
+function formatExpenseStartPreview(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return value;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["expenses"] }) {
   const create = expenses.create;
@@ -98,6 +114,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               group={expenses.upcoming}
               icon={<CalendarClock className="size-4 text-muted" aria-hidden />}
               onOpenDetails={expenses.onOpenDetails}
+              onOpenPayment={expenses.onOpenPayment}
             />
             <div className="mx-5 border-t border-default" />
             <ExpensesGroup
@@ -105,6 +122,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               icon={<History className="size-4 text-muted" aria-hidden />}
               grow
               onOpenDetails={expenses.onOpenDetails}
+              onOpenPayment={expenses.onOpenPayment}
             />
           </>
         )}
@@ -170,13 +188,15 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                                 {item.canRecordPayment ? (
                                   <>
                                     <span aria-hidden>·</span>
-                                    <button
+                                    <Button
                                       type="button"
-                                      className="font-medium text-highlighted underline-offset-2 hover:underline"
+                                      variant="link"
+                                      size="sm"
+                                      className="h-auto min-h-0 px-0 py-0 text-[11px]"
                                       onClick={() => expenses.onOpenPayment(item.id)}
                                     >
-                                      Record payment
-                                    </button>
+                                      {item.kind === "subscription" ? "Pay" : "Record payment"}
+                                    </Button>
                                   </>
                                 ) : null}
                               </div>
@@ -219,8 +239,20 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
 
       <Dialog open={create.open} onOpenChange={create.onOpenChange}>
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
-          <DialogHeader className="space-y-1 border-b border-default px-5 py-4 text-left">
-            <DialogTitle className="text-base font-bold text-highlighted">Add expense</DialogTitle>
+          <DialogHeader className="space-y-2 border-b border-default px-5 py-4 pr-14 text-left">
+            <div className="flex flex-wrap items-center gap-2">
+              <DialogTitle className="text-base font-bold text-highlighted">
+                Add expense
+              </DialogTitle>
+              <Badge variant="secondary">
+                {create.kind === "subscription" ? "Subscription" : "One-time"}
+              </Badge>
+            </div>
+            <DialogDescription className="text-xs text-muted">
+              {create.kind === "subscription"
+                ? "Recurring charge with a clear next due date"
+                : "Ops spend for this period"}
+            </DialogDescription>
           </DialogHeader>
 
           <form
@@ -270,29 +302,68 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               </div>
 
               {create.kind === "subscription" ? (
-                <div className={agencyFormFieldClass}>
-                  <Label htmlFor={`${create.formId}-period`} className={agencyFormLabelClass}>
-                    Period
-                  </Label>
-                  <Select
-                    value={create.period ?? undefined}
-                    onValueChange={(value) => create.onPeriodChange(value as MoneyExpensePeriod)}
-                  >
-                    <SelectTrigger
-                      id={`${create.formId}-period`}
-                      className="h-9 w-full rounded-xl border-default bg-default"
-                    >
-                      <SelectValue placeholder="Select period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {create.periodOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className={agencyFormFieldClass}>
+                      <Label htmlFor={`${create.formId}-period`} className={agencyFormLabelClass}>
+                        Period
+                      </Label>
+                      <Select
+                        value={create.period ?? undefined}
+                        onValueChange={(value) =>
+                          create.onPeriodChange(value as MoneyExpensePeriod)
+                        }
+                      >
+                        <SelectTrigger
+                          id={`${create.formId}-period`}
+                          className="h-9 w-full rounded-xl border-default bg-default"
+                        >
+                          <SelectValue placeholder="Select period" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {create.periodOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className={agencyFormFieldClass}>
+                      <Label
+                        htmlFor={`${create.formId}-starts-at`}
+                        className={agencyFormLabelClass}
+                      >
+                        Start date <span className="font-normal text-muted">(optional)</span>
+                      </Label>
+                      <MemberProfileDatePicker
+                        id={`${create.formId}-starts-at`}
+                        value={create.startsAt}
+                        onChange={create.onStartsAtChange}
+                        aria-label="Subscription start date"
+                        className="h-9 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  {create.startsAt ? (
+                    <div className="rounded-xl border border-default bg-muted/25 px-3 py-2.5 text-[11px] text-muted text-pretty">
+                      First due{" "}
+                      <span className="font-medium text-highlighted">
+                        {formatExpenseStartPreview(create.startsAt)}
+                      </span>
+                      {create.period ? (
+                        <> · then {moneyExpensePeriodLabel(create.period)?.toLowerCase()}</>
+                      ) : null}
+                      . After Pay, it stays hidden until the next due.
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted text-pretty">
+                      Add a start date to pin the first due date. Without one, the next due is one
+                      period from now.
+                    </p>
+                  )}
+                </>
               ) : null}
 
               <div className={agencyFormFieldClass}>
@@ -349,20 +420,39 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
 
       <Dialog open={payment.open} onOpenChange={payment.onOpenChange}>
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
-          <DialogHeader className="space-y-1 border-b border-default px-5 py-4 text-left">
-            <DialogTitle className="text-base font-bold text-highlighted">
-              Record expense payment
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted">
-              {payment.name}
-              {payment.remainingLabel ? ` · ${payment.remainingLabel} remaining` : null}
-            </DialogDescription>
+          <DialogHeader className="space-y-2 border-b border-default px-5 py-4 pr-14 text-left">
+            <div className="flex flex-wrap items-center gap-2">
+              <DialogTitle className="text-base font-bold text-highlighted">
+                {payment.kind === "subscription" ? "Pay subscription" : "Record payment"}
+              </DialogTitle>
+              {payment.kind === "subscription" ? (
+                <Badge variant="secondary">Advances next due</Badge>
+              ) : null}
+            </div>
+            <DialogDescription className="text-xs text-muted">{payment.name}</DialogDescription>
           </DialogHeader>
           <form
             id={payment.formId}
             onSubmit={(event: FormEvent<HTMLFormElement>) => payment.onSubmit(event)}
           >
             <div className="flex flex-col gap-4 px-5 py-4">
+              <div className="rounded-xl border border-default bg-muted/25 px-4 py-4 text-center">
+                <p className="text-xs text-muted">Remaining</p>
+                <p
+                  className={cn(
+                    agencyMetricClass,
+                    "mt-1 font-mono text-2xl font-semibold tabular-nums text-highlighted",
+                  )}
+                >
+                  {payment.remainingLabel || "—"}
+                </p>
+                {payment.kind === "subscription" ? (
+                  <p className="mt-2 text-[11px] text-muted text-pretty">
+                    Paying in full rolls the next due forward and hides this row until then.
+                  </p>
+                ) : null}
+              </div>
+              <Separator />
               <div className={agencyFormFieldClass}>
                 <Label htmlFor="money-expense-payment-amount" className={agencyFormLabelClass}>
                   Amount ({payment.currency})
@@ -372,6 +462,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                   inputMode="decimal"
                   value={payment.amount}
                   onChange={(event) => payment.onAmountChange(event.target.value)}
+                  autoFocus
                   className={cn(
                     "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
                     agencyInputPlaceholderClass,
@@ -389,7 +480,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={!payment.canSubmit} form={payment.formId}>
-                Record
+                {payment.kind === "subscription" ? "Pay" : "Record"}
               </Button>
             </DialogFooter>
           </form>
@@ -404,11 +495,13 @@ function ExpensesGroup({
   icon,
   grow,
   onOpenDetails,
+  onOpenPayment,
 }: {
   group: ExpensesGroupViewModel;
   icon: ReactNode;
   grow?: boolean;
   onOpenDetails: () => void;
+  onOpenPayment: (expenseId: string) => void;
 }) {
   const hasItems = group.items.length > 0;
 
@@ -461,7 +554,23 @@ function ExpensesGroup({
                     {item.amountLabel}
                   </span>
                 </div>
-                <p className="mt-0.5 truncate text-[11px] text-muted">{item.meta}</p>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
+                  <span className="truncate">{item.meta}</span>
+                  {item.canRecordPayment ? (
+                    <>
+                      <span aria-hidden>·</span>
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        className="h-auto min-h-0 shrink-0 px-0 py-0 text-[11px]"
+                        onClick={() => onOpenPayment(item.id)}
+                      >
+                        {item.kind === "subscription" ? "Pay" : "Record payment"}
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
                 {item.note ? (
                   <p className="mt-0.5 truncate text-xs text-muted">{item.note}</p>
                 ) : null}

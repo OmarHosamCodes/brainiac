@@ -8,7 +8,6 @@ import {
   agencyPanelClass,
   agencySectionTitleClass,
 } from "@/features/shared/agency-ui";
-import { MoneyPayoutRunView } from "@/features/billing/money-payout-run-view";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
@@ -35,7 +34,6 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
     moneySettings,
     bills,
     expenses,
-    payoutRun,
     isOwner,
     isRolePending,
     scoreboardStatus,
@@ -143,15 +141,6 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
 
           <motion.div
             custom={1}
-            variants={moneySectionItemVariants}
-            initial="hidden"
-            animate="show"
-          >
-            <MoneyPayoutRunView viewModel={payoutRun} />
-          </motion.div>
-
-          <motion.div
-            custom={2}
             variants={moneySectionItemVariants}
             initial="hidden"
             animate="show"

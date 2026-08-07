@@ -4,6 +4,7 @@ import {
   moneyExpenseCanSubmit,
   moneyExpensePeriodLabel,
   moneyExpenseStatusLabel,
+  moneyExpenseSubscriptionMeta,
   parseMoneyExpenseAmount,
 } from "./money-expense-form";
 
@@ -44,5 +45,27 @@ describe("moneyExpenseStatusLabel", () => {
     expect(moneyExpenseStatusLabel("due")).toBe("Due");
     expect(moneyExpenseStatusLabel("partial")).toBe("Partial");
     expect(moneyExpenseStatusLabel("paid")).toBe("Paid");
+  });
+});
+
+describe("moneyExpenseSubscriptionMeta", () => {
+  test("prefers next due over start date", () => {
+    expect(
+      moneyExpenseSubscriptionMeta({
+        period: "monthly",
+        nextDueAt: "2026-09-15T00:00:00.000Z",
+        startsAt: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toContain("Next");
+  });
+
+  test("falls back to starts label", () => {
+    expect(
+      moneyExpenseSubscriptionMeta({
+        period: "monthly",
+        nextDueAt: null,
+        startsAt: "2026-01-01T00:00:00.000Z",
+      }),
+    ).toContain("Starts");
   });
 });
