@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import { computeReportHourMetrics } from "@/features/reports/agency-report-hour-metrics";
 import { fetchAllReportEntries } from "@/features/reports/fetch-report-entries";
 import type { AgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
 import { orpcClient } from "@/lib/orpc";
@@ -10,14 +11,17 @@ import {
   invalidateAgencyDashboardQueries,
   invalidateAgencyEntriesQueries,
   invalidateAgencyReportsQueries,
+  useAgencyClientsQuery,
   useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
 } from "@/features/shared/agency-queries";
+import { allAgencyReportFieldIds } from "@/features/reports/agency-report-fields";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
-import type { AggregatedReportRow } from "@/features/reports/agency-report-grouping";
 import {
+  applyReportEntriesWaste,
   groupEntriesForDisplay,
-  isReportEntryWaste,
+  type AggregatedReportRow,
+  type AgencyReportEntry,
 } from "@/features/reports/agency-report-grouping";
 import { selectEntriesForDetailsRow } from "@/features/reports/hooks/use-agency-report-entry-details-dialog";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -36,20 +40,10 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   const [searchParams] = useSearchParams();
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const deletingEntryIds = useAgencyTimeTrackingStore((state) => state.deletingEntryIds);
-  const {
-    range,
-    projectId,
-    memberUserId,
-    clientId,
-    clientIds,
-    projectIds,
-    memberUserIds,
-    fields,
-    showWaste,
-  } = filters;
+  const { range, projectId, memberUserId, clientId, clientIds, projectIds, memberUserIds } =
+    filters;
   const [updatingRowKeys, setUpdatingRowKeys] = useState<Set<string>>(() => new Set());
   const [savedRowKeys, setSavedRowKeys] = useState<Set<string>>(() => new Set());
-  const [wastePendingRowKeys, setWastePendingRowKeys] = useState<Set<string>>(() => new Set());
   const [detailsRowKey, setDetailsRowKey] = useState<string | null>(null);
   const [detailsRowLabel, setDetailsRowLabel] = useState("");
   const savedTickTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -104,8 +98,10 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId);
+  const clientsQuery = useAgencyClientsQuery(teamId);
   const projects = projectsQuery.data?.items ?? [];
   const tasks = tasksQuery.items ?? [];
+  const clients = clientsQuery.data?.items ?? [];
 
   const taskChangeMutation = useMutation({
     mutationFn: async ({ row, taskId }: { row: AggregatedReportRow; taskId: string }) => {
@@ -162,6 +158,9 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   const handleDescriptionChange = useCallback(
     async (row: AggregatedReportRow, description: string) => {
       if (!teamId || row.description.trim() === description) return;
+      if (row.entryCount > 1 && !window.confirm(`Update ${row.entryCount} time entries?`)) {
+        return;
+      }
 
       setUpdatingRowKeys((current) => new Set(current).add(row.key));
       try {
@@ -181,6 +180,9 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   const handleTaskChange = useCallback(
     async (row: AggregatedReportRow, taskId: string) => {
       if (!teamId || row.taskId === taskId) return;
+      if (row.entryCount > 1 && !window.confirm(`Update ${row.entryCount} time entries?`)) {
+        return;
+      }
 
       setUpdatingRowKeys((current) => new Set(current).add(row.key));
       try {
@@ -213,7 +215,24 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
       const nextIsWaste = !(
         row.entries.every((entry) => entry.isWaste === true) || row.taskIsWaste === true
       );
-      setWastePendingRowKeys((current) => new Set(current).add(row.key));
+      const entryIds = row.entries.map((entry) => entry.id);
+      const snapshots = queryClient.getQueriesData<AgencyReportEntry[]>({
+        queryKey: ["agency-reports", "entries", teamId],
+      });
+      for (const [queryKey, data] of snapshots) {
+        if (!data) continue;
+        queryClient.setQueryData(
+          queryKey,
+          applyReportEntriesWaste(data, new Set(entryIds), nextIsWaste),
+        );
+      }
+      if (row.entries.length > 1) {
+        toast.success(
+          nextIsWaste
+            ? `Marked ${row.entries.length} entries as waste`
+            : `Unmarked ${row.entries.length} entries as waste`,
+        );
+      }
       try {
         await Promise.all(
           row.entries.map((entry) =>
@@ -231,14 +250,11 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
         ]);
         flashSavedRow(row.key);
       } catch (error) {
+        for (const [queryKey, data] of snapshots) {
+          queryClient.setQueryData(queryKey, data);
+        }
         toast.error("Couldn't update entry", {
           description: getErrorMessage(error, "Try again."),
-        });
-      } finally {
-        setWastePendingRowKeys((current) => {
-          const next = new Set(current);
-          next.delete(row.key);
-          return next;
         });
       }
     },
@@ -273,19 +289,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   const isPending = entriesQuery.isPending && !entriesQuery.isPlaceholderData;
   const isError = entriesQuery.isError;
   const error = getErrorMessage(entriesQuery.error, "Try refreshing.");
-  const { totalSeconds, wasteSeconds, paidSeconds } = useMemo(() => {
-    let total = 0;
-    let waste = 0;
-    for (const entry of entries) {
-      total += entry.durationSeconds;
-      if (isReportEntryWaste(entry)) waste += entry.durationSeconds;
-    }
-    return {
-      totalSeconds: total,
-      wasteSeconds: waste,
-      paidSeconds: Math.max(0, total - waste),
-    };
-  }, [entries]);
+  const hourMetrics = useMemo(() => computeReportHourMetrics(entries, clients), [clients, entries]);
   const refetch = () => {
     void entriesQuery.refetch();
   };
@@ -298,18 +302,15 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     isError,
     error,
     refetch,
-    totalSeconds,
-    wasteSeconds,
-    paidSeconds,
+    hourMetrics,
+    clients,
     projects,
     tasks,
     tasksLoading: tasksQuery.isLoading,
     updatingRowKeys,
     savedRowKeys,
     deletingEntryIds,
-    wastePendingRowKeys,
-    visibleFields: fields,
-    showWaste,
+    visibleFields: allAgencyReportFieldIds(),
     detailsOpen: detailsRowKey !== null,
     detailsEntries,
     detailsLabel: detailsRowLabel,

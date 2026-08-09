@@ -2,8 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import {
   aggregateSimilarReportRows,
+  applyReportEntriesWaste,
   filterEntriesByShowWaste,
   groupEntriesForDisplay,
+  reportSimilarTaskStripeIndexes,
   type AgencyReportEntry,
 } from "@/features/reports/agency-report-grouping";
 
@@ -58,6 +60,47 @@ describe("aggregateSimilarReportRows", () => {
     ]);
 
     expect(rows).toHaveLength(3);
+  });
+
+  test("lists similar task titles consecutively within a project", () => {
+    const rows = aggregateSimilarReportRows([
+      makeEntry({
+        id: "e1",
+        taskId: "task-a",
+        taskTitle: "Peeling",
+        description: "zzz wrap",
+      }),
+      makeEntry({
+        id: "e2",
+        taskId: "task-b",
+        taskTitle: "QA",
+        description: "mid review",
+      }),
+      makeEntry({
+        id: "e3",
+        taskId: "task-a",
+        taskTitle: "Peeling",
+        description: "aaa prep",
+      }),
+    ]);
+
+    expect(rows.map((row) => `${row.taskTitle}:${row.description}`)).toEqual([
+      "Peeling:aaa prep",
+      "Peeling:zzz wrap",
+      "QA:mid review",
+    ]);
+  });
+
+  test("stripes consecutive similar-task clusters with two bands", () => {
+    expect(
+      reportSimilarTaskStripeIndexes([
+        { taskTitle: "Peeling" },
+        { taskTitle: "peeling" },
+        { taskTitle: "QA" },
+        { taskTitle: "QA" },
+        { taskTitle: "Ship" },
+      ]),
+    ).toEqual([0, 0, 1, 1, 0]);
   });
 
   test("mergeSameTaskNames collapses same title across task ids, descriptions, and assignees", () => {
@@ -291,5 +334,20 @@ describe("filterEntriesByShowWaste", () => {
         entries: false,
       }).map((entry) => entry.id),
     ).toEqual(["ok", "task-waste", "project-waste"]);
+  });
+});
+
+describe("applyReportEntriesWaste", () => {
+  test("flips only targeted entries", () => {
+    const entries = [
+      makeEntry({ id: "keep", isWaste: false }),
+      makeEntry({ id: "flip", isWaste: false }),
+    ];
+
+    const next = applyReportEntriesWaste(entries, new Set(["flip"]), true);
+
+    expect(next.find((entry) => entry.id === "keep")?.isWaste).toBe(false);
+    expect(next.find((entry) => entry.id === "flip")?.isWaste).toBe(true);
+    expect(entries.find((entry) => entry.id === "flip")?.isWaste).toBe(false);
   });
 });

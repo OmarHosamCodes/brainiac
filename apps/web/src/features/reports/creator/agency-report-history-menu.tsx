@@ -25,30 +25,32 @@ export function AgencyReportHistoryMenu({
   const [open, setOpen] = useState(false);
   const [searchParams] = useSearchParams();
   const activeReportId = searchParams.get("report");
-  const reportsQuery = useSavedReportsList({ teamId, enabled: open });
+  const reportsQuery = useSavedReportsList({ teamId, enabled: Boolean(teamId) });
+  const savedCount = reportsQuery.data?.items.length;
 
   function handleSelect(reportId: string) {
     onSelectReport(reportId);
     setOpen(false);
   }
 
+  const triggerLabel =
+    typeof savedCount === "number" ? `Saved reports (${savedCount})` : "Saved reports";
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="px-2.5"
-          aria-label="Reports"
-          title="Reports"
-        >
-          <FileText />
+        <Button variant="secondary" size="sm" aria-label={triggerLabel} title={triggerLabel}>
+          <FileText className="size-3.5" aria-hidden />
+          Saved reports
+          {typeof savedCount === "number" ? (
+            <span className="font-mono tabular-nums text-muted">{savedCount}</span>
+          ) : null}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
         <div className="border-b border-default/55 px-3 py-2.5">
-          <p className="text-sm font-semibold text-highlighted">Reports</p>
-          <p className="text-xs text-muted">Open a saved report.</p>
+          <p className="text-sm font-semibold text-highlighted">Saved reports</p>
+          <p className="text-xs text-muted">Open a report you saved.</p>
         </div>
         {reportsQuery.isPending ? (
           <SavedReportsListSkeleton />

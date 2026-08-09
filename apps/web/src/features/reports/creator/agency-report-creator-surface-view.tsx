@@ -5,6 +5,7 @@ import {
   AgencyReportCreatorHeader,
   AgencyReportCreatorHeaderSkeleton,
 } from "@/features/reports/creator/agency-report-creator-header";
+import { AgencyReportHourMetricsRow } from "@/features/reports/agency-report-hour-metrics-row";
 import { AgencyReportCreatorTable } from "@/features/reports/creator/agency-report-creator-table";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
@@ -25,7 +26,7 @@ export function AgencyReportCreatorSurfaceView({
       <div className={agencyEmptyPanelClass}>
         <BarChart2 className="mx-auto size-7 text-muted" />
         <p className="mt-4 text-sm font-semibold text-highlighted">No report selected.</p>
-        <p className="mt-1 text-xs text-muted">Go back to Reports and create or open a report.</p>
+        <p className="mt-1 text-xs text-muted">Go back to Reports to create or open one.</p>
       </div>
     );
   }
@@ -77,6 +78,14 @@ export function AgencyReportCreatorSurfaceView({
         onRetrySave={vm.autosave.retry}
         exportPhase={vm.exportPhase}
         onExport={(mode) => void vm.handleExport(mode)}
+        viewOptions={{
+          fieldIds: vm.visibleFields,
+          onFieldIdsChange: vm.onFieldIdsChange,
+          showWaste: vm.showWaste,
+          onShowWasteChange: vm.onShowWasteChange,
+          mergeSameTaskNames: vm.mergeSameTaskNames,
+          onMergeSameTaskNamesChange: vm.onMergeSameTaskNamesChange,
+        }}
         activityMenu={activityMenu}
         deletingReport={vm.deletingReport}
         onDeleteReport={() => void vm.handleDeleteReport()}
@@ -85,8 +94,8 @@ export function AgencyReportCreatorSurfaceView({
       {!vm.rangeReady ? (
         <div className={agencyEmptyPanelClass}>
           <BarChart2 className="mx-auto size-7 text-muted" />
-          <p className="mt-4 text-sm font-semibold text-highlighted">Missing date range.</p>
-          <p className="mt-1 text-xs text-muted">This report has an invalid date range.</p>
+          <p className="mt-4 text-sm font-semibold text-highlighted">Dates are missing.</p>
+          <p className="mt-1 text-xs text-muted">This report needs a date range to show hours.</p>
         </div>
       ) : vm.entriesQueryPending ? (
         <div className="overflow-hidden rounded-dense border border-default bg-default">
@@ -99,9 +108,7 @@ export function AgencyReportCreatorSurfaceView({
       ) : vm.entriesQueryError ? (
         <div className={agencyErrorPanelClass} role="alert">
           <AlertTriangle className="mx-auto size-5 text-error" />
-          <p className="mt-3 text-sm font-semibold text-highlighted">
-            Couldn't load report entries.
-          </p>
+          <p className="mt-3 text-sm font-semibold text-highlighted">Couldn't load entries.</p>
           <p className="mt-1 text-xs text-muted">{vm.entriesQueryErrorMessage}</p>
           <Button variant="secondary" size="sm" className="mt-3" onClick={vm.refetchEntries}>
             Retry
@@ -110,22 +117,28 @@ export function AgencyReportCreatorSurfaceView({
       ) : vm.creator.visibleEntries.length === 0 ? (
         <div className={agencyEmptyPanelClass}>
           <BarChart2 className="mx-auto size-7 text-muted" />
-          <p className="mt-4 text-sm font-semibold text-highlighted">No entries in this report.</p>
+          <p className="mt-4 text-sm font-semibold text-highlighted">No entries left.</p>
           <p className="mt-1 text-xs text-muted">
-            All rows were removed or nothing matched the filters.
+            Undo a removal, or go back and change the filters.
           </p>
         </div>
       ) : (
-        <AgencyReportCreatorTable
-          creator={vm.creator}
-          visibleFields={vm.visibleFields}
-          mergeSameTaskNames={vm.mergeSameTaskNames}
-          onSaveEdit={vm.handleSaveEdit}
-          onExcludeEntry={vm.handleExcludeEntry}
-          onToggleWaste={(entryId) => void vm.handleToggleWaste(entryId)}
-          savingEntryId={vm.savingEntryId}
-          wastePending={vm.wastePending}
-        />
+        <>
+          <AgencyReportHourMetricsRow
+            metrics={vm.hourMetrics}
+            caption="This preview matches your export."
+          />
+          <AgencyReportCreatorTable
+            creator={vm.creator}
+            clients={vm.clients}
+            visibleFields={vm.visibleFields}
+            mergeSameTaskNames={vm.mergeSameTaskNames}
+            onSaveEdit={vm.handleSaveEdit}
+            onExcludeEntry={vm.handleExcludeEntry}
+            onToggleWaste={(entryIds) => void vm.handleToggleWaste(entryIds)}
+            savingEntryId={vm.savingEntryId}
+          />
+        </>
       )}
     </div>
   );

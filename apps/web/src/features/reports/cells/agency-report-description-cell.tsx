@@ -103,7 +103,7 @@ export function AgencyReportDescriptionCell({
       )}
       title={value || undefined}
       aria-label={value ? `Edit description: ${value}` : "Add description"}
-      onDoubleClick={startEditing}
+      onClick={startEditing}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();

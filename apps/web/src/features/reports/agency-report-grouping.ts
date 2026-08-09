@@ -193,15 +193,41 @@ export function aggregateSimilarReportRows(
   }
 
   return [...byKey.values()].sort((left, right) => {
+    const byTask = reportSimilarTaskKey(left).localeCompare(reportSimilarTaskKey(right));
+    if (byTask !== 0) return byTask;
     if (mergeSameTaskNames) {
-      const byTitle = (left.taskTitle ?? "").localeCompare(right.taskTitle ?? "");
-      if (byTitle !== 0) return byTitle;
       return left.userName.localeCompare(right.userName);
     }
     const byDescription = left.description.localeCompare(right.description);
     if (byDescription !== 0) return byDescription;
     return left.userName.localeCompare(right.userName);
   });
+}
+
+/** Same-name tasks within a project — used to keep similar rows consecutive. */
+export function reportSimilarTaskKey(row: Pick<AggregatedReportRow, "taskTitle">): string {
+  return normalizeReportTaskTitle(row.taskTitle).toLocaleLowerCase();
+}
+
+/** Alternating 0/1 band per similar-task cluster (resets at the start of `rows`). */
+export function reportSimilarTaskStripeIndexes(
+  rows: readonly Pick<AggregatedReportRow, "taskTitle">[],
+): Array<0 | 1> {
+  let stripe: 0 | 1 = 0;
+  let previous: string | undefined;
+  return rows.map((row) => {
+    const key = reportSimilarTaskKey(row);
+    if (previous !== undefined && key !== previous) {
+      stripe = stripe === 0 ? 1 : 0;
+    }
+    previous = key;
+    return stripe;
+  });
+}
+
+/** Two-tone row fill so similar-task clusters scan as blocks. */
+export function reportSimilarTaskStripeClass(stripe: 0 | 1): string {
+  return stripe === 1 ? "bg-muted/40 hover:bg-muted/55" : "bg-default hover:bg-muted/30";
 }
 
 export function groupEntriesForDisplay(
@@ -279,5 +305,14 @@ export function filterEntriesByShowWaste(
   return entries.filter((entry) => isReportEntryWasteVisible(entry, showWaste));
 }
 
-/** Muted ink for waste text cells — pair with AgencyWasteBadge (Reports) or AgencyWasteTag (Tracker); not project or row actions. */
+export function applyReportEntriesWaste(
+  entries: readonly AgencyReportEntry[],
+  entryIds: ReadonlySet<string>,
+  isWaste: boolean,
+): AgencyReportEntry[] {
+  if (entryIds.size === 0) return [...entries];
+  return entries.map((entry) => (entryIds.has(entry.id) ? { ...entry, isWaste } : entry));
+}
+
+/** Muted ink for waste text cells — not project, waste control, or row actions. */
 export const reportEntryWasteTextClass = "text-muted";

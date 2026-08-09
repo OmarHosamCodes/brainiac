@@ -4,14 +4,14 @@ import { AgencyReportDescriptionCell } from "@/features/reports/cells/agency-rep
 import { AgencyReportDurationCell } from "@/features/reports/cells/agency-report-duration-cell";
 import { AgencyReportRowActions } from "@/features/reports/agency-report-row-actions";
 import { AgencyReportTaskCell } from "@/features/reports/cells/agency-report-task-cell";
+import { AgencyReportWasteCell } from "@/features/reports/cells/agency-report-waste-cell";
+import { AgencyReportGroupHourStats } from "@/features/reports/agency-report-group-hour-stats";
+import {
+  metricsForAggregatedRows,
+  type ReportHourClient,
+} from "@/features/reports/agency-report-hour-metrics";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import { agencyMetricClass } from "@/features/shared/agency-ui";
-import {
-  AgencyWasteBadge,
-  agencyWasteReportCellBorderClass,
-  agencyWasteStampHostClass,
-  resolveAgencyWasteReportBorderSegment,
-} from "@/features/shared/agency-waste-badge";
 import {
   AGENCY_REPORT_FIELD_LABELS,
   allAgencyReportFieldIds,
@@ -22,12 +22,23 @@ import {
   groupEntriesForDisplay,
   isReportEntryWaste,
   reportEntryWasteTextClass,
+  reportSimilarTaskStripeClass,
+  reportSimilarTaskStripeIndexes,
   type AgencyReportEntry,
   type AggregatedReportRow,
   type DisplayClientGroup,
 } from "@/features/reports/agency-report-grouping";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/ui/table";
 
 /** Short dim rule between task ↔ description; not a full cell-height border. */
 const reportTaskDescriptionSepClass =
@@ -37,6 +48,7 @@ type AgencyReportsTableProps = {
   teamId: string;
   entries: AgencyReportEntry[];
   clientGroups?: DisplayClientGroup[];
+  clients?: readonly ReportHourClient[];
   visibleFields?: AgencyReportFieldId[];
   footer?: ReactNode;
   projects?: Array<Pick<AgencyProject, "id" | "clientId" | "clientName" | "name" | "colorHueId">>;
@@ -64,6 +76,7 @@ export function AgencyReportsTable({
   teamId,
   entries,
   clientGroups: clientGroupsProp,
+  clients = [],
   visibleFields = allAgencyReportFieldIds(),
   footer,
   projects = [],
@@ -102,110 +115,102 @@ export function AgencyReportsTable({
     <div className="space-y-6">
       {clientGroups.map((clientGroup) => (
         <section key={clientGroup.clientId} className="space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-            <h3 className="text-sm font-semibold text-highlighted">{clientGroup.clientName}</h3>
-            <p className="text-xs text-muted">
-              <span className={agencyMetricClass}>
-                {formatDuration(clientGroup.totalSeconds, "clock")}
-              </span>
-              {" total"}
-            </p>
+          <div className="space-y-2 px-1">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="text-base font-semibold text-highlighted">{clientGroup.clientName}</h3>
+              <p className="text-xs text-muted">
+                <span className={agencyMetricClass}>
+                  {formatDuration(clientGroup.totalSeconds, "clock")}
+                </span>
+                {" total"}
+              </p>
+            </div>
+            <AgencyReportGroupHourStats
+              metrics={metricsForAggregatedRows(
+                clientGroup.projects.flatMap((project) => project.rows),
+                clients,
+              )}
+            />
           </div>
           <div className="overflow-x-auto rounded-dense border border-default/55 bg-default">
-            <table className="w-full min-w-[48rem] border-separate border-spacing-0 text-xs">
-              <caption className="sr-only">
+            <Table className="min-w-[48rem]">
+              <TableCaption className="sr-only">
                 Time entries for {clientGroup.clientName}, grouped by project and task
-              </caption>
-              <thead className="border-b border-default/50 bg-elevated/45">
-                <tr className="text-left text-[11px] font-semibold tracking-wide text-muted">
+              </TableCaption>
+              <TableHeader className="border-b border-default/50">
+                <TableRow>
                   {showProject ? (
-                    <th scope="col" className="w-40 px-4 py-2.5 font-semibold">
+                    <TableHead scope="col" className="w-44">
                       {AGENCY_REPORT_FIELD_LABELS.project}
-                    </th>
+                    </TableHead>
                   ) : null}
                   {showTask ? (
-                    <th scope="col" className="min-w-[14rem] w-[22%] px-4 py-2.5 font-semibold">
+                    <TableHead scope="col" className="min-w-[14rem] w-[22%]">
                       {AGENCY_REPORT_FIELD_LABELS.task}
-                    </th>
+                    </TableHead>
                   ) : null}
                   {showDescription ? (
-                    <th scope="col" className="px-4 py-2.5 font-semibold">
-                      {AGENCY_REPORT_FIELD_LABELS.description}
-                    </th>
+                    <TableHead scope="col">{AGENCY_REPORT_FIELD_LABELS.description}</TableHead>
                   ) : null}
+                  <TableHead scope="col" className="w-20">
+                    Waste
+                  </TableHead>
                   {showDuration ? (
-                    <th scope="col" className="w-28 px-4 py-2.5 text-right font-semibold">
+                    <TableHead scope="col" className="w-28 text-right">
                       {AGENCY_REPORT_FIELD_LABELS.duration}
-                    </th>
+                    </TableHead>
                   ) : null}
                   {showAssignee ? (
-                    <th scope="col" className="w-36 px-4 py-2.5 font-semibold">
+                    <TableHead scope="col" className="w-36">
                       {AGENCY_REPORT_FIELD_LABELS.assignee}
-                    </th>
+                    </TableHead>
                   ) : null}
                   {showActions ? (
-                    <th scope="col" className="w-10 px-2 py-2.5">
+                    <TableHead scope="col" className="w-10 px-2">
                       <span className="sr-only">Actions</span>
-                    </th>
+                    </TableHead>
                   ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {clientGroup.projects.flatMap((project) =>
-                  project.rows.map((row, rowIndex) => {
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {clientGroup.projects.flatMap((project) => {
+                  const taskStripes = reportSimilarTaskStripeIndexes(project.rows);
+                  return project.rows.map((row, rowIndex) => {
                     const isWaste = isReportEntryWaste(row);
-                    const wasteBorderVisible = {
-                      task: showTask,
-                      description: showDescription,
-                      duration: showDuration,
-                      assignee: showAssignee,
-                      actions: showActions,
-                    };
-                    const wasteBorder = (column: keyof typeof wasteBorderVisible) =>
-                      isWaste
-                        ? agencyWasteReportCellBorderClass(
-                            resolveAgencyWasteReportBorderSegment(column, wasteBorderVisible),
-                          )
-                        : undefined;
                     return (
-                      <tr
+                      <TableRow
                         key={row.key}
-                        className={cn(!isWaste && "border-b border-default last:border-b-0")}
+                        className={cn(
+                          "border-b border-default last:border-b-0",
+                          reportSimilarTaskStripeClass(taskStripes[rowIndex] ?? 0),
+                        )}
                       >
                         {showProject && rowIndex === 0 ? (
-                          <td
+                          <TableCell
                             rowSpan={project.rows.length}
-                            className="border-r border-default bg-elevated/40 px-4 py-3 align-top text-xs"
+                            className="border-r border-default bg-elevated/40 align-top text-sm"
                           >
-                            <div className="flex flex-col gap-1.5">
+                            <div className="flex flex-col gap-2">
                               <span className="font-semibold text-highlighted">
                                 {project.projectName}
                               </span>
-                              {showDuration ? (
-                                <span className={cn("text-[10px] text-muted", agencyMetricClass)}>
-                                  {formatDuration(project.totalSeconds, "clock")}
-                                </span>
-                              ) : null}
+                              <AgencyReportGroupHourStats
+                                showTotal
+                                showLabels={false}
+                                metrics={metricsForAggregatedRows(project.rows, clients)}
+                              />
                             </div>
-                          </td>
+                          </TableCell>
                         ) : null}
                         {showTask ? (
-                          <td
+                          <TableCell
                             className={cn(
-                              "relative min-w-0 px-4 py-3 text-start text-highlighted",
-                              wasteBorder("task"),
-                              isWaste && agencyWasteStampHostClass,
+                              "relative min-w-0 text-start text-sm text-highlighted",
                               isWaste && reportEntryWasteTextClass,
                             )}
                           >
                             {showDescription ? (
                               <span aria-hidden className={reportTaskDescriptionSepClass} />
-                            ) : null}
-                            {isWaste ? (
-                              <AgencyWasteBadge
-                                onDismiss={onToggleWaste ? () => onToggleWaste(row) : undefined}
-                                disabled={wastePendingRowKeys?.has(row.key)}
-                              />
                             ) : null}
                             {onTaskChange ? (
                               <AgencyReportTaskCell
@@ -225,23 +230,15 @@ export function AgencyReportsTable({
                                 {row.taskTitle || "—"}
                               </span>
                             )}
-                          </td>
+                          </TableCell>
                         ) : null}
                         {showDescription ? (
-                          <td
+                          <TableCell
                             className={cn(
-                              "min-w-0 max-w-md px-4 py-3 text-start text-highlighted",
-                              wasteBorder("description"),
-                              isWaste && !showTask && agencyWasteStampHostClass,
+                              "min-w-0 max-w-md text-start text-sm text-highlighted",
                               isWaste && reportEntryWasteTextClass,
                             )}
                           >
-                            {isWaste && !showTask ? (
-                              <AgencyWasteBadge
-                                onDismiss={onToggleWaste ? () => onToggleWaste(row) : undefined}
-                                disabled={wastePendingRowKeys?.has(row.key)}
-                              />
-                            ) : null}
                             {onDescriptionChange ? (
                               <AgencyReportDescriptionCell
                                 value={row.description}
@@ -256,13 +253,19 @@ export function AgencyReportsTable({
                                 {row.description || "—"}
                               </span>
                             )}
-                          </td>
+                          </TableCell>
                         ) : null}
+                        <TableCell>
+                          <AgencyReportWasteCell
+                            isWaste={isWaste}
+                            entryCount={row.entryCount}
+                            onToggle={onToggleWaste ? () => onToggleWaste(row) : undefined}
+                          />
+                        </TableCell>
                         {showDuration ? (
-                          <td
+                          <TableCell
                             className={cn(
-                              "px-4 py-3 text-right text-muted",
-                              wasteBorder("duration"),
+                              "text-right text-sm text-muted",
                               isWaste && reportEntryWasteTextClass,
                             )}
                           >
@@ -274,21 +277,20 @@ export function AgencyReportsTable({
                                   : undefined
                               }
                             />
-                          </td>
+                          </TableCell>
                         ) : null}
                         {showAssignee ? (
-                          <td
+                          <TableCell
                             className={cn(
-                              "px-4 py-3 text-highlighted",
-                              wasteBorder("assignee"),
+                              "text-sm text-highlighted",
                               isWaste && reportEntryWasteTextClass,
                             )}
                           >
                             {row.userName}
-                          </td>
+                          </TableCell>
                         ) : null}
                         {showActions ? (
-                          <td className={cn("px-2 py-3 text-right", wasteBorder("actions"))}>
+                          <TableCell className="px-2 text-right">
                             <AgencyReportRowActions
                               label={row.taskTitle || row.description || row.projectName}
                               entryCount={row.entryCount}
@@ -311,19 +313,19 @@ export function AgencyReportsTable({
                               onDelete={() => onDeleteRow?.(row)}
                               onToggleWaste={onToggleWaste ? () => onToggleWaste(row) : undefined}
                             />
-                          </td>
+                          </TableCell>
                         ) : null}
-                      </tr>
+                      </TableRow>
                     );
-                  }),
-                )}
-              </tbody>
-            </table>
+                  });
+                })}
+              </TableBody>
+            </Table>
           </div>
         </section>
       ))}
 
-      {footer ?? (
+      {footer === undefined ? (
         <p className="text-xs text-muted">
           <span className={agencyMetricClass}>{entries.length}</span>
           {entries.length === 1 ? " entry" : " entries"}
@@ -331,6 +333,8 @@ export function AgencyReportsTable({
           <span className={agencyMetricClass}>{formatDuration(totalSeconds, "clock")}</span>
           {" total"}
         </p>
+      ) : (
+        footer
       )}
     </div>
   );

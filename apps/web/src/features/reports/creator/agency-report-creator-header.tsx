@@ -26,6 +26,10 @@ import {
 } from "@/features/reports/agency-report-naming";
 import type { AgencyReportExportMode } from "@/features/reports/export-agency-report-xlsx";
 import type { AgencyReportAutosaveState } from "@/features/reports/use-agency-report-autosave";
+import {
+  AgencyReportViewOptions,
+  type AgencyReportViewOptionsProps,
+} from "@/features/reports/agency-report-view-options";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
@@ -42,7 +46,7 @@ function ReportSaveStatus({ state, lastSavedAt, onRetry }: ReportSaveStatusProps
   if (state === "error") {
     return (
       <span className="inline-flex items-center gap-1 font-mono text-[11px] text-error">
-        Error
+        Couldn't save
         <span aria-hidden className="text-error/60">
           ·
         </span>
@@ -125,7 +129,7 @@ function ReportTitleEditor({ value, fallbackName, onChange, onCommit }: ReportTi
           "motion-reduce:transition-none",
         )}
         onClick={() => setEditing(true)}
-        title="Click to rename"
+        title="Rename"
       >
         {value || fallbackName}
       </button>
@@ -186,6 +190,7 @@ type ReportHeaderActionsProps = {
   exportPhase: "idle" | "exporting" | "exported";
   exportDisabled: boolean;
   onExport: (mode: AgencyReportExportMode) => void;
+  viewOptions: AgencyReportViewOptionsProps;
   activityMenu: ReactNode;
   deleteDisabled: boolean;
   deletingReport: boolean;
@@ -198,6 +203,7 @@ function ReportHeaderActions({
   exportPhase,
   exportDisabled,
   onExport,
+  viewOptions,
   activityMenu,
   deleteDisabled,
   deletingReport,
@@ -215,6 +221,7 @@ function ReportHeaderActions({
         </Button>
       ) : null}
       {activityMenu}
+      <AgencyReportViewOptions {...viewOptions} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -222,7 +229,7 @@ function ReportHeaderActions({
             size="sm"
             className="h-9 gap-1.5"
             disabled={exportDisabled || exporting}
-            title="Downloads .xlsx for Google Sheets"
+            title="Download Excel for Google Sheets"
           >
             {exporting ? (
               <>
@@ -313,6 +320,7 @@ export type AgencyReportCreatorHeaderProps = {
   onRetrySave: () => void;
   exportPhase: "idle" | "exporting" | "exported";
   onExport: (mode: AgencyReportExportMode) => void;
+  viewOptions: AgencyReportViewOptionsProps;
   activityMenu: ReactNode;
   deletingReport: boolean;
   onDeleteReport: () => void;
@@ -334,6 +342,7 @@ export function AgencyReportCreatorHeader({
   onRetrySave,
   exportPhase,
   onExport,
+  viewOptions,
   activityMenu,
   deletingReport,
   onDeleteReport,
@@ -395,6 +404,7 @@ export function AgencyReportCreatorHeader({
             exportPhase={exportPhase}
             exportDisabled={visibleEntryCount === 0}
             onExport={onExport}
+            viewOptions={viewOptions}
             activityMenu={activityMenu}
             deleteDisabled={deleteDisabled}
             deletingReport={deletingReport}
@@ -414,7 +424,7 @@ export function AgencyReportCreatorHeader({
           <DialogHeader>
             <DialogTitle>Delete this report?</DialogTitle>
             <DialogDescription>
-              Deletes the saved report "{reportName || fallbackName}". Time entries are not deleted.
+              Removes “{reportName || fallbackName}”. Time entries stay in Tracker.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

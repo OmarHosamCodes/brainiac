@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { AgencyReportDurationCell } from "@/features/reports/cells/agency-report-duration-cell";
+import { AgencyReportWasteCell } from "@/features/reports/cells/agency-report-waste-cell";
 import { AgencyReportEntryContextMenu } from "@/features/reports/agency-report-entry-context-menu";
 import { AgencyReportCreatorRowActions } from "@/features/reports/creator/agency-report-creator-row-actions";
 import { Input } from "@/ui/input";
@@ -19,23 +20,26 @@ import {
   isReportCreatorSelectionHighlightField,
   type AgencyReportFieldId,
 } from "@/features/reports/agency-report-fields";
-import { agencyMetricClass } from "@/features/shared/agency-ui";
+import { AgencyReportGroupHourStats } from "@/features/reports/agency-report-group-hour-stats";
 import {
-  AgencyWasteBadge,
-  agencyWasteReportCellBorderClass,
-  agencyWasteStampHostClass,
-  resolveAgencyWasteReportBorderSegment,
-} from "@/features/shared/agency-waste-badge";
+  metricsForAggregatedRows,
+  type ReportHourClient,
+  type ReportHourMetrics,
+} from "@/features/reports/agency-report-hour-metrics";
+import { agencyMetricClass } from "@/features/shared/agency-ui";
 import {
   groupEntriesForDisplay,
   isReportEntryWaste,
   reportEntryWasteTextClass,
+  reportSimilarTaskStripeClass,
+  reportSimilarTaskStripeIndexes,
   type AggregatedReportRow,
 } from "@/features/reports/agency-report-grouping";
 import { DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES } from "@/features/reports/agency-report-merge-tasks";
 import { applyDurationToDraft, entryToDraft } from "@/features/time-tracking/time-entry-draft";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
+import { Table, TableCaption, TableHead, TableHeader, TableRow } from "@/ui/table";
 
 const reportCreatorSelectedCellClass = "bg-primary/8 ring-1 ring-inset ring-primary/20";
 
@@ -54,17 +58,19 @@ function reportCreatorCellSelectionClass(
 
 type AgencyReportCreatorTableProps = {
   creator: AgencyReportCreatorState;
+  clients?: readonly ReportHourClient[];
   visibleFields?: AgencyReportFieldId[];
   mergeSameTaskNames?: boolean;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onExcludeEntry: (entryId: string) => void;
-  onToggleWaste: (entryId: string) => void;
+  onToggleWaste: (entryIds: string[]) => void;
   savingEntryId?: string | null;
   wastePending?: boolean;
 };
 
 export function AgencyReportCreatorTable({
   creator,
+  clients = [],
   visibleFields = allAgencyReportFieldIds(),
   mergeSameTaskNames = DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES,
   onSaveEdit,
@@ -75,10 +81,6 @@ export function AgencyReportCreatorTable({
 }: AgencyReportCreatorTableProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const clientGroups = groupEntriesForDisplay(creator.visibleEntries, { mergeSameTaskNames });
-  const totalSeconds = creator.visibleEntries.reduce(
-    (sum, entry) => sum + entry.durationSeconds,
-    0,
-  );
   const showProject = isReportFieldVisible(visibleFields, "project");
   const showTask = isReportFieldVisible(visibleFields, "task");
   const showDescription = isReportFieldVisible(visibleFields, "description");
@@ -89,56 +91,67 @@ export function AgencyReportCreatorTable({
     <div className="space-y-6">
       {clientGroups.map((clientGroup) => (
         <section key={clientGroup.clientId} className="space-y-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-            <h3 className="text-sm font-semibold text-highlighted">{clientGroup.clientName}</h3>
-            <p className="text-xs text-muted">
-              <span className={agencyMetricClass}>
-                {formatDuration(clientGroup.totalSeconds, "clock")}
-              </span>
-              {" total"}
-            </p>
+          <div className="space-y-2 px-1">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="text-base font-semibold text-highlighted">{clientGroup.clientName}</h3>
+              <p className="text-xs text-muted">
+                <span className={agencyMetricClass}>
+                  {formatDuration(clientGroup.totalSeconds, "clock")}
+                </span>
+                {" total"}
+              </p>
+            </div>
+            <AgencyReportGroupHourStats
+              metrics={metricsForAggregatedRows(
+                clientGroup.projects.flatMap((project) => project.rows),
+                clients,
+              )}
+            />
           </div>
           <div className="overflow-x-auto rounded-dense border border-default/55 bg-default">
-            <table className="w-full min-w-[40rem] border-separate border-spacing-0 text-xs">
-              <caption className="sr-only">
+            <Table className="min-w-[40rem]">
+              <TableCaption className="sr-only">
                 Time entries for {clientGroup.clientName}, grouped by project and task
-              </caption>
-              <thead className="border-b border-default/50 bg-elevated/45">
-                <tr className="text-left text-[11px] font-semibold tracking-wide text-muted">
+              </TableCaption>
+              <TableHeader className="border-b border-default/50">
+                <TableRow>
                   {showProject ? (
-                    <th scope="col" className="w-48 px-4 py-2.5 font-semibold">
+                    <TableHead scope="col" className="w-44">
                       {AGENCY_REPORT_FIELD_LABELS.project}
-                    </th>
+                    </TableHead>
                   ) : null}
                   {showTask ? (
-                    <th scope="col" className="min-w-[14rem] w-[22%] px-4 py-2.5 font-semibold">
+                    <TableHead scope="col" className="min-w-[14rem] w-[22%]">
                       {AGENCY_REPORT_FIELD_LABELS.task}
-                    </th>
+                    </TableHead>
                   ) : null}
                   {showDescription ? (
-                    <th scope="col" className="px-4 py-2.5 font-semibold">
-                      {AGENCY_REPORT_FIELD_LABELS.description}
-                    </th>
+                    <TableHead scope="col">{AGENCY_REPORT_FIELD_LABELS.description}</TableHead>
                   ) : null}
+                  <TableHead scope="col" className="w-20">
+                    Waste
+                  </TableHead>
                   {showDuration ? (
-                    <th scope="col" className="w-28 px-4 py-2.5 text-right font-semibold">
+                    <TableHead scope="col" className="w-28 text-right">
                       {AGENCY_REPORT_FIELD_LABELS.duration}
-                    </th>
+                    </TableHead>
                   ) : null}
                   {showAssignee ? (
-                    <th scope="col" className="w-36 px-4 py-2.5 font-semibold">
+                    <TableHead scope="col" className="w-36">
                       {AGENCY_REPORT_FIELD_LABELS.assignee}
-                    </th>
+                    </TableHead>
                   ) : null}
-                  <th scope="col" className="w-10 px-2 py-2.5">
+                  <TableHead scope="col" className="w-10 px-2">
                     <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
               <motion.tbody layout={!prefersReducedMotion}>
                 <AnimatePresence initial={false}>
-                  {clientGroup.projects.flatMap((project) =>
-                    project.rows.map((row, rowIndex) => {
+                  {clientGroup.projects.flatMap((project) => {
+                    const taskStripes = reportSimilarTaskStripeIndexes(project.rows);
+                    const projectHourMetrics = metricsForAggregatedRows(project.rows, clients);
+                    return project.rows.map((row, rowIndex) => {
                       const activeEntryId =
                         creator.editingEntryId &&
                         row.entries.some((entry) => entry.id === creator.editingEntryId)
@@ -175,6 +188,8 @@ export function AgencyReportCreatorTable({
                           isSaving={Boolean(activeEntryId && savingEntryId === activeEntryId)}
                           prefersReducedMotion={prefersReducedMotion}
                           wastePending={wastePending}
+                          similarTaskStripe={taskStripes[rowIndex] ?? 0}
+                          projectHourMetrics={projectHourMetrics}
                           onSelectEntry={creator.selectEntry}
                           onEdit={(entryId) => creator.startEditing(entryId)}
                           onRemove={onExcludeEntry}
@@ -186,23 +201,17 @@ export function AgencyReportCreatorTable({
                           }}
                         />
                       );
-                    }),
-                  )}
+                    });
+                  })}
                 </AnimatePresence>
               </motion.tbody>
-            </table>
+            </Table>
           </div>
         </section>
       ))}
 
       <p className="text-xs text-muted">
-        <span className={agencyMetricClass}>{creator.visibleEntries.length}</span>
-        {creator.visibleEntries.length === 1 ? " entry" : " entries"}
-        <span aria-hidden="true"> · </span>
-        <span className={agencyMetricClass}>{formatDuration(totalSeconds, "clock")}</span>
-        {" total"}
-        <span aria-hidden="true"> · </span>
-        Use the row menu to edit or remove. Removed entries stay in time tracking.
+        Edit or remove from the row menu. Entries stay in Tracker.
       </p>
     </div>
   );
@@ -224,10 +233,12 @@ type ReportCreatorRowProps = {
   isSaving: boolean;
   prefersReducedMotion: boolean;
   wastePending: boolean;
+  similarTaskStripe: 0 | 1;
+  projectHourMetrics: ReportHourMetrics;
   onSelectEntry: (entryId: string) => void;
   onEdit: (entryId: string) => void;
   onRemove: (entryId: string) => void;
-  onToggleWaste: (entryId: string) => void;
+  onToggleWaste: (entryIds: string[]) => void;
   onCancelEdit: () => void;
   onSaveEdit: (draft: TimeEntryDraft) => Promise<void>;
 };
@@ -248,6 +259,8 @@ function ReportCreatorRow({
   isSaving,
   prefersReducedMotion,
   wastePending,
+  similarTaskStripe,
+  projectHourMetrics,
   onSelectEntry,
   onEdit,
   onRemove,
@@ -297,19 +310,7 @@ function ReportCreatorRow({
   }
 
   const isWaste = isReportEntryWaste(row);
-  const wasteBorderVisible = {
-    task: showTask,
-    description: showDescription,
-    duration: showDuration,
-    assignee: showAssignee,
-    actions: true,
-  };
-  const wasteBorder = (column: keyof typeof wasteBorderVisible) =>
-    isWaste
-      ? agencyWasteReportCellBorderClass(
-          resolveAgencyWasteReportBorderSegment(column, wasteBorderVisible),
-        )
-      : undefined;
+  const rowEntryIds = row.entries.map((entry) => entry.id);
   const rowElement = (
     <motion.tr
       layout={!prefersReducedMotion}
@@ -319,55 +320,42 @@ function ReportCreatorRow({
         prefersReducedMotion ? undefined : { opacity: 0, height: 0, transition: { duration: 0.2 } }
       }
       className={cn(
-        "transition-colors duration-150",
-        !isWaste && "border-b border-default last:border-b-0",
+        "group/row border-b border-default transition-colors duration-150 last:border-b-0",
+        reportSimilarTaskStripeClass(similarTaskStripe),
       )}
     >
       {showProject && rowIndex === 0 ? (
         <td
           rowSpan={projectRowSpan}
-          className="border-r border-default bg-elevated/40 px-4 py-3 align-middle text-xs font-semibold text-highlighted"
+          className="border-r border-default bg-elevated/40 px-4 py-3 align-top text-sm"
         >
-          {row.projectName}
+          <div className="flex flex-col gap-2">
+            <span className="font-semibold text-highlighted">{row.projectName}</span>
+            <AgencyReportGroupHourStats showTotal showLabels={false} metrics={projectHourMetrics} />
+          </div>
         </td>
       ) : null}
       {showTask ? (
         <td
           className={cn(
-            "relative min-w-0 px-4 py-3 text-start text-highlighted",
+            "relative min-w-0 px-4 py-3 text-start text-sm text-highlighted",
             reportCreatorCellSelectionClass(isSelected, "task"),
-            wasteBorder("task"),
-            isWaste && agencyWasteStampHostClass,
             isWaste && reportEntryWasteTextClass,
           )}
           title={row.taskTitle || undefined}
         >
           {showDescription ? <span aria-hidden className={reportTaskDescriptionSepClass} /> : null}
-          {isWaste ? (
-            <AgencyWasteBadge
-              onDismiss={() => onToggleWaste(primaryEntryId)}
-              disabled={wastePending || isEditing || isSaving}
-            />
-          ) : null}
           <span className="block truncate text-start">{row.taskTitle || "—"}</span>
         </td>
       ) : null}
       {showDescription ? (
         <td
           className={cn(
-            "min-w-0 max-w-md px-4 py-3 text-start",
+            "min-w-0 max-w-md px-4 py-3 text-start text-sm",
             reportCreatorCellSelectionClass(isSelected, "description"),
-            wasteBorder("description"),
-            isWaste && !showTask && agencyWasteStampHostClass,
             isWaste && !isEditing && reportEntryWasteTextClass,
           )}
         >
-          {isWaste && !showTask ? (
-            <AgencyWasteBadge
-              onDismiss={() => onToggleWaste(primaryEntryId)}
-              disabled={wastePending || isEditing || isSaving}
-            />
-          ) : null}
           {isEditing ? (
             <Input
               value={draft.description}
@@ -392,12 +380,19 @@ function ReportCreatorRow({
           )}
         </td>
       ) : null}
+      <td className="px-4 py-3">
+        <AgencyReportWasteCell
+          isWaste={isWaste}
+          entryCount={row.entryCount}
+          disabled={isEditing || isSaving}
+          onToggle={() => onToggleWaste(rowEntryIds)}
+        />
+      </td>
       {showDuration ? (
         <td
           className={cn(
             "px-4 py-3 text-right text-muted",
             reportCreatorCellSelectionClass(isSelected, "duration"),
-            wasteBorder("duration"),
             isWaste && !isEditing && reportEntryWasteTextClass,
           )}
         >
@@ -427,14 +422,13 @@ function ReportCreatorRow({
           className={cn(
             "px-4 py-3 text-highlighted",
             reportCreatorCellSelectionClass(isSelected, "assignee"),
-            wasteBorder("assignee"),
             isWaste && reportEntryWasteTextClass,
           )}
         >
           {row.userName}
         </td>
       ) : null}
-      <td className={cn("px-2 py-3 text-right", wasteBorder("actions"))}>
+      <td className="px-2 py-3 text-right">
         <AgencyReportCreatorRowActions
           label={rowLabel}
           taskId={row.taskId}
@@ -443,7 +437,7 @@ function ReportCreatorRow({
           wastePending={wastePending}
           onEdit={() => onEdit(primaryEntryId)}
           onRemove={() => onRemove(primaryEntryId)}
-          onToggleWaste={() => onToggleWaste(primaryEntryId)}
+          onToggleWaste={() => onToggleWaste(rowEntryIds)}
         />
       </td>
     </motion.tr>
@@ -461,7 +455,7 @@ function ReportCreatorRow({
       onSelectEntry={onSelectEntry}
       onEdit={() => onEdit(primaryEntryId)}
       onRemove={() => onRemove(primaryEntryId)}
-      onToggleWaste={() => onToggleWaste(primaryEntryId)}
+      onToggleWaste={() => onToggleWaste(rowEntryIds)}
     >
       {rowElement}
     </AgencyReportEntryContextMenu>

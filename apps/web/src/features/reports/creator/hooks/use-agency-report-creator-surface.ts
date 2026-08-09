@@ -4,13 +4,24 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import {
+  allAgencyReportFieldIds,
   normalizeReportFieldIds,
+  parseReportFieldsParam,
+  serializeReportFieldsParam,
   type AgencyReportFieldId,
 } from "@/features/reports/agency-report-fields";
-import { parseShowWasteParam } from "@/features/reports/agency-report-show-waste";
+import { computeReportHourMetrics } from "@/features/reports/agency-report-hour-metrics";
+import {
+  areSameShowWaste,
+  DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+  parseShowWasteParam,
+  serializeShowWasteParam,
+  type AgencyReportShowWaste,
+} from "@/features/reports/agency-report-show-waste";
 import {
   AGENCY_REPORT_MERGE_TASKS_PARAM,
   parseMergeSameTaskNamesParam,
+  serializeMergeSameTaskNamesParam,
 } from "@/features/reports/agency-report-merge-tasks";
 import { fetchAllReportEntries } from "@/features/reports/fetch-report-entries";
 import { useAgencyReportAutosave } from "@/features/reports/use-agency-report-autosave";
@@ -22,6 +33,7 @@ import {
   invalidateAgencyDashboardQueries,
   invalidateAgencyEntriesQueries,
   invalidateAgencyReportsQueries,
+  useAgencyClientsQuery,
 } from "@/features/shared/agency-queries";
 import {
   exportAgencyReportXlsx,
@@ -76,7 +88,6 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
 
   const [exportPhase, setExportPhase] = useState<"idle" | "exporting" | "exported">("idle");
   const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
-  const [wastePending, setWastePending] = useState(false);
   const [deletingReport, setDeletingReport] = useState(false);
   const [reportName, setReportName] = useState("");
   /** Autosave only sees committed titles — drafts while renaming must not flush mid-keystroke. */
@@ -91,10 +102,11 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
 
   const labelContext = useAgencyReportLabelContext(teamId);
 
-  const visibleFields = useMemo<AgencyReportFieldId[]>(
-    () => (report ? normalizeReportFieldIds(report.fieldIds) : []),
-    [report?.fieldIds],
-  );
+  const visibleFields = useMemo<AgencyReportFieldId[]>(() => {
+    const fromUrl = searchParams.get("fields");
+    if (fromUrl) return parseReportFieldsParam(fromUrl);
+    return report ? normalizeReportFieldIds(report.fieldIds) : allAgencyReportFieldIds();
+  }, [report, searchParams]);
 
   const showWaste = useMemo(
     () => parseShowWasteParam(searchParams.get("showWaste")),
@@ -104,6 +116,53 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   const mergeSameTaskNames = useMemo(
     () => parseMergeSameTaskNamesParam(searchParams.get(AGENCY_REPORT_MERGE_TASKS_PARAM)),
     [searchParams],
+  );
+
+  const replaceReportSearchParams = useCallback(
+    (mutate: (next: URLSearchParams) => void) => {
+      const next = new URLSearchParams(searchParams);
+      next.set("section", "reports");
+      mutate(next);
+      navigate(`/agency?${next.toString()}`, { replace: true });
+    },
+    [navigate, searchParams],
+  );
+
+  const handleFieldIdsChange = useCallback(
+    (fieldIds: AgencyReportFieldId[]) => {
+      replaceReportSearchParams((next) => {
+        const nextFields = fieldIds.length > 0 ? fieldIds : allAgencyReportFieldIds();
+        next.set("fields", serializeReportFieldsParam(nextFields));
+      });
+    },
+    [replaceReportSearchParams],
+  );
+
+  const handleShowWasteChange = useCallback(
+    (nextShowWaste: AgencyReportShowWaste) => {
+      replaceReportSearchParams((next) => {
+        if (areSameShowWaste(nextShowWaste, DEFAULT_AGENCY_REPORT_SHOW_WASTE)) {
+          next.delete("showWaste");
+        } else {
+          next.set("showWaste", serializeShowWasteParam(nextShowWaste));
+        }
+      });
+    },
+    [replaceReportSearchParams],
+  );
+
+  const handleMergeSameTaskNamesChange = useCallback(
+    (nextMerge: boolean) => {
+      replaceReportSearchParams((next) => {
+        const mergeParam = serializeMergeSameTaskNamesParam(nextMerge);
+        if (!mergeParam) {
+          next.delete(AGENCY_REPORT_MERGE_TASKS_PARAM);
+        } else {
+          next.set(AGENCY_REPORT_MERGE_TASKS_PARAM, mergeParam);
+        }
+      });
+    },
+    [replaceReportSearchParams],
   );
 
   const filters = useMemo(() => {
@@ -160,6 +219,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   });
 
   const entries = entriesQuery.data ?? [];
+  const clientsQuery = useAgencyClientsQuery(teamId);
   const creator = useAgencyReportCreator(entries, {
     initialExcludedEntryIds: report?.excludedEntryIds,
     showWaste,
@@ -221,21 +281,39 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   );
 
   const handleToggleWaste = useCallback(
-    async (entryId?: string) => {
-      const entry =
-        (entryId ? creator.visibleEntries.find((item) => item.id === entryId) : null) ??
-        creator.selectedEntry;
-      if (!entry || !teamId) return;
+    async (entryIds?: string[]) => {
+      const ids =
+        entryIds && entryIds.length > 0
+          ? entryIds
+          : creator.selectedEntry
+            ? [creator.selectedEntry.id]
+            : [];
+      const entries = ids
+        .map((id) => creator.visibleEntries.find((item) => item.id === id))
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+      if (entries.length === 0 || !teamId) return;
 
-      const nextIsWaste = !(entry.isWaste === true);
-      setWastePending(true);
-      try {
-        await orpcClient.agencyOps.reports.updateEntry({
-          teamId,
-          entryId: entry.id,
-          isWaste: nextIsWaste,
-        });
+      const nextIsWaste = !entries.every((entry) => entry.isWaste === true);
+      for (const entry of entries) {
         creator.setTaskWaste(entry.id, entry.taskId ?? "", nextIsWaste);
+      }
+      if (entries.length > 1) {
+        toast.success(
+          nextIsWaste
+            ? `Marked ${entries.length} entries as waste`
+            : `Unmarked ${entries.length} entries as waste`,
+        );
+      }
+      try {
+        await Promise.all(
+          entries.map((entry) =>
+            orpcClient.agencyOps.reports.updateEntry({
+              teamId,
+              entryId: entry.id,
+              isWaste: nextIsWaste,
+            }),
+          ),
+        );
         autosave.queueActivity({ action: "waste_toggled", payload: { isWaste: nextIsWaste } });
         void Promise.all([
           invalidateAgencyEntriesQueries(teamId),
@@ -243,11 +321,12 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
           invalidateAgencyDashboardQueries(teamId),
         ]);
       } catch (error) {
+        for (const entry of entries) {
+          creator.setTaskWaste(entry.id, entry.taskId ?? "", !nextIsWaste);
+        }
         toast.error("Couldn't update entry", {
           description: getErrorMessage(error, "Try again."),
         });
-      } finally {
-        setWastePending(false);
       }
     },
     [autosave, creator, queryClient, teamId],
@@ -322,7 +401,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
       if (event.key === "w" || event.key === "W") {
         if (!creator.selectedEntry?.taskId) return;
         event.preventDefault();
-        void handleToggleWaste(creator.selectedEntryId);
+        void handleToggleWaste([creator.selectedEntryId]);
       }
     }
 
@@ -351,7 +430,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
 
       if (files.length === 0) {
         toast.error("Nothing to export", {
-          description: "No clients remain after the current filters.",
+          description: "No clients left after the current filters.",
         });
         setExportPhase("idle");
         return;
@@ -371,7 +450,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
       }, 1600);
     } catch (error) {
       setExportPhase("idle");
-      toast.error("Export failed", {
+      toast.error("Couldn't export", {
         description: getErrorMessage(error, "Try again."),
       });
     }
@@ -387,8 +466,8 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   const handleDeleteReport = useCallback(async () => {
     if (!teamId || !reportId || deletingReport) return;
     if (autosave.state === "pending" || autosave.state === "saving") {
-      toast.error("Wait for save to finish", {
-        description: "The report is still saving. Try again in a moment.",
+      toast.error("Still saving", {
+        description: "Try again in a moment.",
       });
       return;
     }
@@ -407,6 +486,11 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
       setDeletingReport(false);
     }
   }, [autosave.state, backParams, deletingReport, navigate, queryClient, reportId, teamId]);
+
+  const hourMetrics = useMemo(
+    () => computeReportHourMetrics(creator.visibleEntries, clientsQuery.data?.items ?? []),
+    [clientsQuery.data?.items, creator.visibleEntries],
+  );
 
   const isPending = reportQuery.isPending;
   const isError = reportQuery.isError;
@@ -429,13 +513,18 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     onBackToReports,
     exportPhase,
     savingEntryId,
-    wastePending,
     deletingReport,
     reportName,
     setReportName,
     labelContext,
     visibleFields,
+    showWaste,
     mergeSameTaskNames,
+    hourMetrics,
+    clients: clientsQuery.data?.items ?? [],
+    onFieldIdsChange: handleFieldIdsChange,
+    onShowWasteChange: handleShowWasteChange,
+    onMergeSameTaskNamesChange: handleMergeSameTaskNamesChange,
     rangeReady,
     entriesQueryPending: entriesQuery.isPending,
     entriesQueryError: entriesQuery.isError,

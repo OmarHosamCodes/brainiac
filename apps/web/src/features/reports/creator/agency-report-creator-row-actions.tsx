@@ -37,7 +37,11 @@ export function AgencyReportCreatorRowActions({
         <Button
           variant="ghost"
           size="sm"
-          className={cn("h-8 w-8 p-0", agencyFocusRingClass)}
+          className={cn(
+            "h-8 w-8 p-0 opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100",
+            (disabled || wastePending || menuOpen) && "opacity-100",
+            agencyFocusRingClass,
+          )}
           disabled={disabled || wastePending}
           aria-label={`Actions for ${label}`}
           onClick={(event) => event.stopPropagation()}

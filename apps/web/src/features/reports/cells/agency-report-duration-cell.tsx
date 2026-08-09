@@ -33,10 +33,11 @@ export function AgencyReportDurationCell({ row, onEditDetails }: AgencyReportDur
     <button
       type="button"
       className={durationTriggerClass}
+      title="View entries"
       aria-label={
         grouped
-          ? `${duration}, ${row.entryCount} entries. Edit details.`
-          : `${duration}. Edit details.`
+          ? `${duration}, ${row.entryCount} entries. View entries.`
+          : `${duration}. View entries.`
       }
       onClick={(event) => {
         event.stopPropagation();
