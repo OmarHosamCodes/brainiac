@@ -1,29 +1,22 @@
+import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
+import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { startShellBoot } from "@/features/app-shell/shell/shell-boot";
-import { authClient, whenAuthSessionReady } from "@/lib/auth-client";
-import { useEffect, useState } from "react";
-import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 export function ProtectedRoute() {
   const session = authClient.useSession();
   const location = useLocation();
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    void whenAuthSessionReady().then(() => setReady(true));
-  }, []);
+    if (session.isPending) startShellBoot();
+  }, [session.isPending]);
 
-  useEffect(() => {
-    if (!ready || session.isPending) {
-      startShellBoot();
-    }
-  }, [ready, session.isPending]);
-
-  if (!ready || session.isPending) {
-    return <LogoLoader />;
+  if (session.isPending) {
+    return <LogoLoader label="Checking your session" />;
   }
 
   if (!session.data) {
