@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "@/lib/navigation";
 
 import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
@@ -20,7 +20,10 @@ export function ProtectedRoute() {
   }
 
   if (!session.data) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    const redirectTo = `${location.pathname}${location.search}`;
+    return (
+      <Navigate to={`/login?redirect=${encodeURIComponent(redirectTo || "/canvas")}`} replace />
+    );
   }
 
   return (

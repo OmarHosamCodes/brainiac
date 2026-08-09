@@ -1,5 +1,5 @@
 import { ChevronDown, Loader2 } from "lucide-react";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link } from "@/lib/navigation";
 
 import Scanner from "@/components/marketing/bits/Scanner";
 import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";

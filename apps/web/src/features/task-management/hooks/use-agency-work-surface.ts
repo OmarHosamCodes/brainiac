@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "@/lib/navigation";
 
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
 import type { AgencyWorkSurfaceView } from "@/features/task-management/agency-work";

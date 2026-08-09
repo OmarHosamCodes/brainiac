@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/navigation";
 
 import { BrandMark } from "@/features/app-shell/components/brand-mark";
 import { cn } from "@/lib/utils";

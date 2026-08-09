@@ -1,6 +1,6 @@
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useId, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/navigation";
 
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { agencyManagementHref } from "@/features/shared/agency-management-sections";

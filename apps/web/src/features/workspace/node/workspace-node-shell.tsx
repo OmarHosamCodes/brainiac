@@ -17,7 +17,7 @@ import {
   Store,
   Trash2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { WorkspaceNodeBlockRenderer } from "@/features/workspace/node/workspace-node-block-renderer";

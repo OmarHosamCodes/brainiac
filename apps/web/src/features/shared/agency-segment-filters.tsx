@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import { AgencyTimeRangeCommandBar } from "@/features/shared/command-bar/agency-time-range-command-bar";

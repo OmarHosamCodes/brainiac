@@ -1,18 +1,21 @@
 declare const __BRAINIAC_SERVER_URL__: string;
 declare const __SENTRY_DSN__: string;
 
-const serverUrl = __BRAINIAC_SERVER_URL__ || (import.meta.env.DEV ? "http://localhost:7000" : "");
+const FALLBACK_SERVER_URL = "http://localhost:7000";
+
+const serverUrl = __BRAINIAC_SERVER_URL__ || (import.meta.env.DEV ? FALLBACK_SERVER_URL : "");
 
 export function getServerUrl(): string {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
 
-  if (!serverUrl) {
-    throw new Error("VITE_PUBLIC_SERVER_URL is required in production builds");
+  if (serverUrl) {
+    return serverUrl;
   }
 
-  return serverUrl;
+  // Prerender / local SSR without env still needs a stable absolute origin.
+  return FALLBACK_SERVER_URL;
 }
 
 /** Route RPC through the web app origin so production can proxy to the API. */

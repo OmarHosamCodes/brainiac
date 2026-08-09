@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Briefcase, LayoutDashboard, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/navigation";
 
 import { APP_NAV_ITEMS } from "@/features/app-shell/app-navigation";
 import { useAppShellStore } from "@/features/app-shell/app-shell-store";

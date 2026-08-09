@@ -1,6 +1,6 @@
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "@/lib/navigation";
 
 import {
   useAgencyNotificationPreferencesQuery,

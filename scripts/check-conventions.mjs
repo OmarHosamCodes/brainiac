@@ -14,8 +14,7 @@ const SCAN_ROOTS = ["apps", "packages"];
 const SKIP_DIRS = new Set(["node_modules", "dist", ".turbo", ".nuxt", ".output"]);
 
 const DYNAMIC_IMPORT_ALLOWLIST = [
-  /authenticated-routes\.tsx$/,
-  /\/app\.tsx$/,
+  /railway-ssr-server\.mjs$/,
   /workspace-block-registry\.ts$/,
   /lazy-infinite-canvas\.tsx$/,
   /export-agency-report-xlsx\.ts$/,

@@ -1,6 +1,6 @@
 import { Menu } from "lucide-react";
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "@/lib/navigation";
 
 import { APP_NAV_ITEMS } from "@/features/app-shell/app-navigation";
 import { AppShellAccountMenu } from "@/features/app-shell/app-shell-account-menu";

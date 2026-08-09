@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "@/lib/navigation";
 
 import { AgencyMoneySurface } from "@/features/money/agency-money-surface";
 import { AgencyResourcingSurface } from "@/features/resourcing/agency-resourcing-surface";

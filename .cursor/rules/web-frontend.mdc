@@ -62,6 +62,8 @@ Feature schemas live in the feature folder or `lib/schemas/` for cross-cutting a
 
 ## Routing
 
-- Pages in `src/pages/`, lazy-loaded in `app.tsx`
-- Protected routes in `authenticated-routes.tsx` behind `ProtectedRoute`
+- TanStack Start file routes in `src/routes/` (public SSG + authenticated SSR shell)
+- Page compositions stay in `src/pages/`; route modules import them
+- Navigation helpers from `@/lib/navigation` (`Link`, `useNavigate`, `useSearchParams`, …) — do not import `react-router-dom`
+- Protected app shell is `src/routes/_authenticated.tsx` (session boot + team list prefetch)
 - App-local imports use `@/` alias

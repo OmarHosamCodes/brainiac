@@ -41,6 +41,9 @@ function IndexProof({ id }: { id: LandingIndexId }) {
 }
 
 function initialOpenId(): LandingIndexId | null {
+  if (typeof window === "undefined") {
+    return DEFAULT_LANDING_INDEX_ID;
+  }
   return landingIndexIdFromHash(window.location.hash) ?? DEFAULT_LANDING_INDEX_ID;
 }
 
