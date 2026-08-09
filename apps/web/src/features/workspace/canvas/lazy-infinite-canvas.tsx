@@ -15,7 +15,7 @@ const InfiniteCanvasLazy = lazy(async () => {
 export const LazyInfiniteCanvas = forwardRef<InfiniteCanvasHandle, InfiniteCanvasProps>(
   function LazyInfiniteCanvas(props, ref) {
     return (
-      <Suspense fallback={<LogoLoader label="Loading canvas" />}>
+      <Suspense fallback={<LogoLoader placement="slot" label="Opening canvas" />}>
         <InfiniteCanvasLazy {...props} ref={ref} />
       </Suspense>
     );

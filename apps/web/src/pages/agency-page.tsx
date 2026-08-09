@@ -2,10 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
+import { ShellBootSurface } from "@/features/app-shell/components/shell-boot-surface";
 import {
-  shellContentInClass,
   shellPageBodyClass,
   shellPageClass,
   shellPageNestClass,
@@ -200,71 +199,67 @@ export function AgencyPage() {
         {...{ [AGENCY_PAGE_SCROLL_ATTR]: "" }}
       >
         <main className={isFullHeightSegment ? shellPageNestClass : shellPageClass}>
-          {isBooting ? (
-            <LogoLoader label="Loading agency" />
-          ) : showAgencyUpsell ? (
-            <div className={shellContentInClass}>
+          <ShellBootSurface booting={isBooting} label="Opening Agency">
+            {showAgencyUpsell ? (
               <AgencyProUpsell />
-            </div>
-          ) : teams.length === 0 ? (
-            <div className={shellContentInClass}>
+            ) : teams.length === 0 ? (
               <AgencyPlaceholderSurface
                 icon="i-lucide-users"
                 title="No team yet"
                 body="Create a team in your workspace to start using agency tools."
                 hints={["Use the team control in the top bar to create or join a team."]}
               />
-            </div>
-          ) : (
-            <div className={cn(shellPageBodyClass, isFullHeightSegment && "min-h-0 flex-1 pt-0")}>
-              <div
-                role="tabpanel"
-                id={panelIdFor(segment)}
-                aria-label={agencySegmentLabel(segment)}
-                className={cn(isFullHeightSegment && "flex min-h-0 flex-1 flex-col")}
-              >
-                <AgencySegmentFiltersRoot
-                  segment={segment}
-                  teamId={selectedTeamId}
-                  selectedProjectId={selectedProjectId}
-                  selectedClientId={selectedClientId}
-                  reportMode={searchParams.get("report")}
-                  searchParams={searchParams}
+            ) : (
+              <div className={cn(shellPageBodyClass, isFullHeightSegment && "min-h-0 flex-1 pt-0")}>
+                <div
+                  role="tabpanel"
+                  id={panelIdFor(segment)}
+                  aria-label={agencySegmentLabel(segment)}
+                  className={cn(isFullHeightSegment && "flex min-h-0 flex-1 flex-col")}
                 >
-                  {segment === "work" ? (
-                    <div className={agencyWorkSurfaceShellClass}>
-                      <AgencyWorkSurface
+                  <AgencySegmentFiltersRoot
+                    segment={segment}
+                    teamId={selectedTeamId}
+                    selectedProjectId={selectedProjectId}
+                    selectedClientId={selectedClientId}
+                    reportMode={searchParams.get("report")}
+                    searchParams={searchParams}
+                  >
+                    {segment === "work" ? (
+                      <div className={agencyWorkSurfaceShellClass}>
+                        <AgencyWorkSurface
+                          teamId={selectedTeamId}
+                          onSegmentChange={handleSegmentChange}
+                        />
+                      </div>
+                    ) : null}
+                    {segment === "reports" && searchParams.get("report") ? (
+                      <AgencyReportCreatorSurface teamId={selectedTeamId} />
+                    ) : null}
+                    {segment === "management" ? (
+                      <AgencyManagementSurface teamId={selectedTeamId} />
+                    ) : null}
+                    {segment === "dashboard" ||
+                    segment === "clients" ||
+                    segment === "projects" ||
+                    (segment === "reports" && !searchParams.get("report")) ? (
+                      <AgencySegmentBody
+                        segment={segment}
                         teamId={selectedTeamId}
-                        onSegmentChange={handleSegmentChange}
+                        selectedProjectId={selectedProjectId}
+                        selectedClientId={selectedClientId}
+                        onSelectProject={openProject}
+                        onSelectClient={openClient}
+                        onSelectMember={openMember}
+                        onCloseProject={closeProject}
+                        onCloseClient={closeClient}
                       />
-                    </div>
-                  ) : null}
-                  {segment === "reports" && searchParams.get("report") ? (
-                    <AgencyReportCreatorSurface teamId={selectedTeamId} />
-                  ) : null}
-                  {segment === "management" ? (
-                    <AgencyManagementSurface teamId={selectedTeamId} />
-                  ) : null}
-                  {segment === "dashboard" ||
-                  segment === "clients" ||
-                  segment === "projects" ||
-                  (segment === "reports" && !searchParams.get("report")) ? (
-                    <AgencySegmentBody
-                      segment={segment}
-                      teamId={selectedTeamId}
-                      selectedProjectId={selectedProjectId}
-                      selectedClientId={selectedClientId}
-                      onSelectProject={openProject}
-                      onSelectClient={openClient}
-                      onSelectMember={openMember}
-                      onCloseProject={closeProject}
-                      onCloseClient={closeClient}
-                    />
-                  ) : null}
-                </AgencySegmentFiltersRoot>
+                    ) : null}
+                  </AgencySegmentFiltersRoot>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </ShellBootSurface>
         </main>
       </div>
     </AppShellPage>

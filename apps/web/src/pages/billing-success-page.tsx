@@ -2,16 +2,12 @@ import { CheckCircle } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { Button } from "@/ui/button";
-import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
-import { useBilling } from "@/features/billing/billing-queries";
+import { ShellBootSurface } from "@/features/app-shell/components/shell-boot-surface";
 import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
-import {
-  shellConfirmInClass,
-  shellContentInClass,
-  shellStaggerItemClass,
-} from "@/features/app-shell/app-shell-ui";
+import { useBilling } from "@/features/billing/billing-queries";
+import { Button } from "@/ui/button";
+import { shellConfirmInClass, shellStaggerItemClass } from "@/features/app-shell/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 export function BillingSuccessPage() {
@@ -27,9 +23,7 @@ export function BillingSuccessPage() {
 
   return (
     <AppShellPage>
-      {isBooting ? (
-        <LogoLoader label="Loading billing" />
-      ) : (
+      <ShellBootSurface booting={isBooting} label="Confirming billing">
         <div className="flex h-full items-start justify-center overflow-y-auto bg-default px-4 pt-12 sm:px-6 lg:px-8">
           <div className="w-full max-w-md px-6 text-center">
             <div
@@ -52,7 +46,7 @@ export function BillingSuccessPage() {
               </p>
             ) : null}
 
-            <div className={cn("flex flex-col gap-3", shellContentInClass)}>
+            <div className="flex flex-col gap-3">
               <Button asChild size="lg">
                 <Link to="/canvas">Go to Canvas</Link>
               </Button>
@@ -68,7 +62,7 @@ export function BillingSuccessPage() {
             </div>
           </div>
         </div>
-      )}
+      </ShellBootSurface>
     </AppShellPage>
   );
 }

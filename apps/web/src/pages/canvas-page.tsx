@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
+import { ShellBootSurface } from "@/features/app-shell/components/shell-boot-surface";
 import {
   LazyInfiniteCanvas,
   type InfiniteCanvasHandle,
@@ -58,112 +58,108 @@ export function CanvasPage() {
 
   return (
     <AppShellPage>
-      <div className="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
-        {!isBooting ? (
-          <>
-            <main className="h-full w-full">
-              <LazyInfiniteCanvas
-                ref={canvasRef}
-                nodes={board.nodes}
-                selectedNodeIds={board.selectedNodeIds}
-                loading={board.isWorkspaceInitialLoading}
-                onNodesChange={(nextNodes: any[]) =>
-                  board.updateNodes((draft) => {
-                    const positionById = new Map(nextNodes.map((node: any) => [node.id, node]));
-                    draft.forEach((node, index) => {
-                      const updated = positionById.get(node.id) as any;
-                      if (!updated) return;
-                      draft[index] = {
-                        ...node,
-                        x: updated.x,
-                        y: updated.y,
-                        width: updated.width,
-                        height: updated.height,
-                      };
-                    });
-                  })
-                }
-                onSelectedNodeIdsChange={board.setSelectedNodeIds}
-                onCreateNode={board.openCreateNode}
-                onEditNode={board.openEditNode}
-                onConnectNodePair={board.connectNodePair}
-                onDisconnectNodePair={board.disconnectNodePair}
-                onRemoveNode={board.removeNode}
-                onOpenNode={(payload: any) => navigate(`/node/${payload.nodeId}`)}
-                renderNode={(node: any, selected: any, allNodes: any) => (
-                  <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />
-                )}
-              />
-            </main>
-
-            <div className="pointer-events-none absolute bottom-[11.5rem] left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-[12rem] md:left-6">
-              {board.isWorkspaceRefreshing ? (
-                <div className="pointer-events-auto flex flex-wrap items-center gap-2">
-                  <Badge
-                    key="refreshing"
-                    variant="secondary"
-                    className={cn("gap-1.5", shellContentInClass)}
-                  >
-                    <Loader2 className="size-3 animate-spin" />
-                    Refreshing
-                  </Badge>
-                </div>
-              ) : null}
-
-              {board.saveError ? (
-                <div
-                  key={board.saveError}
-                  className={cn(
-                    dashboardErrorAlertClass,
-                    shellContentInClass,
-                    "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
-                  )}
-                >
-                  {board.saveError}
-                </div>
-              ) : null}
-
-              {board.workspaceQuery.status === "error" ? (
-                <div
-                  key={board.workspaceQuery.error?.message ?? "workspace-error"}
-                  className={cn(
-                    dashboardErrorAlertClass,
-                    shellContentInClass,
-                    "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
-                  )}
-                >
-                  <div className="flex items-center gap-2 font-semibold">
-                    <AlertCircle className="size-4" />
-                    Couldn&apos;t load workspace
-                  </div>
-                  <p className="mt-1">{board.workspaceQuery.error?.message}</p>
-                </div>
-              ) : null}
-            </div>
-
-            <WorkspaceEditorModal
-              availableBlocks={board.editorBlockOptions}
-              content={board.nodeDraft.content}
-              featuredBlocks={board.nodeDraft.featuredBlocks}
-              mode={board.editorMode}
-              nodeType={board.nodeDraft.nodeType}
-              open={board.editorOpen}
-              tint={board.nodeDraft.tint}
-              title={board.nodeDraft.title}
-              valid={board.isDraftValid}
-              onClose={board.closeEditor}
-              onSubmit={board.submitNodeEditor}
-              onFeaturedBlocksChange={(featuredBlocks) => board.patchNodeDraft({ featuredBlocks })}
-              onContentChange={(content) => board.patchNodeDraft({ content })}
-              onNodeTypeChange={(nodeType) => board.patchNodeDraft({ nodeType })}
-              onTintChange={(tint) => board.patchNodeDraft({ tint })}
-              onTitleChange={(title) => board.patchNodeDraft({ title })}
+      <ShellBootSurface booting={isBooting} label="Opening canvas">
+        <div className="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
+          <main className="h-full w-full">
+            <LazyInfiniteCanvas
+              ref={canvasRef}
+              nodes={board.nodes}
+              selectedNodeIds={board.selectedNodeIds}
+              loading={board.isWorkspaceInitialLoading}
+              onNodesChange={(nextNodes: any[]) =>
+                board.updateNodes((draft) => {
+                  const positionById = new Map(nextNodes.map((node: any) => [node.id, node]));
+                  draft.forEach((node, index) => {
+                    const updated = positionById.get(node.id) as any;
+                    if (!updated) return;
+                    draft[index] = {
+                      ...node,
+                      x: updated.x,
+                      y: updated.y,
+                      width: updated.width,
+                      height: updated.height,
+                    };
+                  });
+                })
+              }
+              onSelectedNodeIdsChange={board.setSelectedNodeIds}
+              onCreateNode={board.openCreateNode}
+              onEditNode={board.openEditNode}
+              onConnectNodePair={board.connectNodePair}
+              onDisconnectNodePair={board.disconnectNodePair}
+              onRemoveNode={board.removeNode}
+              onOpenNode={(payload: any) => navigate(`/node/${payload.nodeId}`)}
+              renderNode={(node: any, selected: any, allNodes: any) => (
+                <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />
+              )}
             />
-          </>
-        ) : (
-          <LogoLoader label="Loading canvas" />
-        )}
-      </div>
+          </main>
+
+          <div className="pointer-events-none absolute bottom-[11.5rem] left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-[12rem] md:left-6">
+            {board.isWorkspaceRefreshing ? (
+              <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+                <Badge
+                  key="refreshing"
+                  variant="secondary"
+                  className={cn("gap-1.5", shellContentInClass)}
+                >
+                  <Loader2 className="size-3 animate-spin" />
+                  Refreshing
+                </Badge>
+              </div>
+            ) : null}
+
+            {board.saveError ? (
+              <div
+                key={board.saveError}
+                className={cn(
+                  dashboardErrorAlertClass,
+                  shellContentInClass,
+                  "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
+                )}
+              >
+                {board.saveError}
+              </div>
+            ) : null}
+
+            {board.workspaceQuery.status === "error" ? (
+              <div
+                key={board.workspaceQuery.error?.message ?? "workspace-error"}
+                className={cn(
+                  dashboardErrorAlertClass,
+                  shellContentInClass,
+                  "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
+                )}
+              >
+                <div className="flex items-center gap-2 font-semibold">
+                  <AlertCircle className="size-4" />
+                  Couldn&apos;t load workspace
+                </div>
+                <p className="mt-1">{board.workspaceQuery.error?.message}</p>
+              </div>
+            ) : null}
+          </div>
+
+          <WorkspaceEditorModal
+            availableBlocks={board.editorBlockOptions}
+            content={board.nodeDraft.content}
+            featuredBlocks={board.nodeDraft.featuredBlocks}
+            mode={board.editorMode}
+            nodeType={board.nodeDraft.nodeType}
+            open={board.editorOpen}
+            tint={board.nodeDraft.tint}
+            title={board.nodeDraft.title}
+            valid={board.isDraftValid}
+            onClose={board.closeEditor}
+            onSubmit={board.submitNodeEditor}
+            onFeaturedBlocksChange={(featuredBlocks) => board.patchNodeDraft({ featuredBlocks })}
+            onContentChange={(content) => board.patchNodeDraft({ content })}
+            onNodeTypeChange={(nodeType) => board.patchNodeDraft({ nodeType })}
+            onTintChange={(tint) => board.patchNodeDraft({ tint })}
+            onTitleChange={(title) => board.patchNodeDraft({ title })}
+          />
+        </div>
+      </ShellBootSurface>
     </AppShellPage>
   );
 }

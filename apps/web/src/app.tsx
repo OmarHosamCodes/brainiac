@@ -22,11 +22,7 @@ const TermsPage = lazy(() =>
 const SentryRoutes = Sentry.withSentryReactRouterV7Routing(Routes);
 
 function PublicPageFallback() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <LogoLoader />
-    </div>
-  );
+  return <LogoLoader label="Opening the page" />;
 }
 
 function LoginAuthBoundary() {
