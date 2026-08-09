@@ -4,6 +4,7 @@ import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanst
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useEffect, type ReactNode } from "react";
 
+import { RouteError, RouteNotFound } from "@/features/app-shell/route-status";
 import "@/lib/sentry";
 import { subscribeThemeDomSync } from "@/stores/theme";
 import { Toaster } from "@/ui/sonner";
@@ -12,6 +13,8 @@ import appCss from "@/index.css?url";
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
+  errorComponent: () => <RouteError />,
+  notFoundComponent: RouteNotFound,
   head: () => ({
     meta: [
       { charSet: "utf-8" },

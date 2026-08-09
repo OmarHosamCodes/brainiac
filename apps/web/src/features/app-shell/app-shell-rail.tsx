@@ -21,7 +21,7 @@ import {
   shellRailLinkClass,
 } from "@/features/app-shell/app-shell-ui";
 import { useBilling } from "@/features/billing/billing-queries";
-import { agencySegmentFromSearch } from "@/features/shared/agency-segments";
+import { agencySegmentFromPathname } from "@/features/shared/agency-segments";
 import { useAgencySegmentShortcuts } from "@/features/shared/use-agency-segment-shortcuts";
 import { LucideIcon } from "@/lib/lucide-icon";
 import { cn } from "@/lib/utils";
@@ -33,8 +33,7 @@ function useShowManagementRail(): boolean {
   useAgencyManagementRailSync();
   const location = useLocation();
   const managementNavOpen = useAppShellStore((s) => s.managementNavOpen);
-  const onAgency = location.pathname.startsWith("/agency");
-  const segment = onAgency ? agencySegmentFromSearch(location.search) : null;
+  const segment = agencySegmentFromPathname(location.pathname);
   return managementNavOpen && segment === "management";
 }
 

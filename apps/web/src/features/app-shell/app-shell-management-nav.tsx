@@ -11,10 +11,10 @@ import {
 import {
   AGENCY_MANAGEMENT_PANES,
   agencyManagementHref,
-  agencyManagementPaneFromSearch,
+  agencyManagementPaneFromPathname,
   agencyManagementPaneTabId,
 } from "@/features/shared/agency-management-sections";
-import { agencySegmentFromSearch } from "@/features/shared/agency-segments";
+import { agencySegmentFromPathname } from "@/features/shared/agency-segments";
 import { LucideIcon } from "@/lib/lucide-icon";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +28,7 @@ export function useAgencyManagementRailSync() {
   const setManagementNavOpen = useAppShellStore((s) => s.setManagementNavOpen);
   const prevSegmentRef = useRef<string | null>(null);
 
-  const onAgency = location.pathname.startsWith("/agency");
-  const currentSegment = onAgency ? agencySegmentFromSearch(location.search) : null;
+  const currentSegment = agencySegmentFromPathname(location.pathname);
 
   useEffect(() => {
     const prev = prevSegmentRef.current;
@@ -46,7 +45,7 @@ export function useAgencyManagementRailSync() {
 export function AppShellManagementNav({ onNavigate }: AppShellManagementNavProps) {
   const location = useLocation();
   const setManagementNavOpen = useAppShellStore((s) => s.setManagementNavOpen);
-  const currentManagePane = agencyManagementPaneFromSearch(location.search);
+  const currentManagePane = agencyManagementPaneFromPathname(location.pathname);
 
   return (
     <div className="flex min-h-0 flex-col gap-0.5" role="group" aria-label="Management sections">

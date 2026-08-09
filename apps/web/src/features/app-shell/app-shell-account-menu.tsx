@@ -7,7 +7,7 @@ import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { useBilling } from "@/features/billing/billing-queries";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { UserSettingsModal } from "@/features/user-settings/user-settings-modal";
-import { authClient } from "@/lib/auth-client";
+import { useAuthSession } from "@/lib/auth-session";
 import { getServerUrl } from "@/lib/env";
 import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
 import { cn } from "@/lib/utils";
@@ -27,12 +27,11 @@ type AppShellAccountMenuProps = {
 };
 
 export function AppShellAccountMenu({ variant = "icon" }: AppShellAccountMenuProps) {
-  const session = authClient.useSession();
+  const { user, isPending } = useAuthSession();
   const { isPro } = useBilling();
   const updateAvailable = useAppUpdateStore((s) => s.updateAvailable);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const user = session.data?.user;
   const userName = user?.name?.trim() || "Workspace";
   const serverUrl = getServerUrl();
   const avatarUrl =
@@ -40,7 +39,7 @@ export function AppShellAccountMenu({ variant = "icon" }: AppShellAccountMenuPro
       ? getUserAvatarPublicUrl({ baseUrl: serverUrl, userId: user.id, storageKey: user.image })
       : null;
 
-  if (session.isPending) {
+  if (isPending) {
     return variant === "sidebar" ? (
       <Skeleton className="h-11 w-full rounded-[10px]" />
     ) : (
