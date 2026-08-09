@@ -4,9 +4,23 @@ import { RPCLink } from "@orpc/client/fetch";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 
+import { NOTIFICATION_LIST_LIMIT } from "@/features/notifications/notification-list-limit";
 import { resolveSsrApiOrigin } from "@/lib/ssr-api-origin";
 
 export type BootTeams = Awaited<ReturnType<AppRouterClient["team"]["list"]>>;
+export type BootUnreadCount = Awaited<ReturnType<AppRouterClient["notifications"]["unreadCount"]>>;
+export type BootNotificationList = Awaited<ReturnType<AppRouterClient["notifications"]["list"]>>;
+export type BootActiveTimer = Awaited<
+  ReturnType<AppRouterClient["agencyOps"]["timer"]["getActive"]>
+>;
+
+export type BootShellChrome = {
+  teams: BootTeams;
+  teamId: string;
+  unread: BootUnreadCount | null;
+  notifications: BootNotificationList | null;
+  timer: BootActiveTimer | null;
+};
 
 function createServerOrpcClient(cookie: string): AppRouterClient {
   const link = new RPCLink({
@@ -25,15 +39,39 @@ function createServerOrpcClient(cookie: string): AppRouterClient {
   return createORPCClient(link);
 }
 
-export const fetchBootTeams = createServerFn({ method: "GET" }).handler(
-  async (): Promise<BootTeams> => {
+const emptyChrome = (): BootShellChrome => ({
+  teams: { items: [] },
+  teamId: "",
+  unread: null,
+  notifications: null,
+  timer: null,
+});
+
+export const fetchBootShellChrome = createServerFn({ method: "GET" }).handler(
+  async (): Promise<BootShellChrome> => {
     const cookie = getRequestHeader("cookie") ?? "";
-    if (!cookie) return { items: [] };
+    if (!cookie) return emptyChrome();
+
+    const client = createServerOrpcClient(cookie);
+    let teams: BootTeams;
     try {
-      const client = createServerOrpcClient(cookie);
-      return await client.team.list();
+      teams = await client.team.list();
     } catch {
-      return { items: [] };
+      return emptyChrome();
+    }
+
+    const teamId = teams.items[0]?.id ?? "";
+    if (!teamId) return { ...emptyChrome(), teams };
+
+    try {
+      const [unread, notifications, timer] = await Promise.all([
+        client.notifications.unreadCount({ teamId }),
+        client.notifications.list({ teamId, limit: NOTIFICATION_LIST_LIMIT }),
+        client.agencyOps.timer.getActive({ teamId }),
+      ]);
+      return { teams, teamId, unread, notifications, timer };
+    } catch {
+      return { ...emptyChrome(), teams, teamId };
     }
   },
 );

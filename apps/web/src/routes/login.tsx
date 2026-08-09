@@ -2,21 +2,17 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { LoginPage } from "@/features/auth/login-page";
 import { AuthProvider } from "@/providers/auth-provider";
-import { validateLooseSearch } from "@/lib/router-search";
+import { validateLoginSearch } from "@/lib/router-search";
+import { safeRedirectPath } from "@/lib/safe-redirect-path";
 import { fetchBootSession } from "@/lib/session-boot";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: validateLooseSearch,
+  validateSearch: validateLoginSearch,
   loader: async ({ location }) => {
     const session = await fetchBootSession();
     if (session) {
       const params = new URLSearchParams(location.searchStr);
-      const redirectTo = params.get("redirect");
-      const safe =
-        redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
-          ? redirectTo
-          : "/canvas";
-      throw redirect({ href: safe });
+      throw redirect({ href: safeRedirectPath(params.get("redirect")) });
     }
     return { session };
   },

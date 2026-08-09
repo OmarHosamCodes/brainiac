@@ -12,6 +12,7 @@ import {
   type SignUpFormValues,
 } from "@/features/auth/auth-schemas";
 import { authClient } from "@/lib/auth-client";
+import { safeRedirectPath } from "@/lib/safe-redirect-path";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 export type { AuthMode };
@@ -24,13 +25,6 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
 
 function formatOAuthError(code: string): string {
   return OAUTH_ERROR_MESSAGES[code] ?? "Sign in failed. Try again.";
-}
-
-function safeRedirectPath(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/canvas";
-  }
-  return value;
 }
 
 export function useLoginPage() {
