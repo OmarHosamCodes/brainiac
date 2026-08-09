@@ -379,13 +379,7 @@ export async function startAgencyTimer(
 
   let projectId: string | null = input.projectId ?? null;
   if (input.taskId) {
-    const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
-    if (projectId && projectId !== taskProjectId) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "taskId does not belong to the provided projectId.",
-      });
-    }
-    projectId = taskProjectId;
+    projectId = await resolveTaskProjectId(input.teamId, input.taskId);
   }
 
   if (projectId) {
@@ -833,11 +827,6 @@ export async function updateAgencyActiveTimerTask(
   let taskProjectId: string | null | undefined;
   if (input.taskId) {
     taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
-    if (input.projectId && input.projectId !== taskProjectId) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "taskId does not belong to the provided projectId.",
-      });
-    }
   }
 
   const binding = resolveAgencyActiveTimerTaskBinding({
@@ -1100,13 +1089,7 @@ export async function createManualAgencyTimeEntry(
 
   let projectId = input.projectId;
   if (input.taskId) {
-    const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
-    if (projectId && projectId !== taskProjectId) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "taskId does not belong to the provided projectId.",
-      });
-    }
-    projectId = taskProjectId;
+    projectId = await resolveTaskProjectId(input.teamId, input.taskId);
   } else if (!projectId) {
     throw new ORPCError("BAD_REQUEST", {
       message: "projectId or taskId is required.",
@@ -1244,11 +1227,6 @@ export async function updateMyAgencyTimeEntry(
       taskIdUpdate = { taskId: null };
     } else {
       const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
-      if (resolvedProjectId && resolvedProjectId !== taskProjectId) {
-        throw new ORPCError("BAD_REQUEST", {
-          message: "taskId does not belong to the provided projectId.",
-        });
-      }
       resolvedProjectId = taskProjectId;
       taskIdUpdate = { taskId: input.taskId };
     }
@@ -1372,13 +1350,7 @@ export async function updateMyAgencyTimeEntriesBulk(
   let projectId = input.patch.projectId;
   let taskId: string | null | undefined;
   if (input.patch.taskId) {
-    const taskProjectId = await resolveTaskProjectId(input.teamId, input.patch.taskId);
-    if (projectId && projectId !== taskProjectId) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "taskId does not belong to the provided projectId.",
-      });
-    }
-    projectId = taskProjectId;
+    projectId = await resolveTaskProjectId(input.teamId, input.patch.taskId);
     taskId = input.patch.taskId;
   } else if (input.patch.projectId) {
     taskId = null;
@@ -1731,11 +1703,6 @@ export async function updateAnyAgencyTimeEntry(
       taskIdUpdate = { taskId: null };
     } else {
       const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
-      if (resolvedProjectId && resolvedProjectId !== taskProjectId) {
-        throw new ORPCError("BAD_REQUEST", {
-          message: "taskId does not belong to the provided projectId.",
-        });
-      }
       resolvedProjectId = taskProjectId;
       taskIdUpdate = { taskId: input.taskId };
     }
