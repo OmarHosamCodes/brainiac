@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "@/lib/navigation";
 
 import { useAppShellStore } from "@/features/app-shell/app-shell-store";
+import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
 import {
   useAgencyNotificationsQuery,
   useMarkNotificationReadMutation,
@@ -13,7 +14,7 @@ import {
   featuredNotificationTitle,
   formatRelativeTime,
   notificationHref,
-  pickFeaturedNeedsAction,
+  pickFeaturedRailItem,
 } from "@/features/notifications/notification-presentation";
 import { useNotificationsInboxUiStore } from "@/features/notifications/stores/notifications-inbox-ui";
 import { useTeamStore } from "@/features/team/team-store";
@@ -31,18 +32,33 @@ export function useFeaturedRailNotification(input: FeaturedRailNotificationInput
   const navigate = useNavigate();
   const requestOpenInbox = useNotificationsInboxUiStore((s) => s.requestOpen);
   const startTimer = useAgencyTimeTrackingStore((state) => state.startTimer);
+  const updateAvailable = useAppUpdateStore((s) => s.updateAvailable);
+  const isRefreshing = useAppUpdateStore((s) => s.isRefreshing);
+  const beginRefresh = useAppUpdateStore((s) => s.beginRefresh);
   const listQuery = useAgencyNotificationsQuery(teamId, Boolean(teamId));
   const markReadMutation = useMarkNotificationReadMutation(teamId);
   const [actionPending, setActionPending] = useState(false);
 
   const items = listQuery.data?.items ?? [];
-  const { featured, count } = useMemo(() => pickFeaturedNeedsAction(items), [items]);
+  const picked = useMemo(
+    () => pickFeaturedRailItem(items, updateAvailable),
+    [items, updateAvailable],
+  );
+  const featured = picked.kind === "notification" ? picked.featured : null;
+  const count = picked.count;
+  const isAppUpdate = picked.kind === "app-update";
 
-  const title = featured ? featuredNotificationTitle(featured) : "";
-  const body = featured ? featuredNotificationBody(featured) : "";
-  const cta = featured
-    ? featuredNotificationCta(featured)
-    : { kind: "open" as const, label: "Open" };
+  const title = isAppUpdate ? "App update" : featured ? featuredNotificationTitle(featured) : "";
+  const body = isAppUpdate
+    ? "A newer version of Orch is ready."
+    : featured
+      ? featuredNotificationBody(featured)
+      : "";
+  const cta = isAppUpdate
+    ? { kind: "reload" as const, label: "Update now" }
+    : featured
+      ? featuredNotificationCta(featured)
+      : { kind: "open" as const, label: "Open" };
   const moreCount = Math.max(0, count - 1);
   const badgeLabel = count > 9 ? "9+" : String(count);
   const actorName = featured?.actorName?.trim() || "Team";
@@ -61,7 +77,14 @@ export function useFeaturedRailNotification(input: FeaturedRailNotificationInput
   }
 
   async function handlePrimaryCta() {
+    if (isAppUpdate) {
+      if (actionPending || isRefreshing) return;
+      setActionPending(true);
+      await beginRefresh();
+      return;
+    }
     if (!featured || !teamId || actionPending) return;
+    if (cta.kind === "reload") return;
     setActionPending(true);
     try {
       if (cta.kind === "start-timer") {
@@ -90,6 +113,7 @@ export function useFeaturedRailNotification(input: FeaturedRailNotificationInput
   return {
     teamId,
     expanded,
+    isAppUpdate,
     featured,
     count,
     moreCount,
@@ -101,10 +125,10 @@ export function useFeaturedRailNotification(input: FeaturedRailNotificationInput
     actorName,
     actorAvatar,
     relativeTime,
-    listPending: listQuery.isPending && !listQuery.data,
-    actionPending,
+    listPending: !isAppUpdate && listQuery.isPending && !listQuery.data,
+    actionPending: actionPending || isRefreshing,
     onDismiss: () => {
-      if (!featured || actionPending) return;
+      if (isAppUpdate || !featured || actionPending) return;
       void markRead(featured);
     },
     onPrimaryCta: () => void handlePrimaryCta(),

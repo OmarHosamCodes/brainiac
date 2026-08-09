@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
-import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
 import { useBilling } from "@/features/billing/billing-queries";
 import {
   useAgencyNotificationPreferencesQuery,
@@ -35,9 +34,6 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
   const session = authClient.useSession();
   const { tier, isPro, checkout, openPortal } = useBilling();
   const { isDark, toggle: toggleTheme } = useTheme();
-  const updateAvailable = useAppUpdateStore((s) => s.updateAvailable);
-  const isRefreshing = useAppUpdateStore((s) => s.isRefreshing);
-  const beginRefresh = useAppUpdateStore((s) => s.beginRefresh);
   const teamId = useTeamStore((s) => s.selectedTeamId) ?? "";
   const preferencesQuery = useAgencyNotificationPreferencesQuery(
     teamId,
@@ -180,10 +176,6 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
     void (isPro ? openPortal() : checkout());
   }
 
-  function handleRefresh() {
-    void beginRefresh();
-  }
-
   function togglePreferenceChannel(pref: NotificationPreferenceItem, channel: "inApp" | "push") {
     if (!teamId || setPreferencesMutation.isPending) return;
     void setPreferencesMutation.mutateAsync([{ ...pref, [channel]: !pref[channel] }]);
@@ -204,8 +196,6 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
     isDark,
     tier,
     isPro,
-    updateAvailable,
-    isRefreshing,
     hasTeam: Boolean(teamId),
     notificationPreferences: (preferencesQuery.data?.items ?? []) as NotificationPreferenceItem[],
     notificationPreferencesLoading: preferencesQuery.isPending && !preferencesQuery.data,
@@ -218,7 +208,6 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
     onToggleTheme: toggleTheme,
     onBillingAction: handleBillingAction,
     onSignOut: () => void signOut(),
-    onRefresh: handleRefresh,
     onTogglePreferenceChannel: togglePreferenceChannel,
   };
 }

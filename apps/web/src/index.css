@@ -647,6 +647,24 @@ body {
   gap: 0.125rem;
 }
 
+/* Nested-route thread: 1px hairline under the parent icon (not an active side-stripe). */
+.app-shell--rail-pinned .app-shell__rail-group:has(> .app-shell__rail-subnav),
+.app-shell__drawer-static .app-shell__rail-group:has(> .app-shell__rail-subnav) {
+  position: relative;
+}
+
+.app-shell--rail-pinned .app-shell__rail-group:has(> .app-shell__rail-subnav)::before,
+.app-shell__drawer-static .app-shell__rail-group:has(> .app-shell__rail-subnav)::before {
+  content: "";
+  position: absolute;
+  left: 1.125rem;
+  top: 1.625rem;
+  bottom: 1rem;
+  width: 1px;
+  pointer-events: none;
+  background: color-mix(in oklab, var(--color-sidebar-foreground) 22%, transparent);
+}
+
 .app-shell__rail-link {
   display: flex;
   width: 100%;
@@ -722,6 +740,32 @@ body {
   white-space: nowrap;
 }
 
+.app-shell--rail-pinned .app-shell__rail-sublink,
+.app-shell__drawer-static .app-shell__rail-sublink {
+  position: relative;
+}
+
+.app-shell--rail-pinned .app-shell__rail-sublink::before,
+.app-shell__drawer-static .app-shell__rail-sublink::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -0.625rem;
+  width: 0.5rem;
+  height: 1px;
+  pointer-events: none;
+  background: color-mix(in oklab, var(--color-sidebar-foreground) 22%, transparent);
+}
+
+.app-shell--rail-pinned .app-shell__rail-sublink:last-child::before,
+.app-shell__drawer-static .app-shell__rail-sublink:last-child::before {
+  top: 0;
+  height: 50%;
+  background: none;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-sidebar-foreground) 22%, transparent);
+  border-left: 1px solid color-mix(in oklab, var(--color-sidebar-foreground) 22%, transparent);
+}
+
 .app-shell__rail-footer {
   margin-top: auto;
   display: flex;
@@ -745,6 +789,7 @@ body {
 .app-shell--rail-pinned .app-shell__rail-subnav {
   max-height: 18rem;
   margin-top: 0.125rem;
+  padding-left: 1.75rem;
   opacity: 1;
 }
 
@@ -763,6 +808,7 @@ body {
 .app-shell__drawer-static .app-shell__rail-subnav {
   max-height: none;
   margin-top: 0.125rem;
+  padding-left: 1.75rem;
   opacity: 1;
 }
 

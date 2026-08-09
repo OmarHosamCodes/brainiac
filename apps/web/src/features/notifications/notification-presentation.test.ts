@@ -9,6 +9,7 @@ import {
   isNeedsActionNotification,
   notificationHref,
   pickFeaturedNeedsAction,
+  pickFeaturedRailItem,
 } from "./notification-presentation";
 
 function notification(
@@ -66,6 +67,34 @@ describe("notification presentation", () => {
     expect(sections.map((section) => section.label)).toEqual(["Needs action", "Updates"]);
     expect(sections[0]?.items.map((item) => item.id)).toEqual(["a"]);
     expect(sections[1]?.items.map((item) => item.id)).toEqual(["m", "d"]);
+  });
+
+  test("app update always outranks Needs-action in the rail", () => {
+    const assigned = notification({
+      id: "a",
+      type: "task.assigned",
+      deliveryClass: "interrupt",
+    });
+    expect(pickFeaturedRailItem([assigned], false)).toEqual({
+      kind: "notification",
+      featured: assigned,
+      count: 1,
+    });
+    expect(pickFeaturedRailItem([assigned], true)).toEqual({
+      kind: "app-update",
+      featured: null,
+      count: 2,
+    });
+    expect(pickFeaturedRailItem([], true)).toEqual({
+      kind: "app-update",
+      featured: null,
+      count: 1,
+    });
+    expect(pickFeaturedRailItem([], false)).toEqual({
+      kind: "empty",
+      featured: null,
+      count: 0,
+    });
   });
 
   test("picks newest unread Needs-action and ignores Updates", () => {

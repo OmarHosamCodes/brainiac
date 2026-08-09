@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { CreditCard, Loader2, LogOut, Moon, RefreshCw, Settings2, Sun } from "lucide-react";
+import { CreditCard, Loader2, LogOut, Moon, Settings2, Sun } from "lucide-react";
 
 import { AgencySettingsDialogShell } from "@/features/shared/agency-settings-dialog-shell";
 import type {
@@ -74,8 +74,6 @@ export function UserSettingsModalView({ viewModel }: UserSettingsModalViewProps)
     isDark,
     tier,
     isPro,
-    updateAvailable,
-    isRefreshing,
     hasTeam,
     notificationPreferences,
     notificationPreferencesLoading,
@@ -85,7 +83,6 @@ export function UserSettingsModalView({ viewModel }: UserSettingsModalViewProps)
     onToggleTheme,
     onBillingAction,
     onSignOut,
-    onRefresh,
     onTogglePreferenceChannel,
   } = viewModel;
 
@@ -131,15 +128,6 @@ export function UserSettingsModalView({ viewModel }: UserSettingsModalViewProps)
                 {isDark ? "Light mode" : "Dark mode"}
               </Button>
             </SettingsRow>
-
-            {updateAvailable && !isRefreshing ? (
-              <SettingsRow label="App update" description="A newer version of Orch is ready.">
-                <Button type="button" size="sm" variant="outline" onClick={onRefresh}>
-                  <RefreshCw className="size-4 text-primary" />
-                  Update now
-                </Button>
-              </SettingsRow>
-            ) : null}
           </div>
 
           <div className="flex flex-col gap-3">

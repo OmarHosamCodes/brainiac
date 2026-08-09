@@ -15,9 +15,9 @@ export function AppShellNotifications({
   forceExpanded,
 }: AppShellNotificationsProps) {
   const teamId = useTeamStore((s) => s.selectedTeamId);
-  if (!teamId) return null;
   if (variant === "featured") {
     return <FeaturedRailNotification forceExpanded={forceExpanded} />;
   }
+  if (!teamId) return null;
   return <AgencyNotifications teamId={teamId} />;
 }

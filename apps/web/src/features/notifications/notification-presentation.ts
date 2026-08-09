@@ -135,6 +135,26 @@ export function pickFeaturedNeedsAction(items: NotificationRecord[]): {
   };
 }
 
+export type FeaturedRailItem =
+  | { kind: "app-update"; featured: null; count: number }
+  | { kind: "notification"; featured: NotificationRecord; count: number }
+  | { kind: "empty"; featured: null; count: 0 };
+
+/** App update always wins the rail card; Needs-action still counts toward overflow. */
+export function pickFeaturedRailItem(
+  items: NotificationRecord[],
+  updateAvailable: boolean,
+): FeaturedRailItem {
+  const needsAction = pickFeaturedNeedsAction(items);
+  if (updateAvailable) {
+    return { kind: "app-update", featured: null, count: needsAction.count + 1 };
+  }
+  if (needsAction.featured) {
+    return { kind: "notification", featured: needsAction.featured, count: needsAction.count };
+  }
+  return { kind: "empty", featured: null, count: 0 };
+}
+
 export function featuredNotificationTitle(notification: NotificationRecord) {
   switch (notification.type) {
     case "task.assigned":
