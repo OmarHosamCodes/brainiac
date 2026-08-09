@@ -6,7 +6,6 @@ import {
   createWorkspaceTaskListBlock,
   type WorkspaceNode,
 } from "@orch/workspace";
-import type { AgentToolCallEntry } from "@orch/agent";
 
 const NOW = "2026-06-15T14:30:00.000Z";
 
@@ -19,7 +18,10 @@ export const marketingWorkspaceNodes: WorkspaceNode[] = (() => {
     width: 300,
     height: 210,
     nodeType: "orchestrator",
-    dashboard: { tint: "emerald", featuredBlocks: [] },
+    dashboard: {
+      tint: "emerald",
+      featuredBlocks: [{ tabId: "marketing-launch-tab", blockId: "marketing-launch-tasks" }],
+    },
     connections: [{ targetNodeId: "marketing-research" }, { targetNodeId: "marketing-ops" }],
     tabs: [
       createWorkspaceNodeTab({
@@ -128,39 +130,6 @@ export const marketingWorkspaceNodes: WorkspaceNode[] = (() => {
   return [launchNode, researchNode, opsNode];
 })();
 
-export const marketingAgentToolTraces: AgentToolCallEntry[] = [
-  {
-    id: "marketing-trace-1",
-    name: "get_node_details",
-    status: "completed",
-    durationMs: 38,
-    error: null,
-    input: { nodeId: "marketing-launch", detailLevel: "full" },
-    output: { title: "Q2 Launch", tabs: 1, blocks: 2, tasksOpen: 2 },
-  },
-  {
-    id: "marketing-trace-2",
-    name: "create_block",
-    status: "completed",
-    durationMs: 112,
-    error: null,
-    input: {
-      nodeId: "marketing-launch",
-      tabId: "marketing-launch-tab",
-      blockType: "task-list",
-      title: "Launch checklist",
-    },
-    output: { blockId: "blk_launch_checklist", created: true },
-  },
-  {
-    id: "marketing-trace-3",
-    name: "search_dashboard",
-    status: "in_progress",
-    error: null,
-    input: { query: "agency time sync", detailLevel: "summary" },
-  },
-];
-
 export const marketingAgencyRows = [
   {
     id: "marketing-entry-1",
@@ -168,6 +137,9 @@ export const marketingAgencyRows = [
     projectId: "proj-alpha",
     projectName: "Client Alpha",
     clientName: "Northwind",
+    taskTitle: "Q2 launch plan",
+    isBillable: true,
+    isWaste: false,
     startedAt: "2026-06-15T09:15:00.000Z",
     endedAt: "2026-06-15T11:29:00.000Z",
     durationSeconds: 8040,
@@ -178,6 +150,9 @@ export const marketingAgencyRows = [
     projectId: "proj-internal",
     projectName: "Internal",
     clientName: "Orch",
+    taskTitle: "Weekly ops",
+    isBillable: false,
+    isWaste: false,
     startedAt: "2026-06-15T13:00:00.000Z",
     endedAt: "2026-06-15T14:05:00.000Z",
     durationSeconds: 3900,
@@ -188,13 +163,17 @@ export const marketingAgencyRows = [
     projectId: "proj-beta",
     projectName: "Client Beta",
     clientName: "Contoso",
+    taskTitle: "Homepage comps",
+    isBillable: true,
+    isWaste: true,
     startedAt: "2026-06-15T14:20:00.000Z",
     endedAt: "2026-06-15T15:08:00.000Z",
     durationSeconds: 2880,
   },
 ] as const;
 
-export const marketingAgencyDayTotalSeconds = marketingAgencyRows.reduce(
-  (sum, row) => sum + row.durationSeconds,
-  0,
-);
+export const marketingAgentThinkingSteps = [
+  { id: "marketing-trace-1", name: "get_node_details", done: true },
+  { id: "marketing-trace-2", name: "create_block", done: true },
+  { id: "marketing-trace-3", name: "search_dashboard", done: false },
+] as const;

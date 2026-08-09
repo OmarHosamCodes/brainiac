@@ -38,7 +38,7 @@ export function MarketingPageShell({ children }: { children: ReactNode }) {
   const year = new Date().getFullYear();
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background text-foreground selection:bg-primary/20">
+    <div className="flex min-h-screen w-full flex-col bg-background font-sans text-foreground selection:bg-primary/20 [--font-body:var(--font-sans)] [--font-heading:var(--font-sans)]">
       {children}
 
       <footer className="mt-auto w-full border-t border-border">
