@@ -58,9 +58,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
     >
       <AppShellChrome />
-      <main className="app-shell__main">{children}</main>
+      <main className="app-shell__main relative">
+        {children}
+        {isRefreshing ? (
+          <div className="absolute inset-0 z-[2]">
+            <LogoLoader placement="slot" label="Applying the update" />
+          </div>
+        ) : null}
+      </main>
       <WorkspaceAgent />
-      {isRefreshing ? <LogoLoader label="Updating" /> : null}
     </div>
   );
 }

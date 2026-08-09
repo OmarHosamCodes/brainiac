@@ -1,23 +1,19 @@
 import { useEffect, useState } from "react";
 
 import {
+  isShellAnimationHoldActive,
   isShellAnimationReady,
   resetShellBoot,
-  startShellBoot,
 } from "@/features/app-shell/shell/shell-boot";
 
-export function useShellBootGate(dataReady: boolean) {
-  const [animationReady, setAnimationReady] = useState(() => isShellAnimationReady());
-
-  useEffect(() => {
-    startShellBoot();
-  }, []);
+export function useShellAnimationHold() {
+  const [animationReady, setAnimationReady] = useState(() => !isShellAnimationHoldActive());
 
   useEffect(() => {
     if (animationReady) return;
 
     const intervalId = window.setInterval(() => {
-      if (isShellAnimationReady()) {
+      if (!isShellAnimationHoldActive() || isShellAnimationReady()) {
         setAnimationReady(true);
       }
     }, 100);
@@ -27,7 +23,10 @@ export function useShellBootGate(dataReady: boolean) {
 
   useEffect(() => resetShellBoot, []);
 
-  const isBooting = !(dataReady && animationReady);
+  return animationReady;
+}
 
-  return { isBooting };
+export function useShellBootGate(dataReady: boolean) {
+  const animationReady = useShellAnimationHold();
+  return { isBooting: !(dataReady && animationReady) };
 }

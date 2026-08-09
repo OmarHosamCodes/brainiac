@@ -2,6 +2,8 @@ import { describe, expect, test, beforeEach } from "bun:test";
 
 import {
   SHELL_LOGO_ANIMATION_MS,
+  hasShellBootStarted,
+  isShellAnimationHoldActive,
   isShellAnimationReadyAt,
   resetShellBoot,
   startShellBoot,
@@ -29,7 +31,15 @@ describe("shell boot session", () => {
   test("startShellBoot is idempotent", () => {
     startShellBoot();
     startShellBoot();
+    expect(hasShellBootStarted()).toBe(true);
     resetShellBoot();
     expect(isShellAnimationReadyAt(Date.now(), null)).toBe(false);
+    expect(hasShellBootStarted()).toBe(false);
+  });
+
+  test("warm cache skips the animation hold", () => {
+    expect(isShellAnimationHoldActive()).toBe(false);
+    startShellBoot();
+    expect(isShellAnimationHoldActive()).toBe(true);
   });
 });

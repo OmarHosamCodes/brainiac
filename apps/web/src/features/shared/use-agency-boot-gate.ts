@@ -1,12 +1,8 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
-import {
-  isShellAnimationReady,
-  resetShellBoot,
-  startShellBoot,
-} from "@/features/app-shell/shell/shell-boot";
+import { useShellAnimationHold } from "@/features/app-shell/shell/use-shell-boot-gate";
 import { ensureAgencySegmentBootQueries } from "@/features/shared/agency-segment-boot";
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
 
@@ -34,15 +30,11 @@ export function useAgencyBootGate({
   searchParams,
 }: UseAgencyBootGateOptions) {
   const queryClient = useQueryClient();
-  const [animationReady, setAnimationReady] = useState(() => isShellAnimationReady());
+  const animationReady = useShellAnimationHold();
 
   const isTeamReady = teamsCount === 0 || Boolean(teamId);
   const isPageReady = !teamsQuery.isPending && !billingQuery.isPending && isTeamReady;
   const skipSegmentBoot = showAgencyUpsell || teamsCount === 0 || !agencyEnabled || !teamId;
-
-  useEffect(() => {
-    startShellBoot();
-  }, []);
 
   useEffect(() => {
     if (!isPageReady || skipSegmentBoot) return;
@@ -53,20 +45,6 @@ export function useAgencyBootGate({
       searchParams,
     }).catch(() => undefined);
   }, [isPageReady, queryClient, searchParams.toString(), segment, skipSegmentBoot, teamId, userId]);
-
-  useEffect(() => {
-    if (animationReady) return;
-
-    const intervalId = window.setInterval(() => {
-      if (isShellAnimationReady()) {
-        setAnimationReady(true);
-      }
-    }, 100);
-
-    return () => window.clearInterval(intervalId);
-  }, [animationReady]);
-
-  useEffect(() => resetShellBoot, []);
 
   const isBooting = !(isPageReady && animationReady);
 
