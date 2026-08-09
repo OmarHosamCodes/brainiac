@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "@/lib/navigation";
+import { Outlet, useLocation } from "@/lib/navigation";
 
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
 import { ShellBootSurface } from "@/features/app-shell/components/shell-boot-surface";
@@ -11,33 +11,22 @@ import {
 } from "@/features/app-shell/app-shell-ui";
 import { AgencyProUpsell } from "@/features/billing/agency-pro-upsell";
 import { useBilling } from "@/features/billing/billing-queries";
-import { AgencyReportCreatorSurface } from "@/features/reports/creator/agency-report-creator-surface";
-import { AgencyManagementSurface } from "@/features/management/agency-management-surface";
-import {
-  managementPaneForLegacySection,
-  type AgencyManagementPaneId,
-} from "@/features/shared/agency-management-sections";
 import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
 import { AgencyPlaceholderSurface } from "@/features/shared/agency-placeholder-surface";
-import { AgencySegmentFiltersRoot } from "@/features/shared/agency-segment-filters";
 import {
-  LEGACY_AGENCY_SEGMENT_MAP,
-  agencySegmentFromSearch,
+  agencySegmentFromPathname,
   agencySegmentLabel,
-  isLegacyAgencySegmentId,
   type AgencySegmentId,
 } from "@/features/shared/agency-segments";
-import { AgencySegmentBody } from "@/features/shared/segment/agency-segment-body";
-import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/features/shared/agency-ui";
+import { AGENCY_PAGE_SCROLL_ATTR } from "@/features/shared/agency-ui";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 import { useAgencyBootGate } from "@/features/shared/use-agency-boot-gate";
-import { AgencyWorkSurface } from "@/features/task-management/agency-work-surface";
 import { useAgencyJourneyLiveSync } from "@/features/task-management/hooks/use-agency-journey-live-sync";
 import { teamListQueryOptions } from "@/features/team/team-queries";
 import { useTeamStore } from "@/features/team/team-store";
 import { setAgencyTimeTrackingUserId } from "@/features/time-tracking/stores/agency-time-tracking";
 import { useCurrentAgencyTeam } from "@/features/time-tracking/stores/agency-timer";
-import { authClient } from "@/lib/auth-client";
+import { useAuthSession } from "@/lib/auth-session";
 import { cn } from "@/lib/utils";
 
 function panelIdFor(segmentId: AgencySegmentId) {
@@ -45,9 +34,11 @@ function panelIdFor(segmentId: AgencySegmentId) {
 }
 
 export function AgencyPage() {
-  const session = authClient.useSession();
-  const authEnabled = Boolean(session.data?.user);
-  const currentUserId = session.data?.user?.id ?? "";
+  const { user } = useAuthSession();
+  const authEnabled = Boolean(user);
+  const currentUserId = user?.id ?? "";
+  const location = useLocation();
+  const segment = agencySegmentFromPathname(location.pathname) ?? "work";
 
   const { limits, billingQuery } = useBilling();
   const agencyEnabled = Boolean(limits.agencyOps);
@@ -61,54 +52,8 @@ export function AgencyPage() {
 
   const teams = teamsQuery.data?.items ?? [];
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const selectedTeamId = useTeamStore((s) => s.selectedTeamId);
   const syncSelectedTeam = useTeamStore((s) => s.syncSelectedTeam);
-  const sectionParam = searchParams.get("section");
-  const segment: AgencySegmentId = agencySegmentFromSearch(searchParams.toString());
-
-  const selectedProjectId =
-    typeof searchParams.get("project") === "string" ? searchParams.get("project")! : "";
-  const selectedClientId =
-    typeof searchParams.get("client") === "string" ? searchParams.get("client")! : "";
-  useEffect(() => {
-    if (sectionParam === "settings") {
-      const next = new URLSearchParams(searchParams);
-      next.set("section", "management");
-      next.set("manage", "resourcing");
-      setSearchParams(next, { replace: true });
-      return;
-    }
-    if (!isLegacyAgencySegmentId(sectionParam)) return;
-    const next = new URLSearchParams(searchParams);
-    next.set("section", LEGACY_AGENCY_SEGMENT_MAP[sectionParam]);
-    const managementPane: AgencyManagementPaneId | null =
-      managementPaneForLegacySection(sectionParam);
-    if (managementPane) {
-      next.set("manage", managementPane);
-    }
-    setSearchParams(next, { replace: true });
-  }, [sectionParam, searchParams, setSearchParams]);
-
-  function handleSegmentChange(nextSegment: AgencySegmentId) {
-    const next = new URLSearchParams(searchParams);
-    next.set("section", nextSegment);
-    next.delete("pane");
-    if (nextSegment !== "projects") {
-      next.delete("project");
-    }
-    if (nextSegment !== "clients") {
-      next.delete("client");
-    }
-    if (nextSegment !== "management") {
-      next.delete("manage");
-    }
-    if (nextSegment !== "reports") {
-      next.delete("report");
-    }
-    setSearchParams(next, { replace: true });
-  }
 
   useEffect(() => {
     syncSelectedTeam(teams);
@@ -146,46 +91,8 @@ export function AgencyPage() {
     showAgencyUpsell,
     teamsQuery,
     billingQuery,
-    searchParams,
+    pathname: location.pathname,
   });
-
-  function openProject(projectId: string) {
-    const next = new URLSearchParams(searchParams);
-    next.set("section", "projects");
-    next.set("project", projectId);
-    next.delete("client");
-    next.delete("manage");
-    next.delete("pane");
-    setSearchParams(next);
-  }
-
-  function openClient(clientId: string) {
-    const next = new URLSearchParams(searchParams);
-    next.set("section", "clients");
-    next.set("client", clientId);
-    next.delete("project");
-    next.delete("manage");
-    next.delete("pane");
-    setSearchParams(next);
-  }
-
-  function openMember(userId: string) {
-    navigate(`/agency/members/${userId}`);
-  }
-
-  function closeProject() {
-    const next = new URLSearchParams(searchParams);
-    next.set("section", "projects");
-    next.delete("project");
-    setSearchParams(next);
-  }
-
-  function closeClient() {
-    const next = new URLSearchParams(searchParams);
-    next.set("section", "clients");
-    next.delete("client");
-    setSearchParams(next);
-  }
 
   const isFullHeightSegment = segment === "work" || segment === "management";
 
@@ -217,45 +124,7 @@ export function AgencyPage() {
                   aria-label={agencySegmentLabel(segment)}
                   className={cn(isFullHeightSegment && "flex min-h-0 flex-1 flex-col")}
                 >
-                  <AgencySegmentFiltersRoot
-                    segment={segment}
-                    teamId={selectedTeamId}
-                    selectedProjectId={selectedProjectId}
-                    selectedClientId={selectedClientId}
-                    reportMode={searchParams.get("report")}
-                    searchParams={searchParams}
-                  >
-                    {segment === "work" ? (
-                      <div className={agencyWorkSurfaceShellClass}>
-                        <AgencyWorkSurface
-                          teamId={selectedTeamId}
-                          onSegmentChange={handleSegmentChange}
-                        />
-                      </div>
-                    ) : null}
-                    {segment === "reports" && searchParams.get("report") ? (
-                      <AgencyReportCreatorSurface teamId={selectedTeamId} />
-                    ) : null}
-                    {segment === "management" ? (
-                      <AgencyManagementSurface teamId={selectedTeamId} />
-                    ) : null}
-                    {segment === "dashboard" ||
-                    segment === "clients" ||
-                    segment === "projects" ||
-                    (segment === "reports" && !searchParams.get("report")) ? (
-                      <AgencySegmentBody
-                        segment={segment}
-                        teamId={selectedTeamId}
-                        selectedProjectId={selectedProjectId}
-                        selectedClientId={selectedClientId}
-                        onSelectProject={openProject}
-                        onSelectClient={openClient}
-                        onSelectMember={openMember}
-                        onCloseProject={closeProject}
-                        onCloseClient={closeClient}
-                      />
-                    ) : null}
-                  </AgencySegmentFiltersRoot>
+                  <Outlet />
                 </div>
               </div>
             )}

@@ -7,17 +7,17 @@ import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/features/shared/
 import { teamListQueryOptions } from "@/features/team/team-queries";
 import { useTeamStore } from "@/features/team/team-store";
 import { useCurrentAgencyTeam } from "@/features/time-tracking/stores/agency-timer";
-import { authClient } from "@/lib/auth-client";
+import { useAuthSession } from "@/lib/auth-session";
 import { cn } from "@/lib/utils";
 
 export function AgencyMemberProfilePage() {
   const params = useParams<{ userId?: string }>();
-  const session = authClient.useSession();
-  const selfId = session.data?.user?.id ?? "";
+  const { user, isPending } = useAuthSession();
+  const selfId = user?.id ?? "";
   const subjectUserId = params.userId?.trim() || selfId;
   const teamsQuery = useQuery({
     ...teamListQueryOptions(),
-    enabled: Boolean(session.data?.user),
+    enabled: Boolean(user),
   });
   const teams = teamsQuery.data?.items ?? [];
   const syncSelectedTeam = useTeamStore((s) => s.syncSelectedTeam);
@@ -32,7 +32,7 @@ export function AgencyMemberProfilePage() {
     setCurrentAgencyTeamId(selectedTeamId || null);
   }, [selectedTeamId, setCurrentAgencyTeamId]);
 
-  if (session.isPending) {
+  if (isPending) {
     return (
       <div className="h-full min-h-0 overflow-y-auto">
         <div className={cn(agencyEmptyPanelClass, "m-6")}>Loading profile…</div>
