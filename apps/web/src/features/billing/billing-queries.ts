@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { authClient } from "@/lib/auth-client";
+import { useAuthSession } from "@/lib/auth-session";
 import { orpc, orpcClient } from "@/lib/orpc";
 
 export const DEFAULT_BILLING_LIMITS: TierLimits = {
@@ -54,8 +55,8 @@ export function refreshBillingState(queryClient: QueryClient) {
 
 export function useBilling(enabled = true) {
   const queryClient = useQueryClient();
-  const session = authClient.useSession();
-  const authEnabled = enabled && Boolean(session.data?.user);
+  const { user } = useAuthSession();
+  const authEnabled = enabled && Boolean(user);
 
   const billingQuery = useQuery(billingStateQueryOptions(authEnabled));
   const derived = deriveBillingState(billingQuery.data);
