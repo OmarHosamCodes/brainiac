@@ -22,7 +22,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | golden-feature | 669 |
 | server-operation | 15 |
 | shared-infrastructure | 292 |
-| static-presentation | 20 |
+| static-presentation | 22 |
 
 ## Counts by domain
 
@@ -42,7 +42,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | deployment | 5 |
 | environment | 5 |
 | integrations | 2 |
-| marketing | 22 |
+| marketing | 24 |
 | member-profile | 37 |
 | notifications | 33 |
 | performance | 8 |
@@ -126,6 +126,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/components/marketing/bits/AnimatedContent.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/components/marketing/bits/Aurora.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/components/marketing/bits/BlurText.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/components/marketing/bits/GradualBlur.css` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: CSS selectors and declarations; structure: source role and exported behavior |
+| `apps/web/src/components/marketing/bits/GradualBlur.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/components/marketing/bits/Magnet.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/components/marketing/bits/Scanner.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/components/marketing/bits/SpotlightCard.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
