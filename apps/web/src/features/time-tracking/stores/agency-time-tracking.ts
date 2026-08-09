@@ -25,6 +25,7 @@ import {
 import { shouldSkipActiveTimerDescriptionSync } from "@/features/time-tracking/tracker-description-sync";
 import { createTimerMutationQueue } from "@/features/time-tracking/timer-mutation-queue";
 import { buildActiveTimerTaskUpdateInput } from "@/features/time-tracking/active-timer-task-update";
+import { releasePendingEntryIds } from "@/features/time-tracking/pending-entry-ids";
 import { type AgencyListOverlay } from "@/features/shared/agency-optimistic-merge";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 
@@ -1217,7 +1218,6 @@ function createAgencyTimeTrackingActions(
 
     const uniqueEntries = dedupeEntries(payload.entries);
     const ids = uniqueEntries.map((entry) => entry.id);
-    const previousDeletingIds = [...get().deletingEntryIds];
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
     const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
 
@@ -1242,7 +1242,10 @@ function createAgencyTimeTrackingActions(
         description: getErrorMessage(error, "Please try again."),
       });
     } finally {
-      set((s) => ({ ...s, deletingEntryIds: previousDeletingIds }));
+      set((s) => ({
+        ...s,
+        deletingEntryIds: releasePendingEntryIds(s.deletingEntryIds, ids),
+      }));
     }
   }
 
@@ -1715,7 +1718,6 @@ function createAgencyTimeTrackingActions(
 
   async function duplicateEntry(payload: DuplicateEntryPayload) {
     const { teamId, entry } = payload;
-    const previousDuplicatingIds = [...get().duplicatingEntryIds];
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([teamId])));
     const entryOverlaySnapshot = optimistic().snapshotTimeEntries(teamId);
     const optimisticEntry = createOptimisticDuplicateEntry(entry);
@@ -1750,7 +1752,10 @@ function createAgencyTimeTrackingActions(
         description: getErrorMessage(error, "Please try again."),
       });
     } finally {
-      set((s) => ({ ...s, duplicatingEntryIds: previousDuplicatingIds }));
+      set((s) => ({
+        ...s,
+        duplicatingEntryIds: releasePendingEntryIds(s.duplicatingEntryIds, [entry.id]),
+      }));
     }
   }
 
@@ -1796,8 +1801,6 @@ function createAgencyTimeTrackingActions(
   async function updateEntry(payload: UpdateEntryPayload) {
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
     const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
-    const previousUpdatingIds = [...get().updatingEntryIds];
-
     const previousEntry = payload.previousEntry ?? findTimeEntry(payload.teamId, payload.entryId);
 
     if (!previousEntry) {
@@ -1837,7 +1840,7 @@ function createAgencyTimeTrackingActions(
     } finally {
       set((s) => ({
         ...s,
-        updatingEntryIds: previousUpdatingIds,
+        updatingEntryIds: releasePendingEntryIds(s.updatingEntryIds, [payload.entryId]),
       }));
     }
   }
@@ -1861,7 +1864,6 @@ function createAgencyTimeTrackingActions(
 
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
     const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
-    const previousUpdatingIds = [...get().updatingEntryIds];
     const optimisticEntries = previousEntries.map((entry) => ({
       ...entry,
       ...(payload.patch.projectId
@@ -1907,7 +1909,10 @@ function createAgencyTimeTrackingActions(
         description: getErrorMessage(error, "Please try again."),
       });
     } finally {
-      set((s) => ({ ...s, updatingEntryIds: previousUpdatingIds }));
+      set((s) => ({
+        ...s,
+        updatingEntryIds: releasePendingEntryIds(s.updatingEntryIds, entryIds),
+      }));
     }
   }
 

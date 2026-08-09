@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 709 |
+| golden-feature | 711 |
 | server-operation | 15 |
 | shared-infrastructure | 319 |
 | static-presentation | 22 |
@@ -53,7 +53,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | server-platform | 23 |
 | task-management | 41 |
 | team | 19 |
-| time-tracking | 98 |
+| time-tracking | 100 |
 | web-platform | 119 |
 | workspace | 105 |
 
@@ -541,6 +541,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/time-tracking/hooks/use-agency-time-entries-log.ts` | time-tracking | feature-hook | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical feature-hook layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/time-tracking/hooks/use-agency-time-entry-row.ts` | time-tracking | feature-hook | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical feature-hook layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/time-tracking/hooks/use-agency-time-tracker.ts` | time-tracking | feature-hook | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical feature-hook layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/time-tracking/pending-entry-ids.test.ts` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/time-tracking/pending-entry-ids.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/stores/agency-time-entries-log.ts` | time-tracking | client-state | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical client-state layer. | content: Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/stores/agency-time-tracking.ts` | time-tracking | client-state | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical client-state layer. | content: oRPC procedures or clients, Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/stores/agency-timer.ts` | time-tracking | client-state | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical client-state layer. | content: feature query orchestration, Zustand client state, React component or hook code; structure: source role and exported behavior |

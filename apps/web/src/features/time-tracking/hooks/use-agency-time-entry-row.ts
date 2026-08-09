@@ -326,7 +326,6 @@ export function useAgencyTimeEntryRow({
       setEditSaving(true);
       setEditError(null);
       try {
-        // Sequential: updateEntry restores updatingEntryIds from a snapshot and races if parallel.
         for (const entry of group.entries) {
           await onSaveEdit(entry.id, { ...entryToDraft(entry), date });
         }
@@ -485,25 +484,8 @@ export function useAgencyTimeEntryRow({
       if (event.key === "Enter") {
         event.preventDefault();
         setEditingDuration(false);
-        const input = event.currentTarget;
-        if (field === "start") {
-          void commitStartTimeInput().then(() => {
-            setTimeEditorOpen(false);
-            input.blur();
-          });
-          return;
-        }
-        if (field === "end") {
-          void commitEndTimeInput().then(() => {
-            setTimeEditorOpen(false);
-            input.blur();
-          });
-          return;
-        }
-        void saveInlineDraft().then(() => {
-          setTimeEditorOpen(false);
-          input.blur();
-        });
+        // Blur commits once. Saving here and then blurring double-fires updateEntry.
+        event.currentTarget.blur();
         return;
       }
 
@@ -515,16 +497,7 @@ export function useAgencyTimeEntryRow({
         event.currentTarget.blur();
       }
     },
-    [
-      commitEndTimeInput,
-      commitStartTimeInput,
-      editDraft,
-      endTimeInput,
-      resetEditDraft,
-      saveInlineDraft,
-      startTimeInput,
-      updateInlineDraft,
-    ],
+    [editDraft, endTimeInput, resetEditDraft, startTimeInput, updateInlineDraft],
   );
 
   const rowDeleting = group.entries.some((entry) => deletingEntryIds.includes(entry.id));
