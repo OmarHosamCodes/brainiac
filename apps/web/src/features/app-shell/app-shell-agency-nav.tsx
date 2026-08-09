@@ -12,11 +12,11 @@ import {
 } from "@/features/app-shell/app-shell-ui";
 import {
   agencyManagementHref,
-  agencyManagementPaneFromSearch,
+  agencyManagementPaneFromPathname,
 } from "@/features/shared/agency-management-sections";
 import {
   AGENCY_SEGMENTS,
-  agencySegmentFromSearch,
+  agencySegmentFromPathname,
   agencySegmentHref,
   agencySegmentTabId,
 } from "@/features/shared/agency-segments";
@@ -55,8 +55,8 @@ export function AppShellAgencyNav({
   const setManagementNavOpen = useAppShellStore((s) => s.setManagementNavOpen);
 
   const active = location.pathname.startsWith("/agency");
-  const currentSegment = active ? agencySegmentFromSearch(location.search) : null;
-  const currentManagePane = agencyManagementPaneFromSearch(location.search);
+  const currentSegment = agencySegmentFromPathname(location.pathname);
+  const currentManagePane = agencyManagementPaneFromPathname(location.pathname);
   const showInlineSubnav = variant === "rail" && (expanded || railPinned);
   const showFlyout = variant === "desktop" || (variant === "rail" && !showInlineSubnav);
 
@@ -95,7 +95,7 @@ export function AppShellAgencyNav({
   function segmentHref(segmentId: (typeof AGENCY_SEGMENTS)[number]["id"]): string {
     if (segmentId === "management") {
       return agencyManagementHref(
-        currentSegment === "management" ? currentManagePane : "resourcing",
+        currentSegment === "management" ? (currentManagePane ?? "resourcing") : "resourcing",
       );
     }
     return agencySegmentHref(segmentId);

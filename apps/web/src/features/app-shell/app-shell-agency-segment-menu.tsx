@@ -3,7 +3,6 @@ import { useId, useRef, useState } from "react";
 import { Link } from "@/lib/navigation";
 
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
-import { agencyManagementHref } from "@/features/shared/agency-management-sections";
 import {
   AGENCY_SEGMENTS,
   agencySegmentHref,
@@ -19,9 +18,7 @@ export function agencyCrumbItemId(segment: AgencySegmentId): string {
 }
 
 function crumbSegmentHref(segmentId: AgencySegmentId): string {
-  return segmentId === "management"
-    ? agencyManagementHref("resourcing")
-    : agencySegmentHref(segmentId);
+  return agencySegmentHref(segmentId);
 }
 
 /** Wrap-around arrow / Home / End index math for the crumb segment menu. */

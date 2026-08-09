@@ -12,7 +12,7 @@ import {
   shellHeaderContextRegionClass,
   shellUtilityClusterClass,
 } from "@/features/app-shell/app-shell-ui";
-import { agencySegmentFromSearch } from "@/features/shared/agency-segments";
+import { agencySegmentFromPathname } from "@/features/shared/agency-segments";
 import { AgencySubtitleBreadcrumb } from "@/features/shared/agency-subtitle-breadcrumb";
 import { useTeamStore } from "@/features/team/team-store";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ export function AppShellContextBar() {
   const onAgency = location.pathname.startsWith("/agency");
   const onMemberProfile =
     location.pathname === "/agency/me" || location.pathname.startsWith("/agency/members/");
-  const segment = onAgency && !onMemberProfile ? agencySegmentFromSearch(location.search) : null;
+  const segment = agencySegmentFromPathname(location.pathname);
   const sectionLabel = activeNav?.label ?? "Orch";
   const sectionHref = activeNav?.to ?? "/canvas";
   const agencyTeamId = useTeamStore((s) => s.selectedTeamId);

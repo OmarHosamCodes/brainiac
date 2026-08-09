@@ -1,21 +1,28 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Suspense, useEffect, type ReactNode } from "react";
+import { Suspense } from "react";
 
 import { AppShell } from "@/features/app-shell/app-shell";
-import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
-import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { ShellPageTransition } from "@/features/app-shell/components/shell-page-transition";
-import { startShellBoot } from "@/features/app-shell/shell/shell-boot";
+import { RouteError, RoutePending } from "@/features/app-shell/route-status";
+import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
+import { resolveLegacyAgencyRedirect } from "@/features/shared/agency-legacy-redirects";
+import { NOTIFICATION_LIST_LIMIT } from "@/features/notifications/notification-list-limit";
 import { teamListQueryKey } from "@/features/team/team-queries";
-import { authClient } from "@/lib/auth-client";
-import { fetchBootTeams } from "@/lib/boot-prefetch";
+import { fetchBootShellChrome } from "@/lib/boot-prefetch";
+import { orpc } from "@/lib/orpc";
 import { fetchBootSession } from "@/lib/session-boot";
 import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/providers/auth-provider";
 
 export const Route = createFileRoute("/_authenticated")({
+  beforeLoad: ({ location }) => {
+    const href = resolveLegacyAgencyRedirect(location.pathname, location.searchStr);
+    if (href) {
+      throw redirect({ href, replace: true });
+    }
+  },
   loader: async ({ context, location }) => {
-    const session = await fetchBootSession();
+    const [session, chrome] = await Promise.all([fetchBootSession(), fetchBootShellChrome()]);
     if (!session) {
       const redirectTo = `${location.pathname}${location.searchStr}`;
       throw redirect({
@@ -23,50 +30,43 @@ export const Route = createFileRoute("/_authenticated")({
       });
     }
 
-    // Warm shell boot data only — Agency surfaces stay client-fetched.
-    const teams = await fetchBootTeams();
-    context.queryClient.setQueryData(teamListQueryKey(), teams);
+    context.queryClient.setQueryData(teamListQueryKey(), chrome.teams);
+    if (chrome.teamId) {
+      context.queryClient.setQueryData(
+        orpc.notifications.unreadCount.queryKey({ input: { teamId: chrome.teamId } }),
+        chrome.unread ?? { count: 0, actionCount: 0 },
+      );
+      context.queryClient.setQueryData(
+        orpc.notifications.list.queryKey({
+          input: { teamId: chrome.teamId, limit: NOTIFICATION_LIST_LIMIT },
+        }),
+        chrome.notifications ?? { items: [], nextCursor: null },
+      );
+      context.queryClient.setQueryData(
+        orpc.agencyOps.timer.getActive.queryKey({ input: { teamId: chrome.teamId } }),
+        chrome.timer ?? { timer: null },
+      );
+    }
 
-    return { session, teamCount: teams.items.length };
+    return { session, teamCount: chrome.teams.items.length };
   },
+  pendingComponent: () => <RoutePending label="Opening your workspace" />,
+  errorComponent: () => <RouteError message="Couldn't open your workspace." />,
   component: AuthenticatedLayout,
 });
 
-function ShellSuspenseFallback() {
-  return <LogoLoader placement="slot" label="Opening your workspace" />;
-}
-
-function ClientSessionGate({ children }: { children: ReactNode }) {
-  const session = authClient.useSession();
-
-  useEffect(() => {
-    if (session.isPending) startShellBoot();
-  }, [session.isPending]);
-
-  if (session.isPending) {
-    return <LogoLoader label="Checking your session" />;
-  }
-
-  if (!session.data) {
-    if (typeof window !== "undefined") {
-      window.location.href = "/login";
-    }
-    return <LogoLoader label="Redirecting to sign in" />;
-  }
-
-  return <div className={cn(shellContentInClass, "h-full min-h-0")}>{children}</div>;
-}
-
 function AuthenticatedLayout() {
+  const { session } = Route.useLoaderData();
+
   return (
-    <AuthProvider>
-      <ClientSessionGate>
+    <AuthProvider initialSession={session}>
+      <div className={cn(shellContentInClass, "h-full min-h-0")}>
         <AppShell>
-          <Suspense fallback={<ShellSuspenseFallback />}>
+          <Suspense fallback={<RoutePending label="Opening your workspace" />}>
             <ShellPageTransition />
           </Suspense>
         </AppShell>
-      </ClientSessionGate>
+      </div>
     </AuthProvider>
   );
 }

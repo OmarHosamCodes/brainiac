@@ -8,7 +8,7 @@ import { useAppUpdateWatcher } from "@/features/app-shell/hooks/use-app-update-w
 import { useAppShellStore, useShellMode } from "@/features/app-shell/app-shell-store";
 import { useAgencyTrackingFavicon } from "@/features/time-tracking/hooks/use-agency-time-tracker";
 import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
-import { WorkspaceAgent } from "@/features/workspace-agent/workspace-agent";
+import { WorkspaceAgentHost } from "@/features/workspace-agent/workspace-agent-host";
 import { cn } from "@/lib/utils";
 import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agency-timer";
 
@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
       </main>
-      <WorkspaceAgent />
+      <WorkspaceAgentHost />
     </div>
   );
 }
