@@ -45,6 +45,27 @@ describe("time-entry-draft", () => {
     }
   });
 
+  test("pm to am overnight range stays valid", () => {
+    const range = draftToIsoRange({
+      ...baseDraft,
+      startTime: "22:27:00",
+      endTime: "11:29:00",
+      durationInput: "13:02:00",
+    });
+    expect("error" in range).toBe(false);
+    if (!("error" in range)) {
+      expect(range.durationSeconds).toBe(46_920);
+    }
+    expect(
+      draftSpansNextDay({
+        ...baseDraft,
+        startTime: "22:27:00",
+        endTime: "11:29:00",
+        durationInput: "13:02:00",
+      }),
+    ).toBe(true);
+  });
+
   test("applyEndTimeToDraft", () => {
     const endDraft = applyEndTimeToDraft(
       { ...baseDraft, startTime: "23:00", endTime: "22:00", durationInput: "1:00" },

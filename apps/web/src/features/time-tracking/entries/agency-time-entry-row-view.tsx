@@ -58,6 +58,8 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     editDraft,
     startTimeInput,
     endTimeInput,
+    spansNextDay,
+    clockInvalid,
     editError,
     editSaving,
     rowDeleting,
@@ -216,7 +218,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 disabled={editSaving || rowUpdating}
                 className={agencyTimeEntryClockTimeInputClass}
                 aria-label="Start time"
-                aria-invalid={Boolean(editError)}
+                aria-invalid={clockInvalid.start}
               />
               <span className={cn("shrink-0", agencyWorkTimeRangeClass)} aria-hidden>
                 -
@@ -236,8 +238,13 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 disabled={editSaving || rowUpdating}
                 className={agencyTimeEntryClockTimeInputClass}
                 aria-label="End time"
-                aria-invalid={Boolean(editError)}
+                aria-invalid={clockInvalid.end}
               />
+              {spansNextDay ? (
+                <span className={cn("shrink-0", agencyWorkTimeRangeClass)} aria-label="Next day">
+                  +1
+                </span>
+              ) : null}
             </div>
           ) : timeRange ? (
             <span className={cn("w-full text-center whitespace-nowrap", agencyWorkTimeRangeClass)}>
@@ -271,7 +278,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 agencyWorkMetricClass,
               )}
               aria-label="Duration"
-              aria-invalid={Boolean(editError)}
+              aria-invalid={clockInvalid.duration}
             />
           ) : (
             <span className={cn("block w-full text-center", agencyWorkMetricClass)}>

@@ -286,23 +286,6 @@ export function draftSpansNextDay(draft: TimeEntryDraft): boolean {
   return toDateInputValue(end) !== draft.date;
 }
 
-export function validateTimeEntryDraft(
-  draft: TimeEntryDraft,
-  options: { requireTask?: boolean } = {},
-): string | null {
-  if (options.requireTask !== false && !draft.taskId) {
-    return "Select a task.";
-  }
-
-  const range = draftToIsoRange(draft);
-  if ("error" in range) return range.error;
-  if (range.durationSeconds <= 0) {
-    return "End time must be after start time.";
-  }
-
-  return null;
-}
-
 export function draftToIsoRange(
   draft: TimeEntryDraft,
 ): { startAt: string; endAt: string; durationSeconds: number } | { error: string } {

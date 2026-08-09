@@ -24,6 +24,7 @@ import {
 } from "@/features/time-tracking/tracker-draft";
 import { shouldSkipActiveTimerDescriptionSync } from "@/features/time-tracking/tracker-description-sync";
 import { createTimerMutationQueue } from "@/features/time-tracking/timer-mutation-queue";
+import { buildActiveTimerTaskUpdateInput } from "@/features/time-tracking/active-timer-task-update";
 import { type AgencyListOverlay } from "@/features/shared/agency-optimistic-merge";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 
@@ -532,18 +533,18 @@ function createAgencyTimeTrackingActions(
       return;
     }
 
-    const taskId = draft.taskId.trim() || null;
-    const projectId = draft.projectId.trim() || undefined;
     const timerSnapshots = snapshotQueries(
       [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
     );
 
     try {
-      const result = (await orpcClient.agencyOps.timer.updateTask({
-        teamId,
-        taskId,
-        ...(projectId ? { projectId } : {}),
-      })) as { timer: AgencyActiveTimer };
+      const result = (await orpcClient.agencyOps.timer.updateTask(
+        buildActiveTimerTaskUpdateInput({
+          teamId,
+          taskId: draft.taskId.trim() || null,
+          draftProjectId: draft.projectId,
+        }),
+      )) as { timer: AgencyActiveTimer };
 
       patchActiveTimerCaches(result.timer);
     } catch (error) {

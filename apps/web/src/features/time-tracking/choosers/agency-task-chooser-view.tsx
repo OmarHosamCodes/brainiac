@@ -214,7 +214,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                       favorited={favoriteTaskIds.has(task.id)}
                       searchTerm={searchTerm}
                       highlightSearch={highlightSearch}
-                      onSelect={() => onSelectTask(task.id)}
+                      onSelect={() => onSelectTask(task.id, task.projectId)}
                       onToggleFavorite={() => onToggleTaskFavorite(task.id)}
                     />
                   );

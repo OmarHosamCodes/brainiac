@@ -47,9 +47,9 @@ import {
   parseClockTimeLabel,
   parseDurationInput,
   startedAtToDateTimeDraft,
-  validateTimeEntryDraft,
   type TimeEntryDraft,
 } from "@/features/time-tracking/time-entry-draft";
+import { validateTimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
 import {
   clockNudgeMinutes,
   durationNudgeSeconds,
@@ -133,7 +133,7 @@ export type AgencyTimeTrackerViewModel = {
   onDescriptionBlur: () => void;
   onDescriptionKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onProjectChange: (projectId: string) => void;
-  onTaskChange: (taskId: string) => void;
+  onTaskChange: (taskId: string, projectId?: string) => void;
   onTagIdsChange: (tagIds: string[]) => void;
   onCreateTag: (name: string) => void;
   onIsBillableChange: (isBillable: boolean) => void;
@@ -772,10 +772,13 @@ export function useAgencyTimeTracker({
         setTrackerTaskId(teamId, "");
       }
     },
-    onTaskChange: (value) => {
-      const task = tasks.find((entry) => entry.id === value);
-      if (task) {
-        setTrackerProjectId(teamId, task.projectId);
+    onTaskChange: (value, projectId) => {
+      const taskProjectId =
+        projectId ??
+        tasks.find((entry) => entry.id === value)?.projectId ??
+        (value && teamId ? findProjectTaskInCache(teamId, value)?.projectId : undefined);
+      if (taskProjectId) {
+        setTrackerProjectId(teamId, taskProjectId);
       }
       setTrackerTaskId(teamId, value || "");
     },

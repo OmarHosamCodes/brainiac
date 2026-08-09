@@ -6,14 +6,17 @@ import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-t
 import { canStartAgencyTimer } from "@/features/time-tracking/timer-validation";
 import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
 import {
+  classifyTimeEntryEditError,
   draftToIsoRange,
   validateTimeEntryDraft,
+  type TimeEntryClockInvalid,
   type TimeEntryDraft,
 } from "@/features/time-tracking/agency-time-entry";
 import {
   applyDurationToDraft,
   applyEndTimeToDraft,
   applyStartTimeToDraft,
+  draftSpansNextDay,
   entryToDraft,
   formatClockTimeLabel,
   meridiemFromDraftTime,
@@ -152,6 +155,8 @@ export type AgencyTimeEntryRowViewModel = {
   editDraft: TimeEntryDraft;
   startTimeInput: string;
   endTimeInput: string;
+  spansNextDay: boolean;
+  clockInvalid: TimeEntryClockInvalid;
   editError: string | null;
   editSaving: boolean;
   rowDeleting: boolean;
@@ -174,7 +179,7 @@ export type AgencyTimeEntryRowViewModel = {
   onDescriptionChange: (value: string) => void;
   onDescriptionBlur: () => void;
   onDescriptionKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
-  onTaskChange: (taskId: string) => void;
+  onTaskChange: (taskId: string, projectId?: string) => void;
   onProjectChange: (projectId: string) => void;
   onTagIdsChange: (tagIds: string[]) => void;
   onIsBillableChange: (isBillable: boolean) => void;
@@ -267,7 +272,7 @@ export function useAgencyTimeEntryRow({
 
   const saveDraft = useCallback(
     async (nextDraft: TimeEntryDraft): Promise<boolean> => {
-      const validationError = validateTimeEntryDraft(nextDraft);
+      const validationError = validateTimeEntryDraft(nextDraft, { requireTask: false });
       if (validationError) {
         setEditError(validationError);
         return false;
@@ -479,23 +484,24 @@ export function useAgencyTimeEntryRow({
       if (event.key === "Enter") {
         event.preventDefault();
         setEditingDuration(false);
+        const input = event.currentTarget;
         if (field === "start") {
           void commitStartTimeInput().then(() => {
             setTimeEditorOpen(false);
-            event.currentTarget.blur();
+            input.blur();
           });
           return;
         }
         if (field === "end") {
           void commitEndTimeInput().then(() => {
             setTimeEditorOpen(false);
-            event.currentTarget.blur();
+            input.blur();
           });
           return;
         }
         void saveInlineDraft().then(() => {
           setTimeEditorOpen(false);
-          event.currentTarget.blur();
+          input.blur();
         });
         return;
       }
@@ -568,6 +574,8 @@ export function useAgencyTimeEntryRow({
     editDraft,
     startTimeInput,
     endTimeInput,
+    spansNextDay: !isMulti && draftSpansNextDay(editDraft),
+    clockInvalid: classifyTimeEntryEditError(editError),
     editError,
     editSaving,
     rowDeleting,
@@ -600,12 +608,12 @@ export function useAgencyTimeEntryRow({
         event.currentTarget.blur();
       }
     },
-    onTaskChange: (taskId) => {
+    onTaskChange: (taskId, projectId) => {
       const task = tasks.find((entry) => entry.id === taskId);
       const nextDraft = {
         ...editDraft,
         taskId,
-        projectId: task?.projectId ?? editDraft.projectId,
+        projectId: projectId ?? task?.projectId ?? editDraft.projectId,
       };
       updateInlineDraft(nextDraft);
       if (isMulti) {

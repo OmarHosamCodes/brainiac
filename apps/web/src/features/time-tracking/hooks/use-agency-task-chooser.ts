@@ -57,7 +57,7 @@ export type AgencyTaskChooserTriggerFormat = "task-only" | "project-client" | "t
 export type UseAgencyTaskChooserOptions = {
   teamId: string;
   value: string;
-  onValueChange: (value: string) => void;
+  onValueChange: (value: string, projectId?: string) => void;
   projects: Project[];
   tasks: AgencyTask[];
   clients?: AgencyTaskChooserClientOption[];
@@ -109,7 +109,7 @@ export type AgencyTaskChooserViewModel = {
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
   onSearchKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
-  onSelectTask: (taskId: string) => void;
+  onSelectTask: (taskId: string, projectId?: string) => void;
   onToggleProject: (projectId: string) => void;
   onToggleClient: (clientName: string) => void;
   onToggleProjectFavorite: (projectId: string) => void;
@@ -385,8 +385,10 @@ export function useAgencyTaskChooser(
   const activeOptionKey = activeItem?.key ?? null;
   const activeOptionDomId = activeOptionKey ? taskChooserOptionDomId(activeOptionKey) : undefined;
 
-  function selectTask(taskId: string) {
-    onValueChange(taskId);
+  function selectTask(taskId: string, projectId?: string) {
+    const resolvedProjectId =
+      projectId ?? taskCatalog.find((task) => task.id === taskId)?.projectId;
+    onValueChange(taskId, resolvedProjectId);
     setOpen(false);
   }
 
@@ -418,7 +420,7 @@ export function useAgencyTaskChooser(
       if (!item) return;
       event.preventDefault();
       if (item.kind === "task") {
-        selectTask(item.taskId);
+        selectTask(item.taskId, item.projectId);
         return;
       }
       toggleProject(item.projectId);
@@ -462,9 +464,10 @@ export function useAgencyTaskChooser(
   }
 
   function onTaskCreated(taskId: string) {
+    const createdProjectId = createTaskProjectId;
     setCreateTaskOpen(false);
     setCreateTaskProjectId("");
-    onValueChange(taskId);
+    onValueChange(taskId, createdProjectId || undefined);
     setOpen(false);
   }
 

@@ -36,6 +36,25 @@ export function validateTimeEntryDraft(
   return null;
 }
 
+export type TimeEntryClockInvalid = {
+  start: boolean;
+  end: boolean;
+  duration: boolean;
+};
+
+/** Map a draft save error to which clock fields should show aria-invalid. */
+export function classifyTimeEntryEditError(error: string | null): TimeEntryClockInvalid {
+  const none = { start: false, end: false, duration: false };
+  if (!error || error === "Select a task.") return none;
+  if (error === "Invalid start time." || error === "Start time can't be in the future.") {
+    return { ...none, start: true };
+  }
+  if (error === "Invalid end time.") return { ...none, end: true };
+  if (error === "End time must be after start time.") return { ...none, start: true, end: true };
+  if (error === "Invalid duration.") return { ...none, duration: true };
+  return none;
+}
+
 export function parseTimeEntryDraftDuration(value: string): number | null {
   return parseDurationInput(value);
 }

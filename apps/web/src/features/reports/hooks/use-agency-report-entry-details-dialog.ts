@@ -215,7 +215,7 @@ export function useAgencyReportEntryDetailsDialog({
   }
 
   async function saveEdit(entryId: string, draft: TimeEntryDraft) {
-    const validationError = validateTimeEntryDraft(draft);
+    const validationError = validateTimeEntryDraft(draft, { requireTask: false });
     if (validationError) return;
 
     const range = draftToIsoRange(draft);
@@ -246,16 +246,18 @@ export function useAgencyReportEntryDetailsDialog({
     const project =
       projects.find((item) => item.id === draft.projectId) ??
       (task ? projects.find((item) => item.id === task.projectId) : null) ??
+      (entry ? projects.find((item) => item.id === entry.projectId) : null) ??
       null;
 
-    if (!teamId || !entry || !task || !project) return;
+    if (!teamId || !entry || !project) return;
+    if (draft.taskId && !task) return;
 
     await agencyTimeTrackingStore.updateEntry({
       teamId,
       entryId: entry.id,
       previousEntry: entry,
       projectId: project.id,
-      taskId: task.id,
+      taskId: task?.id ?? null,
       task,
       project,
       description: draft.description,

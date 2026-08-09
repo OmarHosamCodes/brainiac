@@ -229,11 +229,11 @@ export function AgencyTimeEntryDayGroupView({
           <AgencyTaskChooser
             teamId={teamId}
             value={bulkDraft.taskId}
-            onValueChange={(taskId) => {
+            onValueChange={(taskId, projectId) => {
               const task = tasks.find((item) => item.id === taskId);
               onBulkDraftChange({
                 taskId,
-                projectId: task?.projectId ?? bulkDraft.projectId,
+                projectId: projectId ?? task?.projectId ?? bulkDraft.projectId,
               });
             }}
             projects={projects}
