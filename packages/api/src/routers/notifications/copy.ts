@@ -67,37 +67,35 @@ export function notificationPushCopy(notification: NotificationRecord) {
 }
 
 export function buildNotificationUrl(notification: NotificationRecord) {
-  const params = new URLSearchParams();
   const payload = notification.payload;
 
   switch (notification.type) {
     case "task.assigned":
     case "task.message":
-      params.set("section", "work");
-      if (payload.taskId) params.set("task", payload.taskId);
-      break;
+      return payload.taskId ? `/agency?task=${encodeURIComponent(payload.taskId)}` : "/agency";
     case "journey.milestone":
-      params.set("section", "projects");
-      if (payload.projectId) params.set("project", payload.projectId);
-      break;
+      return payload.projectId
+        ? `/agency/projects/${encodeURIComponent(payload.projectId)}`
+        : "/agency/projects";
     case "timer.activity":
-      params.set("section", "dashboard");
-      break;
+      return "/agency/dashboard";
     case "team.digest":
-      params.set("section", "reports");
-      break;
-    case "member.alert":
-      if (payload.subjectUserId) {
-        return `/agency/members/${encodeURIComponent(payload.subjectUserId)}`;
+      return "/agency/reports";
+    case "member.alert": {
+      if (!payload.subjectUserId) return "/agency/management/people";
+      const params = new URLSearchParams();
+      params.set("focus", "alerts");
+      if (payload.alertId) params.set("alertId", payload.alertId);
+      if (payload.dateKey && /^\d{4}-\d{2}-\d{2}$/.test(payload.dateKey)) {
+        params.set("day", payload.dateKey);
+      } else if (payload.periodKey && /^\d{4}-\d{2}$/.test(payload.periodKey)) {
+        params.set("period", payload.periodKey);
       }
-      params.set("section", "management");
-      params.set("manage", "tenure");
-      break;
+      return `/agency/members/${encodeURIComponent(payload.subjectUserId)}?${params.toString()}`;
+    }
     default: {
       const _exhaustive: never = notification.type;
       return _exhaustive;
     }
   }
-
-  return `/agency?${params.toString()}`;
 }
