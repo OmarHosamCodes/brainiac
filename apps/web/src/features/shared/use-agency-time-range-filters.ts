@@ -627,17 +627,6 @@ export function useAgencyTimeRangeFilters({
           clientsLoading: clientsQuery.isPending,
         }
       : {}),
-    ...(includeFieldsFilter
-      ? {
-          fieldIds: draftFieldIds,
-          onFieldIdsChange: setDraftFieldIds,
-          defaultFieldIds,
-          showWaste: draftShowWaste,
-          onShowWasteChange: setDraftShowWaste,
-          mergeSameTaskNames: draftMergeSameTaskNames,
-          onMergeSameTaskNamesChange: setDraftMergeSameTaskNames,
-        }
-      : {}),
   };
 
   return {

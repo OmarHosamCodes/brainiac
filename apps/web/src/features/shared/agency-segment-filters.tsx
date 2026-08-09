@@ -36,6 +36,7 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Skeleton } from "@/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { suggestAgencyReportName } from "@/features/reports/agency-report-naming";
 import type { AgencyListFiltersApplied } from "@/features/shared/use-agency-list-filters";
 import { useAgencyListFilters } from "@/features/shared/use-agency-list-filters";
@@ -340,16 +341,32 @@ function ReportsFiltersRoot({
               shellClassName="rounded-dense"
               trailingActions={
                 <>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={
-                      timeRange.entriesCount === 0 || timeRange.entriesFetching || creatingReport
-                    }
-                    onClick={() => void openReportCreator()}
-                  >
-                    {creatingReport ? "Creating…" : "Create report"}
-                  </Button>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Button
+                            size="sm"
+                            disabled={
+                              timeRange.entriesCount === 0 ||
+                              timeRange.entriesFetching ||
+                              creatingReport
+                            }
+                            onClick={() => void openReportCreator()}
+                          >
+                            {creatingReport ? "Creating report…" : "Create report"}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {timeRange.entriesCount === 0 || timeRange.entriesFetching ? (
+                        <TooltipContent side="bottom">
+                          {timeRange.entriesFetching
+                            ? "Still loading hours…"
+                            : "No hours in this range. Widen dates or reset filters."}
+                        </TooltipContent>
+                      ) : null}
+                    </Tooltip>
+                  </TooltipProvider>
                   <AgencyReportHistoryMenu
                     teamId={teamId}
                     searchContext={searchContext}
