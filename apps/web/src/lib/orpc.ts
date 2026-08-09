@@ -5,7 +5,7 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 
 import { getRpcBaseUrl } from "@/lib/env";
 
-const RPC_REQUEST_TIMEOUT_MS = 6_000;
+const RPC_REQUEST_TIMEOUT_MS = 15_000;
 
 const rpcLink = new RPCLink({
   url: `${getRpcBaseUrl()}/rpc`,

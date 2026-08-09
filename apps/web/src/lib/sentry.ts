@@ -22,14 +22,16 @@ function resolveSentryRelease(): string | undefined {
 
 const sentryDsn = resolveSentryDsn();
 
-export const isSentryEnabled = Boolean(sentryDsn);
+export const isSentryEnabled = Boolean(sentryDsn) && import.meta.env.PROD;
 
 if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
+    enabled: import.meta.env.PROD,
     environment: import.meta.env.PROD ? "production" : "development",
     release: resolveSentryRelease(),
     sendDefaultPii: false,
+    ignoreErrors: ["TimeoutError", /signal timed out/i, /Failed to fetch/i],
     integrations: [
       Sentry.reactRouterV7BrowserTracingIntegration({
         useEffect: React.useEffect,
