@@ -106,9 +106,23 @@ export function useLocation() {
   });
 }
 
+export function collectRouteParams(
+  matches: ReadonlyArray<{ params?: Record<string, unknown> }>,
+): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const match of matches) {
+    const next = match.params;
+    if (!next) continue;
+    for (const [key, value] of Object.entries(next)) {
+      if (typeof value === "string") params[key] = value;
+    }
+  }
+  return params;
+}
+
 export function useParams<T extends Record<string, string | undefined> = Record<string, string>>() {
   const params = useRouterState({
-    select: (state) => state.matches.at(-1)?.params ?? {},
+    select: (state) => collectRouteParams(state.matches),
   });
   return params as T;
 }
