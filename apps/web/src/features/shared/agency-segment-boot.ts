@@ -26,6 +26,21 @@ type EnsureAgencySegmentBootInput = {
   pathname: string;
 };
 
+export function agencyEntityIdFromPath(
+  pathname: string,
+  kind: "clients" | "projects" | "reports",
+): string | null {
+  const path = pathname.length > 1 && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const match = new RegExp(`^/agency/${kind}/([^/]+)$`).exec(path);
+  const raw = match?.[1];
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 function ensureSyncedQuery(
   queryClient: QueryClient,
   options: any,
@@ -153,7 +168,8 @@ export async function ensureAgencySegmentBootQueries(
       ]);
       break;
     }
-    case "clients":
+    case "clients": {
+      const clientId = agencyEntityIdFromPath(pathname, "clients");
       await Promise.all([
         ensureSyncedQuery(
           queryClient,
@@ -165,15 +181,52 @@ export async function ensureAgencySegmentBootQueries(
           orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
           "cold",
         ),
+        clientId
+          ? ensureSyncedQuery(
+              queryClient,
+              orpc.agencyOps.clients.commercialSummary.queryOptions({
+                input: { teamId, clientId },
+              }),
+              "cold",
+            )
+          : undefined,
+        clientId
+          ? ensureSyncedQuery(
+              queryClient,
+              orpc.agencyOps.projects.list.queryOptions({
+                input: {
+                  teamId,
+                  clientId,
+                  trashFilter: "all",
+                  archiveFilter: "all",
+                },
+              }),
+              "cold",
+            )
+          : undefined,
       ]);
       break;
-    case "projects":
-      await ensureSyncedQuery(
-        queryClient,
-        orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
-        "cold",
-      );
+    }
+    case "projects": {
+      const projectId = agencyEntityIdFromPath(pathname, "projects");
+      await Promise.all([
+        ensureSyncedQuery(
+          queryClient,
+          orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
+          "cold",
+        ),
+        projectId
+          ? ensureSyncedQuery(
+              queryClient,
+              orpc.agencyOps.projects.list.queryOptions({
+                input: { teamId, trashFilter: "all" },
+              }),
+              "cold",
+            )
+          : undefined,
+      ]);
       break;
+    }
     case "reports":
       await Promise.all([
         ensureSyncedQuery(
