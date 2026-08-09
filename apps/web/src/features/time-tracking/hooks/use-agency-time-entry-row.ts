@@ -119,7 +119,7 @@ type UseAgencyTimeEntryRowOptions = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
-  onToggleWaste: (entryId: string) => void;
+  onToggleWaste: (entryId: string | readonly string[]) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onBulkPatch: (
     entryIds: string[],
@@ -303,6 +303,7 @@ export function useAgencyTimeEntryRow({
       description?: string;
       tagIds?: string[];
       isBillable?: boolean;
+      isWaste?: boolean;
     }) => {
       if (!isMulti) return;
       setEditSaving(true);
@@ -530,7 +531,9 @@ export function useAgencyTimeEntryRow({
   const rowUpdating = group.entries.some((entry) => updatingEntryIds.includes(entry.id));
   const rowDuplicating = group.entries.some((entry) => duplicatingEntryIds.includes(entry.id));
   const rowWastePending = rowUpdating;
-  const isWaste = primaryEntry.isWaste === true;
+  const isWaste = isMulti
+    ? group.entries.every((entry) => entry.isWaste === true)
+    : primaryEntry.isWaste === true;
   const timeRange = isMulti
     ? formatGroupTimeRange(group)
     : formatTimeRange(primaryEntry.startedAt, primaryEntry.endedAt);
@@ -594,7 +597,8 @@ export function useAgencyTimeEntryRow({
     onDeleteGroup: () => onDeleteGroup(group.entries.map((entry) => entry.id)),
     onDeleteEntry,
     onDuplicate: () => onDuplicate(primaryEntry.id),
-    onToggleWaste: () => onToggleWaste(primaryEntry.id),
+    onToggleWaste: () =>
+      onToggleWaste(isMulti ? group.entries.map((entry) => entry.id) : primaryEntry.id),
     onDescriptionChange: setDescriptionDraft,
     onDescriptionBlur: () => void saveDescriptionEdit(),
     onDescriptionKeyDown: (event) => {

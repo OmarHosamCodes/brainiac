@@ -174,7 +174,8 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         </div>
         {isWaste ? (
           <AgencyWasteTag
-            onDismiss={!isMulti ? onToggleWaste : undefined}
+            onDismiss={onToggleWaste}
+            dismissLabel={isMulti ? `Unmark ${group.entries.length} entries as waste` : undefined}
             disabled={rowWastePending || rowUpdating || editSaving}
           />
         ) : null}
@@ -362,7 +363,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               wastePending={rowWastePending}
               onDelete={() => onDeleteGroup()}
               onDuplicate={!isMulti ? onDuplicate : undefined}
-              onToggleWaste={!isMulti ? onToggleWaste : undefined}
+              onToggleWaste={onToggleWaste}
             />
           )}
         </div>

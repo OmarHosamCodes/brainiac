@@ -74,7 +74,7 @@ export type AgencyTimeEntriesLogViewModel = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
-  onToggleWaste: (entryId: string) => void;
+  onToggleWaste: (entryId: string | readonly string[]) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onBulkPatch: (
     entryIds: string[],
@@ -408,13 +408,25 @@ export function useAgencyTimeEntriesLog({
     }
   }
 
-  async function toggleEntryWaste(entryId: string) {
+  async function toggleEntryWaste(entryId: string | readonly string[]) {
     if (!teamId || wastePending) return;
-    const entry = entries.find((item) => item.id === entryId);
-    if (!entry) return;
-    const nextIsWaste = entry.isWaste !== true;
-    await saveBulkPatch([entryId], { isWaste: nextIsWaste });
-    toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
+    const entryIds = typeof entryId === "string" ? [entryId] : [...entryId];
+    const targets = entries.filter((item) => entryIds.includes(item.id));
+    if (targets.length === 0) return;
+    const nextIsWaste = !targets.every((entry) => entry.isWaste === true);
+    await saveBulkPatch(
+      targets.map((entry) => entry.id),
+      { isWaste: nextIsWaste },
+    );
+    toast.success(
+      targets.length === 1
+        ? nextIsWaste
+          ? "Marked as waste"
+          : "Unmarked as waste"
+        : nextIsWaste
+          ? `Marked ${targets.length} entries as waste`
+          : `Unmarked ${targets.length} entries as waste`,
+    );
   }
 
   async function saveBulkPatch(
