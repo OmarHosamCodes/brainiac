@@ -446,7 +446,7 @@ export const agencyTimeEntryRailBillableClass = cn(
 /** Content-box width for locale ranges like "12:29 - 14:54" / "9:29 pm - 9:40 pm". */
 export const agencyTimeEntryRailTimeClass = cn(
   agencyTimeEntryRailCellClass,
-  "w-[168px] whitespace-nowrap",
+  "w-[188px] whitespace-nowrap",
 );
 
 export const agencyTimeEntryRailCalendarClass = cn(
