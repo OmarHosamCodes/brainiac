@@ -1,19 +1,20 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
-import { authClient } from "@/lib/auth-client";
+import { authModeFromSearchParam, type AuthMode } from "@/features/auth/auth-mode-from-search";
 import {
   signInFormSchema,
   signUpFormSchema,
   type SignInFormValues,
   type SignUpFormValues,
 } from "@/features/auth/auth-schemas";
+import { authClient } from "@/lib/auth-client";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
-export type AuthMode = "sign-in" | "sign-up";
+export type { AuthMode };
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   state_mismatch: "Sign-in expired or was interrupted. Please try again.",
@@ -28,8 +29,14 @@ function formatOAuthError(code: string): string {
 export function useLoginPage() {
   const session = authClient.useSession();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<AuthMode>("sign-in");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [mode, setMode] = useState<AuthMode>(() =>
+    authModeFromSearchParam(searchParams.get("mode")),
+  );
+
+  useEffect(() => {
+    setMode(authModeFromSearchParam(searchParams.get("mode")));
+  }, [searchParams]);
   const [error, setError] = useState<string | null>(() => {
     const oauthError = searchParams.get("error");
     return oauthError ? formatOAuthError(oauthError) : null;
@@ -108,6 +115,18 @@ export function useLoginPage() {
     setEmailAuthOpen(true);
     signInForm.reset();
     signUpForm.reset();
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (nextMode === "sign-up") {
+          next.set("mode", "sign-up");
+        } else {
+          next.delete("mode");
+        }
+        return next;
+      },
+      { replace: true },
+    );
   }
 
   function toggleEmailAuth() {

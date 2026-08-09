@@ -1,7 +1,7 @@
 import { ChevronDown, Loader2 } from "lucide-react";
 import { Navigate, Link } from "react-router-dom";
 
-import Aurora from "@/components/marketing/bits/Aurora";
+import Scanner from "@/components/marketing/bits/Scanner";
 import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
 import { Button } from "@/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
@@ -44,11 +44,33 @@ export function LoginPage() {
             className="pointer-events-none absolute inset-0 opacity-30 dark:opacity-50"
             aria-hidden="true"
           >
-            <Aurora
-              colorStops={["#6b7280", "#e5e5e5", "#f5f5f5"]}
-              amplitude={0.7}
-              blend={0.5}
-              speed={0.45}
+            <Scanner
+              color1="#6b7280"
+              color2="#5b5bd6"
+              color3="#f2f2f5"
+              speed={0.5}
+              sweepSpeed={0.25}
+              sweepWidth={1.6}
+              sweepFalloff={6}
+              scale={1.5}
+              frequency={2}
+              ripple={0.22}
+              bandDensity={11}
+              lineSharpness={5.5}
+              glow={0.22}
+              scanDirection="vertical"
+              colorSpread={0.7}
+              brightness={0.85}
+              contrast={1.15}
+              softness={1.4}
+              vignette={0.45}
+              scanline
+              grain
+              grainIntensity={0.05}
+              opacity={0.9}
+              mouseInteraction
+              mouseRadius={0.5}
+              mouseStrength={0.35}
             />
           </div>
         ) : null}
