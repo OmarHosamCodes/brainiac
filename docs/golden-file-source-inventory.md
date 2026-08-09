@@ -21,7 +21,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | --- | ---: |
 | golden-feature | 669 |
 | server-operation | 15 |
-| shared-infrastructure | 292 |
+| shared-infrastructure | 295 |
 | static-presentation | 22 |
 
 ## Counts by domain
@@ -55,7 +55,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | task-management | 41 |
 | team | 19 |
 | time-tracking | 95 |
-| web-platform | 98 |
+| web-platform | 101 |
 | workspace | 104 |
 
 ## Artifacts
@@ -164,7 +164,10 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/app-shell/app-update.test.ts` | web-platform | test | shared-infrastructure | web-platform | Cross-cutting web-platform test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/app-shell/app-update.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/app-shell/components/brand-mark.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/app-shell/components/logo-loader-status.test.ts` | web-platform | test | shared-infrastructure | web-platform | Cross-cutting web-platform test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/app-shell/components/logo-loader-status.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/app-shell/components/logo-loader.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/app-shell/components/shell-boot-surface.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/app-shell/components/shell-page-transition.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/app-shell/hooks/use-app-update-watcher.ts` | web-platform | feature-hook | shared-infrastructure | web-platform | Cross-cutting web-platform feature-hook support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations, environment contract; structure: hook naming |
 | `apps/web/src/features/app-shell/shell/shell-boot.test.ts` | web-platform | test | shared-infrastructure | web-platform | Cross-cutting web-platform test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
