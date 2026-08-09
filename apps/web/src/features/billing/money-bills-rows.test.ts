@@ -372,7 +372,7 @@ describe("moneyBillPartyHref", () => {
       periodStart: "2026-08-01T00:00:00.000Z",
       periodEnd: "2026-08-31T23:59:59.999Z",
     });
-    expect(moneyBillPartyHref(row)).toBe("/agency?section=clients&client=cli_1");
+    expect(moneyBillPartyHref(row)).toBe("/agency/clients/cli_1");
   });
 
   test("members open member profile", () => {

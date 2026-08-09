@@ -7,6 +7,7 @@ import {
   featuredNotificationTitle,
   groupNotificationSections,
   isNeedsActionNotification,
+  notificationHref,
   pickFeaturedNeedsAction,
 } from "./notification-presentation";
 
@@ -126,5 +127,19 @@ describe("notification presentation", () => {
       kind: "open",
       label: "Review alert",
     });
+  });
+
+  test("notificationHref uses canonical Agency paths", () => {
+    expect(notificationHref(notification({ id: "1", type: "task.assigned" }))).toBe("/agency");
+    expect(
+      notificationHref(
+        notification({ id: "2", type: "task.message", payload: { taskId: "tsk_1" } }),
+      ),
+    ).toBe("/agency?task=tsk_1");
+    expect(
+      notificationHref(
+        notification({ id: "3", type: "journey.milestone", payload: { projectId: "prj_1" } }),
+      ),
+    ).toBe("/agency/projects/prj_1");
   });
 });

@@ -4,8 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";
+import { NOTIFICATION_LIST_LIMIT } from "@/features/notifications/notification-list-limit";
 
-export const NOTIFICATION_LIST_LIMIT = 40;
+export { NOTIFICATION_LIST_LIMIT };
 
 export type NotificationPreferenceType =
   | "task.assigned"

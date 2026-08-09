@@ -1,3 +1,4 @@
+import { agencyClientHref } from "@/features/shared/agency-segments";
 import { formatDuration } from "@/lib/utils/format-duration";
 
 import type { MoneyBillsPartyFilter, MoneyBillsStatusFilter } from "./money-bills-filters";
@@ -474,7 +475,7 @@ export function moneyBillHueId(row: MoneyBillRow): string | null {
 }
 
 export function moneyBillClientHref(clientId: string): string {
-  return `/agency?section=clients&client=${encodeURIComponent(clientId)}`;
+  return agencyClientHref(clientId);
 }
 
 export function moneyBillMemberHref(userId: string): string {

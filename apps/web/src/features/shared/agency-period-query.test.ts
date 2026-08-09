@@ -20,10 +20,10 @@ describe("agency-period-query", () => {
 
   test("builds Reports and Money handoff hrefs", () => {
     expect(buildAgencyReportsPeriodHref({ from: "2026-08-01", to: "2026-08-31" })).toBe(
-      "/agency?from=2026-08-01&to=2026-08-31&section=reports",
+      "/agency/reports?from=2026-08-01&to=2026-08-31",
     );
-    expect(buildAgencyMoneyPeriodHref({ from: "2026-08-01", to: "2026-08-31" })).toContain(
-      "manage=money",
+    expect(buildAgencyMoneyPeriodHref({ from: "2026-08-01", to: "2026-08-31" })).toBe(
+      "/agency/management/money?from=2026-08-01&to=2026-08-31",
     );
   });
 

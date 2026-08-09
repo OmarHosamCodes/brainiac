@@ -1,9 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import {
-  isAgencyManagementPaneId,
-  type AgencyManagementPaneId,
-} from "@/features/shared/agency-management-sections";
+import { agencyManagementPaneFromPathname } from "@/features/shared/agency-management-sections";
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
 import { ensureAgencyWorkBootQueries } from "@/features/shared/agency-queries";
 import {
@@ -26,7 +23,7 @@ type EnsureAgencySegmentBootInput = {
   segment: AgencySegmentId;
   teamId: string;
   userId: string;
-  searchParams: URLSearchParams;
+  pathname: string;
 };
 
 function ensureSyncedQuery(
@@ -70,17 +67,13 @@ async function resolveDashboardRange(queryClient: QueryClient, teamId: string) {
   };
 }
 
-function managementPaneFromSearchParams(searchParams: URLSearchParams): AgencyManagementPaneId {
-  const manage = searchParams.get("manage");
-  return isAgencyManagementPaneId(manage) ? manage : "resourcing";
-}
-
 async function ensureManagementBootQueries(
   queryClient: QueryClient,
   teamId: string,
-  searchParams: URLSearchParams,
+  pathname: string,
 ) {
-  const pane = managementPaneFromSearchParams(searchParams);
+  const pane = agencyManagementPaneFromPathname(pathname);
+  if (!pane) return;
   switch (pane) {
     case "resourcing": {
       const monthKey = focusMonthKeyFromAnchor(periodAnchorUtc(new Date(), "month"));
@@ -130,7 +123,7 @@ async function ensureManagementBootQueries(
 
 export async function ensureAgencySegmentBootQueries(
   queryClient: QueryClient,
-  { segment, teamId, userId, searchParams }: EnsureAgencySegmentBootInput,
+  { segment, teamId, userId, pathname }: EnsureAgencySegmentBootInput,
 ) {
   if (!teamId) return;
 
@@ -201,7 +194,7 @@ export async function ensureAgencySegmentBootQueries(
       ]);
       break;
     case "management":
-      await ensureManagementBootQueries(queryClient, teamId, searchParams);
+      await ensureManagementBootQueries(queryClient, teamId, pathname);
       break;
     default: {
       const _exhaustive: never = segment;

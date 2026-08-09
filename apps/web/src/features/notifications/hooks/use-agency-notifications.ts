@@ -1,6 +1,6 @@
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "@/lib/navigation";
+import { useNavigate } from "@/lib/navigation";
 
 import {
   useAgencyNotificationPreferencesQuery,
@@ -14,7 +14,6 @@ import {
   type NotificationPreferenceItem,
 } from "@/features/notifications/notifications-queries";
 import {
-  buildNotificationSearchParams,
   featuredNotificationCta,
   formatDigestHours,
   formatRelativeTime,
@@ -94,7 +93,6 @@ export function notificationSentenceParts(notification: NotificationRecord) {
 export function useAgencyNotifications(input: AgencyNotificationsInput) {
   const teamId = input.teamId;
   const navigate = useNavigate();
-  const [, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
@@ -163,12 +161,7 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
   async function openNotification(notification: NotificationRecord) {
     await markReadMutation.mutateAsync(notification.id);
     setOpen(false);
-    const href = notificationHref(notification);
-    if (href) {
-      navigate(href);
-      return;
-    }
-    setSearchParams(buildNotificationSearchParams(notification), { replace: false });
+    navigate(notificationHref(notification));
   }
 
   async function handleStartTimer(notification: NotificationRecord) {
@@ -187,7 +180,7 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
     });
     await markReadMutation.mutateAsync(notification.id);
     setOpen(false);
-    setSearchParams(new URLSearchParams({ section: "work", task: payload.taskId }));
+    navigate("/agency");
   }
 
   async function handlePrimaryAction(notification: NotificationRecord) {
