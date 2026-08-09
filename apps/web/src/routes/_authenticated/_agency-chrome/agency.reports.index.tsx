@@ -4,7 +4,7 @@ import { RoutePending } from "@/features/app-shell/route-status";
 import { AgencyReportsPage } from "@/pages/agency-reports-page";
 import { validateReportSearch } from "@/lib/router-search";
 
-export const Route = createFileRoute("/_authenticated/_agency-chrome/agency/reports")({
+export const Route = createFileRoute("/_authenticated/_agency-chrome/agency/reports/")({
   ssr: false,
   validateSearch: validateReportSearch,
   component: AgencyReportsPage,
