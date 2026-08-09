@@ -26,7 +26,7 @@ const features: PricingFeature[] = [
   { kind: "limit", label: "Tabs per node", free: "3", pro: "12" },
   { kind: "limit", label: "Teams", free: "1", pro: "5" },
   { kind: "limit", label: "Team members", free: "3", pro: "20" },
-  { kind: "limit", label: "AI conversations", free: "5", pro: "Unlimited" },
+  { kind: "limit", label: "Agent conversations", free: "5", pro: "Unlimited" },
   { kind: "flag", label: "Agency ops", free: false, pro: true },
   { kind: "flag", label: "Marketplace publishing", free: false, pro: true },
 ];
@@ -70,11 +70,11 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
       <div className="mx-auto max-w-4xl px-6 py-20 md:px-10 md:py-28 lg:px-16">
         <div className="max-w-2xl">
           <h2 className="text-3xl leading-[1.1] font-semibold tracking-[-0.025em] md:text-5xl">
-            Free to try. Pro when you need the room.
+            Free to start. Pro when 10 nodes is not enough.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-muted-foreground md:text-lg">
-            Start with 10 nodes, 6 blocks per tab, and the AI agent. Upgrade for 200 nodes, agency
-            ops, and marketplace publishing.
+            Free includes 10 nodes, 6 blocks per tab, and the agent. Pro adds 200 nodes, Agency, and
+            marketplace publishing.
           </p>
         </div>
 
@@ -110,19 +110,21 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
                   <p className="text-3xl font-bold tabular-nums">$0</p>
                   <p className="mt-1 text-xs text-muted-foreground">10 nodes, single user</p>
                   <Button asChild variant="outline" size="sm" className="mt-4 w-full max-w-[10rem]">
-                    <Link to={isAuthenticated ? "/canvas" : "/login"}>Get started</Link>
+                    <Link to={isAuthenticated ? "/canvas" : "/login?mode=sign-up"}>
+                      {isAuthenticated ? "Open workspace" : "Get started"}
+                    </Link>
                   </Button>
                 </td>
                 <td className="bg-primary/5 px-5 py-6 text-center align-top">
                   <p className="text-3xl font-bold tabular-nums">$19</p>
-                  <p className="mt-1 text-xs text-muted-foreground">200 nodes, teams, agency ops</p>
+                  <p className="mt-1 text-xs text-muted-foreground">200 nodes, teams, Agency</p>
                   <Button
                     size="sm"
                     variant={isAuthenticated && isPro ? "outline" : "default"}
                     className="mt-4 w-full max-w-[10rem]"
                     onClick={() => void handleCheckout()}
                   >
-                    {isAuthenticated && isPro ? "Current plan" : "Upgrade to Pro"}
+                    {isAuthenticated && isPro ? "Manage billing" : "Upgrade to Pro"}
                   </Button>
                 </td>
               </tr>

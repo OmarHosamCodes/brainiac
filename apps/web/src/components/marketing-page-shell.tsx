@@ -3,16 +3,14 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
-import { Button } from "@/ui/button";
+import { cn } from "@/lib/utils";
 import { useTheme } from "@/stores/theme";
+import { Button } from "@/ui/button";
 
-const footerNav = [
+const footerLinks = [
   { label: "Canvas", to: "/canvas" },
   { label: "Agency", to: "/agency" },
   { label: "Pricing", to: "/#pricing" },
-];
-
-const footerLegal = [
   { label: "Terms", to: "/terms" },
   { label: "Privacy", to: "/privacy" },
 ];
@@ -24,8 +22,8 @@ function ThemeToggle() {
     <Button
       type="button"
       variant="ghost"
-      size="sm"
-      className="-ml-2 rounded-full"
+      size="icon-sm"
+      className="rounded-full text-muted-foreground hover:text-foreground"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       onClick={toggle}
     >
@@ -41,22 +39,13 @@ export function MarketingPageShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen w-full flex-col bg-background font-sans text-foreground selection:bg-primary/20 [--font-body:var(--font-sans)] [--font-heading:var(--font-sans)]">
       {children}
 
-      <footer className="mt-auto w-full border-t border-border">
-        <div className="mx-auto max-w-6xl px-6 py-12 md:px-10 md:py-16 lg:px-16">
-          <div className="grid grid-cols-1 gap-y-10 md:grid-cols-12 md:gap-x-10">
-            <div className="md:col-span-5">
-              <MarketingBrandLockup />
-              <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-                A spatial knowledge workspace with an embedded agent.
-              </p>
-            </div>
-
-            <div className="md:col-span-3 md:col-start-7">
-              <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Product
-              </div>
-              <ul className="space-y-2.5">
-                {footerNav.map((item) => (
+      <footer className="mt-auto w-full">
+        <div className="mx-auto max-w-6xl px-6 py-14 md:px-10 md:py-20 lg:px-16">
+          <div className="flex flex-col items-center text-center">
+            <MarketingBrandLockup linkToHome className="text-base" />
+            <nav aria-label="Footer" className="mt-8">
+              <ul className="flex flex-wrap items-center justify-center gap-x-7 gap-y-3">
+                {footerLinks.map((item) => (
                   <li key={item.to}>
                     <Link
                       to={item.to}
@@ -67,33 +56,22 @@ export function MarketingPageShell({ children }: { children: ReactNode }) {
                   </li>
                 ))}
               </ul>
-            </div>
-
-            <div className="md:col-span-2 md:col-start-11">
-              <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Legal
-              </div>
-              <ul className="mb-6 space-y-2.5">
-                {footerLegal.map((item) => (
-                  <li key={item.to}>
-                    <Link
-                      to={item.to}
-                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <ThemeToggle />
-            </div>
+            </nav>
           </div>
 
-          <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 md:mt-16 md:flex-row md:items-center">
+          <div
+            aria-hidden
+            className={cn(
+              "mt-12 h-px w-full md:mt-14",
+              "bg-[repeating-linear-gradient(90deg,var(--border)_0_3px,transparent_3px_7px)]",
+            )}
+          />
+
+          <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-xs text-muted-foreground">
               &copy; {year} Orch. All rights reserved.
             </p>
-            <p className="text-xs text-muted-foreground">Built for people who think on canvases.</p>
+            <ThemeToggle />
           </div>
         </div>
       </footer>

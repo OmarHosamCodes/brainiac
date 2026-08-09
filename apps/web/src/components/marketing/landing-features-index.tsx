@@ -14,7 +14,7 @@ import {
 import { LandingWorkspaceVignette } from "@/components/marketing/landing-workspace-vignette";
 import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/ui/collapsible";
+import { Collapsible, CollapsibleTrigger } from "@/ui/collapsible";
 
 type LandingFeaturesIndexProps = {
   isAuthenticated: boolean;
@@ -66,7 +66,7 @@ export function LandingFeaturesIndex({ isAuthenticated }: LandingFeaturesIndexPr
           Think, track, and inspect in one place.
         </h2>
         <p className="mt-4 max-w-lg text-base leading-relaxed text-muted-foreground md:text-lg">
-          Open a part. The product is the proof, not a claim.
+          Open a part to see the real product.
         </p>
 
         <div className="mt-12 border-t border-border">
@@ -100,6 +100,8 @@ export function LandingFeaturesIndex({ isAuthenticated }: LandingFeaturesIndexPr
                       className={cn(
                         "font-mono text-sm font-medium tabular-nums md:text-base",
                         isOpen ? "text-chart-2" : "text-muted-foreground",
+                        !reducedMotion &&
+                          "transition-colors duration-[var(--motion-duration-rail)] ease-[var(--motion-ease-out)]",
                       )}
                     >
                       {entry.numeral}
@@ -116,26 +118,30 @@ export function LandingFeaturesIndex({ isAuthenticated }: LandingFeaturesIndexPr
                       className={cn(
                         "size-4 shrink-0 justify-self-end text-muted-foreground md:self-center",
                         isOpen && "rotate-180",
-                        !reducedMotion && "transition-transform",
+                        !reducedMotion &&
+                          "transition-transform duration-[var(--motion-duration-rail)] ease-[var(--motion-ease-out)]",
                       )}
                     />
                   </CollapsibleTrigger>
 
-                  <CollapsibleContent
+                  <div
                     className={cn(
-                      "overflow-hidden",
+                      "grid",
+                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
                       !reducedMotion &&
-                        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                        "transition-[grid-template-rows] duration-[var(--motion-duration-rail)] ease-[var(--motion-ease-out)]",
                     )}
                   >
-                    <div className="max-w-4xl pb-10">
-                      <p className="text-sm leading-relaxed text-muted-foreground md:text-base">
-                        {entry.summary}
-                      </p>
-                      <p className="mt-4 mb-3 text-xs text-muted-foreground">Sample workspace</p>
-                      <IndexProof id={entry.id} />
+                    <div className="min-h-0 overflow-hidden" inert={!isOpen}>
+                      <div className="max-w-4xl pb-10">
+                        <p className="text-sm leading-relaxed text-muted-foreground md:text-base">
+                          {entry.summary}
+                        </p>
+                        <p className="mt-4 mb-3 text-xs text-muted-foreground">Sample data</p>
+                        <IndexProof id={entry.id} />
+                      </div>
                     </div>
-                  </CollapsibleContent>
+                  </div>
                 </Collapsible>
               </div>
             );

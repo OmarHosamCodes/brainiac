@@ -46,49 +46,50 @@ function formatClock(value: string) {
   return timeRangeFormatter.format(date);
 }
 
-type LandingAgencyPreviewProps = {
-  className?: string;
-  rowLimit?: number;
-};
-
-export function LandingAgencyPreview({ className, rowLimit }: LandingAgencyPreviewProps) {
-  const rows = rowLimit ? marketingAgencyRows.slice(0, rowLimit) : marketingAgencyRows;
+function sumDuration(rows: readonly { durationSeconds: number }[]) {
   let totalSeconds = 0;
   for (const row of rows) {
     totalSeconds += row.durationSeconds;
   }
+  return totalSeconds;
+}
+
+type LandingAgencyPreviewProps = {
+  className?: string;
+};
+
+export function LandingAgencyPreview({ className }: LandingAgencyPreviewProps) {
+  const rows = marketingAgencyRows;
+  const totalSeconds = sumDuration(rows);
   const todayKey = rows[0]?.startedAt.slice(0, 10) ?? "2026-06-15";
-  const showTracker = !rowLimit;
 
   return (
     <div className={cn("min-w-0 space-y-3", className)} aria-hidden>
-      {showTracker ? (
-        <div className={agencyTimeTrackerCardClass}>
-          <span className="min-w-0 flex-1 truncate pr-2 text-sm text-muted">
-            What are you working on?
-          </span>
-          <div className={agencyTimeTrackerRailClass}>
-            <span className={agencyTimeTrackerRailDividerClass} />
-            <div className={agencyTimeTrackerRailCellClass}>
-              <span className={cn(agencyTimeTrackerTaskChooserTriggerClass, "text-muted")}>
-                Choose task
-              </span>
-            </div>
-            <span className={agencyTimeTrackerRailDividerClass} />
-            <div className={agencyTimeTrackerRailCellClass}>
-              <span className={cn(agencyTimeTrackerIconActionClass, "text-info")}>$</span>
-            </div>
-            <span className={agencyTimeTrackerRailDividerClass} />
-            <div className={agencyTimeTrackerRailCellClass}>
-              <span className={cn(agencyTimeTrackerMetricClass, "text-muted")}>00:00:00</span>
-            </div>
-            <span className={agencyTimeTrackerRailDividerClass} />
-            <div className={agencyTimeTrackerRailCellClass}>
-              <span className={agencyTimeTrackerPrimaryActionClass}>Start</span>
-            </div>
+      <div className={agencyTimeTrackerCardClass}>
+        <span className="min-w-0 flex-1 truncate pr-2 text-sm text-muted">
+          What are you working on?
+        </span>
+        <div className={agencyTimeTrackerRailClass}>
+          <span className={agencyTimeTrackerRailDividerClass} />
+          <div className={agencyTimeTrackerRailCellClass}>
+            <span className={cn(agencyTimeTrackerTaskChooserTriggerClass, "text-muted")}>
+              Choose task
+            </span>
+          </div>
+          <span className={agencyTimeTrackerRailDividerClass} />
+          <div className={agencyTimeTrackerRailCellClass}>
+            <span className={cn(agencyTimeTrackerIconActionClass, "text-info")}>$</span>
+          </div>
+          <span className={agencyTimeTrackerRailDividerClass} />
+          <div className={agencyTimeTrackerRailCellClass}>
+            <span className={cn(agencyTimeTrackerMetricClass, "text-muted")}>00:00:00</span>
+          </div>
+          <span className={agencyTimeTrackerRailDividerClass} />
+          <div className={agencyTimeTrackerRailCellClass}>
+            <span className={agencyTimeTrackerPrimaryActionClass}>Start</span>
           </div>
         </div>
-      ) : null}
+      </div>
 
       <section className={cn(agencyTimeEntryDayGroupClass, "overflow-x-auto")}>
         <header className={cn(agencyTimeEntrySectionHeaderClass, "min-w-[52rem] justify-between")}>

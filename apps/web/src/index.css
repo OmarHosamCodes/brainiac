@@ -377,6 +377,28 @@
   scrollbar-width: none;
 }
 
+@media (max-width: 767px), (hover: none) and (pointer: coarse) {
+  html {
+    scrollbar-gutter: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar,
+  *::-webkit-scrollbar-thumb,
+  *::-webkit-scrollbar-track {
+    display: none;
+    width: 0;
+    height: 0;
+    background: transparent;
+  }
+}
+
 /* Reaction picker animations */
 @keyframes bounce-subtle {
   0%,
@@ -420,6 +442,13 @@ body {
 
   html {
     @apply antialiased font-sans;
+    scrollbar-gutter: stable;
+  }
+
+  @supports not (scrollbar-gutter: stable) {
+    html {
+      overflow-y: scroll;
+    }
   }
 
   html:has(.app-shell),

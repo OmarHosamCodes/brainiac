@@ -1,10 +1,8 @@
+import GradualBlur from "@/components/marketing/bits/GradualBlur";
 import WebThreads from "@/components/marketing/bits/WebThreads";
-import { LandingAgencyPreview } from "@/components/marketing/landing-agency-preview";
 import { LandingAuthActions } from "@/components/marketing/landing-auth-actions";
-import { LANDING_INDEX_ENTRIES } from "@/components/marketing/landing-index";
 import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
 import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
-import { cn } from "@/lib/utils";
 
 type LandingHeroProps = {
   isAuthenticated: boolean;
@@ -15,12 +13,12 @@ export function LandingHero({ isAuthenticated }: LandingHeroProps) {
 
   return (
     <div className="dark">
-      <section className="relative w-full overflow-hidden border-b border-border bg-background text-foreground">
+      <section className="relative flex min-h-svh w-full flex-col overflow-hidden border-b border-border bg-background text-foreground">
         <a
           href="#instrument-index"
           className="bg-background text-foreground focus-visible:ring-ring sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-20 focus-visible:rounded-md focus-visible:px-3 focus-visible:py-2 focus-visible:ring-2"
         >
-          Skip to instrument index
+          Skip to Canvas, Agency, and Agent
         </a>
 
         {!reducedMotion ? (
@@ -57,7 +55,7 @@ export function LandingHero({ isAuthenticated }: LandingHeroProps) {
           />
         )}
 
-        <div className="relative mx-auto max-w-6xl px-6 pt-16 pb-12 md:px-10 md:pt-20 md:pb-16 lg:px-16">
+        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6 pt-16 pb-28 md:px-10 md:pt-20 lg:px-16">
           <MarketingBrandLockup className="mb-8 text-foreground md:mb-10" />
 
           <h1 className="max-w-3xl text-[2.25rem] leading-[1.05] font-semibold tracking-[-0.03em] text-balance sm:text-5xl md:text-6xl lg:text-[3.75rem]">
@@ -65,8 +63,7 @@ export function LandingHero({ isAuthenticated }: LandingHeroProps) {
           </h1>
 
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground md:mt-6">
-            Canvas for ideas, Agency for execution. An agent that reads and reshapes your work in
-            plain sight.
+            Think on the canvas. Track time in Agency. The agent shows every tool call.
           </p>
 
           <LandingAuthActions
@@ -74,49 +71,19 @@ export function LandingHero({ isAuthenticated }: LandingHeroProps) {
             showPricing
             className="mt-7 md:mt-8"
           />
-
-          <ol className="mt-10 border-t border-border md:mt-12">
-            {LANDING_INDEX_ENTRIES.map((entry) => {
-              const isOpen = entry.id === "agency";
-
-              return (
-                <li key={entry.id} className="border-b border-border">
-                  <a
-                    href={`#index-${entry.id}`}
-                    className={cn(
-                      "grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1 py-5 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-x-8 md:py-6",
-                      "hover:text-foreground focus-visible:ring-ring rounded-sm focus-visible:ring-2 focus-visible:outline-none",
-                      isOpen ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "font-mono text-sm font-medium tabular-nums md:text-base",
-                        isOpen ? "text-chart-2" : "text-muted-foreground",
-                      )}
-                    >
-                      {entry.numeral}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-xl font-semibold tracking-[-0.025em] md:text-2xl">
-                        {entry.name}
-                      </span>
-                      <span className="mt-0.5 block text-sm md:hidden">{entry.job}</span>
-                    </span>
-                    <span className="hidden text-sm md:inline">{entry.job}</span>
-                  </a>
-
-                  {isOpen ? (
-                    <div className="max-w-xl pb-8">
-                      <p className="mb-3 text-xs text-muted-foreground">Sample workspace</p>
-                      <LandingAgencyPreview rowLimit={2} />
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
         </div>
+
+        <GradualBlur
+          target="parent"
+          position="bottom"
+          height="6rem"
+          strength={2}
+          divCount={5}
+          curve="bezier"
+          exponential
+          opacity={1}
+          zIndex={10}
+        />
       </section>
     </div>
   );

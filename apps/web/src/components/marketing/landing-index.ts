@@ -3,9 +3,9 @@ export const LANDING_INDEX_ENTRIES = [
     id: "canvas",
     numeral: "01",
     name: "Canvas",
-    job: "Spatial workspace",
+    job: "Infinite canvas",
     summary:
-      "Pan, zoom, and place nodes. Tabs hold blocks: task lists, notes, kanban, decision matrices.",
+      "Pan, zoom, and place nodes. Tabs hold blocks: task lists, notes, kanban, and decision matrices.",
   },
   {
     id: "agency",
@@ -13,15 +13,14 @@ export const LANDING_INDEX_ENTRIES = [
     name: "Agency",
     job: "Time, projects, money, people",
     summary:
-      "Track time and capacity in structured rows. Projects, money, people, and resourcing sit in the same operating system.",
+      "Track time in structured rows. Projects, money, people, and resourcing stay in one place.",
   },
   {
     id: "agent",
     numeral: "03",
     name: "Agent",
     job: "Every tool call visible",
-    summary:
-      "The agent reads the workspace and writes in plain sight. Each action shows up as inspectable text.",
+    summary: "The agent reads your workspace and shows each action as text you can inspect.",
   },
 ] as const;
 
@@ -39,4 +38,27 @@ export function landingIndexIdFromHash(hash: string): LandingIndexId | null {
     if (entry.id === id) return entry.id;
   }
   return null;
+}
+
+export function landingScrollTargetId(hash: string): string | null {
+  const normalized = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (normalized === "instrument-index" || normalized === "pricing") return normalized;
+  const indexId = landingIndexIdFromHash(normalized);
+  return indexId ? `index-${indexId}` : null;
+}
+
+export function landingInPageHash(href: string, pathname: string): string | null {
+  if (href.startsWith("#")) return href;
+  if (pathname !== "/") return null;
+  if (href.startsWith("/#")) return href.slice(1);
+  return null;
+}
+
+export function scrollToLandingTarget(targetId: string): void {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const margin = Number.parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+  const top = window.scrollY + el.getBoundingClientRect().top - margin;
+  window.scrollTo({ top: Math.max(0, top), behavior: reduced ? "auto" : "smooth" });
 }
