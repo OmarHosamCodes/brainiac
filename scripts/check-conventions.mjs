@@ -17,6 +17,7 @@ const DYNAMIC_IMPORT_ALLOWLIST = [
   /railway-ssr-server\.mjs$/,
   /workspace-block-registry\.ts$/,
   /lazy-infinite-canvas\.tsx$/,
+  /workspace-agent-host\.tsx$/,
   /export-agency-report-xlsx\.ts$/,
   /\.test\.(ts|tsx)$/,
 ];
