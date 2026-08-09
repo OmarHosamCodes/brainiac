@@ -1,6 +1,6 @@
 import { FileText } from "lucide-react";
 import { useState } from "react";
-import { useSearchParams } from "@/lib/navigation";
+import { useParams } from "@/lib/navigation";
 
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -23,8 +23,7 @@ export function AgencyReportHistoryMenu({
   onSelectReport,
 }: AgencyReportHistoryMenuProps) {
   const [open, setOpen] = useState(false);
-  const [searchParams] = useSearchParams();
-  const activeReportId = searchParams.get("report");
+  const activeReportId = useParams<{ reportId?: string }>().reportId ?? null;
   const reportsQuery = useSavedReportsList({ teamId, enabled: Boolean(teamId) });
   const savedCount = reportsQuery.data?.items.length;
 

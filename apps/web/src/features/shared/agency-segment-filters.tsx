@@ -42,7 +42,7 @@ import type { AgencyListFiltersApplied } from "@/features/shared/use-agency-list
 import { useAgencyListFilters } from "@/features/shared/use-agency-list-filters";
 import type { AgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
 import { useAgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
-import type { AgencySegmentId } from "@/features/shared/agency-segments";
+import { agencyReportHref, type AgencySegmentId } from "@/features/shared/agency-segments";
 import {
   buildAgencyMoneyPeriodHref,
   buildAgencyReportsPeriodHref,
@@ -73,30 +73,9 @@ export function useAgencySegmentSurfaceFilters() {
 type AgencySegmentFiltersRootProps = {
   segment: AgencySegmentId;
   teamId: string;
-  selectedProjectId: string;
-  selectedClientId?: string;
-  reportMode: string | null;
-  searchParams: URLSearchParams;
+  searchParams?: URLSearchParams;
   children: ReactNode;
 };
-
-function commandBarVisible(
-  segment: AgencySegmentId,
-  selectedProjectId: string,
-  selectedClientId: string,
-  reportMode: string | null,
-): boolean {
-  if (segment === "work" || segment === "management") return false;
-  if (segment === "projects" && selectedProjectId) return false;
-  if (segment === "clients" && selectedClientId) return false;
-  if (segment === "reports" && reportMode) return false;
-  return (
-    segment === "dashboard" ||
-    segment === "reports" ||
-    segment === "clients" ||
-    segment === "projects"
-  );
-}
 
 function CommandBarSkeleton() {
   return <Skeleton className="h-[4.25rem] w-full rounded-2xl" />;
@@ -213,7 +192,8 @@ function ReportsFiltersRoot({
         return;
       }
       const next = new URLSearchParams(searchParams);
-      next.set("section", "reports");
+      next.delete("section");
+      next.delete("report");
       if (areSameReportFieldSets(fieldIds, allAgencyReportFieldIds())) {
         next.delete("fields");
       } else {
@@ -230,9 +210,10 @@ function ReportsFiltersRoot({
       } else {
         next.set(AGENCY_REPORT_MERGE_TASKS_PARAM, mergeParam);
       }
+      const query = next.toString();
       // Router updates are secondary; don't block the table paint.
       startTransition(() => {
-        navigate(`/agency?${next.toString()}`, { replace: true });
+        navigate(query ? `/agency/reports?${query}` : "/agency/reports", { replace: true });
       });
     },
     [navigate, searchParams],
@@ -262,22 +243,17 @@ function ReportsFiltersRoot({
       reportId: string,
       options?: { preserveShowWaste?: boolean; preserveMergeSameTaskNames?: boolean },
     ) => {
-      const next = new URLSearchParams(searchParams);
-      next.set("section", "reports");
-      next.set("report", reportId);
-      next.delete("from");
-      next.delete("to");
-      next.delete("client");
-      next.delete("project");
-      next.delete("member");
-      next.delete("fields");
-      if (!options?.preserveShowWaste) {
-        next.delete("showWaste");
+      const next = new URLSearchParams();
+      if (options?.preserveShowWaste) {
+        const showWaste = searchParams.get("showWaste");
+        if (showWaste) next.set("showWaste", showWaste);
       }
-      if (!options?.preserveMergeSameTaskNames) {
-        next.delete(AGENCY_REPORT_MERGE_TASKS_PARAM);
+      if (options?.preserveMergeSameTaskNames) {
+        const mergeTasks = searchParams.get(AGENCY_REPORT_MERGE_TASKS_PARAM);
+        if (mergeTasks) next.set(AGENCY_REPORT_MERGE_TASKS_PARAM, mergeTasks);
       }
-      navigate(`/agency?${next.toString()}`);
+      const query = next.toString();
+      navigate(query ? `${agencyReportHref(reportId)}?${query}` : agencyReportHref(reportId));
     },
     [navigate, searchParams],
   );
@@ -596,36 +572,35 @@ function NoFiltersRoot({ children }: { children: ReactNode }) {
 export function AgencySegmentFiltersRoot({
   segment,
   teamId,
-  selectedProjectId,
-  selectedClientId = "",
-  reportMode,
   searchParams,
   children,
 }: AgencySegmentFiltersRootProps) {
-  const showBar = commandBarVisible(segment, selectedProjectId, selectedClientId, reportMode);
-
   switch (segment) {
     case "dashboard":
       return (
-        <DashboardFiltersRoot teamId={teamId} showBar={showBar}>
+        <DashboardFiltersRoot teamId={teamId} showBar>
           {children}
         </DashboardFiltersRoot>
       );
     case "reports":
       return (
-        <ReportsFiltersRoot teamId={teamId} showBar={showBar} searchParams={searchParams}>
+        <ReportsFiltersRoot
+          teamId={teamId}
+          showBar
+          searchParams={searchParams ?? new URLSearchParams()}
+        >
           {children}
         </ReportsFiltersRoot>
       );
     case "clients":
       return (
-        <ClientsFiltersRoot teamId={teamId} showBar={showBar}>
+        <ClientsFiltersRoot teamId={teamId} showBar>
           {children}
         </ClientsFiltersRoot>
       );
     case "projects":
       return (
-        <ProjectsFiltersRoot teamId={teamId} showBar={showBar}>
+        <ProjectsFiltersRoot teamId={teamId} showBar>
           {children}
         </ProjectsFiltersRoot>
       );

@@ -17,16 +17,17 @@ export type LegacyAgencySegmentId = "projects" | "resourcing" | "billing";
 
 export type AgencySegment = {
   id: AgencySegmentId;
+  path: string;
   label: string;
   icon: string;
   shortcutKey: string;
-  /** Plain-spoken description shown under the section title. */
   subtitle: string;
 };
 
 export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
   {
     id: "work",
+    path: "/agency",
     label: "Tracker",
     icon: "i-lucide-timer",
     shortcutKey: "t",
@@ -34,6 +35,7 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
   },
   {
     id: "dashboard",
+    path: "/agency/dashboard",
     label: "Dashboard",
     icon: "i-lucide-layout-dashboard",
     shortcutKey: "d",
@@ -41,6 +43,7 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
   },
   {
     id: "clients",
+    path: "/agency/clients",
     label: "Clients",
     icon: "i-lucide-building-2",
     shortcutKey: "c",
@@ -48,6 +51,7 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
   },
   {
     id: "projects",
+    path: "/agency/projects",
     label: "Projects",
     icon: "i-lucide-folder-kanban",
     shortcutKey: "p",
@@ -55,6 +59,7 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
   },
   {
     id: "reports",
+    path: "/agency/reports",
     label: "Reports",
     icon: "i-lucide-bar-chart-3",
     shortcutKey: "r",
@@ -62,6 +67,7 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
   },
   {
     id: "management",
+    path: "/agency/management/resourcing",
     label: "Management",
     icon: "i-lucide-sliders-horizontal",
     shortcutKey: "m",
@@ -75,29 +81,62 @@ export const LEGACY_AGENCY_SEGMENT_MAP = {
   billing: "management",
 } as const satisfies Record<LegacyAgencySegmentId, AgencySegmentId>;
 
+const SEGMENT_BY_ID = Object.fromEntries(
+  AGENCY_SEGMENTS.map((entry) => [entry.id, entry]),
+) as Record<AgencySegmentId, AgencySegment>;
+
 export function isLegacyAgencySegmentId(value: string | null): value is LegacyAgencySegmentId {
   return value === "projects" || value === "resourcing" || value === "billing";
 }
 
 export function isAgencySegmentId(value: string | null): value is AgencySegmentId {
-  return AGENCY_SEGMENTS.some((entry) => entry.id === value);
+  return value !== null && value in SEGMENT_BY_ID;
 }
 
-/** Resolve the active Agency segment from `?section=`. */
-export function agencySegmentFromSearch(search: string): AgencySegmentId {
-  const section = new URLSearchParams(search).get("section");
-  if (isAgencySegmentId(section)) return section;
-  if (isLegacyAgencySegmentId(section)) return LEGACY_AGENCY_SEGMENT_MAP[section];
-  return "work";
+function normalizeAgencyPath(pathname: string): string {
+  if (pathname.length > 1 && pathname.endsWith("/")) return pathname.slice(0, -1);
+  return pathname;
 }
 
-/** Canonical href for an Agency segment (Tracker omits the query). */
+export function agencySegmentFromPathname(pathname: string): AgencySegmentId | null {
+  const path = normalizeAgencyPath(pathname);
+  if (!path.startsWith("/agency")) return null;
+  if (path === "/agency/me" || path.startsWith("/agency/members")) return null;
+  if (path === "/agency") return "work";
+  if (path === "/agency/dashboard" || path.startsWith("/agency/dashboard/")) return "dashboard";
+  if (path === "/agency/clients" || path.startsWith("/agency/clients/")) return "clients";
+  if (path === "/agency/projects" || path.startsWith("/agency/projects/")) return "projects";
+  if (path === "/agency/reports" || path.startsWith("/agency/reports/")) return "reports";
+  if (path === "/agency/management" || path.startsWith("/agency/management/")) return "management";
+  return null;
+}
+
 export function agencySegmentHref(segment: AgencySegmentId): string {
-  return segment === "work" ? "/agency" : `/agency?section=${segment}`;
+  return SEGMENT_BY_ID[segment].path;
+}
+
+export function agencyClientHref(clientId: string): string {
+  return `/agency/clients/${encodeURIComponent(clientId)}`;
+}
+
+export function agencyProjectHref(projectId: string): string {
+  return `/agency/projects/${encodeURIComponent(projectId)}`;
+}
+
+export function agencyReportHref(reportId: string): string {
+  return `/agency/reports/${encodeURIComponent(reportId)}`;
+}
+
+export function agencyMemberHref(userId: string): string {
+  return `/agency/members/${encodeURIComponent(userId)}`;
+}
+
+export function agencyTaskHref(taskId: string): string {
+  return `/agency?task=${encodeURIComponent(taskId)}`;
 }
 
 export function agencySegmentLabel(segment: AgencySegmentId): string {
-  return AGENCY_SEGMENTS.find((entry) => entry.id === segment)?.label ?? "Agency";
+  return SEGMENT_BY_ID[segment]?.label ?? "Agency";
 }
 
 export function agencySegmentTabId(segment: AgencySegmentId): string {

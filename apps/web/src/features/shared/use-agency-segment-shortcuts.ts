@@ -1,11 +1,16 @@
 import { useEffect } from "react";
-import { useNavigate } from "@/lib/navigation";
+import { useLocation, useNavigate } from "@/lib/navigation";
 
+import {
+  agencyManagementHref,
+  agencyManagementPaneFromPathname,
+} from "@/features/shared/agency-management-sections";
 import { AGENCY_SEGMENTS, agencySegmentHref } from "@/features/shared/agency-segments";
 
 /** Global `g` then segment key chords (Work = `g w`, …). */
 export function useAgencySegmentShortcuts() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     let pendingPrefix = false;
@@ -47,7 +52,13 @@ export function useAgencySegmentShortcuts() {
       const match = AGENCY_SEGMENTS.find((entry) => entry.shortcutKey === key);
       if (match) {
         event.preventDefault();
-        navigate(agencySegmentHref(match.id));
+        const href =
+          match.id === "management"
+            ? agencyManagementHref(
+                agencyManagementPaneFromPathname(location.pathname) ?? "resourcing",
+              )
+            : agencySegmentHref(match.id);
+        navigate(href);
       }
       clearPrefix();
     }
@@ -57,5 +68,5 @@ export function useAgencySegmentShortcuts() {
       window.removeEventListener("keydown", handleKeydown);
       clearPrefix();
     };
-  }, [navigate]);
+  }, [location.pathname, navigate]);
 }

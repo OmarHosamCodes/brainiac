@@ -1,6 +1,12 @@
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
 
 import { buildMemberProfileAlertHref } from "@/features/member-profile/member-profile-alert-href";
+import { agencyManagementHref } from "@/features/shared/agency-management-sections";
+import {
+  agencyProjectHref,
+  agencySegmentHref,
+  agencyTaskHref,
+} from "@/features/shared/agency-segments";
 
 export type NotificationSection = {
   label: "Needs action" | "Updates";
@@ -56,49 +62,36 @@ export function groupNotificationSections(items: NotificationRecord[]): Notifica
   return sections;
 }
 
-/** Agency Tracker segment id remains `work` (labeled Tracker in nav). */
-export function buildNotificationSearchParams(notification: NotificationRecord) {
-  const params = new URLSearchParams();
+export function notificationHref(notification: NotificationRecord): string {
   const payload = notification.payload;
 
   switch (notification.type) {
     case "task.assigned":
     case "task.message":
-      params.set("section", "work");
-      if (payload.taskId) params.set("task", payload.taskId);
-      break;
+      return payload.taskId ? agencyTaskHref(payload.taskId) : agencySegmentHref("work");
     case "journey.milestone":
-      params.set("section", "projects");
-      if (payload.projectId) params.set("project", payload.projectId);
-      break;
+      return payload.projectId
+        ? agencyProjectHref(payload.projectId)
+        : agencySegmentHref("projects");
     case "timer.activity":
-      params.set("section", "dashboard");
-      break;
+      return agencySegmentHref("dashboard");
     case "team.digest":
-      params.set("section", "reports");
-      break;
+      return agencySegmentHref("reports");
     case "member.alert":
-      // Profile route owns focus/alertId/day — no agency section params.
-      break;
+      if (payload.subjectUserId) {
+        return buildMemberProfileAlertHref({
+          subjectUserId: payload.subjectUserId,
+          alertId: payload.alertId,
+          dateKey: payload.dateKey,
+          periodKey: payload.periodKey,
+        });
+      }
+      return agencyManagementHref("tenure");
     default: {
       const _exhaustive: never = notification.type;
       return _exhaustive;
     }
   }
-
-  return params;
-}
-
-export function notificationHref(notification: NotificationRecord): string | null {
-  if (notification.type === "member.alert" && notification.payload.subjectUserId) {
-    return buildMemberProfileAlertHref({
-      subjectUserId: notification.payload.subjectUserId,
-      alertId: notification.payload.alertId,
-      dateKey: notification.payload.dateKey,
-      periodKey: notification.payload.periodKey,
-    });
-  }
-  return null;
 }
 
 export function notificationPreferenceLabel(type: NotificationRecord["type"]) {

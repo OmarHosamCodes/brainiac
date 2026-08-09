@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "@/lib/navigation";
+import { useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import { computeReportHourMetrics } from "@/features/reports/agency-report-hour-metrics";
@@ -37,7 +37,6 @@ export type UseAgencyReportsSurfaceProps = {
 export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSurfaceProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const deletingEntryIds = useAgencyTimeTrackingStore((state) => state.deletingEntryIds);
   const { range, projectId, memberUserId, clientId, clientIds, projectIds, memberUserIds } =
@@ -262,10 +261,8 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   );
 
   const handleGoToTracker = useCallback(() => {
-    const next = new URLSearchParams(searchParams);
-    next.set("section", "work");
-    navigate(`/agency?${next.toString()}`);
-  }, [navigate, searchParams]);
+    navigate("/agency");
+  }, [navigate]);
   const handleEditDetails = useCallback((row: AggregatedReportRow) => {
     if (row.entries.length === 0) return;
     setDetailsRowKey(row.key);

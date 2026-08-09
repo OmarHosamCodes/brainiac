@@ -26,18 +26,17 @@ export type { AgencyMemberOption };
 
 export type TaskStatus = AgencyProjectTaskStatus;
 
-/** Strip obsolete Work tab/task query params so legacy URLs land on the tracker. */
+/** Strip obsolete Work tab/filter query params. `task` stays as a Tracker deep-link. */
 export function normalizeAgencyWorkSurfaceQueryParams(
   searchParams: URLSearchParams,
 ): URLSearchParams | null {
-  if (!searchParams.has("tab") && !searchParams.has("task") && !searchParams.has("filter")) {
+  if (!searchParams.has("tab") && !searchParams.has("filter") && !searchParams.has("section")) {
     return null;
   }
   const next = new URLSearchParams(searchParams);
-  next.set("section", "work");
   next.delete("tab");
-  next.delete("task");
   next.delete("filter");
+  next.delete("section");
   return next;
 }
 

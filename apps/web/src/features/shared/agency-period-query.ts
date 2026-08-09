@@ -33,13 +33,10 @@ export function appendAgencyPeriodQuery(
 
 export function buildAgencyReportsPeriodHref(range: { from: string; to: string }): string {
   const params = appendAgencyPeriodQuery(new URLSearchParams(), range);
-  params.set("section", "reports");
-  return `/agency?${params.toString()}`;
+  return `/agency/reports?${params.toString()}`;
 }
 
 export function buildAgencyMoneyPeriodHref(range: { from: string; to: string }): string {
   const params = appendAgencyPeriodQuery(new URLSearchParams(), range);
-  params.set("section", "management");
-  params.set("manage", "money");
-  return `/agency?${params.toString()}`;
+  return `/agency/management/money?${params.toString()}`;
 }

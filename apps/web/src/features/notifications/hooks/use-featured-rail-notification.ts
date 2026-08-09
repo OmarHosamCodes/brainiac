@@ -1,6 +1,6 @@
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
 import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "@/lib/navigation";
+import { useNavigate } from "@/lib/navigation";
 
 import { useAppShellStore } from "@/features/app-shell/app-shell-store";
 import {
@@ -8,7 +8,6 @@ import {
   useMarkNotificationReadMutation,
 } from "@/features/notifications/notifications-queries";
 import {
-  buildNotificationSearchParams,
   featuredNotificationBody,
   featuredNotificationCta,
   featuredNotificationTitle,
@@ -30,7 +29,6 @@ export function useFeaturedRailNotification(input: FeaturedRailNotificationInput
   const railPinned = useAppShellStore((s) => s.railPinned);
   const expanded = input.forceExpanded || railPinned;
   const navigate = useNavigate();
-  const [, setSearchParams] = useSearchParams();
   const requestOpenInbox = useNotificationsInboxUiStore((s) => s.requestOpen);
   const startTimer = useAgencyTimeTrackingStore((state) => state.startTimer);
   const listQuery = useAgencyNotificationsQuery(teamId, Boolean(teamId));
@@ -59,12 +57,7 @@ export function useFeaturedRailNotification(input: FeaturedRailNotificationInput
 
   async function openNotification(notification: NotificationRecord) {
     await markRead(notification);
-    const href = notificationHref(notification);
-    if (href) {
-      navigate(href);
-      return;
-    }
-    setSearchParams(buildNotificationSearchParams(notification), { replace: false });
+    navigate(notificationHref(notification));
   }
 
   async function handlePrimaryCta() {
@@ -85,7 +78,7 @@ export function useFeaturedRailNotification(input: FeaturedRailNotificationInput
           successDescription: "Timer started from notification.",
         });
         await markRead(featured);
-        setSearchParams(new URLSearchParams({ section: "work", task: payload.taskId }));
+        navigate("/agency");
         return;
       }
       await openNotification(featured);

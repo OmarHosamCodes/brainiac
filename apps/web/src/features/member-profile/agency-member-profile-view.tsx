@@ -714,7 +714,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
             <DialogDescription>
               Light edits for day-to-day contact. Configure rates, tenure, and schedule in{" "}
               <a
-                href="/agency?section=management&manage=tenure"
+                href="/agency/management/people"
                 className="font-medium text-foreground underline-offset-2 hover:underline"
               >
                 People

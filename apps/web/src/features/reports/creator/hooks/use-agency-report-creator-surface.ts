@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "@/lib/navigation";
+import { useNavigate, useParams, useSearchParams } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import {
@@ -68,8 +68,8 @@ export type UseAgencyReportCreatorSurfaceProps = {
 export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreatorSurfaceProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const reportId = searchParams.get("report") ?? "";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const reportId = useParams<{ reportId?: string }>().reportId ?? "";
 
   const reportQuery = useQuery({
     queryKey: ["agency-reports", "saved", teamId, reportId],
@@ -77,11 +77,12 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     enabled: Boolean(teamId && reportId),
   });
 
-  const backParams = useMemo(() => {
+  const reportsListHref = useMemo(() => {
     const next = new URLSearchParams(searchParams);
-    next.set("section", "reports");
+    next.delete("section");
     next.delete("report");
-    return next.toString();
+    const query = next.toString();
+    return query ? `/agency/reports?${query}` : "/agency/reports";
   }, [searchParams]);
 
   const report = reportQuery.data;
@@ -121,11 +122,12 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   const replaceReportSearchParams = useCallback(
     (mutate: (next: URLSearchParams) => void) => {
       const next = new URLSearchParams(searchParams);
-      next.set("section", "reports");
       mutate(next);
-      navigate(`/agency?${next.toString()}`, { replace: true });
+      next.delete("section");
+      next.delete("report");
+      setSearchParams(next, { replace: true });
     },
-    [navigate, searchParams],
+    [searchParams, setSearchParams],
   );
 
   const handleFieldIdsChange = useCallback(
@@ -477,7 +479,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
       await orpcClient.agencyOps.reports.saved.delete({ teamId, reportId });
       void queryClient.invalidateQueries({ queryKey: ["agency-reports", "saved", teamId] });
       toast.success("Report deleted");
-      navigate(`/agency?${backParams}`);
+      navigate(reportsListHref);
     } catch (error) {
       toast.error("Couldn't delete report", {
         description: getErrorMessage(error, "Try again."),
@@ -485,7 +487,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     } finally {
       setDeletingReport(false);
     }
-  }, [autosave.state, backParams, deletingReport, navigate, queryClient, reportId, teamId]);
+  }, [autosave.state, deletingReport, navigate, queryClient, reportId, reportsListHref, teamId]);
 
   const hourMetrics = useMemo(
     () => computeReportHourMetrics(creator.visibleEntries, clientsQuery.data?.items ?? []),
@@ -500,8 +502,8 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     void reportQuery.refetch();
   };
   const onBackToReports = useCallback(() => {
-    navigate(`/agency?${backParams}`);
-  }, [backParams, navigate]);
+    navigate(reportsListHref);
+  }, [navigate, reportsListHref]);
 
   return {
     reportId,

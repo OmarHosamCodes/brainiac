@@ -15,7 +15,7 @@ type UseAgencyBootGateOptions = {
   showAgencyUpsell: boolean;
   teamsQuery: Pick<UseQueryResult, "isPending">;
   billingQuery: Pick<UseQueryResult, "isPending">;
-  searchParams: URLSearchParams;
+  pathname: string;
 };
 
 export function useAgencyBootGate({
@@ -27,7 +27,7 @@ export function useAgencyBootGate({
   showAgencyUpsell,
   teamsQuery,
   billingQuery,
-  searchParams,
+  pathname,
 }: UseAgencyBootGateOptions) {
   const queryClient = useQueryClient();
   const animationReady = useShellAnimationHold();
@@ -42,9 +42,9 @@ export function useAgencyBootGate({
       segment,
       teamId,
       userId,
-      searchParams,
+      pathname,
     }).catch(() => undefined);
-  }, [isPageReady, queryClient, searchParams.toString(), segment, skipSegmentBoot, teamId, userId]);
+  }, [isPageReady, pathname, queryClient, segment, skipSegmentBoot, teamId, userId]);
 
   const isBooting = !(isPageReady && animationReady);
 

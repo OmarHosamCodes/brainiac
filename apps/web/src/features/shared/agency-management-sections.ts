@@ -25,6 +25,19 @@ export const AGENCY_MANAGEMENT_PANES: readonly AgencyManagementPane[] = [
   },
 ] as const;
 
+/** Product URL slug per pane. People stays `tenure` internally. */
+export const AGENCY_MANAGEMENT_PANE_SLUG = {
+  resourcing: "resourcing",
+  tenure: "people",
+  money: "money",
+} as const satisfies Record<AgencyManagementPaneId, string>;
+
+const AGENCY_MANAGEMENT_SLUG_PANE = {
+  resourcing: "resourcing",
+  people: "tenure",
+  money: "money",
+} as const satisfies Record<string, AgencyManagementPaneId>;
+
 export function isAgencyManagementPaneId(value: unknown): value is AgencyManagementPaneId {
   return AGENCY_MANAGEMENT_PANES.some((pane) => pane.id === value);
 }
@@ -39,22 +52,18 @@ export function agencyManagementPaneSubtitle(paneId: AgencyManagementPaneId): st
 
 /** Canonical href for a Management pane under Agency. */
 export function agencyManagementHref(paneId: AgencyManagementPaneId): string {
-  return `/agency?section=management&manage=${paneId}`;
+  return `/agency/management/${AGENCY_MANAGEMENT_PANE_SLUG[paneId]}`;
 }
 
-export function agencyManagementPaneFromSearch(search: string): AgencyManagementPaneId {
-  const manage = new URLSearchParams(search).get("manage");
-  return isAgencyManagementPaneId(manage) ? manage : "resourcing";
+const MANAGEMENT_SLUG_PANE: Record<string, AgencyManagementPaneId> = AGENCY_MANAGEMENT_SLUG_PANE;
+
+export function agencyManagementPaneFromPathname(pathname: string): AgencyManagementPaneId | null {
+  const match = /^\/agency\/management\/([^/]+)/.exec(pathname);
+  const slug = match?.[1];
+  if (!slug) return null;
+  return MANAGEMENT_SLUG_PANE[slug] ?? null;
 }
 
 export function agencyManagementPaneTabId(paneId: AgencyManagementPaneId): string {
   return `agency-management-pane-${paneId}`;
-}
-
-export function managementPaneForLegacySection(
-  value: string | null,
-): AgencyManagementPaneId | null {
-  if (value === "resourcing") return "resourcing";
-  if (value === "billing" || value === "invoices") return "money";
-  return null;
 }
