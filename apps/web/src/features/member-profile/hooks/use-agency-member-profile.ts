@@ -1,7 +1,7 @@
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";

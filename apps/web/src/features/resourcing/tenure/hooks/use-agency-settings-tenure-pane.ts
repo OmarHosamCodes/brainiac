@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";

@@ -1,11 +1,4 @@
 import * as Sentry from "@sentry/react";
-import React from "react";
-import {
-  createRoutesFromChildren,
-  matchRoutes,
-  useLocation,
-  useNavigationType,
-} from "react-router-dom";
 
 declare const __APP_BUILD_ID__: string;
 declare const __SENTRY_DSN__: string;
@@ -24,7 +17,7 @@ const sentryDsn = resolveSentryDsn();
 
 export const isSentryEnabled = Boolean(sentryDsn) && import.meta.env.PROD;
 
-if (sentryDsn) {
+if (typeof window !== "undefined" && sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
     enabled: import.meta.env.PROD,
@@ -32,15 +25,7 @@ if (sentryDsn) {
     release: resolveSentryRelease(),
     sendDefaultPii: false,
     ignoreErrors: ["TimeoutError", /signal timed out/i, /Failed to fetch/i],
-    integrations: [
-      Sentry.reactRouterV7BrowserTracingIntegration({
-        useEffect: React.useEffect,
-        useLocation,
-        useNavigationType,
-        createRoutesFromChildren,
-        matchRoutes,
-      }),
-    ],
+    integrations: [Sentry.browserTracingIntegration()],
     tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
     tracePropagationTargets: [
       "localhost",

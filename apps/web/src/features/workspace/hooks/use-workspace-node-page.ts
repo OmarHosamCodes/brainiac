@@ -1,6 +1,6 @@
 import { normalizeWorkspaceNode, type WorkspaceBlock, type WorkspaceNode } from "@orch/workspace";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "@/lib/navigation";
 
 import type { WorkspaceNodeEditorContextValue } from "@/features/workspace/node/context";
 import { useWorkspaceNodeSharing } from "./use-workspace-node-sharing";

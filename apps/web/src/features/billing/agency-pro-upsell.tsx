@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/navigation";
 
 import { Button } from "@/ui/button";
 import { useBilling } from "@/features/billing/billing-queries";

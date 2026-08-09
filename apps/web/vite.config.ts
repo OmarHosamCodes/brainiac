@@ -1,4 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -6,8 +7,6 @@ import path from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 
 import "@orch/env/vite";
-
-import { marketingPrerenderShell } from "./vite-marketing-prerender";
 
 function resolveAppBuildId(): string {
   return (
@@ -41,6 +40,8 @@ function hasSentryUploadCredentials(env: Record<string, string>): boolean {
   );
 }
 
+const MARKETING_PRERENDER_PATHS = new Set(["/", "/privacy", "/terms", "/login"]);
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const serverUrl =
@@ -58,44 +59,8 @@ export default defineConfig(({ mode }) => {
       __APP_BUILD_ID__: JSON.stringify(appBuildId),
       __SENTRY_DSN__: JSON.stringify(sentryDsn),
     },
-    plugins: [
-      react(),
-      tailwindcss(),
-      marketingPrerenderShell(),
-      appVersionPlugin(appBuildId),
-      ...(shouldUploadSourceMaps
-        ? [
-            sentryVitePlugin({
-              org: process.env.SENTRY_ORG || env.SENTRY_ORG,
-              project: process.env.SENTRY_PROJECT || env.SENTRY_PROJECT,
-              authToken: process.env.SENTRY_AUTH_TOKEN || env.SENTRY_AUTH_TOKEN,
-              release: {
-                name: appBuildId,
-              },
-              sourcemaps: {
-                filesToDeleteAfterUpload: ["./dist/**/*.map"],
-              },
-            }),
-          ]
-        : []),
-    ],
-    build: {
-      sourcemap: shouldUploadSourceMaps ? "hidden" : false,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (!id.includes("node_modules")) return undefined;
-            if (id.includes("@xyflow/react")) return "xyflow";
-            if (id.includes("motion/react") || id.includes("framer-motion")) return "motion";
-            if (id.includes("@radix-ui")) return "radix";
-            if (id.includes("react-dom") || id.includes("react-router")) return "react-vendor";
-            if (id.includes("lucide-react")) return "lucide";
-            return undefined;
-          },
-        },
-      },
-    },
     resolve: {
+      tsconfigPaths: true,
       alias: {
         "@": path.resolve(__dirname, "./src"),
       },
@@ -123,6 +88,9 @@ export default defineConfig(({ mode }) => {
       port: 7001,
       strictPort: true,
     },
+    build: {
+      sourcemap: shouldUploadSourceMaps ? "hidden" : false,
+    },
     optimizeDeps: {
       include: [
         "better-auth/react",
@@ -133,5 +101,32 @@ export default defineConfig(({ mode }) => {
         "zod",
       ],
     },
+    plugins: [
+      tailwindcss(),
+      tanstackStart({
+        prerender: {
+          enabled: true,
+          crawlLinks: false,
+          filter: ({ path: prerenderPath }) => MARKETING_PRERENDER_PATHS.has(prerenderPath),
+        },
+      }),
+      react(),
+      appVersionPlugin(appBuildId),
+      ...(shouldUploadSourceMaps
+        ? [
+            sentryVitePlugin({
+              org: process.env.SENTRY_ORG || env.SENTRY_ORG,
+              project: process.env.SENTRY_PROJECT || env.SENTRY_PROJECT,
+              authToken: process.env.SENTRY_AUTH_TOKEN || env.SENTRY_AUTH_TOKEN,
+              release: {
+                name: appBuildId,
+              },
+              sourcemaps: {
+                filesToDeleteAfterUpload: ["./dist/**/*.map"],
+              },
+            }),
+          ]
+        : []),
+    ],
   };
 });

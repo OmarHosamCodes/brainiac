@@ -1,6 +1,6 @@
 import { Bell, LogIn, Settings, UserRound } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/navigation";
 
 import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
 import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";

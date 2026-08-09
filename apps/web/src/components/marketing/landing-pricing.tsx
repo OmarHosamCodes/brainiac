@@ -1,5 +1,5 @@
 import { Check, Minus } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@/lib/navigation";
 
 import { Button } from "@/ui/button";
 import { useBilling } from "@/features/billing/billing-queries";

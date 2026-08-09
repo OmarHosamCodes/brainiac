@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import { authModeFromSearchParam, type AuthMode } from "@/features/auth/auth-mode-from-search";
@@ -26,9 +26,15 @@ function formatOAuthError(code: string): string {
   return OAUTH_ERROR_MESSAGES[code] ?? "Sign in failed. Try again.";
 }
 
+function safeRedirectPath(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/canvas";
+  }
+  return value;
+}
+
 export function useLoginPage() {
   const session = authClient.useSession();
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<AuthMode>(() =>
     authModeFromSearchParam(searchParams.get("mode")),
@@ -43,7 +49,7 @@ export function useLoginPage() {
   });
   const [pending, setPending] = useState(false);
   const [emailAuthOpen, setEmailAuthOpen] = useState(false);
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/canvas";
+  const redirectTo = safeRedirectPath(searchParams.get("redirect"));
   const signInForm = useForm<SignInFormValues>({
     resolver: zodResolver(signInFormSchema),
     defaultValues: { email: "", password: "" },

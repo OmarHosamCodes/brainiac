@@ -1,5 +1,5 @@
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation } from "@/lib/navigation";
 
 import { findActiveNavItem } from "@/features/app-shell/app-navigation";
 import { AppShellAgencySegmentMenu } from "@/features/app-shell/app-shell-agency-segment-menu";

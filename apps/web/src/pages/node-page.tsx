@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/navigation";
 
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
 import { ShellBootSurface } from "@/features/app-shell/components/shell-boot-surface";

@@ -1,6 +1,6 @@
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
 import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "@/lib/navigation";
 
 import { useAppShellStore } from "@/features/app-shell/app-shell-store";
 import {

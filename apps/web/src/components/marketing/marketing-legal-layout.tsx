@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/navigation";
 
 import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
 import { MarketingPageShell } from "@/components/marketing-page-shell";

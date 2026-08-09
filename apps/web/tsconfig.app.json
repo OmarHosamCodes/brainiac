@@ -8,12 +8,13 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "ignoreDeprecations": "6.0",
+    "verbatimModuleSyntax": false,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["vite/client"]
+    "types": ["vite/client", "node"]
   },
-  "include": ["src"],
+  "include": ["src", "src/routeTree.gen.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

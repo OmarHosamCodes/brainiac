@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "@/lib/navigation";
 
 import { AppShellChrome } from "@/features/app-shell/app-shell-chrome";
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";

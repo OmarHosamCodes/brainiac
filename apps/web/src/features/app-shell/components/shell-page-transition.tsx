@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect } from "react";
-import { Outlet, useLocation, useNavigationType } from "react-router-dom";
+import { Outlet, useLocation, useNavigationType } from "@/lib/navigation";
 
 import { resolveShellMode } from "@/features/app-shell/app-navigation";
 import {

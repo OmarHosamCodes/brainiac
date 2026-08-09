@@ -9,7 +9,7 @@ import type { WorkspaceNode } from "@orch/workspace";
 import { useChat } from "@ai-sdk/react";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";

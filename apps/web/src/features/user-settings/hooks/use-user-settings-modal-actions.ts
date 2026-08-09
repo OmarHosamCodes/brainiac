@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
