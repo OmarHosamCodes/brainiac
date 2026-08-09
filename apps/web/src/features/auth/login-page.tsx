@@ -86,8 +86,7 @@ export function LoginPage() {
             Run your agency.
           </h2>
           <p className="mt-6 text-lg leading-relaxed text-[var(--marketing-ink-muted)]">
-            Canvas for ideas, Agency for execution. Sign in to open your workspace and pick up where
-            you left off.
+            Think on the canvas. Track time in Agency. The agent shows every tool call.
           </p>
         </div>
 
@@ -107,8 +106,8 @@ export function LoginPage() {
                 </h1>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {isSignUp
-                    ? "Start with a free workspace. 10 nodes, agent included."
-                    : "Access your canvas, agency tools, and agent history."}
+                    ? "Start a free workspace. 10 nodes, agent included."
+                    : "Open your canvas, Agency, and agent."}
                 </p>
               </div>
             </div>
@@ -136,7 +135,7 @@ export function LoginPage() {
               onClick={toggleEmailAuth}
               aria-expanded={emailAuthOpen}
             >
-              Sign in with email and password
+              {isSignUp ? "Create account with email" : "Sign in with email"}
               <ChevronDown
                 className={cn(
                   "size-4 transition-transform duration-300",
@@ -243,7 +242,7 @@ export function LoginPage() {
                       className="font-semibold text-primary hover:underline"
                       onClick={() => switchMode(isSignUp ? "sign-in" : "sign-up")}
                     >
-                      {isSignUp ? "Sign in" : "Sign up"}
+                      {isSignUp ? "Sign in" : "Create account"}
                     </button>
                   </p>
                 </div>

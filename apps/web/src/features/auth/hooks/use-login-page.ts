@@ -17,13 +17,13 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 export type { AuthMode };
 
 const OAUTH_ERROR_MESSAGES: Record<string, string> = {
-  state_mismatch: "Sign-in expired or was interrupted. Please try again.",
-  please_restart_the_process: "Sign-in could not be completed. Please try again.",
-  invalid_callback_request: "Invalid sign-in response. Please try again.",
+  state_mismatch: "Sign-in expired or was interrupted. Try again.",
+  please_restart_the_process: "Sign-in could not be completed. Try again.",
+  invalid_callback_request: "Invalid sign-in response. Try again.",
 };
 
 function formatOAuthError(code: string): string {
-  return OAUTH_ERROR_MESSAGES[code] ?? "Sign in failed. Please try again.";
+  return OAUTH_ERROR_MESSAGES[code] ?? "Sign in failed. Try again.";
 }
 
 export function useLoginPage() {
@@ -62,9 +62,9 @@ export function useLoginPage() {
         email: values.email.trim(),
         password: values.password,
       });
-      if (result.error) setError(result.error.message ?? "Sign in failed.");
+      if (result.error) setError(result.error.message ?? "Sign in failed. Try again.");
     } catch (submitError) {
-      setError(getErrorMessage(submitError, "Sign in failed."));
+      setError(getErrorMessage(submitError, "Sign in failed. Try again."));
     } finally {
       setPending(false);
     }
@@ -80,12 +80,12 @@ export function useLoginPage() {
         password: values.password,
       });
       if (result.error) {
-        setError(result.error.message ?? "Sign up failed.");
+        setError(result.error.message ?? "Could not create account. Try again.");
         return;
       }
       toast.success("Welcome to Orch", { description: "Your workspace is ready." });
     } catch (submitError) {
-      setError(getErrorMessage(submitError, "Sign up failed."));
+      setError(getErrorMessage(submitError, "Could not create account. Try again."));
     } finally {
       setPending(false);
     }
