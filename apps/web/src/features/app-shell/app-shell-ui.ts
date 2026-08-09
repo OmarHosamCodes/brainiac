@@ -105,6 +105,10 @@ export const shellSegmentTabActiveClass = "bg-primary/10 text-primary";
 /** Page column — equal L/R pad, no max-width. Nest pad pairs with `--shell-inner-radius`. */
 export const shellPageClass = "flex h-full w-full flex-col px-[var(--shell-nest-pad,1rem)] pb-4";
 
+/** Document-scroll Agency pages — grow with content instead of locking to viewport height. */
+export const shellPageScrollClass =
+  "flex w-full min-h-full flex-col px-[var(--shell-nest-pad,1rem)] pb-4";
+
 /** Nest-padded work surface — inset matches `--app-shell-topbar-inset` in execution. */
 export const shellPageNestClass =
   "flex h-full w-full min-h-0 flex-1 flex-col overflow-hidden p-[var(--shell-nest-pad,1rem)]";

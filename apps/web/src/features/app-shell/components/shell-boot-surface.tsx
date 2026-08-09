@@ -11,9 +11,17 @@ type ShellBootSurfaceProps = {
   label: string;
   children: ReactNode;
   className?: string;
+  /** Fill the parent (Tracker / canvas). Off lets document-scroll pages grow and scroll. */
+  fill?: boolean;
 };
 
-export function ShellBootSurface({ booting, label, children, className }: ShellBootSurfaceProps) {
+export function ShellBootSurface({
+  booting,
+  label,
+  children,
+  className,
+  fill = true,
+}: ShellBootSurfaceProps) {
   const reducedMotion = usePrefersReducedMotion();
   const [loaderVisible, setLoaderVisible] = useState(booting);
   const [loaderExiting, setLoaderExiting] = useState(false);
@@ -42,15 +50,26 @@ export function ShellBootSurface({ booting, label, children, className }: ShellB
     return () => window.clearTimeout(timeoutId);
   }, [booting, loaderVisible, reducedMotion]);
 
+  const occupyViewport = fill || booting || loaderVisible;
+
   return (
-    <div className={cn("relative h-full min-h-0", className)}>
+    <div
+      className={cn(
+        "relative min-h-0",
+        occupyViewport ? "flex h-full min-h-full flex-col" : "min-h-full",
+        className,
+      )}
+    >
       {!booting ? (
-        <div className={cn("h-full min-h-0", shellContentInClass)}>{children}</div>
+        <div className={cn(fill && "flex min-h-0 flex-1 flex-col", shellContentInClass)}>
+          {children}
+        </div>
       ) : null}
       {loaderVisible ? (
         <div
           className={cn(
-            "absolute inset-0 z-[1]",
+            "z-[1]",
+            booting ? "flex min-h-full flex-1 flex-col" : "absolute inset-0",
             loaderExiting &&
               "pointer-events-none opacity-0 transition-opacity duration-[var(--motion-duration-fast)] ease-[var(--motion-ease-out)]",
           )}

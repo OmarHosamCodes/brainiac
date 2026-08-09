@@ -6,8 +6,8 @@ import { AppShellPage } from "@/features/app-shell/app-shell-page";
 import { ShellBootSurface } from "@/features/app-shell/components/shell-boot-surface";
 import {
   shellPageBodyClass,
-  shellPageClass,
   shellPageNestClass,
+  shellPageScrollClass,
 } from "@/features/app-shell/app-shell-ui";
 import { AgencyProUpsell } from "@/features/billing/agency-pro-upsell";
 import { useBilling } from "@/features/billing/billing-queries";
@@ -82,7 +82,7 @@ export function AgencyPage() {
   useAgencyActiveTimerQuery(agencySyncTeamId);
   useAgencyJourneyLiveSync({ teamId: agencySyncTeamId });
 
-  const { isBooting } = useAgencyBootGate({
+  const { isBooting, bootLabel } = useAgencyBootGate({
     segment,
     teamId: selectedTeamId,
     userId: currentUserId,
@@ -105,8 +105,12 @@ export function AgencyPage() {
         )}
         {...{ [AGENCY_PAGE_SCROLL_ATTR]: "" }}
       >
-        <main className={isFullHeightSegment ? shellPageNestClass : shellPageClass}>
-          <ShellBootSurface booting={isBooting} label="Opening Agency">
+        <main className={isFullHeightSegment ? shellPageNestClass : shellPageScrollClass}>
+          <ShellBootSurface
+            booting={isBooting}
+            label={bootLabel}
+            fill={isFullHeightSegment || isBooting}
+          >
             {showAgencyUpsell ? (
               <AgencyProUpsell />
             ) : teams.length === 0 ? (
