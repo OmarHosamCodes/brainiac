@@ -34,11 +34,16 @@ export type DashboardConversationMessageAttachmentRecord = {
 /** Persisted generative UI artifacts (validated as AiUiArtifact[] at the API boundary). */
 export type DashboardConversationMessageArtifactRecord = {
   id: string;
-  kind: "schema" | "react";
+  kind: "schema" | "react" | "workspaceBlock" | "workspaceNode";
   title: string;
   schema?: unknown;
   code?: string;
   props?: Record<string, unknown>;
+  block?: unknown;
+  node?: unknown;
+  operation?: string;
+  nodeId?: string;
+  tabId?: string;
 };
 export type DashboardConversationMessageArtifactsRecord =
   DashboardConversationMessageArtifactRecord[];
@@ -189,14 +194,15 @@ export type AgentAgencyProposalStatus =
   | "failed"
   | "expired";
 
-/** Pending Agency agent writes awaiting human Approve/Reject. */
+export type AgentProposalDomain = "agency" | "canvas";
+
+/** Pending agent writes awaiting human Approve/Reject (Agency + Canvas). */
 export const agentAgencyProposal = pgTable(
   "agent_agency_proposal",
   {
     id: text("id").primaryKey(),
-    teamId: text("team_id")
-      .notNull()
-      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    domain: text("domain").$type<AgentProposalDomain>().notNull().default("agency"),
+    teamId: text("team_id").references(() => workspaceTeam.id, { onDelete: "cascade" }),
     actorUserId: text("actor_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -223,5 +229,6 @@ export const agentAgencyProposal = pgTable(
     index("agent_agency_proposal_team_status_idx").on(table.teamId, table.status),
     index("agent_agency_proposal_actor_created_idx").on(table.actorUserId, table.createdAt),
     index("agent_agency_proposal_conversation_idx").on(table.conversationId),
+    index("agent_agency_proposal_domain_status_idx").on(table.domain, table.status),
   ],
 );
