@@ -1,9 +1,8 @@
-import { agencyDraftPlanSchema } from "@orch/agent";
 import { z } from "zod";
 
 import { protectedProcedure } from "../../procedures";
 import { toInternalServerError } from "../../dev-errors";
-import { approveAgencyProposal, confirmAgencyPlan, rejectAgencyProposal } from "./agency-proposals";
+import { approveAgencyProposal, confirmAgentPlan, rejectAgencyProposal } from "./agency-proposals";
 import {
   agentChatTurnInputSchema,
   agentChatTurnResponseSchema,
@@ -75,9 +74,18 @@ export const agentRouter = {
     confirmPlan: protectedProcedure
       .input(
         z.object({
-          teamId: z.string().min(1),
+          teamId: z.string().min(1).optional(),
+          domain: z.enum(["agency", "canvas"]).optional(),
           conversationId: z.string().min(1).optional(),
-          plan: agencyDraftPlanSchema,
+          plan: z.object({
+            planId: z.string().min(1),
+            title: z.string().min(1),
+            summary: z.string().min(1),
+            steps: z
+              .array(z.object({ label: z.string().min(1), action: z.unknown() }))
+              .min(1)
+              .max(20),
+          }),
         }),
       )
       .handler(async ({ input, context }) => {
@@ -93,20 +101,22 @@ export const agentRouter = {
                   before: z.unknown(),
                   after: z.unknown(),
                   label: z.string(),
+                  boardHref: z.string().optional(),
                 }),
               ),
             })
-            .parse(await confirmAgencyPlan(context.session.user.id, input));
+            .parse(await confirmAgentPlan(context.session.user.id, input));
         } catch (error) {
           throw toInternalServerError("agent.proposals.confirmPlan", error, {
-            teamId: input.teamId,
+            teamId: input.teamId ?? null,
+            domain: input.domain ?? "agency",
           });
         }
       }),
     approve: protectedProcedure
       .input(
         z.object({
-          teamId: z.string().min(1),
+          teamId: z.string().min(1).optional(),
           proposalId: z.string().min(1),
         }),
       )
@@ -118,6 +128,12 @@ export const agentRouter = {
               status: z.literal("executed"),
               result: z.unknown(),
               label: z.string(),
+              workspaceSnapshot: z
+                .object({
+                  nodes: z.array(z.unknown()),
+                  updatedAt: z.string().nullable(),
+                })
+                .optional(),
             })
             .parse(await approveAgencyProposal(context.session.user.id, input));
         } catch (error) {
@@ -129,7 +145,7 @@ export const agentRouter = {
     reject: protectedProcedure
       .input(
         z.object({
-          teamId: z.string().min(1),
+          teamId: z.string().min(1).optional(),
           proposalId: z.string().min(1),
         }),
       )

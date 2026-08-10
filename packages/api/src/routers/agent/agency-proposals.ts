@@ -5,6 +5,13 @@ import {
   type AgencyAction,
   type AgencyDraftPlan,
 } from "@orch/agent/agency-actions";
+import {
+  canvasActionLabel,
+  canvasActionSchema,
+  canvasDraftPlanSchema,
+  type CanvasAction,
+} from "@orch/agent/canvas-actions";
+import { applyCanvasAction } from "@orch/agent/tools";
 import { db } from "@orch/db";
 import { agentAgencyProposal } from "@orch/db/schema";
 import { createWorkspaceId } from "@orch/workspace";
@@ -44,6 +51,7 @@ import {
   updateAgencyActiveTimerTask,
   updateMyAgencyTimeEntry,
 } from "../agency-ops/time-tracking/service";
+import { getWorkspaceSnapshot, saveWorkspaceNodes } from "../workspace/service";
 
 const PROPOSAL_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -327,6 +335,7 @@ export async function createAgencyProposalRecord(
 
   await db.insert(agentAgencyProposal).values({
     id,
+    domain: "agency",
     teamId: input.teamId,
     actorUserId,
     conversationId: input.conversationId ?? null,
@@ -373,26 +382,146 @@ export async function confirmAgencyPlan(
   return { planId: plan.planId, proposals };
 }
 
-export async function approveAgencyProposal(
+export async function createCanvasProposalRecord(
   actorUserId: string,
-  input: { proposalId: string; teamId: string },
+  input: {
+    action: unknown;
+    label?: string;
+    conversationId?: string | null;
+    teamId?: string | null;
+  },
 ) {
-  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  if (input.teamId) {
+    await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  }
+  const action = canvasActionSchema.parse(input.action);
+  if (
+    action.type === "node.create" &&
+    action.visibility === "team" &&
+    !action.teamId &&
+    !input.teamId
+  ) {
+    throw new ORPCError("BAD_REQUEST", { message: "Team-shared nodes require a team." });
+  }
+  const snapshot = await getWorkspaceSnapshot(actorUserId, {});
+  const preview = await applyCanvasAction(snapshot.nodes, action);
+  const now = new Date();
+  const id = createWorkspaceId("aap");
+  const label = input.label?.trim() || canvasActionLabel(action);
+  const createdNodeId =
+    action.type === "node.create" && preview.after && typeof preview.after === "object"
+      ? String((preview.after as { id?: string }).id ?? "")
+      : action.type.startsWith("node.") ||
+          action.type.startsWith("tab.") ||
+          action.type.startsWith("block.")
+        ? "nodeId" in action
+          ? action.nodeId
+          : null
+        : null;
+  const boardHref = createdNodeId ? `/node/${createdNodeId}` : "/canvas";
+
+  await db.insert(agentAgencyProposal).values({
+    id,
+    domain: "canvas",
+    teamId: input.teamId ?? (action.type === "node.create" ? (action.teamId ?? null) : null),
+    actorUserId,
+    conversationId: input.conversationId ?? null,
+    messageId: null,
+    action,
+    beforeState: preview.before,
+    afterState: preview.after,
+    label,
+    status: "pending",
+    illustrationArtifactId: null,
+    error: null,
+    expiresAt: new Date(now.getTime() + PROPOSAL_TTL_MS),
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return {
+    proposalId: id,
+    status: "pending" as const,
+    action,
+    before: preview.before,
+    after: preview.after,
+    label,
+    boardHref,
+  };
+}
+
+export async function confirmCanvasPlan(
+  actorUserId: string,
+  input: { conversationId?: string | null; teamId?: string | null; plan: unknown },
+) {
+  if (input.teamId) {
+    await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  }
+  const plan = canvasDraftPlanSchema.parse(input.plan);
+  const proposals = [];
+  for (const step of plan.steps) {
+    proposals.push(
+      await createCanvasProposalRecord(actorUserId, {
+        action: step.action,
+        label: step.label,
+        conversationId: input.conversationId,
+        teamId: input.teamId,
+      }),
+    );
+  }
+  return { planId: plan.planId, proposals };
+}
+
+async function loadProposalForActor(
+  actorUserId: string,
+  input: { proposalId: string; teamId?: string },
+) {
   const [row] = await db
     .select()
     .from(agentAgencyProposal)
     .where(
       and(
         eq(agentAgencyProposal.id, input.proposalId),
-        eq(agentAgencyProposal.teamId, input.teamId),
         eq(agentAgencyProposal.actorUserId, actorUserId),
       ),
     )
     .limit(1);
-
   if (!row) {
     throw new ORPCError("NOT_FOUND", { message: "Proposal not found." });
   }
+  if (row.domain === "agency") {
+    const teamId = input.teamId ?? row.teamId;
+    if (!teamId) {
+      throw new ORPCError("BAD_REQUEST", { message: "Agency proposal requires a team." });
+    }
+    await requireTeamMembership(actorUserId, teamId, "viewer");
+    if (row.teamId && row.teamId !== teamId) {
+      throw new ORPCError("NOT_FOUND", { message: "Proposal not found." });
+    }
+  } else if (row.teamId) {
+    await requireTeamMembership(actorUserId, row.teamId, "viewer");
+  }
+  return row;
+}
+
+async function executeCanvasAction(actorUserId: string, action: CanvasAction) {
+  const snapshot = await getWorkspaceSnapshot(actorUserId, {});
+  const applied = await applyCanvasAction(snapshot.nodes, action);
+  const saved = await saveWorkspaceNodes(actorUserId, { nodes: applied.nextNodes });
+  return {
+    workspaceSnapshot: {
+      nodes: applied.nextNodes,
+      updatedAt: saved.updatedAt,
+    },
+  };
+}
+
+export async function approveAgencyProposal(
+  actorUserId: string,
+  input: { proposalId: string; teamId?: string },
+) {
+  const row = await loadProposalForActor(actorUserId, input);
+
   if (row.status !== "pending") {
     throw new ORPCError("BAD_REQUEST", { message: `Proposal is ${row.status}.` });
   }
@@ -404,24 +533,44 @@ export async function approveAgencyProposal(
     throw new ORPCError("BAD_REQUEST", { message: "Proposal expired." });
   }
 
-  const action = agencyActionSchema.parse(row.action);
-  const currentBefore = await loadAgencyActionBefore(actorUserId, input.teamId, action);
-  if (stableJson(currentBefore) !== stableJson(row.beforeState)) {
-    await db
-      .update(agentAgencyProposal)
-      .set({
-        status: "failed",
-        error: "State changed since proposal; reject and re-propose.",
-        updatedAt: new Date(),
-      })
-      .where(eq(agentAgencyProposal.id, row.id));
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Underlying data changed. Reject this proposal and ask Orch to propose again.",
-    });
-  }
-
   try {
-    const result = await executeAgencyAction(actorUserId, input.teamId, action);
+    if (row.domain === "canvas") {
+      const canvasAction = canvasActionSchema.parse(row.action);
+      const result = await executeCanvasAction(actorUserId, canvasAction);
+      await db
+        .update(agentAgencyProposal)
+        .set({ status: "executed", updatedAt: new Date(), error: null })
+        .where(eq(agentAgencyProposal.id, row.id));
+      return {
+        proposalId: row.id,
+        status: "executed" as const,
+        result,
+        label: row.label,
+        workspaceSnapshot: result.workspaceSnapshot,
+      };
+    }
+
+    const teamId = input.teamId ?? row.teamId;
+    if (!teamId) {
+      throw new ORPCError("BAD_REQUEST", { message: "Agency proposal requires a team." });
+    }
+    const action = agencyActionSchema.parse(row.action);
+    const currentBefore = await loadAgencyActionBefore(actorUserId, teamId, action);
+    if (stableJson(currentBefore) !== stableJson(row.beforeState)) {
+      await db
+        .update(agentAgencyProposal)
+        .set({
+          status: "failed",
+          error: "State changed since proposal; reject and re-propose.",
+          updatedAt: new Date(),
+        })
+        .where(eq(agentAgencyProposal.id, row.id));
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Underlying data changed. Reject this proposal and ask Orch to propose again.",
+      });
+    }
+
+    const result = await executeAgencyAction(actorUserId, teamId, action);
     await db
       .update(agentAgencyProposal)
       .set({ status: "executed", updatedAt: new Date(), error: null })
@@ -444,24 +593,9 @@ export async function approveAgencyProposal(
 
 export async function rejectAgencyProposal(
   actorUserId: string,
-  input: { proposalId: string; teamId: string },
+  input: { proposalId: string; teamId?: string },
 ) {
-  await requireTeamMembership(actorUserId, input.teamId, "viewer");
-  const [row] = await db
-    .select()
-    .from(agentAgencyProposal)
-    .where(
-      and(
-        eq(agentAgencyProposal.id, input.proposalId),
-        eq(agentAgencyProposal.teamId, input.teamId),
-        eq(agentAgencyProposal.actorUserId, actorUserId),
-      ),
-    )
-    .limit(1);
-
-  if (!row) {
-    throw new ORPCError("NOT_FOUND", { message: "Proposal not found." });
-  }
+  const row = await loadProposalForActor(actorUserId, input);
   if (row.status !== "pending") {
     throw new ORPCError("BAD_REQUEST", { message: `Proposal is ${row.status}.` });
   }
@@ -472,6 +606,32 @@ export async function rejectAgencyProposal(
     .where(eq(agentAgencyProposal.id, row.id));
 
   return { proposalId: row.id, status: "rejected" as const };
+}
+
+export async function confirmAgentPlan(
+  actorUserId: string,
+  input: {
+    domain?: "agency" | "canvas";
+    teamId?: string;
+    conversationId?: string | null;
+    plan: unknown;
+  },
+) {
+  if ((input.domain ?? "agency") === "canvas") {
+    return confirmCanvasPlan(actorUserId, {
+      conversationId: input.conversationId,
+      teamId: input.teamId,
+      plan: input.plan,
+    });
+  }
+  if (!input.teamId) {
+    throw new ORPCError("BAD_REQUEST", { message: "Agency plan confirm requires a team." });
+  }
+  return confirmAgencyPlan(actorUserId, {
+    teamId: input.teamId,
+    conversationId: input.conversationId,
+    plan: input.plan,
+  });
 }
 
 export function parseAgencyDraftPlan(plan: unknown): AgencyDraftPlan {
