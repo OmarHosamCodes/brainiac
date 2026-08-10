@@ -1045,41 +1045,66 @@ export const workspaceNodeDashboardSchema = z.object({
     .default([]),
 });
 
-export const workspaceNodeSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().trim().min(1).max(120),
-  content: z.string().max(4000).default(""),
-  nodeType: workspaceNodeTypeSchema.default("standard"),
-  ownerUserId: z.string().min(1).nullable().optional(),
-  visibility: workspaceNodeVisibilitySchema.default("private"),
-  teamId: z.string().min(1).nullable().optional(),
-  x: z.number().finite(),
-  y: z.number().finite(),
-  width: z.number().positive(),
-  height: z.number().positive(),
-  label: z.string().max(120).optional(),
-  minWidth: z.number().positive().optional(),
-  minHeight: z.number().positive().optional(),
-  createdAt: isoTimestampSchema,
-  updatedAt: isoTimestampSchema,
-  tabs: z.array(workspaceNodeTabSchema).max(WORKSPACE_NODE_TAB_LIMIT).default([]),
-  customBlockTemplates: z
-    .array(workspaceCustomBlockTemplateSchema)
-    .max(WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT)
-    .default([]),
-  connections: z
-    .array(workspaceNodeConnectionSchema)
-    .max(WORKSPACE_NODE_CONNECTION_LIMIT)
-    .default([]),
-  viewState: workspaceNodeViewStateSchema.default({
-    activeTabId: null,
-    notePreviewState: {},
-  }),
-  dashboard: workspaceNodeDashboardSchema.default({
-    tint: "neutral",
-    featuredBlocks: [],
-  }),
+export const workspaceAgencyRefSchema = z.object({
+  teamId: z.string().min(1),
+  projectId: z.string().min(1).optional(),
+  taskId: z.string().min(1).optional(),
 });
+
+export const workspaceNodeSchema = z
+  .object({
+    id: z.string().min(1),
+    title: z.string().trim().min(1).max(120),
+    content: z.string().max(4000).default(""),
+    nodeType: workspaceNodeTypeSchema.default("standard"),
+    ownerUserId: z.string().min(1).nullable().optional(),
+    visibility: workspaceNodeVisibilitySchema.default("private"),
+    teamId: z.string().min(1).nullable().optional(),
+    agencyRef: workspaceAgencyRefSchema.nullable().optional(),
+    x: z.number().finite(),
+    y: z.number().finite(),
+    width: z.number().positive(),
+    height: z.number().positive(),
+    label: z.string().max(120).optional(),
+    minWidth: z.number().positive().optional(),
+    minHeight: z.number().positive().optional(),
+    createdAt: isoTimestampSchema,
+    updatedAt: isoTimestampSchema,
+    tabs: z.array(workspaceNodeTabSchema).max(WORKSPACE_NODE_TAB_LIMIT).default([]),
+    customBlockTemplates: z
+      .array(workspaceCustomBlockTemplateSchema)
+      .max(WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT)
+      .default([]),
+    connections: z
+      .array(workspaceNodeConnectionSchema)
+      .max(WORKSPACE_NODE_CONNECTION_LIMIT)
+      .default([]),
+    viewState: workspaceNodeViewStateSchema.default({
+      activeTabId: null,
+      notePreviewState: {},
+    }),
+    dashboard: workspaceNodeDashboardSchema.default({
+      tint: "neutral",
+      featuredBlocks: [],
+    }),
+  })
+  .superRefine((node, ctx) => {
+    if (!node.agencyRef) return;
+    if (node.visibility !== "team") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["agencyRef"],
+        message: "agencyRef is only valid on team-visible nodes",
+      });
+    }
+    if (!node.teamId || node.teamId !== node.agencyRef.teamId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["agencyRef", "teamId"],
+        message: "agencyRef.teamId must match the node teamId",
+      });
+    }
+  });
 
 export const workspaceSaveInputSchema = z.object({
   nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT),
