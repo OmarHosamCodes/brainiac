@@ -47,6 +47,7 @@ type AgentStickyDockViewProps = {
   onConfirmPlan: (plan: OrchUIDataParts["orchPlan"]) => void;
   onApproveProposal: (proposalId: string) => void;
   onRejectProposal: (proposalId: string) => void;
+  onOpenBoard?: (href: string) => void;
   onOpenArtifact: (artifact: AiUiArtifact) => void;
   onDismiss: () => void;
   className?: string;
@@ -67,6 +68,7 @@ export function AgentStickyDockView({
   onConfirmPlan,
   onApproveProposal,
   onRejectProposal,
+  onOpenBoard,
   onOpenArtifact,
   onDismiss,
   className,
@@ -152,6 +154,7 @@ export function AgentStickyDockView({
                 busy={proposalBusy}
                 onApprove={() => onApproveProposal(item.proposal.proposalId)}
                 onReject={() => onRejectProposal(item.proposal.proposalId)}
+                onOpenBoard={onOpenBoard}
                 embedded
                 className="max-w-none"
               />

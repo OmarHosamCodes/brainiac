@@ -67,6 +67,9 @@ type WorkspaceAgentComposerViewProps = {
   onSelectToolPreset: (preset: DashboardAgentToolPreset) => void;
   /** When false, Plan mode is hidden (Canvas). Agency enables Plan. */
   planModeEnabled: boolean;
+  surfaceLabel: "Agency" | "Canvas";
+  crossSurfaceUnlockLabel: "Agency" | "Canvas" | null;
+  onUnlockCrossSurface: () => void;
   selectedModelLabel: string;
   selectedModelButtonLabel: string;
   resolvedModelLabel: string | null;
@@ -160,6 +163,9 @@ export function WorkspaceAgentComposerView({
   selectedToolPreset,
   onSelectToolPreset,
   planModeEnabled,
+  surfaceLabel,
+  crossSurfaceUnlockLabel,
+  onUnlockCrossSurface,
   selectedModelLabel,
   selectedModelButtonLabel,
   resolvedModelLabel,
@@ -414,6 +420,21 @@ export function WorkspaceAgentComposerView({
                   >
                     <div className="flex flex-col gap-0.5 p-1">
                       <WorkspaceAgentAttachMenuItem onSelect={() => onToolsMenuOpenChange(false)} />
+                      {crossSurfaceUnlockLabel ? (
+                        <button
+                          type="button"
+                          className={workspaceAgentPlusMenuItemClass}
+                          onClick={() => {
+                            onUnlockCrossSurface();
+                            onToolsMenuOpenChange(false);
+                          }}
+                        >
+                          <Wrench className="size-4 text-muted-foreground" aria-hidden />
+                          <span className="flex-1">
+                            Unlock {crossSurfaceUnlockLabel} from {surfaceLabel}
+                          </span>
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className={cn(

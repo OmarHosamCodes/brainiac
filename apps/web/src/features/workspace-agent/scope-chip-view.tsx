@@ -22,6 +22,10 @@ function chipPrefix(kind: AgentScopeRef["kind"]) {
       return "Project";
     case "member":
       return "Member";
+    case "task":
+      return "Task";
+    case "surface":
+      return "Surface";
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;

@@ -123,6 +123,7 @@ type WorkspaceAgentChatPanelViewProps = {
   quickStarts: WorkspaceAgentQuickStart[];
   onSelectQuickStart: (start: WorkspaceAgentQuickStart) => void;
   emptyHint: string;
+  onOpenBoard?: (href: string) => void;
 };
 
 function formatConversationStamp(value: string): string {
@@ -154,6 +155,7 @@ function WorkspaceAgentMessagePartsView({
   onQuestionSelectedOptionIdsChange,
   onQuestionFreeTextChange,
   onOpenArtifactCanvas,
+  onOpenBoard,
 }: {
   message: OrchUIMessage;
   isStreamingMessage: boolean;
@@ -172,6 +174,7 @@ function WorkspaceAgentMessagePartsView({
   onQuestionSelectedOptionIdsChange: (questionId: string, ids: string[]) => void;
   onQuestionFreeTextChange: (questionId: string, value: string) => void;
   onOpenArtifactCanvas: (artifact: AiUiArtifact) => void;
+  onOpenBoard?: (href: string) => void;
 }) {
   const text = getMessageText(message);
   const attachments = getMessageAttachments(message);
@@ -345,6 +348,7 @@ function WorkspaceAgentMessagePartsView({
             busy={proposalBusyId === part.data.proposalId}
             onApprove={() => onApproveProposal(part.data.proposalId)}
             onReject={() => onRejectProposal(part.data.proposalId)}
+            onOpenBoard={onOpenBoard}
           />
         );
       })}
@@ -444,6 +448,7 @@ export function WorkspaceAgentChatPanelView({
   onConfirmPlan,
   onApproveProposal,
   onRejectProposal,
+  onOpenBoard,
   onAnswerQuestion,
   onQuestionSelectedOptionIdsChange,
   onQuestionFreeTextChange,
@@ -659,6 +664,7 @@ export function WorkspaceAgentChatPanelView({
                                   onConfirmPlan={onConfirmPlan}
                                   onApproveProposal={onApproveProposal}
                                   onRejectProposal={onRejectProposal}
+                                  onOpenBoard={onOpenBoard}
                                   onAnswerQuestion={onAnswerQuestion}
                                   onQuestionSelectedOptionIdsChange={
                                     onQuestionSelectedOptionIdsChange
@@ -720,6 +726,7 @@ export function WorkspaceAgentChatPanelView({
             onConfirmPlan={onConfirmPlan}
             onApproveProposal={onApproveProposal}
             onRejectProposal={onRejectProposal}
+            onOpenBoard={onOpenBoard}
             onOpenArtifact={onOpenArtifactCanvas}
             onDismiss={() => {
               if (!stickyItem) return;

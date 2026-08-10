@@ -3,6 +3,7 @@ import { Maximize2, X } from "lucide-react";
 
 import { AgentUiReactSandboxView } from "@/features/workspace-agent/agent-ui-react-sandbox-view";
 import { AgentUiSchemaRendererView } from "@/features/workspace-agent/agent-ui-schema-renderer-view";
+import { AgentWorkspaceArtifactPreviewView } from "@/features/workspace-agent/agent-workspace-block-preview-view";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,9 @@ export function AgentArtifactBodyView({ artifact }: { artifact: AiUiArtifact }) 
           props={artifact.props}
         />
       );
+    case "workspaceBlock":
+    case "workspaceNode":
+      return <AgentWorkspaceArtifactPreviewView artifact={artifact} />;
     default: {
       const _exhaustive: never = artifact;
       void _exhaustive;
@@ -49,7 +53,11 @@ export function AgentArtifactPaneView({
           {artifact.title}
         </p>
         <Badge variant="secondary" className="h-5 px-2 text-[10px] font-medium">
-          {artifact.kind === "react" ? "Sandbox" : "View"}
+          {artifact.kind === "react"
+            ? "Sandbox"
+            : artifact.kind === "workspaceBlock" || artifact.kind === "workspaceNode"
+              ? "Block"
+              : "View"}
         </Badge>
         <Button
           type="button"

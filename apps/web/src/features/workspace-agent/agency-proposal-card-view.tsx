@@ -6,6 +6,7 @@ export type AgencyProposalCardViewModel = {
   label: string;
   before: unknown;
   after: unknown;
+  boardHref?: string | null;
 };
 
 type AgencyProposalCardViewProps = {
@@ -13,6 +14,7 @@ type AgencyProposalCardViewProps = {
   busy: boolean;
   onApprove: () => void;
   onReject: () => void;
+  onOpenBoard?: (href: string) => void;
   className?: string;
   embedded?: boolean;
 };
@@ -31,6 +33,7 @@ export function AgencyProposalCardView({
   busy,
   onApprove,
   onReject,
+  onOpenBoard,
   className,
   embedded = false,
 }: AgencyProposalCardViewProps) {
@@ -76,6 +79,18 @@ export function AgencyProposalCardView({
         </div>
       </div>
       <div className="mt-3.5 flex justify-end gap-2">
+        {proposal.boardHref && onOpenBoard ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => onOpenBoard(proposal.boardHref!)}
+            className="h-8 rounded-full px-4"
+          >
+            Open on board
+          </Button>
+        ) : null}
         <Button
           type="button"
           size="sm"

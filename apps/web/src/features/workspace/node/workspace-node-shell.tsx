@@ -18,6 +18,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Link } from "@/lib/navigation";
+import { agencyRefHref } from "@/features/workspace/workspace-agency-links";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { WorkspaceNodeBlockRenderer } from "@/features/workspace/node/workspace-node-block-renderer";
@@ -85,6 +86,7 @@ export function WorkspaceNodeShell({
     saveActiveTabToMarketplace,
     getDisplayTabTitle,
   } = useWorkspaceNodeEditorContext();
+  const agencyHref = node.agencyRef ? agencyRefHref(node.agencyRef) : null;
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [addBlockCommandOpen, setAddBlockCommandOpen] = useState(false);
   const [addBlockCommandView, setAddBlockCommandView] =
@@ -151,6 +153,11 @@ export function WorkspaceNodeShell({
           <div className="mb-8 mt-4 space-y-4">
             <Badge className={saveBadge.className}>{saveBadge.label}</Badge>
             <h1 className="text-2xl font-bold tracking-tight text-highlighted">{node.title}</h1>
+            {agencyHref ? (
+              <Button variant="outline" size="sm" className="mt-2 h-8 rounded-full" asChild>
+                <Link to={agencyHref}>Open in Agency</Link>
+              </Button>
+            ) : null}
             <div className="rounded-2xl border border-default bg-default p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">

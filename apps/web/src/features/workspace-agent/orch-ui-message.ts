@@ -44,6 +44,7 @@ export type OrchUIDataParts = {
     action: unknown;
     before: unknown;
     after: unknown;
+    boardHref?: string | null;
   };
   orchQuestion: {
     questionId: string;
@@ -216,6 +217,7 @@ function toolCallToPrimaryDataPart(tool: AgentToolCall): OrchUIMessage["parts"][
         },
       };
     }
+    case "draft_canvas_plan":
     case "draft_agency_plan": {
       const output = tool.output;
       if (
@@ -243,6 +245,7 @@ function toolCallToPrimaryDataPart(tool: AgentToolCall): OrchUIMessage["parts"][
         },
       };
     }
+    case "propose_canvas_action":
     case "propose_agency_action": {
       const output = tool.output;
       if (
@@ -264,6 +267,8 @@ function toolCallToPrimaryDataPart(tool: AgentToolCall): OrchUIMessage["parts"][
           action: output.action,
           before: output.before,
           after: output.after,
+          boardHref:
+            "boardHref" in output && typeof output.boardHref === "string" ? output.boardHref : null,
         },
       };
     }

@@ -9,7 +9,7 @@ import type { WorkspaceNode } from "@orch/workspace";
 import { useChat } from "@ai-sdk/react";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation } from "@/lib/navigation";
+import { useLocation, useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
@@ -49,10 +49,40 @@ function resolveAgentSurface(pathname: string): AgentSurface {
   return "canvas";
 }
 
+function composerUnlockedSurfaces(
+  surface: AgentSurface,
+  scopeChips: AgentScopeRef[],
+): AgentSurface[] {
+  const canvasUnlocked =
+    surface === "canvas" ||
+    scopeChips.some(
+      (chip) =>
+        chip.kind === "node" ||
+        chip.kind === "tab" ||
+        chip.kind === "block" ||
+        (chip.kind === "surface" && chip.id === "canvas"),
+    );
+  const agencyUnlocked =
+    surface === "agency" ||
+    scopeChips.some(
+      (chip) =>
+        chip.kind === "timeEntry" ||
+        chip.kind === "project" ||
+        chip.kind === "task" ||
+        chip.kind === "member" ||
+        (chip.kind === "surface" && chip.id === "agency"),
+    );
+  return [
+    ...(canvasUnlocked ? (["canvas"] as const) : []),
+    ...(agencyUnlocked ? (["agency"] as const) : []),
+  ];
+}
+
 export function useWorkspaceAgent() {
   useAgentScopeModeListener();
 
   const location = useLocation();
+  const navigate = useNavigate();
   const surface = resolveAgentSurface(location.pathname);
   const teamId = useCurrentAgencyTeamStore((s) => s.currentAgencyTeamId);
   const workspaceNodes = useWorkspaceStore((s) => s.nodes);
@@ -100,9 +130,15 @@ export function useWorkspaceAgent() {
     Record<string, { selectedOptionIds: string[]; freeText: string }>
   >({});
 
+  const unlockedSurfaces = useMemo(
+    () => composerUnlockedSurfaces(surface, scopeChips),
+    [scopeChips, surface],
+  );
+
   const data = useWorkspaceAgentData({
     activeConversationId,
     surface,
+    unlockedSurfaces,
     toolPreset: selectedToolPreset,
     toolsMenuOpen,
   });
@@ -215,20 +251,8 @@ export function useWorkspaceAgent() {
   );
 
   useEffect(() => {
-    // Canvas does not ship Plan mode yet — coerce to Ask.
-    if (surface === "canvas" && selectedToolPreset === "plan") {
-      setSelectedToolPreset("ask");
-    }
-  }, [selectedToolPreset, surface]);
-
-  useEffect(() => {
     if (activeConversation?.toolPreset) {
-      const preset = activeConversation.toolPreset;
-      if (surface === "canvas" && preset === "plan") {
-        setSelectedToolPreset("ask");
-      } else {
-        setSelectedToolPreset(preset);
-      }
+      setSelectedToolPreset(activeConversation.toolPreset);
     }
     if (activeConversation?.model) {
       modelPresetState.rememberResolvedModel(activeConversation.model);
@@ -368,12 +392,12 @@ export function useWorkspaceAgent() {
         setSelectedToolPreset(input.toolPreset);
       }
 
-      const scopedNodes =
-        surface === "canvas"
-          ? workspaceNodes.filter((node) =>
-              scopeChips.some((chip) => chip.kind === "node" && chip.id === node.id),
-            )
-          : [];
+      const unlocked = composerUnlockedSurfaces(surface, scopeChips);
+      const canvasUnlocked = unlocked.includes("canvas");
+      const agencyUnlocked = unlocked.includes("agency");
+      const scopedNodes = workspaceNodes.filter((node) =>
+        scopeChips.some((chip) => chip.kind === "node" && chip.id === node.id),
+      );
 
       setDraft("");
       setError(null);
@@ -388,12 +412,13 @@ export function useWorkspaceAgent() {
               attachments,
               conversationId: activeConversationId ?? undefined,
               surface,
+              unlockedSurfaces: unlocked,
               toolPreset,
               modelPreset: modelPresetState.modelPreset,
               scopeRefs: scopeChips,
               contextNodeTitles: scopeChips.map((chip) => chip.label),
-              ...(surface === "agency" && teamId ? { teamId } : {}),
-              ...(surface === "canvas"
+              ...(agencyUnlocked && teamId ? { teamId } : {}),
+              ...(canvasUnlocked
                 ? {
                     nodes: workspaceNodes,
                     scopeNodes: scopedNodes.length > 0 ? scopedNodes : workspaceNodes,
@@ -511,11 +536,12 @@ export function useWorkspaceAgent() {
 
   const confirmPlanMutation = useMutation({
     mutationFn: async (plan: OrchUIDataParts["orchPlan"]) => {
-      if (!teamId) throw new Error("No active Agency team.");
+      const domain = surface === "canvas" ? "canvas" : "agency";
+      if (domain === "agency" && !teamId) throw new Error("No active Agency team.");
       return orpcClient.agent.proposals.confirmPlan({
-        teamId,
+        ...(teamId ? { teamId } : {}),
+        domain,
         conversationId: activeConversationId ?? undefined,
-        // Stream cards keep action as unknown; API Zod re-validates the plan.
         plan: plan as Parameters<typeof orpcClient.agent.proposals.confirmPlan>[0]["plan"],
       });
     },
@@ -523,15 +549,19 @@ export function useWorkspaceAgent() {
 
   const approveProposalMutation = useMutation({
     mutationFn: async (proposalId: string) => {
-      if (!teamId) throw new Error("No active Agency team.");
-      return orpcClient.agent.proposals.approve({ teamId, proposalId });
+      return orpcClient.agent.proposals.approve({
+        ...(teamId ? { teamId } : {}),
+        proposalId,
+      });
     },
   });
 
   const rejectProposalMutation = useMutation({
     mutationFn: async (proposalId: string) => {
-      if (!teamId) throw new Error("No active Agency team.");
-      return orpcClient.agent.proposals.reject({ teamId, proposalId });
+      return orpcClient.agent.proposals.reject({
+        ...(teamId ? { teamId } : {}),
+        proposalId,
+      });
     },
   });
 
@@ -557,8 +587,16 @@ export function useWorkspaceAgent() {
     async (proposalId: string) => {
       setProposalBusyId(proposalId);
       try {
-        await approveProposalMutation.mutateAsync(proposalId);
+        const approved = await approveProposalMutation.mutateAsync(proposalId);
         setResolvedProposalIds((prev) => new Set(prev).add(proposalId));
+        const snapshot = (
+          approved as {
+            workspaceSnapshot?: { nodes: WorkspaceNode[]; updatedAt: string | null };
+          }
+        ).workspaceSnapshot;
+        if (snapshot?.nodes) {
+          applyBoundWorkspaceSnapshot(snapshot.nodes, snapshot.updatedAt);
+        }
         await invalidateAgencyCaches();
         toast.success("Change approved and applied.");
       } catch (approveError) {
@@ -670,6 +708,22 @@ export function useWorkspaceAgent() {
     },
     [sendMessage, setExpanded],
   );
+  const onUnlockCrossSurface = useCallback(() => {
+    const target = surface === "agency" ? "canvas" : "agency";
+    addScopeChip({
+      kind: "surface",
+      id: target,
+      label: target === "canvas" ? "Canvas" : "Agency",
+    });
+  }, [addScopeChip, surface]);
+
+  const onOpenBoard = useCallback(
+    (href: string) => {
+      void navigate(href);
+    },
+    [navigate],
+  );
+
   const emptyHint =
     surface === "agency"
       ? "Ask about your time, waste, or who's tracking."
@@ -709,7 +763,11 @@ export function useWorkspaceAgent() {
     stopGeneration,
     selectedToolPreset,
     setSelectedToolPreset,
-    planModeEnabled: surface === "agency",
+    planModeEnabled: true,
+    surfaceLabel: surface === "agency" ? ("Agency" as const) : ("Canvas" as const),
+    crossSurfaceUnlockLabel: surface === "agency" ? ("Canvas" as const) : ("Agency" as const),
+    onUnlockCrossSurface,
+    onOpenBoard,
     selectedModelId,
     selectedModelLabel: modelPresetState.selectedModelLabel,
     selectedModelButtonLabel: modelPresetState.selectedModelButtonLabel,
