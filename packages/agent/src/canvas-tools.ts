@@ -10,7 +10,7 @@ function buildCanvasPlanTool() {
   return tool({
     name: "draft_canvas_plan",
     description:
-      "Draft a multi-step Canvas change plan. Does not write data. User must Confirm in the UI to materialize proposals. Each step is { label, action } where action.type is node.create|replace|delete, tab.create|replace|delete, or block.create|patch|replace|delete.",
+      "Draft a multi-step Canvas change plan. Does not write data. User must Confirm in the UI to materialize proposals. Each step is { label, action } where action.type is node.create|replace|delete, tab.create|replace|delete, or block.create|patch|replace|delete. For a new node, put every planned block on node.create via blocks: [{ blockType, title?, content? }] — do not emit a bare node.create that only yields default Notes. Use block.create only for nodes that already exist on the board.",
     inputSchema: z.object({
       title: z.string().trim().min(1).max(160),
       summary: z.string().trim().min(1).max(1_000),

@@ -6,6 +6,7 @@ const idSchema = z.string().trim().min(1).max(160);
 export const canvasActionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("node.create"),
+    id: idSchema.optional(),
     title: z.string().trim().min(1).max(120),
     content: z.string().max(4000).optional(),
     x: z.number().finite().optional(),
@@ -14,6 +15,17 @@ export const canvasActionSchema = z.discriminatedUnion("type", [
     height: z.number().positive().optional(),
     tint: z.string().trim().min(1).max(40).optional(),
     overviewTabTitle: z.string().trim().min(1).max(80).optional(),
+    blocks: z
+      .array(
+        z.object({
+          blockType: z.string().trim().min(1).max(80),
+          title: z.string().trim().min(1).max(120).optional(),
+          content: z.string().max(8000).optional(),
+        }),
+      )
+      .min(1)
+      .max(20)
+      .optional(),
     visibility: z.enum(["private", "team"]).optional(),
     teamId: idSchema.nullable().optional(),
     agencyRef: z
@@ -82,6 +94,64 @@ export const canvasActionSchema = z.discriminatedUnion("type", [
 ]);
 
 export type CanvasAction = z.infer<typeof canvasActionSchema>;
+
+type CanvasGraphNode = {
+  id: string;
+  tabs: Array<{ id: string }>;
+};
+
+export type CanvasCreatedTarget = { nodeId: string; tabId: string | null };
+
+/** Point follow-up plan steps at the node/tab minted by an earlier node.create. */
+export function bindCanvasPlanStepAction(
+  action: CanvasAction,
+  nodes: CanvasGraphNode[],
+  lastCreated: CanvasCreatedTarget | null,
+): CanvasAction {
+  if (!("nodeId" in action)) return action;
+  if (nodes.some((node) => node.id === action.nodeId)) return action;
+  if (!lastCreated) return action;
+  switch (action.type) {
+    case "node.replace":
+    case "node.delete":
+    case "tab.create":
+      return { ...action, nodeId: lastCreated.nodeId };
+    case "tab.replace":
+    case "tab.delete":
+    case "block.create":
+    case "block.patch":
+    case "block.replace":
+    case "block.delete": {
+      const node = nodes.find((entry) => entry.id === lastCreated.nodeId);
+      const tabExists = node?.tabs.some((tab) => tab.id === action.tabId) ?? false;
+      return {
+        ...action,
+        nodeId: lastCreated.nodeId,
+        tabId: tabExists ? action.tabId : (lastCreated.tabId ?? action.tabId),
+      };
+    }
+    default: {
+      const _exhaustive: never = action;
+      return _exhaustive;
+    }
+  }
+}
+
+export function stampCanvasCreateIds(action: CanvasAction, after: unknown): CanvasAction {
+  if (action.type !== "node.create" || !after || typeof after !== "object") return action;
+  const id = "id" in after && typeof after.id === "string" ? after.id : null;
+  return id ? { ...action, id } : action;
+}
+
+export function readLastCreatedCanvasTarget(
+  action: CanvasAction,
+  after: unknown,
+): CanvasCreatedTarget | null {
+  if (action.type !== "node.create" || !after || typeof after !== "object") return null;
+  const node = after as { id?: string; tabs?: Array<{ id?: string }> };
+  if (!node.id) return null;
+  return { nodeId: node.id, tabId: node.tabs?.[0]?.id ?? null };
+}
 
 export const canvasPlanStepSchema = z.object({
   action: canvasActionSchema,

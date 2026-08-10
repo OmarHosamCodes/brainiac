@@ -2597,6 +2597,7 @@ export async function applyCanvasAction(
         const trimmedContent = action.content?.trim() ?? "";
         const tint = action.tint ? workspaceNodeTintSchema.safeParse(action.tint).data : undefined;
         const node = createWorkspaceNode({
+          id: action.id,
           title: action.title,
           content: trimmedContent,
           x: action.x ?? suggestedPosition.x,
@@ -2611,6 +2612,16 @@ export async function applyCanvasAction(
             : undefined,
           dashboard: tint ? { tint, featuredBlocks: [] } : undefined,
         });
+        if (action.blocks?.length && node.tabs[0]) {
+          node.tabs[0].blocks = action.blocks.map((spec) =>
+            createBlockByType({
+              node,
+              type: workspaceBlockTypeSchema.parse(spec.blockType),
+              title: spec.title,
+              content: spec.content,
+            }),
+          );
+        }
         draft.push(node);
         return { nodeId: node.id };
       }

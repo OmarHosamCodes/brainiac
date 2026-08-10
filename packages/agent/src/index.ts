@@ -271,6 +271,7 @@ function buildCanvasPlanInstructions(workspace: DashboardAgentWorkspaceContext) 
     "Do not call draft_canvas_plan until ask_agency_question has been used this turn (or the user already answered a prior question). Do not claim changes were applied.",
     "After draft_canvas_plan, call ui_present with an overview of the plan. Then tell the user to Confirm in the UI.",
     "Never invent ids — use tool results. Do not call propose_canvas_action in Plan mode.",
+    "When drafting a new node, node.create.blocks must list every planned block type (task-list, table, notes, …). A title-only node.create only creates default empty Notes.",
   ].join("\n");
 }
 

@@ -1,7 +1,12 @@
 import { createWorkspaceNode } from "@orch/workspace";
 import { describe, expect, test } from "bun:test";
 
-import { canvasActionLabel, canvasActionSchema } from "./canvas-actions";
+import {
+  bindCanvasPlanStepAction,
+  canvasActionLabel,
+  canvasActionSchema,
+  stampCanvasCreateIds,
+} from "./canvas-actions";
 import { applyCanvasAction } from "./tools";
 
 describe("canvasActionSchema", () => {
@@ -75,5 +80,49 @@ describe("applyCanvasAction", () => {
       title: "Extra",
     });
     expect(created.nextNodes.map((node) => node.title).sort()).toEqual(["Extra", "Keep"]);
+  });
+
+  test("node.create with blocks seeds those types instead of default notes", async () => {
+    const created = await applyCanvasAction([], {
+      type: "node.create",
+      title: "Brief",
+      blocks: [
+        { blockType: "task-list", title: "Todos" },
+        { blockType: "table", title: "Schedule" },
+      ],
+    });
+    const blockTypes = created.nextNodes[0]?.tabs[0]?.blocks.map((block) => block.type);
+    expect(blockTypes).toEqual(["task-list", "table"]);
+  });
+
+  test("node.create with stamped id is stable across preview and approve", async () => {
+    const preview = await applyCanvasAction([], { type: "node.create", title: "Brief" });
+    const stamped = stampCanvasCreateIds(
+      { type: "node.create", title: "Brief" },
+      preview.after,
+    );
+    expect(stamped.type).toBe("node.create");
+    if (stamped.type !== "node.create") return;
+    const approved = await applyCanvasAction([], stamped);
+    expect(approved.nextNodes[0]?.id).toBe(preview.nextNodes[0]?.id);
+  });
+
+  test("bindCanvasPlanStepAction remaps invented ids onto the last created node", () => {
+    const created = createWorkspaceNode({ title: "Brief" });
+    const bound = bindCanvasPlanStepAction(
+      {
+        type: "block.create",
+        nodeId: "placeholder-node",
+        tabId: "placeholder-tab",
+        blockType: "task-list",
+        title: "Todos",
+      },
+      [created],
+      { nodeId: created.id, tabId: created.tabs[0]?.id ?? null },
+    );
+    expect(bound.type).toBe("block.create");
+    if (bound.type !== "block.create") return;
+    expect(bound.nodeId).toBe(created.id);
+    expect(bound.tabId).toBe(created.tabs[0]?.id);
   });
 });
