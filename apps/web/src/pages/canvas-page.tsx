@@ -1,6 +1,6 @@
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@/lib/navigation";
 
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
@@ -19,17 +19,62 @@ import { useWorkspaceQuery } from "@/features/workspace/hooks/use-workspace-quer
 import { dashboardErrorAlertClass } from "@/features/dashboard/dashboard-ui";
 import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
 import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
+import type { CanvasNodeModel } from "@/features/workspace/canvas/canvas-types";
 import { cn } from "@/lib/utils";
+
+function renderWorkspaceCard(
+  node: CanvasNodeModel,
+  selected: boolean,
+  allNodes: CanvasNodeModel[],
+) {
+  return <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />;
+}
 
 export function CanvasPage() {
   const canvasRef = useRef<InfiniteCanvasHandle | null>(null);
   const navigate = useNavigate();
+  const [selectionArmed, setSelectionArmed] = useState(false);
   const session = authClient.useSession();
   const authEnabled = Boolean(session.data?.user);
 
   const syncSelectedTeam = useTeamStore((s) => s.syncSelectedTeam);
 
   const board = useWorkspaceQuery();
+
+  useEffect(() => {
+    if (board.selectedNodeIds.length > 0) {
+      board.setSelectedNodeIds([]);
+    }
+    setSelectionArmed(true);
+  }, []);
+
+  const handleFlowNodesChange = useCallback(
+    (nextNodes: CanvasNodeModel[]) => {
+      board.updateNodes((draft) => {
+        const positionById = new Map(nextNodes.map((node) => [node.id, node]));
+        draft.forEach((node, index) => {
+          const updated = positionById.get(node.id);
+          if (!updated) return;
+          draft[index] = {
+            ...node,
+            x: updated.x,
+            y: updated.y,
+            width: updated.width,
+            height: updated.height,
+          };
+        });
+      });
+    },
+    [board.updateNodes],
+  );
+
+  const handleOpenNode = useCallback(
+    (payload: { nodeId: string }) => {
+      board.setSelectedNodeIds([]);
+      void navigate(`/node/${payload.nodeId}`);
+    },
+    [board.setSelectedNodeIds, navigate],
+  );
 
   const teamListQuery = useQuery({
     ...teamListQueryOptions(),
@@ -49,13 +94,6 @@ export function CanvasPage() {
   const dataReady = !board.isWorkspaceInitialLoading && !teamListQuery.isPending;
   const { isBooting } = useShellBootGate(dataReady);
 
-  useEffect(() => {
-    if (board.isWorkspaceInitialLoading || !canvasRef.current || board.nodes.length === 0) {
-      return;
-    }
-    canvasRef.current.fitAllNodes();
-  }, [board.isWorkspaceInitialLoading, board.nodes.length]);
-
   return (
     <AppShellPage>
       <ShellBootSurface booting={isBooting} label="Opening canvas">
@@ -64,34 +102,17 @@ export function CanvasPage() {
             <LazyInfiniteCanvas
               ref={canvasRef}
               nodes={board.nodes}
-              selectedNodeIds={board.selectedNodeIds}
+              selectedNodeIds={selectionArmed ? board.selectedNodeIds : []}
               loading={board.isWorkspaceInitialLoading}
-              onNodesChange={(nextNodes: any[]) =>
-                board.updateNodes((draft) => {
-                  const positionById = new Map(nextNodes.map((node: any) => [node.id, node]));
-                  draft.forEach((node, index) => {
-                    const updated = positionById.get(node.id) as any;
-                    if (!updated) return;
-                    draft[index] = {
-                      ...node,
-                      x: updated.x,
-                      y: updated.y,
-                      width: updated.width,
-                      height: updated.height,
-                    };
-                  });
-                })
-              }
+              onNodesChange={handleFlowNodesChange}
               onSelectedNodeIdsChange={board.setSelectedNodeIds}
               onCreateNode={board.openCreateNode}
               onEditNode={board.openEditNode}
               onConnectNodePair={board.connectNodePair}
               onDisconnectNodePair={board.disconnectNodePair}
               onRemoveNode={board.removeNode}
-              onOpenNode={(payload: any) => navigate(`/node/${payload.nodeId}`)}
-              renderNode={(node: any, selected: any, allNodes: any) => (
-                <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />
-              )}
+              onOpenNode={handleOpenNode}
+              renderNode={renderWorkspaceCard}
             />
           </main>
 

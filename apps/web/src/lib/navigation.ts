@@ -153,14 +153,15 @@ type AppLinkProps = {
   "aria-controls"?: string;
 };
 
-export function Link({ to, replace, state, children, ...rest }: AppLinkProps) {
+export function Link({ to, replace, state, children, onClick, ...rest }: AppLinkProps) {
   return createElement(
     TanStackLink,
     {
       ...rest,
-      href: to,
+      to,
       replace,
       state: state as never,
+      onClick,
     } as never,
     children,
   );

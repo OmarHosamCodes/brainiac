@@ -9,7 +9,6 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
-  useViewport,
   type Connection,
   type NodeChange,
   type OnSelectionChangeParams,
@@ -21,6 +20,7 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import { LayoutGrid, Link2, Minus, Plus, Scan } from "lucide-react";
@@ -73,6 +73,13 @@ export type InfiniteCanvasHandle = {
 
 const FIT_PADDING = 0.15;
 
+const MINIMAP_NODE_COLOR = "color-mix(in oklab, var(--chart-2) 45%, transparent)";
+const MINIMAP_NODE_STROKE = "color-mix(in oklab, var(--chart-2) 65%, transparent)";
+
+function minimapNodeColor() {
+  return MINIMAP_NODE_COLOR;
+}
+
 const nodeTypes = {
   [WORKSPACE_FLOW_NODE_TYPE]: WorkspaceFlowNode,
 };
@@ -105,8 +112,8 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
     const hasFittedRef = useRef(false);
     const { isDark } = useTheme();
     const reactFlow = useReactFlow();
-    const { zoom } = useViewport();
-    const { zoomIn, zoomOut, fitView, screenToFlowPosition } = reactFlow;
+    const { zoomIn, zoomOut, fitView, screenToFlowPosition, getZoom } = reactFlow;
+    const [zoomPercent, setZoomPercent] = useState(100);
 
     const nodeById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
 
@@ -132,17 +139,25 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
       return eligible.includes(pair.standardNodeId) ? pair : null;
     }, [nodeById, nodes, selectedNodeIds]);
 
-    const zoomPercent = Math.round(zoom * 100);
+    const syncZoomPercent = useCallback(() => {
+      const next = Math.round(getZoom() * 100);
+      setZoomPercent((prev) => (prev === next ? prev : next));
+    }, [getZoom]);
 
-    const fitAllNodes = useCallback(() => {
-      if (nodes.length === 0) {
-        reactFlow.setViewport({ x: 0, y: 0, zoom: 1 });
-        return;
-      }
+    const fitAllNodes = useCallback(
+      (options?: { animate?: boolean }) => {
+        if (nodes.length === 0) {
+          reactFlow.setViewport({ x: 0, y: 0, zoom: 1 });
+          syncZoomPercent();
+          return;
+        }
 
-      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      void fitView({ padding: FIT_PADDING, duration: reducedMotion ? 0 : 200 });
-    }, [fitView, nodes.length, reactFlow]);
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const animate = options?.animate !== false && !reducedMotion;
+        void fitView({ padding: FIT_PADDING, duration: animate ? 200 : 0 });
+      },
+      [fitView, nodes.length, reactFlow, syncZoomPercent],
+    );
 
     const createNodeAtViewportCenter = useCallback(() => {
       const shell = shellRef.current;
@@ -176,6 +191,10 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
     ]);
 
     useEffect(() => {
+      syncZoomPercent();
+    }, [syncZoomPercent]);
+
+    useEffect(() => {
       if (loading) {
         return;
       }
@@ -190,8 +209,8 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
       }
 
       const frame = window.requestAnimationFrame(() => {
-        fitAllNodes();
         hasFittedRef.current = true;
+        fitAllNodes({ animate: false });
       });
 
       return () => window.cancelAnimationFrame(frame);
@@ -310,6 +329,7 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
             onNodesChange={handleNodesChange}
             onSelectionChange={handleSelectionChange}
             onConnect={handleConnect}
+            onMoveEnd={syncZoomPercent}
             onNodeDoubleClick={(_event, node) => onOpenNode({ nodeId: node.id })}
             onPaneContextMenu={handlePaneContextMenu}
             isValidConnection={(connection) =>
@@ -415,8 +435,8 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
                   "!m-0 overflow-hidden !rounded-[14px] !border-0 !shadow-none",
                 )}
                 maskColor="color-mix(in oklab, var(--chart-2) 12%, transparent)"
-                nodeColor={() => "color-mix(in oklab, var(--chart-2) 45%, transparent)"}
-                nodeStrokeColor="color-mix(in oklab, var(--chart-2) 65%, transparent)"
+                nodeColor={minimapNodeColor}
+                nodeStrokeColor={MINIMAP_NODE_STROKE}
                 pannable
                 zoomable
               />

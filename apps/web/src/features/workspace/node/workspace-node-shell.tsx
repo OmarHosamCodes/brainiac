@@ -152,12 +152,14 @@ export function WorkspaceNodeShell({
           </Button>
           <div className="mb-8 mt-4 space-y-4">
             <Badge className={saveBadge.className}>{saveBadge.label}</Badge>
-            <h1 className="text-2xl font-bold tracking-tight text-highlighted">{node.title}</h1>
-            {agencyHref ? (
-              <Button variant="outline" size="sm" className="mt-2 h-8 rounded-full" asChild>
-                <Link to={agencyHref}>Open in Agency</Link>
-              </Button>
-            ) : null}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h1 className="text-2xl font-bold tracking-tight text-highlighted">{node.title}</h1>
+              {agencyHref ? (
+                <Button variant="outline" size="sm" className="h-8 rounded-full" asChild>
+                  <Link to={agencyHref}>Open in Agency</Link>
+                </Button>
+              ) : null}
+            </div>
             <div className="rounded-2xl border border-default bg-default p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
