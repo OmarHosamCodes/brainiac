@@ -1,3 +1,4 @@
+import { workspaceBlockSchema, workspaceNodeSchema } from "@orch/workspace";
 import { z } from "zod";
 
 /** Max React module source length for sandboxed artifacts. */
@@ -143,9 +144,29 @@ export const aiUiReactArtifactSchema = z.object({
   props: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const aiUiWorkspaceBlockArtifactSchema = z.object({
+  id: artifactIdSchema,
+  kind: z.literal("workspaceBlock"),
+  title: z.string().min(1).max(160),
+  operation: z.enum(["create", "patch", "replace"]).optional(),
+  nodeId: z.string().min(1).max(160).optional(),
+  tabId: z.string().min(1).max(160).optional(),
+  block: workspaceBlockSchema,
+});
+
+export const aiUiWorkspaceNodeArtifactSchema = z.object({
+  id: artifactIdSchema,
+  kind: z.literal("workspaceNode"),
+  title: z.string().min(1).max(160),
+  operation: z.enum(["create", "replace"]).optional(),
+  node: workspaceNodeSchema,
+});
+
 export const aiUiArtifactSchema = z.discriminatedUnion("kind", [
   aiUiSchemaArtifactSchema,
   aiUiReactArtifactSchema,
+  aiUiWorkspaceBlockArtifactSchema,
+  aiUiWorkspaceNodeArtifactSchema,
 ]);
 export type AiUiArtifact = z.infer<typeof aiUiArtifactSchema>;
 
@@ -180,6 +201,12 @@ export function parseUiPresentInput(raw: unknown): AiUiArtifact {
       (unwrapped as { schema: unknown }).schema,
     );
   }
+  if (unwrapped && typeof unwrapped === "object" && "block" in unwrapped) {
+    (unwrapped as { block: unknown }).block = coerceJson((unwrapped as { block: unknown }).block);
+  }
+  if (unwrapped && typeof unwrapped === "object" && "node" in unwrapped) {
+    (unwrapped as { node: unknown }).node = coerceJson((unwrapped as { node: unknown }).node);
+  }
   return aiUiArtifactSchema.parse(unwrapped);
 }
 
@@ -210,7 +237,7 @@ export function cappedArtifacts(artifacts: AiUiArtifact[]): AiUiArtifact[] {
 }
 
 export const UI_PRESENT_TOOL_DESCRIPTION =
-  "Preferred way to answer: render a live UI artifact in the operator canvas (tables, metrics, comparisons, plans, before/after). Prefer kind 'schema' (stack, grid, stat, table, callout, pillRow, imageGrid, markdown, text, divider). Use kind 'react' only when schema cannot express it: sandbox plain JS only (no JSX/imports/fetch); h(type, props, ...children); render(element) once; props global; components Stack, Grid, Stat, Table, Text, Image, Callout. Reply one short line after; never repeat rendered data.";
+  "Preferred way to answer: render a live UI artifact in the operator canvas. Prefer kind 'schema' (stack, grid, stat, table, callout, pillRow, imageGrid, markdown, text, divider) for reports and plans. For Canvas create/edit previews use kind 'workspaceBlock' (full validated block payload) or kind 'workspaceNode' (node card preview). Use kind 'react' only when schema cannot express it: sandbox plain JS only (no JSX/imports/fetch); h(type, props, ...children); render(element) once; props global; components Stack, Grid, Stat, Table, Text, Image, Callout. Reply one short line after; never repeat rendered data.";
 
 /** One-line system nudge; full rules live on the ui_present tool description. */
 export const UI_PRESENT_SYSTEM_GUIDANCE =

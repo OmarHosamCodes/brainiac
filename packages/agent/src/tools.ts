@@ -60,6 +60,7 @@ import {
 import { tool } from "@openrouter/sdk/lib/tool";
 import { z } from "zod";
 
+import { type CanvasAction, canvasActionSchema } from "./canvas-actions";
 import { createUiPresentTool } from "./ui-present-tool";
 
 type DashboardSearchMatch = {
@@ -2545,13 +2546,243 @@ export type DashboardAgentWorkspaceRuntime = ReturnType<
   typeof createDashboardAgentWorkspaceRuntime
 >;
 
+function snapshotCanvasTarget(nodes: WorkspaceNode[], action: CanvasAction): unknown {
+  switch (action.type) {
+    case "node.create":
+      return null;
+    case "node.replace":
+    case "node.delete":
+      return findNode(nodes, action.nodeId);
+    case "tab.create":
+      return findNode(nodes, action.nodeId);
+    case "tab.replace":
+    case "tab.delete": {
+      const found = findTab(nodes, action.nodeId, action.tabId);
+      return found.tab;
+    }
+    case "block.create": {
+      const found = findTab(nodes, action.nodeId, action.tabId);
+      return found.tab;
+    }
+    case "block.patch":
+    case "block.replace":
+    case "block.delete": {
+      const found = findBlock(nodes, {
+        nodeId: action.nodeId,
+        tabId: action.tabId,
+        blockId: action.blockId,
+      });
+      return found.block;
+    }
+    default: {
+      const _exhaustive: never = action;
+      return _exhaustive;
+    }
+  }
+}
+
+/** Apply one Canvas proposal action to a node graph. Does not persist. */
+export async function applyCanvasAction(
+  nodes: WorkspaceNode[],
+  rawAction: unknown,
+): Promise<{ action: CanvasAction; before: unknown; after: unknown; nextNodes: WorkspaceNode[] }> {
+  const action = canvasActionSchema.parse(rawAction);
+  const before = snapshotCanvasTarget(nodes, action);
+  const workspace = createDashboardAgentWorkspaceRuntime({ nodes });
+
+  const { result } = await workspace.applyMutation((draft, timestamp) => {
+    switch (action.type) {
+      case "node.create": {
+        const suggestedPosition = getSuggestedNodePosition(draft);
+        const trimmedContent = action.content?.trim() ?? "";
+        const tint = action.tint ? workspaceNodeTintSchema.safeParse(action.tint).data : undefined;
+        const node = createWorkspaceNode({
+          title: action.title,
+          content: trimmedContent,
+          x: action.x ?? suggestedPosition.x,
+          y: action.y ?? suggestedPosition.y,
+          width: action.width,
+          height: action.height,
+          visibility: action.visibility,
+          teamId: action.teamId ?? null,
+          agencyRef: action.agencyRef ?? null,
+          tabs: action.overviewTabTitle
+            ? [createDefaultWorkspaceTab(action.overviewTabTitle, trimmedContent)]
+            : undefined,
+          dashboard: tint ? { tint, featuredBlocks: [] } : undefined,
+        });
+        draft.push(node);
+        return { nodeId: node.id };
+      }
+      case "node.replace": {
+        const parsedNode = workspaceNodeSchema.parse(action.node);
+        const currentNode = requireNode(draft, action.nodeId);
+        const currentIndex = draft.findIndex((entry) => entry.id === action.nodeId);
+        const nextNode = createWorkspaceNode({
+          ...parsedNode,
+          id: currentNode.id,
+          createdAt: currentNode.createdAt,
+          updatedAt: timestamp,
+        });
+        assertNodeUsesKnownCustomTemplates(nextNode);
+        draft[currentIndex] = nextNode;
+        return { nodeId: nextNode.id };
+      }
+      case "node.delete": {
+        const node = requireNode(draft, action.nodeId);
+        const currentIndex = draft.findIndex((entry) => entry.id === node.id);
+        draft.splice(currentIndex, 1);
+        return { nodeId: node.id };
+      }
+      case "tab.create": {
+        const node = requireNode(draft, action.nodeId);
+        const tab = createDefaultWorkspaceTab(action.title?.trim() || "New tab");
+        node.tabs.push(tab);
+        node.viewState.activeTabId = tab.id;
+        node.updatedAt = timestamp;
+        return { tabId: tab.id };
+      }
+      case "tab.replace": {
+        const parsedTab = workspaceNodeTabSchema.parse(action.tab);
+        const { node, tab: currentTab } = requireTab(draft, action.nodeId, action.tabId);
+        const currentIndex = node.tabs.findIndex((entry) => entry.id === currentTab.id);
+        const nextTab = workspaceNodeTabSchema.parse({
+          ...parsedTab,
+          id: currentTab.id,
+          createdAt: currentTab.createdAt,
+          updatedAt: timestamp,
+        });
+        assertBlocksUseKnownCustomTemplates(node, nextTab.blocks);
+        node.tabs[currentIndex] = nextTab;
+        node.updatedAt = timestamp;
+        return { tabId: nextTab.id };
+      }
+      case "tab.delete": {
+        const { node, tab } = requireTab(draft, action.nodeId, action.tabId);
+        const currentIndex = node.tabs.findIndex((entry) => entry.id === tab.id);
+        node.tabs = node.tabs.filter((entry) => entry.id !== tab.id);
+        if (node.tabs.length === 0) {
+          const fallbackTab = createDefaultWorkspaceTab("Overview", node.content);
+          node.tabs = [fallbackTab];
+          node.viewState.activeTabId = fallbackTab.id;
+        } else if (node.viewState.activeTabId === tab.id) {
+          const nextTab =
+            node.tabs[currentIndex] ??
+            node.tabs[Math.max(0, currentIndex - 1)] ??
+            node.tabs[0] ??
+            null;
+          node.viewState.activeTabId = nextTab?.id ?? null;
+        }
+        node.updatedAt = timestamp;
+        return { tabId: tab.id };
+      }
+      case "block.create": {
+        const blockType = workspaceBlockTypeSchema.parse(action.blockType);
+        const { node, tab } = requireTab(draft, action.nodeId, action.tabId);
+        const block = createBlockByType({
+          node,
+          type: blockType,
+          title: action.title,
+          customTemplateId: action.customTemplateId,
+          ...(blockType === "notes" && action.content ? { content: action.content } : {}),
+        });
+        tab.blocks.push(block);
+        tab.updatedAt = timestamp;
+        node.updatedAt = timestamp;
+        return { blockId: block.id };
+      }
+      case "block.patch": {
+        const operations = z
+          .array(blockPatchOperationSchema)
+          .min(1)
+          .max(50)
+          .parse(action.operations);
+        const {
+          node,
+          tab,
+          block: currentBlock,
+        } = requireBlock(draft, action.nodeId, action.tabId, action.blockId);
+        const currentIndex = tab.blocks.findIndex((entry) => entry.id === currentBlock.id);
+        const draftBlock = cloneStructuredValue(currentBlock);
+        for (const operation of operations) {
+          applyBlockPatchOperation(draftBlock, operation);
+        }
+        const nextBlock = workspaceBlockSchema.parse({
+          ...draftBlock,
+          id: currentBlock.id,
+          createdAt: currentBlock.createdAt,
+          updatedAt: timestamp,
+        });
+        assertBlocksUseKnownCustomTemplates(node, [nextBlock]);
+        tab.blocks[currentIndex] = nextBlock;
+        tab.updatedAt = timestamp;
+        node.updatedAt = timestamp;
+        return { blockId: nextBlock.id };
+      }
+      case "block.replace": {
+        const parsedBlock = workspaceBlockSchema.parse(action.block);
+        const {
+          node,
+          tab,
+          block: currentBlock,
+        } = requireBlock(draft, action.nodeId, action.tabId, action.blockId);
+        const currentIndex = tab.blocks.findIndex((entry) => entry.id === currentBlock.id);
+        const nextBlock = workspaceBlockSchema.parse({
+          ...parsedBlock,
+          id: currentBlock.id,
+          createdAt: currentBlock.createdAt,
+          updatedAt: timestamp,
+        });
+        assertBlocksUseKnownCustomTemplates(node, [nextBlock]);
+        tab.blocks[currentIndex] = nextBlock;
+        tab.updatedAt = timestamp;
+        node.updatedAt = timestamp;
+        return { blockId: nextBlock.id };
+      }
+      case "block.delete": {
+        const { node, tab, block } = requireBlock(
+          draft,
+          action.nodeId,
+          action.tabId,
+          action.blockId,
+        );
+        tab.blocks = tab.blocks.filter((entry) => entry.id !== block.id);
+        tab.updatedAt = timestamp;
+        node.updatedAt = timestamp;
+        return { blockId: block.id };
+      }
+      default: {
+        const _exhaustive: never = action;
+        return _exhaustive;
+      }
+    }
+  });
+
+  const nextNodes = workspace.getNodes();
+  const createdNodeId =
+    result && typeof result === "object" && "nodeId" in result
+      ? String((result as { nodeId?: string }).nodeId ?? "")
+      : "";
+  const after =
+    action.type === "node.create" && createdNodeId
+      ? findNode(nextNodes, createdNodeId)
+      : snapshotCanvasTarget(nextNodes, action);
+  return {
+    action,
+    before,
+    after,
+    nextNodes,
+  };
+}
+
 export function buildDashboardAgentTools(
   workspace: DashboardAgentWorkspaceRuntime,
   marketplaceItems: WorkspaceMarketplaceItem[] = [],
-  profile: "ask" | "agent" = "ask",
+  profile: "ask" | "agent" | "plan" = "ask",
+  options: { directMutations?: boolean } = {},
 ) {
   const profileGuidance =
-    profile === "agent"
+    profile === "agent" || profile === "plan"
       ? "Start with summary data and request full raw payloads only for mutation prep or exact structural verification."
       : "Prefer the summary response and avoid full raw payloads unless the answer is blocked or you are preparing a replace mutation.";
 
@@ -2667,7 +2898,8 @@ export function buildDashboardAgentTools(
         const customBlockTemplate =
           node && block ? getCustomBlockTemplateForBlock(node, block) : null;
         const shouldIncludeEditGuide =
-          Boolean(block) && (profile === "agent" || includeEditGuide || detailLevel === "full");
+          Boolean(block) &&
+          (profile === "agent" || profile === "plan" || includeEditGuide || detailLevel === "full");
 
         return getBlockDetailsOutputSchema.parse({
           node: node ? describeNodeReference(node) : null,
@@ -2685,7 +2917,7 @@ export function buildDashboardAgentTools(
         });
       },
     }),
-    ...(profile === "agent"
+    ...(options.directMutations
       ? [
           tool({
             name: "create_node",

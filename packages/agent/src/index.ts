@@ -12,6 +12,9 @@ import {
   type AgencyAgentQuestion,
 } from "./agency-question";
 import { buildAgencyAgentTools } from "./agency-tools";
+import { canvasDraftPlanSchema, canvasProposalSnapshotSchema } from "./canvas-actions";
+import { buildCanvasWriteTools } from "./canvas-tools";
+import { resolveUnlockedSurfaces } from "./tool-catalog";
 import {
   agencyQuestionRetryNote,
   agencyToolRetryNote,
@@ -261,6 +264,54 @@ function buildAgencyAgentModeInstructions(workspace: DashboardAgentWorkspaceCont
   ].join("\n");
 }
 
+function buildCanvasPlanInstructions(workspace: DashboardAgentWorkspaceContext) {
+  return [
+    buildAgentInstructions({ ...workspace, surface: "canvas" }),
+    "Plan mode workflow: (1) research with read tools, (2) must call ask_agency_question at least once to clarify assumptions (never ask only in prose), (3) after the user answers in a later turn, call draft_canvas_plan, (4) prefer ui_present for a schema or workspaceBlock plan overview.",
+    "Do not call draft_canvas_plan until ask_agency_question has been used this turn (or the user already answered a prior question). Do not claim changes were applied.",
+    "After draft_canvas_plan, call ui_present with an overview of the plan. Then tell the user to Confirm in the UI.",
+    "Never invent ids — use tool results. Do not call propose_canvas_action in Plan mode.",
+  ].join("\n");
+}
+
+function buildCanvasAgentModeInstructions(workspace: DashboardAgentWorkspaceContext) {
+  return [
+    buildAgentInstructions({ ...workspace, surface: "canvas" }),
+    "Agent mode: never write Canvas data directly. Call propose_canvas_action for each intended write (node/tab/block create, patch, replace, or delete).",
+    "When you need clarification, call ask_agency_question (do not ask only in prose).",
+    "Required: after each propose_canvas_action, call ui_present with kind workspaceBlock or workspaceNode, then tell the user to Approve or Reject.",
+    "Never claim a write succeeded until the user Approves. Prefer one proposal at a time unless the user asks for a batch.",
+    "If the workspace is scoped, use the scoped nodeId/tabId/blockId in propose_canvas_action. Do not propose create_node unless the user explicitly asks for a new node.",
+  ].join("\n");
+}
+
+function appendCrossSurfaceInstructions(
+  base: string,
+  workspace: DashboardAgentWorkspaceContext,
+  toolPreset: DashboardAgentToolPreset,
+) {
+  const surfaces = resolveUnlockedSurfaces({
+    surface: workspace.surface ?? "canvas",
+    unlockedSurfaces: workspace.unlockedSurfaces,
+    scopeRefs: workspace.scopeRefs,
+  });
+  if (surfaces.length < 2) return base;
+  const extra: string[] = [
+    "This turn is unlocked across Agency and Canvas. Use Agency tools for time/projects/tasks and Canvas tools for the board.",
+  ];
+  if (toolPreset === "agent") {
+    extra.push(
+      "Writes stay on the proposal bus: propose_agency_action for Agency, propose_canvas_action for Canvas. Never claim either applied until Approve.",
+    );
+  }
+  if (toolPreset === "plan") {
+    extra.push(
+      "Draft with draft_agency_plan and/or draft_canvas_plan depending on the requested domain.",
+    );
+  }
+  return [base, ...extra].join("\n");
+}
+
 function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   if (workspace.surface === "agency") {
     // Mode-specific Agency instructions are applied in resolveAgentExecutionConfig.
@@ -355,40 +406,6 @@ function buildAskInstructions(
   ].join("\n");
 }
 
-function buildAgentOnlyInstructions(
-  workspace: DashboardAgentWorkspaceContext,
-  toolingUnavailable = false,
-) {
-  const scopedWorkspace = hasScopedWorkspace(workspace);
-
-  return [
-    buildToolEnabledAgentInstructions(workspace),
-    toolingUnavailable
-      ? "The selected model cannot call tools in this pass, so explain that deep inspection is limited and answer from the provided context only."
-      : "Inspect the workspace before concluding. Start with list, search, or summary detail tools to verify specifics before you answer.",
-    "Prefer ui_present for structured results or before/after change summaries; keep the chat reply to one short line.",
-    "When the user asks you to create, rename, update, or delete nodes, tabs, or blocks, use the workspace mutation tools instead of only describing the change.",
-    "Escalate to full raw node, tab, block, or marketplace payloads only when mutation prep or exact structural verification requires it.",
-    'For block edits, search or inspect first, call get_block_details, use its editGuide with patch_block when possible, and only escalate to detailLevel: "full" plus replace_block when patch_block is not enough.',
-    "If tools are available and the workspace has nodes, do at least one inspection step before your final answer.",
-    ...(scopedWorkspace
-      ? [
-          "",
-          "SCOPED MUTATION WORKFLOW — follow these steps in order:",
-          "1. IDENTIFY SCOPE: The user is inside a specific node. The CURRENT SCOPE section above provides the target nodeId, tabId, and optionally blockId. All mutations default to these IDs.",
-          "2. READ BEFORE WRITE: Call get_block_details or get_tab_details on the scoped target to understand its current state before mutating.",
-          "3. APPLY MUTATIONS TO SCOPE: Use the scoped nodeId and tabId for create_block, patch_block, create_tab, etc. Do NOT create a new node unless the user explicitly asks to create a new node.",
-          '4. RESOLVE REFERENCES: When the user says "here", "this tab", "this node", "this block", or "current", always resolve to the scoped IDs provided above.',
-          "",
-          "ANTI-PATTERNS — never do these when scoped:",
-          "- NEVER call create_node when the user asks to add a block or content. Use create_block with the scoped nodeId and tabId instead.",
-          '- NEVER create a new tab when the user says "add a block to this tab". Use the active tabId from the scope.',
-          "- NEVER guess node/tab/block IDs. Use the exact IDs provided in CURRENT SCOPE and MUTATION TARGET IDs.",
-        ]
-      : []),
-  ].join("\n");
-}
-
 function normalizeMessages(messages: AgentModelInputMessage[]) {
   return messages.map((message) => ({
     role: message.role,
@@ -425,14 +442,19 @@ function resolveAgentExecutionConfig(
     workspace,
     "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
   );
+  const surface = workspace.surface ?? "canvas";
 
-  if (workspace.surface === "agency") {
+  if (surface === "agency") {
     switch (toolPreset) {
       case "agent":
         return {
           shouldUseTools: supportsTools,
           instructions: supportsTools
-            ? buildAgencyAgentModeInstructions(workspace)
+            ? appendCrossSurfaceInstructions(
+                buildAgencyAgentModeInstructions(workspace),
+                workspace,
+                toolPreset,
+              )
             : agencyFallback,
           fallbackInstructions: agencyFallback,
           maxSteps: 10,
@@ -442,17 +464,28 @@ function resolveAgentExecutionConfig(
       case "plan":
         return {
           shouldUseTools: supportsTools,
-          instructions: supportsTools ? buildAgencyPlanInstructions(workspace) : agencyFallback,
+          instructions: supportsTools
+            ? appendCrossSurfaceInstructions(
+                buildAgencyPlanInstructions(workspace),
+                workspace,
+                toolPreset,
+              )
+            : agencyFallback,
           fallbackInstructions: agencyFallback,
           maxSteps: 8,
-          // Cap completion — omitting max_tokens lets OpenRouter request ~50k and fail low-credit keys.
           maxOutputTokens: 1_200,
           shouldRetryForInspection: supportsTools,
         };
       case "ask":
         return {
           shouldUseTools: supportsTools,
-          instructions: supportsTools ? buildAgencyAskInstructions(workspace) : agencyFallback,
+          instructions: supportsTools
+            ? appendCrossSurfaceInstructions(
+                buildAgencyAskInstructions(workspace),
+                workspace,
+                toolPreset,
+              )
+            : agencyFallback,
           fallbackInstructions: agencyFallback,
           maxSteps: 8,
           maxOutputTokens: 1_200,
@@ -470,7 +503,11 @@ function resolveAgentExecutionConfig(
       return {
         shouldUseTools: supportsTools,
         instructions: supportsTools
-          ? buildAgentOnlyInstructions(workspace)
+          ? appendCrossSurfaceInstructions(
+              buildCanvasAgentModeInstructions(workspace),
+              workspace,
+              toolPreset,
+            )
           : buildDirectAnswerInstructions(
               workspace,
               "Deep inspection is limited because the selected model cannot call tools.",
@@ -484,19 +521,26 @@ function resolveAgentExecutionConfig(
         shouldRetryForInspection: supportsTools && workspace.nodes.length > 0,
       };
     case "plan":
-      // Canvas Plan mode is out of scope — treat as Ask.
       return {
         shouldUseTools: supportsTools,
-        instructions: supportsTools ? buildAskInstructions(workspace) : canvasToolingFallback,
+        instructions: supportsTools
+          ? appendCrossSurfaceInstructions(
+              buildCanvasPlanInstructions(workspace),
+              workspace,
+              toolPreset,
+            )
+          : canvasToolingFallback,
         fallbackInstructions: canvasToolingFallback,
-        maxSteps: 6,
+        maxSteps: 8,
         maxOutputTokens: 1_200,
         shouldRetryForInspection: supportsTools && workspace.nodes.length > 0,
       };
     case "ask":
       return {
         shouldUseTools: supportsTools,
-        instructions: supportsTools ? buildAskInstructions(workspace) : canvasToolingFallback,
+        instructions: supportsTools
+          ? appendCrossSurfaceInstructions(buildAskInstructions(workspace), workspace, toolPreset)
+          : canvasToolingFallback,
         fallbackInstructions: canvasToolingFallback,
         maxSteps: 6,
         maxOutputTokens: 1_200,
@@ -515,6 +559,7 @@ type ToolPassArgs = {
   workspaceRuntime: DashboardAgentWorkspaceRuntime;
   toolPreset: DashboardAgentToolPreset;
   agencyRuntime?: DashboardAgentConfig["agencyRuntime"];
+  canvasRuntime?: DashboardAgentConfig["canvasRuntime"];
   normalizedMessages: ReturnType<typeof normalizeMessages>;
   instructions: string;
   maxSteps: number;
@@ -529,7 +574,17 @@ type ToolPassLiveEvent =
   | { type: "token"; delta: string }
   | { type: "tool"; tool: AgentToolCall }
   | { type: "artifact"; artifact: AiUiArtifact }
-  | { type: "plan"; plan: AgencyDraftPlan }
+  | {
+      type: "plan";
+      plan:
+        | AgencyDraftPlan
+        | {
+            planId: string;
+            title: string;
+            summary: string;
+            steps: Array<{ label: string; action: unknown }>;
+          };
+    }
   | { type: "question"; question: AgencyAgentQuestion }
   | {
       type: "proposal";
@@ -571,17 +626,50 @@ function providerErrorUserMessage(errorMessage: string): string {
   return `The model provider failed (${detail}). Try another model tier, or retry in a moment.`;
 }
 
+type MergedAgentTool =
+  | ReturnType<typeof buildDashboardAgentTools>[number]
+  | ReturnType<typeof buildCanvasWriteTools>[number]
+  | ReturnType<typeof buildAgencyAgentTools>[number];
+
+function mergeOpenRouterTools(groups: MergedAgentTool[][]) {
+  const seen = new Set<string>();
+  const merged: MergedAgentTool[] = [];
+  for (const group of groups) {
+    for (const entry of group) {
+      if (entry.type !== "function") continue;
+      const name = entry.function.name;
+      if (seen.has(name)) continue;
+      seen.add(name);
+      merged.push(entry);
+    }
+  }
+  return merged;
+}
+
 async function* streamToolEnabledPass(
   args: ToolPassArgs,
 ): AsyncGenerator<ToolPassLiveEvent, ToolPassResult> {
-  const availableTools =
-    args.workspace.surface === "agency" && args.agencyRuntime
+  const surfaces = resolveUnlockedSurfaces({
+    surface: args.workspace.surface ?? "canvas",
+    unlockedSurfaces: args.workspace.unlockedSurfaces,
+    scopeRefs: args.workspace.scopeRefs,
+  });
+  const canvasReads: MergedAgentTool[] = surfaces.includes("canvas")
+    ? buildDashboardAgentTools(
+        args.workspaceRuntime,
+        args.workspace.marketplaceItems ?? [],
+        args.toolPreset === "ask" ? "ask" : args.toolPreset,
+      )
+    : [];
+  const canvasWrites: MergedAgentTool[] =
+    surfaces.includes("canvas") && args.canvasRuntime
+      ? buildCanvasWriteTools(args.canvasRuntime, args.toolPreset)
+      : [];
+  const agencyTools: MergedAgentTool[] =
+    surfaces.includes("agency") && args.agencyRuntime
       ? buildAgencyAgentTools(args.agencyRuntime, args.toolPreset)
-      : buildDashboardAgentTools(
-          args.workspaceRuntime,
-          args.workspace.marketplaceItems ?? [],
-          args.toolPreset === "agent" ? "agent" : "ask",
-        );
+      : [];
+  const availableTools = mergeOpenRouterTools([canvasReads, canvasWrites, agencyTools]);
   const tools = args.allowedToolNames
     ? availableTools.filter(
         (entry) =>
@@ -656,8 +744,11 @@ async function* streamToolEnabledPass(
               artifacts.push(artifact);
               enqueue({ type: "artifact", artifact });
             }
-            if (tool.name === "draft_agency_plan") {
-              const plan = agencyDraftPlanSchema.safeParse(tool.output);
+            if (tool.name === "draft_agency_plan" || tool.name === "draft_canvas_plan") {
+              const plan =
+                tool.name === "draft_canvas_plan"
+                  ? canvasDraftPlanSchema.safeParse(tool.output)
+                  : agencyDraftPlanSchema.safeParse(tool.output);
               if (plan.success) {
                 enqueue({ type: "plan", plan: plan.data });
               }
@@ -668,11 +759,17 @@ async function* streamToolEnabledPass(
                 enqueue({ type: "question", question: question.data });
               }
             }
-            if (tool.name === "propose_agency_action") {
-              const proposal = agencyProposalSnapshotSchema.safeParse({
-                ...(typeof tool.output === "object" && tool.output ? tool.output : {}),
-                status: "pending",
-              });
+            if (tool.name === "propose_agency_action" || tool.name === "propose_canvas_action") {
+              const proposal =
+                tool.name === "propose_canvas_action"
+                  ? canvasProposalSnapshotSchema.safeParse({
+                      ...(typeof tool.output === "object" && tool.output ? tool.output : {}),
+                      status: "pending",
+                    })
+                  : agencyProposalSnapshotSchema.safeParse({
+                      ...(typeof tool.output === "object" && tool.output ? tool.output : {}),
+                      status: "pending",
+                    });
               if (proposal.success) {
                 enqueue({
                   type: "proposal",
@@ -887,6 +984,7 @@ export async function* streamDashboardAgent(
         workspaceRuntime,
         toolPreset,
         agencyRuntime: config.agencyRuntime,
+        canvasRuntime: config.canvasRuntime,
         normalizedMessages,
         instructions: executionConfig.instructions,
         maxSteps: executionConfig.maxSteps,
@@ -927,6 +1025,7 @@ export async function* streamDashboardAgent(
             workspaceRuntime,
             toolPreset,
             agencyRuntime: config.agencyRuntime,
+            canvasRuntime: config.canvasRuntime,
             normalizedMessages,
             instructions: `${executionConfig.instructions}\n${retryNote}`,
             maxSteps: executionConfig.maxSteps,
@@ -977,6 +1076,7 @@ export async function* streamDashboardAgent(
             workspaceRuntime,
             toolPreset,
             agencyRuntime: config.agencyRuntime,
+            canvasRuntime: config.canvasRuntime,
             normalizedMessages,
             instructions: `${executionConfig.instructions}\n${questionNote}\nPrior Agency tool results (reuse these; do not repeat reads):\n${priorResults}`,
             maxSteps: Math.min(4, executionConfig.maxSteps),
@@ -1022,6 +1122,7 @@ export async function* streamDashboardAgent(
           workspaceRuntime,
           toolPreset,
           agencyRuntime: config.agencyRuntime,
+          canvasRuntime: config.canvasRuntime,
           normalizedMessages,
           instructions: `${executionConfig.instructions}\n${agencyUiPresentRetryNote(toolPreset)}\nPrior Agency tool results (render these; do not repeat tools):\n${priorResults}`,
           maxSteps: Math.min(4, executionConfig.maxSteps),
@@ -1130,23 +1231,31 @@ export async function* streamDashboardAgent(
     finalResponse = providerErrorUserMessage(providerError);
   }
 
-  if (!finalResponse.trim() && !stopped && surface === "agency") {
+  if (!finalResponse.trim() && !stopped) {
     if (
-      toolCalls.some((tool) => tool.name === "draft_agency_plan" && tool.status === "completed")
+      toolCalls.some(
+        (tool) =>
+          (tool.name === "draft_agency_plan" || tool.name === "draft_canvas_plan") &&
+          tool.status === "completed",
+      )
     ) {
       finalResponse = "Drafted a plan — review the card and Confirm when ready.";
     } else if (
-      toolCalls.some((tool) => tool.name === "propose_agency_action" && tool.status === "completed")
+      toolCalls.some(
+        (tool) =>
+          (tool.name === "propose_agency_action" || tool.name === "propose_canvas_action") &&
+          tool.status === "completed",
+      )
     ) {
       finalResponse = "Proposed a change — review before/after, then Approve or Reject.";
     } else if (askedAgencyQuestion) {
       finalResponse = "Answer the question above to continue.";
     } else if (artifacts.length > 0) {
       finalResponse = "Opened a canvas with the results.";
-    } else if (toolPreset === "plan") {
+    } else if (surface === "agency" && toolPreset === "plan") {
       finalResponse =
         "I couldn't draft a plan from that request. Try naming the entries or projects to change, or switch to Ask to inspect time first.";
-    } else if (toolPreset === "agent") {
+    } else if (surface === "agency" && toolPreset === "agent") {
       finalResponse =
         "I couldn't propose a change from that request. Try being more specific, or switch to Ask to inspect time first.";
     }
@@ -1222,10 +1331,11 @@ export async function runTaskAgent(
 }
 
 export * from "./agency-actions";
+export * from "./canvas-actions";
 export * from "./agency-question";
 export * from "./attachment-content";
 export * from "./models";
 export * from "./model-routing";
 export * from "./stream-turn";
 export * from "./types";
-export { listAgentToolCatalog } from "./tool-catalog";
+export { listAgentToolCatalog, resolveUnlockedSurfaces } from "./tool-catalog";
