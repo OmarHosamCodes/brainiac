@@ -338,6 +338,12 @@ function WorkspaceAgentMessagePartsView({
               key={part.id ?? part.data.proposalId}
               label="Proposal resolved"
               detail={part.data.label}
+              actionLabel={part.data.boardHref ? "Open on board" : undefined}
+              onAction={
+                part.data.boardHref && onOpenBoard
+                  ? () => onOpenBoard(part.data.boardHref!)
+                  : undefined
+              }
             />
           );
         }
@@ -348,7 +354,6 @@ function WorkspaceAgentMessagePartsView({
             busy={proposalBusyId === part.data.proposalId}
             onApprove={() => onApproveProposal(part.data.proposalId)}
             onReject={() => onRejectProposal(part.data.proposalId)}
-            onOpenBoard={onOpenBoard}
           />
         );
       })}
@@ -726,7 +731,6 @@ export function WorkspaceAgentChatPanelView({
             onConfirmPlan={onConfirmPlan}
             onApproveProposal={onApproveProposal}
             onRejectProposal={onRejectProposal}
-            onOpenBoard={onOpenBoard}
             onOpenArtifact={onOpenArtifactCanvas}
             onDismiss={() => {
               if (!stickyItem) return;

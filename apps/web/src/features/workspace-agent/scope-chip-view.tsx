@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import type { AgentScopeRef } from "@orch/agent/types";
+import { X } from "lucide-react";
 
 import { Badge } from "@/ui/badge";
 
@@ -25,7 +26,7 @@ function chipPrefix(kind: AgentScopeRef["kind"]) {
     case "task":
       return "Task";
     case "surface":
-      return "Surface";
+      return null;
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -41,34 +42,35 @@ export function WorkspaceAgentScopeChipView({ chips, onRemove }: WorkspaceAgentS
   return (
     <div className="flex flex-wrap gap-1.5">
       <AnimatePresence initial={false}>
-        {chips.map((chip, index) => (
-          <motion.div
-            key={`${chip.kind}-${chip.id}`}
-            layout
-            initial={{ opacity: 0, scale: 0.92, y: 4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.12 } }}
-            transition={{
-              duration: 0.18,
-              ease: EASE_OUT_QUART,
-              delay: Math.min(index, 6) * 0.03,
-            }}
-          >
-            <Badge variant="secondary" className="gap-1 rounded-full text-secondary-foreground">
-              <span>
-                {chipPrefix(chip.kind)} - {chip.label}
-              </span>
-              <button
-                type="button"
-                className="rounded-full px-0.5 leading-none text-muted-foreground hover:text-destructive"
-                aria-label={`Remove ${chip.label} from scope`}
-                onClick={() => onRemove(chip.id)}
-              >
-                ×
-              </button>
-            </Badge>
-          </motion.div>
-        ))}
+        {chips.map((chip, index) => {
+          const prefix = chipPrefix(chip.kind);
+          return (
+            <motion.div
+              key={`${chip.kind}-${chip.id}`}
+              layout
+              initial={{ opacity: 0, scale: 0.92, y: 4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.12 } }}
+              transition={{
+                duration: 0.18,
+                ease: EASE_OUT_QUART,
+                delay: Math.min(index, 6) * 0.03,
+              }}
+            >
+              <Badge variant="secondary" className="gap-1 rounded-full text-secondary-foreground">
+                <span>{prefix ? `${prefix} · ${chip.label}` : chip.label}</span>
+                <button
+                  type="button"
+                  className="rounded-full p-0.5 leading-none text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  aria-label={`Remove ${chip.label} from scope`}
+                  onClick={() => onRemove(chip.id)}
+                >
+                  <X className="size-3" aria-hidden />
+                </button>
+              </Badge>
+            </motion.div>
+          );
+        })}
       </AnimatePresence>
     </div>
   );

@@ -214,7 +214,6 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     selectedToolPreset={view.selectedToolPreset}
                     onSelectToolPreset={view.setSelectedToolPreset}
                     planModeEnabled={view.planModeEnabled}
-                    surfaceLabel={view.surfaceLabel}
                     crossSurfaceUnlockLabel={view.crossSurfaceUnlockLabel}
                     onUnlockCrossSurface={view.onUnlockCrossSurface}
                     selectedModelLabel={selectedModelLabel}

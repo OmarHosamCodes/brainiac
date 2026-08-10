@@ -55,9 +55,11 @@ export function AgentArtifactPaneView({
         <Badge variant="secondary" className="h-5 px-2 text-[10px] font-medium">
           {artifact.kind === "react"
             ? "Sandbox"
-            : artifact.kind === "workspaceBlock" || artifact.kind === "workspaceNode"
-              ? "Block"
-              : "View"}
+            : artifact.kind === "workspaceNode"
+              ? "Node"
+              : artifact.kind === "workspaceBlock"
+                ? "Block"
+                : "View"}
         </Badge>
         <Button
           type="button"

@@ -100,7 +100,7 @@ export function AgencyProjectDetailView({
           Back to projects
         </Button>
         {canvasNodeHref ? (
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" className="h-8 rounded-full" asChild>
             <Link to={canvasNodeHref}>Open on Canvas</Link>
           </Button>
         ) : null}

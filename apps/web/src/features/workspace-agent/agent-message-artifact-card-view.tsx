@@ -26,7 +26,13 @@ export function AgentMessageArtifactCardView({
           {artifact.title}
         </p>
         <p className="text-[11px] text-muted-foreground">
-          {artifact.kind === "react" ? "Sandbox canvas" : "Canvas from this reply"}
+          {artifact.kind === "react"
+            ? "Sandbox canvas"
+            : artifact.kind === "workspaceNode"
+              ? "Node preview from this reply"
+              : artifact.kind === "workspaceBlock"
+                ? "Block preview from this reply"
+                : "Canvas from this reply"}
         </p>
       </div>
       <Button

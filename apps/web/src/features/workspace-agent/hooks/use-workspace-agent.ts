@@ -27,7 +27,9 @@ import { useWorkspaceAgentModelPreferences } from "@/features/workspace-agent/ho
 import { useWorkspaceAgentModelPreset } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preset";
 import { OrchTurnStreamTransport } from "@/features/workspace-agent/orch-turn-stream-transport";
 import {
+  appendConfirmedProposalsToMessages,
   collectAnsweredQuestionIds,
+  collectResolvedPlanIdsFromMessages,
   collectArtifactsFromMessages,
   dashboardMessagesToUIMessages,
   formatAgencyQuestionAnswerMessage,
@@ -275,7 +277,9 @@ export function useWorkspaceAgent() {
     const next = dashboardMessagesToUIMessages(activeConversation.messages);
     // Stale get-query (user-only) must not wipe a richer just-streamed thread.
     if (next.length < messages.length) return;
+    const persistedResolvedPlans = collectResolvedPlanIdsFromMessages(activeConversation.messages);
     setAnsweredQuestionIds(collectAnsweredQuestionIds(activeConversation.messages));
+    setResolvedPlanIds((prev) => new Set([...prev, ...persistedResolvedPlans]));
     setMessages(next);
   }, [
     activeConversation?.id,
@@ -571,8 +575,16 @@ export function useWorkspaceAgent() {
       try {
         const result = await confirmPlanMutation.mutateAsync(plan);
         setResolvedPlanIds((prev) => new Set(prev).add(plan.planId));
+        setMessages(appendConfirmedProposalsToMessages(messages, result.proposals));
+        if (activeConversationId) {
+          void queryClient.invalidateQueries({
+            queryKey: orpc.agent.conversations.get.queryKey({
+              input: { conversationId: activeConversationId },
+            }),
+          });
+        }
         toast.success(
-          `Plan confirmed — ${result.proposals.length} proposal${result.proposals.length === 1 ? "" : "s"} ready to Approve.`,
+          `Plan confirmed. ${result.proposals.length} proposal${result.proposals.length === 1 ? "" : "s"} ready to Approve.`,
         );
       } catch (confirmError) {
         setError(getErrorMessage(confirmError, "Failed to confirm plan."));
@@ -580,7 +592,7 @@ export function useWorkspaceAgent() {
         setPlanConfirmingId(null);
       }
     },
-    [confirmPlanMutation],
+    [activeConversationId, confirmPlanMutation, messages, queryClient, setMessages],
   );
 
   const onApproveProposal = useCallback(
@@ -764,8 +776,11 @@ export function useWorkspaceAgent() {
     selectedToolPreset,
     setSelectedToolPreset,
     planModeEnabled: true,
-    surfaceLabel: surface === "agency" ? ("Agency" as const) : ("Canvas" as const),
-    crossSurfaceUnlockLabel: surface === "agency" ? ("Canvas" as const) : ("Agency" as const),
+    crossSurfaceUnlockLabel: unlockedSurfaces.includes(surface === "agency" ? "canvas" : "agency")
+      ? null
+      : surface === "agency"
+        ? ("Canvas" as const)
+        : ("Agency" as const),
     onUnlockCrossSurface,
     onOpenBoard,
     selectedModelId,
@@ -788,7 +803,9 @@ export function useWorkspaceAgent() {
     threadMenuOpen,
     setThreadMenuOpen,
     tools: toolsCatalogQuery.data?.tools ?? [],
-    toolsLoading: toolsCatalogQuery.isLoading,
+    toolsLoading:
+      toolsCatalogQuery.isLoading ||
+      (toolsCatalogQuery.isFetching && !toolsCatalogQuery.data?.tools?.length),
     modelOptions,
     filteredModelOptions: modelPreferences.filteredModelOptions,
     modelSearch: modelPreferences.modelSearch,
