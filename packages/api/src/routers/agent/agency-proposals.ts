@@ -6,17 +6,24 @@ import {
   type AgencyDraftPlan,
 } from "@orch/agent/agency-actions";
 import {
+  bindCanvasPlanStepAction,
   canvasActionLabel,
   canvasActionSchema,
   canvasDraftPlanSchema,
+  readLastCreatedCanvasTarget,
+  stampCanvasCreateIds,
   type CanvasAction,
 } from "@orch/agent/canvas-actions";
 import { applyCanvasAction } from "@orch/agent/tools";
 import { db } from "@orch/db";
-import { agentAgencyProposal } from "@orch/db/schema";
-import { createWorkspaceId } from "@orch/workspace";
+import {
+  agentAgencyProposal,
+  dashboardConversationMessage,
+  type DashboardConversationMessageToolsCalledRecord,
+} from "@orch/db/schema";
+import { createWorkspaceId, type WorkspaceNode } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 import {
   archiveAgencyClient,
@@ -54,6 +61,63 @@ import {
 import { getWorkspaceSnapshot, saveWorkspaceNodes } from "../workspace/service";
 
 const PROPOSAL_TTL_MS = 24 * 60 * 60 * 1000;
+
+type ConfirmProposalRecord = {
+  proposalId: string;
+  status: "pending";
+  action: unknown;
+  before: unknown;
+  after: unknown;
+  label: string;
+  boardHref?: string;
+};
+
+async function appendConfirmProposalsToAssistantMessage(
+  actorUserId: string,
+  conversationId: string | null | undefined,
+  toolName: "propose_canvas_action" | "propose_agency_action",
+  proposals: ConfirmProposalRecord[],
+) {
+  if (!conversationId || proposals.length === 0) {
+    return;
+  }
+  const [message] = await db
+    .select()
+    .from(dashboardConversationMessage)
+    .where(
+      and(
+        eq(dashboardConversationMessage.conversationId, conversationId),
+        eq(dashboardConversationMessage.userId, actorUserId),
+        eq(dashboardConversationMessage.role, "assistant"),
+      ),
+    )
+    .orderBy(desc(dashboardConversationMessage.createdAt), desc(dashboardConversationMessage.id))
+    .limit(1);
+  if (!message) {
+    return;
+  }
+  const existing =
+    (message.toolsCalled as DashboardConversationMessageToolsCalledRecord | null) ?? [];
+  const appended: DashboardConversationMessageToolsCalledRecord = proposals.map((proposal) => ({
+    id: `confirm-${proposal.proposalId}`,
+    name: toolName,
+    input: { action: proposal.action, label: proposal.label },
+    output: {
+      proposalId: proposal.proposalId,
+      status: proposal.status,
+      label: proposal.label,
+      action: proposal.action,
+      before: proposal.before,
+      after: proposal.after,
+      ...(proposal.boardHref ? { boardHref: proposal.boardHref } : {}),
+    },
+    status: "completed",
+  }));
+  await db
+    .update(dashboardConversationMessage)
+    .set({ toolsCalled: [...existing, ...appended] })
+    .where(eq(dashboardConversationMessage.id, message.id));
+}
 
 function stableJson(value: unknown) {
   return JSON.stringify(value ?? null);
@@ -379,6 +443,12 @@ export async function confirmAgencyPlan(
       }),
     );
   }
+  await appendConfirmProposalsToAssistantMessage(
+    actorUserId,
+    input.conversationId,
+    "propose_agency_action",
+    proposals,
+  );
   return { planId: plan.planId, proposals };
 }
 
@@ -389,6 +459,7 @@ export async function createCanvasProposalRecord(
     label?: string;
     conversationId?: string | null;
     teamId?: string | null;
+    nodes?: WorkspaceNode[];
   },
 ) {
   if (input.teamId) {
@@ -403,19 +474,20 @@ export async function createCanvasProposalRecord(
   ) {
     throw new ORPCError("BAD_REQUEST", { message: "Team-shared nodes require a team." });
   }
-  const snapshot = await getWorkspaceSnapshot(actorUserId, {});
-  const preview = await applyCanvasAction(snapshot.nodes, action);
+  const snapshotNodes = input.nodes ?? (await getWorkspaceSnapshot(actorUserId, {})).nodes;
+  const preview = await applyCanvasAction(snapshotNodes, action);
+  const storedAction = stampCanvasCreateIds(action, preview.after);
   const now = new Date();
   const id = createWorkspaceId("aap");
-  const label = input.label?.trim() || canvasActionLabel(action);
+  const label = input.label?.trim() || canvasActionLabel(storedAction);
   const createdNodeId =
-    action.type === "node.create" && preview.after && typeof preview.after === "object"
+    storedAction.type === "node.create" && preview.after && typeof preview.after === "object"
       ? String((preview.after as { id?: string }).id ?? "")
-      : action.type.startsWith("node.") ||
-          action.type.startsWith("tab.") ||
-          action.type.startsWith("block.")
-        ? "nodeId" in action
-          ? action.nodeId
+      : storedAction.type.startsWith("node.") ||
+          storedAction.type.startsWith("tab.") ||
+          storedAction.type.startsWith("block.")
+        ? "nodeId" in storedAction
+          ? storedAction.nodeId
           : null
         : null;
   const boardHref = createdNodeId ? `/node/${createdNodeId}` : "/canvas";
@@ -423,11 +495,11 @@ export async function createCanvasProposalRecord(
   await db.insert(agentAgencyProposal).values({
     id,
     domain: "canvas",
-    teamId: input.teamId ?? (action.type === "node.create" ? (action.teamId ?? null) : null),
+    teamId: input.teamId ?? (storedAction.type === "node.create" ? (storedAction.teamId ?? null) : null),
     actorUserId,
     conversationId: input.conversationId ?? null,
     messageId: null,
-    action,
+    action: storedAction,
     beforeState: preview.before,
     afterState: preview.after,
     label,
@@ -442,9 +514,10 @@ export async function createCanvasProposalRecord(
   return {
     proposalId: id,
     status: "pending" as const,
-    action,
+    action: storedAction,
     before: preview.before,
     after: preview.after,
+    nextNodes: preview.nextNodes,
     label,
     boardHref,
   };
@@ -459,16 +532,27 @@ export async function confirmCanvasPlan(
   }
   const plan = canvasDraftPlanSchema.parse(input.plan);
   const proposals = [];
+  let draftNodes = (await getWorkspaceSnapshot(actorUserId, {})).nodes;
+  let lastCreated = null as ReturnType<typeof readLastCreatedCanvasTarget>;
   for (const step of plan.steps) {
-    proposals.push(
-      await createCanvasProposalRecord(actorUserId, {
-        action: step.action,
-        label: step.label,
-        conversationId: input.conversationId,
-        teamId: input.teamId,
-      }),
-    );
+    const boundAction = bindCanvasPlanStepAction(step.action, draftNodes, lastCreated);
+    const proposal = await createCanvasProposalRecord(actorUserId, {
+      action: boundAction,
+      label: step.label,
+      conversationId: input.conversationId,
+      teamId: input.teamId,
+      nodes: draftNodes,
+    });
+    proposals.push(proposal);
+    draftNodes = proposal.nextNodes;
+    lastCreated = readLastCreatedCanvasTarget(boundAction, proposal.after) ?? lastCreated;
   }
+  await appendConfirmProposalsToAssistantMessage(
+    actorUserId,
+    input.conversationId,
+    "propose_canvas_action",
+    proposals,
+  );
   return { planId: plan.planId, proposals };
 }
 
