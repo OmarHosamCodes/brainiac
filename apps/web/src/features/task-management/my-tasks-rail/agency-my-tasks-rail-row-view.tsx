@@ -2,6 +2,7 @@ import { Check, MoreVertical } from "lucide-react";
 import { motion, type Variants } from "motion/react";
 import type { ReactNode, KeyboardEvent } from "react";
 
+import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import {
   agencyMyTasksCheckPopClass,
   agencyMyTasksCreateFlashClass,
@@ -14,11 +15,14 @@ import {
   agencyTaskRowCheckboxClass,
   agencyTaskRowCompleteClass,
 } from "@/features/shared/agency-ui";
+import type {
+  MyTasksAssignerDisplay,
+  MyTasksTimeConsumerDisplay,
+} from "@/features/task-management/agency-my-tasks-row-meta";
 import {
   railLayoutTransition,
   railRowStateTransition,
 } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
-import { formatEstimateMinutes } from "@/features/task-management/agency-task-estimate";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -33,8 +37,8 @@ type AgencyMyTasksRailRowViewProps = {
   taskId: string;
   title: string;
   projectName: string;
-  assignedByLabel: string;
-  estimateMinutes: number | null;
+  assigner: MyTasksAssignerDisplay;
+  timeConsumer: MyTasksTimeConsumerDisplay | null;
   isDone: boolean;
   isSelected: boolean;
   isTracking: boolean;
@@ -56,8 +60,8 @@ export function AgencyMyTasksRailRowView({
   taskId,
   title,
   projectName,
-  assignedByLabel,
-  estimateMinutes,
+  assigner,
+  timeConsumer,
   isDone,
   isSelected,
   isTracking,
@@ -74,9 +78,6 @@ export function AgencyMyTasksRailRowView({
   variants,
   stagger,
 }: AgencyMyTasksRailRowViewProps) {
-  const estimateLabel =
-    estimateMinutes !== null && estimateMinutes > 0 ? formatEstimateMinutes(estimateMinutes) : null;
-
   return (
     <motion.li
       layout
@@ -169,8 +170,52 @@ export function AgencyMyTasksRailRowView({
           animate={{ opacity: isDone ? 0.55 : 1 }}
           transition={railRowStateTransition}
         >
-          Assigned by {assignedByLabel} · {projectName}
-          {estimateLabel ? ` · ${estimateLabel}` : null}
+          <span className="inline-flex min-w-0 items-center gap-1">
+            <span className="shrink-0">Assigned by</span>
+            {assigner.kind === "me" ? (
+              <span className="shrink-0">me</span>
+            ) : (
+              <span
+                className="inline-flex shrink-0 items-center"
+                aria-label={`Assigned by ${assigner.userName}`}
+              >
+                <AgencyMemberAvatar
+                  name={assigner.userName}
+                  userId={assigner.userId}
+                  avatarUrl={assigner.userAvatar}
+                  size="sm"
+                  className="size-3.5 rounded-full"
+                />
+              </span>
+            )}
+            <span className="min-w-0 truncate">· {projectName}</span>
+            {timeConsumer ? (
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1",
+                  timeConsumer.overdue ? "text-error" : "text-muted",
+                )}
+                aria-label={timeConsumer.ariaLabel}
+              >
+                <span aria-hidden>·</span>
+                <span
+                  className="relative h-1 w-8 overflow-hidden rounded-full bg-muted"
+                  aria-hidden
+                >
+                  <span
+                    className={cn(
+                      "absolute inset-y-0 left-0 rounded-full",
+                      timeConsumer.overdue ? "bg-error" : "bg-primary",
+                    )}
+                    style={{ width: `${Math.round(timeConsumer.ratio * 100)}%` }}
+                  />
+                </span>
+                <span className="font-mono tabular-nums">
+                  {timeConsumer.trackedLabel}/{timeConsumer.estimateLabel}
+                </span>
+              </span>
+            ) : null}
+          </span>
         </motion.div>
       </div>
 
