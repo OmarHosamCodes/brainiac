@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 734 |
+| golden-feature | 740 |
 | server-operation | 15 |
 | shared-infrastructure | 320 |
 | static-presentation | 22 |
@@ -51,7 +51,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | repository | 13 |
 | resourcing | 40 |
 | server-platform | 23 |
-| task-management | 56 |
+| task-management | 62 |
 | team | 19 |
 | time-tracking | 100 |
 | web-platform | 119 |
@@ -448,6 +448,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/shared/use-agency-segment-shortcuts.ts` | agency-shared | feature-hook | shared-infrastructure | agency-platform | Cross-cutting agency-shared feature-hook support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/shared/use-agency-time-range-filters.ts` | agency-shared | feature-hook | shared-infrastructure | agency-platform | Cross-cutting agency-shared feature-hook support rather than a feature-owned business workflow. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/shared/use-team-work-schedule.ts` | agency-shared | feature-hook | shared-infrastructure | agency-platform | Cross-cutting agency-shared feature-hook support rather than a feature-owned business workflow. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
+| `apps/web/src/features/task-management/agency-my-tasks-edit-draft.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/task-management/agency-my-tasks-edit-draft.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/task-management/agency-task-blueprints.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/task-management/agency-task-blueprints.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/task-management/agency-task-estimate.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
@@ -460,13 +462,17 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/task-management/agency-task-utils.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/task-management/agency-work-surface.tsx` | task-management | presentational-view | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/task-management/agency-work.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/task-management/containers/agency-my-tasks-edit-dialog-container.tsx` | task-management | container | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/task-management/containers/agency-my-tasks-rail-container.tsx` | task-management | container | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/task-management/containers/agency-work-surface-container.tsx` | task-management | container | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/task-management/hooks/use-agency-journey-live-sync.ts` | task-management | feature-hook | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/task-management/hooks/use-agency-my-tasks-edit-dialog.ts` | task-management | feature-hook | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/task-management/hooks/use-agency-my-tasks-rail.ts` | task-management | feature-hook | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/task-management/hooks/use-agency-task-group-row.ts` | task-management | feature-hook | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/task-management/hooks/use-agency-task-row.ts` | task-management | feature-hook | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/task-management/hooks/use-agency-work-surface.ts` | task-management | feature-hook | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical feature-hook layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/task-management/my-tasks-rail/agency-my-tasks-edit-dialog-view.tsx` | task-management | presentational-view | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/task-management/my-tasks-rail/agency-my-tasks-edit-dialog.tsx` | task-management | presentational-view | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/task-management/my-tasks-rail/agency-my-tasks-estimate-popover.tsx` | task-management | presentational-view | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/task-management/my-tasks-rail/agency-my-tasks-quick-add-field-view.tsx` | task-management | presentational-view | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
