@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+import {
+  agencyProjectTaskAssigneeSchema,
+  agencyProjectTaskKindSchema,
+  agencyProjectTaskMemberStatusSchema,
+  agencyProjectTaskSchema,
+  agencyProjectTaskStatusSchema,
+} from "../../../schemas/agency-ops";
+
 export const agencyTimeEntrySourceSchema = z.enum(["timer", "manual"]);
 
 export const teamScopedInputSchema = z.object({
@@ -57,34 +65,13 @@ export const agencyProjectTaskBlueprintSchema = z.object({
   description: z.string(),
 });
 
-export const agencyProjectTaskSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  projectId: z.string().min(1),
-  title: z.string().min(1),
-  status: z.enum(["open", "in_progress", "done", "archived"]),
-  taskKind: z.enum(["standard", "journey_anchor", "journey_milestone"]),
-  assignedToTeam: z.boolean(),
-  isWaste: z.boolean(),
-  estimateMinutes: z.number().int().min(1).max(1440).nullable(),
-  createdByUserId: z.string().min(1),
-  assignees: z.array(
-    z.object({
-      userId: z.string().min(1),
-      userName: z.string().min(1),
-      userAvatar: z.string().nullable(),
-      status: z.enum(["open", "in_progress", "done"]),
-    }),
-  ),
-  viewerStatus: z.enum(["open", "in_progress", "done"]).optional(),
-  viewerCompletionCount: z.number().int().nonnegative().optional(),
-  viewerBlueprints: z.array(agencyProjectTaskBlueprintSchema).optional(),
-  totalTrackedSeconds: z.number().int().nonnegative().optional(),
-  dueDate: z.string().datetime().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
+export {
+  agencyProjectTaskSchema,
+  agencyProjectTaskStatusSchema,
+  agencyProjectTaskKindSchema,
+  agencyProjectTaskMemberStatusSchema,
+  agencyProjectTaskAssigneeSchema,
+};
 export const agencyProjectJourneyStepSchema = z.object({
   id: z.string().min(1),
   journeyId: z.string().min(1),

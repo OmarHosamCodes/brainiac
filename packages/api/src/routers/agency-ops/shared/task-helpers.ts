@@ -7,6 +7,7 @@ import {
   agencyOpsProjectTask,
 } from "@orch/db/schema";
 import { and, inArray, eq, asc } from "drizzle-orm";
+import type { AgencyProjectTask } from "../../../schemas/agency-ops";
 import { formatAvatarUrl } from "./avatar-helpers";
 
 export type AgencyProjectTaskAssigneeRecord = {
@@ -21,26 +22,7 @@ export type AgencyProjectTaskBlueprintRecord = {
   description: string;
 };
 
-export type AgencyProjectTaskRecord = {
-  id: string;
-  teamId: string;
-  projectId: string;
-  title: string;
-  status: "open" | "in_progress" | "done" | "archived";
-  taskKind: "standard" | "journey_anchor" | "journey_milestone";
-  assignedToTeam: boolean;
-  isWaste: boolean;
-  estimateMinutes: number | null;
-  createdByUserId: string;
-  assignees: AgencyProjectTaskAssigneeRecord[];
-  viewerStatus?: "open" | "in_progress" | "done";
-  viewerCompletionCount?: number;
-  viewerBlueprints?: AgencyProjectTaskBlueprintRecord[];
-  totalTrackedSeconds?: number;
-  dueDate: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
+export type AgencyProjectTaskRecord = AgencyProjectTask;
 
 export type MemberStatusEntry = {
   status: "open" | "in_progress" | "done";

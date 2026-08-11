@@ -510,7 +510,7 @@ export async function createAgencyProjectTask(
 
   const existing = await findProjectTaskByTitleKey(input.teamId, input.projectId, titleKey);
   if (existing) {
-    // Title reuse merges assignees only — estimate stays on the existing task.
+    // Title reuse merges assignees only; keep the existing estimate (create does not overwrite).
     const merged = await mergeAssigneesIntoExistingTask(existing, {
       assignedToTeam,
       assigneeUserIds,
