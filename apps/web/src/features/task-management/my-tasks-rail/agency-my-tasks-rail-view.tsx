@@ -153,7 +153,7 @@ function RailPanel({
               view.setAssigneeUserIds(nextIds);
             }}
             members={view.members}
-            placeholder="Owners"
+            placeholder="Assignees"
             triggerVariant="stack"
             contentAlign="start"
             className="shrink-0"

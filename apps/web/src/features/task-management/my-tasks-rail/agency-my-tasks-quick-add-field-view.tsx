@@ -82,8 +82,8 @@ export function AgencyMyTasksQuickAddFieldView({
         onKeyDown={handleKeyDown}
         onFocus={onFocus}
         onBlur={onBlur}
-        placeholder="Add task"
-        aria-label="Add task"
+        placeholder="Task name"
+        aria-label="Task name"
         aria-autocomplete="list"
         aria-controls={showSuggestions ? MY_TASKS_TITLE_LISTBOX_ID : undefined}
         aria-expanded={showSuggestions}
@@ -105,7 +105,7 @@ export function AgencyMyTasksQuickAddFieldView({
           >
             {suggestions.length === 0 ? (
               <li className="px-2.5 py-2 text-sm text-muted" role="presentation">
-                No matching tasks
+                No existing tasks match
               </li>
             ) : (
               suggestions.map((item, index) => {
