@@ -7,13 +7,7 @@ import {
 import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
 
-export type MyTasksSuggestionItem = {
-  id: string;
-  title: string;
-  projectId: string;
-  projectName: string;
-  clientName: string;
-};
+import type { MyTasksSuggestionItem } from "./agency-my-tasks-suggestion-item";
 
 type AgencyMyTasksQuickAddFieldViewProps = {
   value: string;

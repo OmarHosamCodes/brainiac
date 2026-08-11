@@ -17,7 +17,7 @@ import {
   selectTaskSuggestions,
 } from "@/features/task-management/agency-task-suggestion-query";
 import { groupTasksByClient } from "@/features/task-management/agency-task-utils";
-import type { MyTasksSuggestionItem } from "@/features/task-management/my-tasks-rail/agency-my-tasks-quick-add-field-view";
+import type { MyTasksSuggestionItem } from "@/features/task-management/my-tasks-rail/agency-my-tasks-suggestion-item";
 import { useAgencyMyTasksRailStore } from "@/features/task-management/stores/agency-my-tasks-rail";
 import { RAIL_HOLD_MS } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
@@ -94,7 +94,11 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   const suggestionTasksQuery = useAgencyProjectTasksQuery(
     teamId,
     suggestionFilters.enabled
-      ? { ...suggestionFilters.filters, enabled: true }
+      ? {
+          ...suggestionFilters.filters,
+          assigneeUserId: actorUserId || undefined,
+          enabled: true,
+        }
       : { enabled: false, statuses: ["open", "in_progress"] },
   );
 
@@ -313,7 +317,6 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     setTitleDraft(item.title);
     setProjectId(item.projectId);
     setTitleSuggestionsSuppressed(true);
-    setTitleFieldFocused(false);
     onSelectTask(item.id);
   }
 
