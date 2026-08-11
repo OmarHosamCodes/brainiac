@@ -17,6 +17,7 @@ import {
   listAgentToolCatalog,
   normalizeDashboardAgentToolPreset,
   resolveOpenRouterModelForTurn,
+  resolveUnlockedSurfaces,
   runDashboardAgent,
   streamDashboardAgent,
   titleSeedFromAgentTurn,
@@ -29,6 +30,7 @@ import {
   type AgentToolCallEntry,
   type AgentToolCatalogInput,
   type AiUiArtifact,
+  type CanvasAgentRuntime,
   type DashboardConversationSummary,
   type DashboardConversationUsageLatest,
   type DashboardConversationUsageSummary,
@@ -64,7 +66,7 @@ import {
   getWorkspaceSnapshot,
   saveWorkspaceNodes,
 } from "../workspace/service";
-import { createAgencyProposalRecord } from "./agency-proposals";
+import { createAgencyProposalRecord, createCanvasProposalRecord } from "./agency-proposals";
 import {
   buildDashboardConversationDeletionResult,
   buildDashboardConversationTitle,
@@ -274,10 +276,30 @@ function createAgencyAgentRuntime(
   };
 }
 
+function createCanvasAgentRuntime(
+  actorUserId: string,
+  conversationId: string,
+  teamId?: string | null,
+): CanvasAgentRuntime {
+  return {
+    createProposal: async (input) =>
+      createCanvasProposalRecord(actorUserId, {
+        action: input.action,
+        label: input.label,
+        conversationId: input.conversationId ?? conversationId,
+        teamId,
+      }),
+  };
+}
+
 export function getAgentToolsCatalog(actorUserId: string, input: AgentToolCatalogInput) {
   void actorUserId;
   return agentToolCatalogResponseSchema.parse({
-    tools: listAgentToolCatalog({ surface: input.surface, mode: input.mode }),
+    tools: listAgentToolCatalog({
+      surface: input.surface,
+      mode: input.mode,
+      unlockedSurfaces: input.unlockedSurfaces,
+    }),
   });
 }
 export async function assertCanCreateDashboardConversation(
@@ -556,6 +578,12 @@ export async function appendDashboardConversationTurn(
   const { actorUserName: userName, turn } = input;
   const surface: AgentSurface = turn.surface ?? "canvas";
   const toolPreset = turn.toolPreset;
+  const unlockedSurfaces = resolveUnlockedSurfaces({
+    surface,
+    unlockedSurfaces: turn.unlockedSurfaces,
+    scopeRefs: turn.scopeRefs,
+  });
+  const needsCanvas = unlockedSurfaces.includes("canvas");
 
   if (surface === "agency" && !turn.teamId?.trim()) {
     throw new ORPCError("BAD_REQUEST", {
@@ -565,17 +593,17 @@ export async function appendDashboardConversationTurn(
 
   const now = new Date();
   const [fullWorkspaceSnapshot, marketplaceResult] = await Promise.all([
-    surface === "agency"
-      ? Promise.resolve({ nodes: [], updatedAt: null as string | null })
-      : turn.nodes
+    needsCanvas
+      ? turn.nodes
         ? Promise.resolve({
             nodes: turn.nodes,
             updatedAt: null as string | null,
           })
-        : getWorkspaceSnapshot(userId, {}),
-    surface === "agency"
-      ? Promise.resolve({ items: [] })
-      : getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" }),
+        : getWorkspaceSnapshot(userId, {})
+      : Promise.resolve({ nodes: [], updatedAt: null as string | null }),
+    needsCanvas
+      ? getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" })
+      : Promise.resolve({ items: [] }),
   ]);
 
   const turnAttachments = turn.attachments ?? [];
@@ -625,9 +653,12 @@ export async function appendDashboardConversationTurn(
   }));
   const scopeNodes = turn.scopeNodes ?? turn.nodes;
   const agencyRuntime =
-    surface === "agency" && turn.teamId
+    unlockedSurfaces.includes("agency") && turn.teamId
       ? createAgencyAgentRuntime(userId, turn.teamId, conversation.id)
       : null;
+  const canvasRuntime = needsCanvas
+    ? createCanvasAgentRuntime(userId, conversation.id, turn.teamId)
+    : null;
 
   const result = await runDashboardAgent(
     [
@@ -645,6 +676,7 @@ export async function appendDashboardConversationTurn(
       userName,
       activeTabId: turn.activeTabId,
       surface,
+      unlockedSurfaces,
       scopeRefs: turn.scopeRefs,
       teamId: turn.teamId ?? null,
     },
@@ -653,6 +685,7 @@ export async function appendDashboardConversationTurn(
       modelPreset,
       toolPreset,
       agencyRuntime,
+      canvasRuntime,
     },
   );
   const nextUsageSummary = buildNextConversationUsageSummary(
@@ -744,6 +777,12 @@ export async function* streamDashboardConversationTurn(
   const { actorUserName: userName, turn } = input;
   const surface: AgentSurface = turn.surface ?? "canvas";
   const toolPreset = turn.toolPreset;
+  const unlockedSurfaces = resolveUnlockedSurfaces({
+    surface,
+    unlockedSurfaces: turn.unlockedSurfaces,
+    scopeRefs: turn.scopeRefs,
+  });
+  const needsCanvas = unlockedSurfaces.includes("canvas");
 
   if (surface === "agency" && !turn.teamId?.trim()) {
     throw new ORPCError("BAD_REQUEST", {
@@ -753,17 +792,17 @@ export async function* streamDashboardConversationTurn(
 
   const now = new Date();
   const [fullWorkspaceSnapshot, marketplaceResult] = await Promise.all([
-    surface === "agency"
-      ? Promise.resolve({ nodes: [], updatedAt: null as string | null })
-      : turn.nodes
+    needsCanvas
+      ? turn.nodes
         ? Promise.resolve({
             nodes: turn.nodes,
             updatedAt: null as string | null,
           })
-        : getWorkspaceSnapshot(userId, {}),
-    surface === "agency"
-      ? Promise.resolve({ items: [] })
-      : getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" }),
+        : getWorkspaceSnapshot(userId, {})
+      : Promise.resolve({ nodes: [], updatedAt: null as string | null }),
+    needsCanvas
+      ? getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" })
+      : Promise.resolve({ items: [] }),
   ]);
 
   const turnAttachments = turn.attachments ?? [];
@@ -813,9 +852,12 @@ export async function* streamDashboardConversationTurn(
   }));
   const scopeNodes = turn.scopeNodes ?? turn.nodes;
   const agencyRuntime =
-    surface === "agency" && turn.teamId
+    unlockedSurfaces.includes("agency") && turn.teamId
       ? createAgencyAgentRuntime(userId, turn.teamId, conversation.id)
       : null;
+  const canvasRuntime = needsCanvas
+    ? createCanvasAgentRuntime(userId, conversation.id, turn.teamId)
+    : null;
 
   const contextTitles = turn.contextNodeTitles ?? turn.scopeRefs?.map((ref) => ref.label) ?? [];
   const userMessageId = createWorkspaceId("message");
@@ -869,6 +911,7 @@ export async function* streamDashboardConversationTurn(
         userName,
         activeTabId: turn.activeTabId,
         surface,
+        unlockedSurfaces,
         scopeRefs: turn.scopeRefs,
         teamId: turn.teamId ?? null,
       },
@@ -877,6 +920,7 @@ export async function* streamDashboardConversationTurn(
         modelPreset,
         toolPreset,
         agencyRuntime,
+        canvasRuntime,
         signal: input.signal,
       },
     )) {

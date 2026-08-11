@@ -34,10 +34,7 @@ export function AgencyPlanCardView({
         className,
       )}
     >
-      <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-        Plan to confirm
-      </p>
-      <div className="mt-1.5 text-base font-semibold tracking-tight">{plan.title}</div>
+      <div className="text-base font-semibold tracking-tight">{plan.title}</div>
       <p className="mt-1 max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
         {plan.summary}
       </p>

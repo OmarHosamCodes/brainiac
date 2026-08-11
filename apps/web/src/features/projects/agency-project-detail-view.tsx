@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { Link } from "@/lib/navigation";
 import { Button } from "@/ui/button";
 import {
   Dialog,
@@ -88,6 +89,7 @@ export function AgencyProjectDetailView({
     pendingTrashConfirm,
     cancelTrashConfirm,
     confirmMoveToTrash,
+    canvasNodeHref,
   } = viewModel;
 
   return (
@@ -97,6 +99,11 @@ export function AgencyProjectDetailView({
           <ArrowLeft />
           Back to projects
         </Button>
+        {canvasNodeHref ? (
+          <Button variant="outline" size="sm" className="h-8 rounded-full" asChild>
+            <Link to={canvasNodeHref}>Open on Canvas</Link>
+          </Button>
+        ) : null}
       </div>
 
       {isLoading ? (

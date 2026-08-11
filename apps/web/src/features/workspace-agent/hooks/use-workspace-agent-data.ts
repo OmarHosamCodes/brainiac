@@ -7,6 +7,7 @@ import { orpc } from "@/lib/orpc";
 export function useWorkspaceAgentData(args: {
   activeConversationId: string | null;
   surface: AgentSurface;
+  unlockedSurfaces: AgentSurface[];
   toolPreset: DashboardAgentToolPreset;
   toolsMenuOpen: boolean;
 }) {
@@ -36,6 +37,7 @@ export function useWorkspaceAgentData(args: {
       input: {
         surface: args.surface,
         mode: args.toolPreset,
+        unlockedSurfaces: args.unlockedSurfaces,
       },
     }),
     enabled: Boolean(authEnabled && args.toolsMenuOpen),

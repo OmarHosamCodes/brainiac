@@ -6,6 +6,7 @@ export type AgencyProposalCardViewModel = {
   label: string;
   before: unknown;
   after: unknown;
+  boardHref?: string | null;
 };
 
 type AgencyProposalCardViewProps = {
@@ -18,8 +19,11 @@ type AgencyProposalCardViewProps = {
 };
 
 function previewJson(value: unknown) {
+  if (value == null) return "Nothing yet";
+  if (typeof value === "string" && value.trim() === "") return "Nothing yet";
   try {
-    return JSON.stringify(value, null, 2);
+    const text = JSON.stringify(value, null, 2);
+    return text && text !== "null" ? text : "Nothing yet";
   } catch {
     return String(value);
   }
@@ -44,19 +48,14 @@ export function AgencyProposalCardView({
         className,
       )}
     >
-      <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-        Proposed change
-      </p>
-      <div className="mt-1.5 text-base font-semibold tracking-tight">{proposal.label}</div>
+      <div className="text-base font-semibold tracking-tight">{proposal.label}</div>
       <p className="mt-1 max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
-        Review before/after, then Approve or Reject.
+        Review before and after, then Approve or Reject.
       </p>
       <div className="mt-3 grid items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr]">
-        <div className="rounded-lg border border-border bg-muted/30 p-2.5">
-          <div className="mb-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-            Before
-          </div>
-          <pre className="max-h-28 overflow-auto text-[10px] leading-snug whitespace-pre-wrap text-foreground/80">
+        <div className="rounded-lg bg-muted/40 p-2.5">
+          <div className="mb-1.5 text-[11px] font-medium text-muted-foreground">Before</div>
+          <pre className="max-h-28 overflow-auto font-mono text-[11px] leading-snug whitespace-pre-wrap text-foreground/80">
             {previewJson(proposal.before)}
           </pre>
         </div>
@@ -66,11 +65,9 @@ export function AgencyProposalCardView({
         >
           →
         </div>
-        <div className="rounded-lg border border-border bg-muted/30 p-2.5 ring-1 ring-foreground/5">
-          <div className="mb-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-            After
-          </div>
-          <pre className="max-h-28 overflow-auto text-[10px] leading-snug whitespace-pre-wrap text-foreground/80">
+        <div className="rounded-lg bg-muted/40 p-2.5">
+          <div className="mb-1.5 text-[11px] font-medium text-muted-foreground">After</div>
+          <pre className="max-h-28 overflow-auto font-mono text-[11px] leading-snug whitespace-pre-wrap text-foreground/80">
             {previewJson(proposal.after)}
           </pre>
         </div>

@@ -10,6 +10,11 @@ import {
 import { startOfWeekUtc } from "@/features/shared/use-agency-time-range-filters";
 import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
 import { teamDetailQueryOptions } from "@/features/team/team-queries";
+import {
+  canvasNodeHref,
+  findCanvasNodeForAgencyProject,
+} from "@/features/workspace/workspace-agency-links";
+import { useWorkspaceStore } from "@/features/workspace/workspace-local-state";
 
 export type ActivitySort = "newest" | "oldest" | "longest";
 
@@ -60,6 +65,7 @@ export type AgencyProjectDetailViewModel = {
   pendingTrashConfirm: boolean;
   cancelTrashConfirm: () => void;
   confirmMoveToTrash: () => void;
+  canvasNodeHref: string | null;
 };
 
 type UseAgencyProjectDetailOptions = {
@@ -73,6 +79,11 @@ export function useAgencyProjectDetail({
 }: UseAgencyProjectDetailOptions): AgencyProjectDetailViewModel {
   const agencyOps = useAgencyOpsStore();
   const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
+  const workspaceNodes = useWorkspaceStore((state) => state.nodes);
+  const linkedCanvasHref = useMemo(() => {
+    const node = findCanvasNodeForAgencyProject(workspaceNodes, projectId);
+    return node ? canvasNodeHref(node.id) : null;
+  }, [projectId, workspaceNodes]);
   const range = useMemo(() => {
     const now = new Date();
     const start = new Date(
@@ -276,5 +287,6 @@ export function useAgencyProjectDetail({
     pendingTrashConfirm,
     cancelTrashConfirm,
     confirmMoveToTrash,
+    canvasNodeHref: linkedCanvasHref,
   };
 }

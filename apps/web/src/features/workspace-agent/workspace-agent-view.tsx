@@ -163,6 +163,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                         onConfirmPlan={view.onConfirmPlan}
                         onApproveProposal={view.onApproveProposal}
                         onRejectProposal={view.onRejectProposal}
+                        onOpenBoard={view.onOpenBoard}
                         onAnswerQuestion={view.onAnswerQuestion}
                         onQuestionSelectedOptionIdsChange={view.onQuestionSelectedOptionIdsChange}
                         onQuestionFreeTextChange={view.onQuestionFreeTextChange}
@@ -213,6 +214,8 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     selectedToolPreset={view.selectedToolPreset}
                     onSelectToolPreset={view.setSelectedToolPreset}
                     planModeEnabled={view.planModeEnabled}
+                    crossSurfaceUnlockLabel={view.crossSurfaceUnlockLabel}
+                    onUnlockCrossSurface={view.onUnlockCrossSurface}
                     selectedModelLabel={selectedModelLabel}
                     selectedModelButtonLabel={selectedModelButtonLabel}
                     resolvedModelLabel={view.resolvedModelLabel}

@@ -9,7 +9,9 @@ import type { ChatStatus, FileUIPart } from "ai";
 import {
   Check,
   ChevronDown,
+  Clock,
   Crosshair,
+  LayoutGrid,
   ListTodo,
   MessageCircleQuestion,
   Plus,
@@ -65,8 +67,9 @@ type WorkspaceAgentComposerViewProps = {
   onSelectMention: (node: WorkspaceNode) => void;
   selectedToolPreset: DashboardAgentToolPreset;
   onSelectToolPreset: (preset: DashboardAgentToolPreset) => void;
-  /** When false, Plan mode is hidden (Canvas). Agency enables Plan. */
   planModeEnabled: boolean;
+  crossSurfaceUnlockLabel: "Agency" | "Canvas" | null;
+  onUnlockCrossSurface: () => void;
   selectedModelLabel: string;
   selectedModelButtonLabel: string;
   resolvedModelLabel: string | null;
@@ -114,7 +117,7 @@ const MODE_OPTIONS: Array<{
   label: string;
   helper: string;
 }> = [
-  { preset: "ask", label: "Ask", helper: "Answers only — no writes" },
+  { preset: "ask", label: "Ask", helper: "Answers only. No writes" },
   { preset: "plan", label: "Plan", helper: "Draft a plan to confirm" },
   { preset: "agent", label: "Agent", helper: "Propose changes to approve" },
 ];
@@ -132,6 +135,64 @@ function modeIcon(preset: DashboardAgentToolPreset) {
       return _exhaustive;
     }
   }
+}
+
+function ComposerPillTag({
+  icon: Icon,
+  label,
+  activateLabel,
+  dismissLabel,
+  tooltip,
+  onActivate,
+  onDismiss,
+}: {
+  icon: typeof Wrench;
+  label: string;
+  activateLabel: string;
+  dismissLabel: string;
+  tooltip: string;
+  onActivate: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <motion.div
+      key={`pill-${label}`}
+      layout
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
+      transition={{ duration: 0.16, ease: [0.25, 1, 0.5, 1] }}
+      className="inline-flex h-7 items-center gap-0.5 rounded-full border border-border bg-secondary pr-1 pl-2 text-xs font-medium text-secondary-foreground"
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 motion-safe:transition-colors motion-safe:duration-150 hover:text-foreground"
+            aria-label={activateLabel}
+            onClick={onActivate}
+          >
+            <Icon className="size-3.5 text-muted-foreground" aria-hidden />
+            {label}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">{tooltip}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="rounded-full p-0.5 text-muted-foreground motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent hover:text-accent-foreground"
+            aria-label={dismissLabel}
+            onClick={onDismiss}
+          >
+            <X className="size-3" aria-hidden />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">{dismissLabel}</TooltipContent>
+      </Tooltip>
+    </motion.div>
+  );
 }
 
 function modeLabel(preset: DashboardAgentToolPreset) {
@@ -160,6 +221,8 @@ export function WorkspaceAgentComposerView({
   selectedToolPreset,
   onSelectToolPreset,
   planModeEnabled,
+  crossSurfaceUnlockLabel,
+  onUnlockCrossSurface,
   selectedModelLabel,
   selectedModelButtonLabel,
   resolvedModelLabel,
@@ -202,13 +265,15 @@ export function WorkspaceAgentComposerView({
   onSelectQuickStart,
 }: WorkspaceAgentComposerViewProps) {
   const showMentions = mentionSuggestions.length > 0;
-  const hasChips = scopeChips.length > 0;
+  const entityChips = scopeChips.filter((chip) => chip.kind !== "surface");
+  const surfaceUnlockChip = scopeChips.find((chip) => chip.kind === "surface") ?? null;
+  const hasChips = entityChips.length > 0;
   const multiline = draft.includes("\n") || draft.length > 80;
   const selectedModeLabel = modeLabel(selectedToolPreset);
-  const SelectedModeIcon = modeIcon(selectedToolPreset);
   const visibleModeOptions = MODE_OPTIONS.filter(
     (mode) => mode.preset !== "plan" || planModeEnabled,
   );
+  const UnlockSurfaceIcon = crossSurfaceUnlockLabel === "Agency" ? Clock : LayoutGrid;
   const compact = !hasChips && !multiline;
   // Nested: flush square. Floating: card radius (never full-pill — that warps the tall footer).
   const borderRadius = nestedInShell ? 0 : 16;
@@ -233,7 +298,7 @@ export function WorkspaceAgentComposerView({
               exit={{ opacity: 0, transition: { duration: 0.12 } }}
               className="mb-2 px-1 text-xs text-foreground/70"
             >
-              Sniper on — click anything to add it to scope.
+              Sniper on. Click anything to add it to scope.
             </motion.p>
           ) : null}
         </AnimatePresence>
@@ -277,7 +342,7 @@ export function WorkspaceAgentComposerView({
                 <TooltipContent side="top">
                   {scopeModeActive
                     ? "Exit sniper mode"
-                    : "Sniper mode — click page items to add scope"}
+                    : "Sniper mode. Click page items to add scope"}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -348,7 +413,7 @@ export function WorkspaceAgentComposerView({
               <PromptInputAttachments>
                 {(attachment) => <PromptInputAttachment data={attachment} />}
               </PromptInputAttachments>
-              <WorkspaceAgentScopeChipView chips={scopeChips} onRemove={onRemoveChip} />
+              <WorkspaceAgentScopeChipView chips={entityChips} onRemove={onRemoveChip} />
             </PromptInputHeader>
 
             <PromptInputBody className="relative">
@@ -414,6 +479,19 @@ export function WorkspaceAgentComposerView({
                   >
                     <div className="flex flex-col gap-0.5 p-1">
                       <WorkspaceAgentAttachMenuItem onSelect={() => onToolsMenuOpenChange(false)} />
+                      {crossSurfaceUnlockLabel ? (
+                        <button
+                          type="button"
+                          className={workspaceAgentPlusMenuItemClass}
+                          onClick={() => {
+                            onUnlockCrossSurface();
+                            onToolsMenuOpenChange(false);
+                          }}
+                        >
+                          <UnlockSurfaceIcon className="size-4 text-muted-foreground" aria-hidden />
+                          <span className="flex-1">Include {crossSurfaceUnlockLabel} tools</span>
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className={cn(
@@ -481,89 +559,37 @@ export function WorkspaceAgentComposerView({
 
                 <AnimatePresence initial={false}>
                   {selectedToolPreset !== "agent" ? (
-                    <motion.div
-                      key={`mode-tag-${selectedModeLabel}`}
-                      layout
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
-                      transition={{ duration: 0.16, ease: [0.25, 1, 0.5, 1] }}
-                      className="inline-flex h-7 items-center gap-0.5 rounded-full border border-border bg-secondary pr-1 pl-2 text-xs font-medium text-secondary-foreground"
-                    >
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 motion-safe:transition-colors motion-safe:duration-150 hover:text-foreground"
-                            aria-label={`Mode: ${selectedModeLabel}. Change mode`}
-                            onClick={() => onToolsMenuOpenChange(true)}
-                          >
-                            <SelectedModeIcon
-                              className="size-3.5 text-muted-foreground"
-                              aria-hidden
-                            />
-                            {selectedModeLabel}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          {selectedModeLabel} mode — click to change
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            className="rounded-full p-0.5 text-muted-foreground motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent hover:text-accent-foreground"
-                            aria-label={`Remove ${selectedModeLabel} mode and return to Agent`}
-                            onClick={() => onSelectToolPreset("agent")}
-                          >
-                            <X className="size-3" aria-hidden />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">Return to Agent</TooltipContent>
-                      </Tooltip>
-                    </motion.div>
+                    <ComposerPillTag
+                      icon={modeIcon(selectedToolPreset)}
+                      label={selectedModeLabel}
+                      activateLabel={`Mode: ${selectedModeLabel}. Change mode`}
+                      dismissLabel={`Remove ${selectedModeLabel} mode and return to Agent`}
+                      tooltip={`${selectedModeLabel} mode. Click to change`}
+                      onActivate={() => onToolsMenuOpenChange(true)}
+                      onDismiss={() => onSelectToolPreset("agent")}
+                    />
                   ) : null}
                   {scopeModeActive ? (
-                    <motion.div
-                      key="scope-tag"
-                      layout
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
-                      transition={{ duration: 0.16, ease: [0.25, 1, 0.5, 1] }}
-                      className="inline-flex h-7 items-center gap-0.5 rounded-full border border-border bg-secondary pr-1 pl-2 text-xs font-medium text-secondary-foreground"
-                    >
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 motion-safe:transition-colors motion-safe:duration-150 hover:text-foreground"
-                            aria-label="Scope mode active. Open tools menu"
-                            onClick={() => onToolsMenuOpenChange(true)}
-                          >
-                            <Crosshair className="size-3.5 text-muted-foreground" aria-hidden />
-                            Scope
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          Click page items to add them to scope
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            className="rounded-full p-0.5 text-muted-foreground motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent hover:text-accent-foreground"
-                            aria-label="Exit scope mode"
-                            onClick={onToggleScopeMode}
-                          >
-                            <X className="size-3" aria-hidden />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">Exit scope mode</TooltipContent>
-                      </Tooltip>
-                    </motion.div>
+                    <ComposerPillTag
+                      icon={Crosshair}
+                      label="Scope"
+                      activateLabel="Scope mode active. Open tools menu"
+                      dismissLabel="Exit scope mode"
+                      tooltip="Click page items to add them to scope"
+                      onActivate={() => onToolsMenuOpenChange(true)}
+                      onDismiss={onToggleScopeMode}
+                    />
+                  ) : null}
+                  {surfaceUnlockChip ? (
+                    <ComposerPillTag
+                      icon={surfaceUnlockChip.id === "agency" ? Clock : LayoutGrid}
+                      label={surfaceUnlockChip.label}
+                      activateLabel={`${surfaceUnlockChip.label} tools included. Open tools menu`}
+                      dismissLabel={`Stop including ${surfaceUnlockChip.label} tools`}
+                      tooltip={`${surfaceUnlockChip.label} tools are included in this chat`}
+                      onActivate={() => onToolsMenuOpenChange(true)}
+                      onDismiss={() => onRemoveChip(surfaceUnlockChip.id)}
+                    />
                   ) : null}
                 </AnimatePresence>
               </PromptInputTools>

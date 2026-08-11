@@ -56,10 +56,7 @@ export function AgencyQuestionCardView({
         className,
       )}
     >
-      <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-        Clarifying question
-      </p>
-      <div className="mt-1.5 text-base font-semibold tracking-tight text-foreground">
+      <div className="text-base font-semibold tracking-tight text-foreground">
         {question.prompt}
       </div>
       {question.context ? (

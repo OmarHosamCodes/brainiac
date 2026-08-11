@@ -44,6 +44,7 @@ export type OrchUIDataParts = {
     action: unknown;
     before: unknown;
     after: unknown;
+    boardHref?: string | null;
   };
   orchQuestion: {
     questionId: string;
@@ -73,6 +74,30 @@ const AGENCY_QUESTION_ANSWER_PREFIX = "Answer to question ";
 export function formatAgencyQuestionAnswerMessage(answer: OrchAgencyQuestionAnswer): string {
   const parts = [...answer.selectedLabels, answer.freeText].filter(Boolean);
   return `${AGENCY_QUESTION_ANSWER_PREFIX}${answer.questionId}: ${parts.join(" — ")}`;
+}
+
+export function collectResolvedPlanIdsFromMessages(
+  messages: DashboardConversationMessage[],
+): Set<string> {
+  const resolved = new Set<string>();
+  for (const message of messages) {
+    if (message.role !== "assistant") continue;
+    const confirmedViaAppend = message.toolsCalled.some(
+      (entry) =>
+        typeof entry !== "string" &&
+        typeof entry.id === "string" &&
+        entry.id.startsWith("confirm-") &&
+        (entry.name === "propose_canvas_action" || entry.name === "propose_agency_action") &&
+        entry.status === "completed",
+    );
+    if (!confirmedViaAppend) continue;
+    for (const entry of message.toolsCalled) {
+      if (typeof entry === "string" || !isRecord(entry.output)) continue;
+      if (entry.name !== "draft_canvas_plan" && entry.name !== "draft_agency_plan") continue;
+      if (typeof entry.output.planId === "string") resolved.add(entry.output.planId);
+    }
+  }
+  return resolved;
 }
 
 export function collectAnsweredQuestionIds(messages: DashboardConversationMessage[]): Set<string> {
@@ -216,6 +241,7 @@ function toolCallToPrimaryDataPart(tool: AgentToolCall): OrchUIMessage["parts"][
         },
       };
     }
+    case "draft_canvas_plan":
     case "draft_agency_plan": {
       const output = tool.output;
       if (
@@ -243,6 +269,7 @@ function toolCallToPrimaryDataPart(tool: AgentToolCall): OrchUIMessage["parts"][
         },
       };
     }
+    case "propose_canvas_action":
     case "propose_agency_action": {
       const output = tool.output;
       if (
@@ -264,6 +291,8 @@ function toolCallToPrimaryDataPart(tool: AgentToolCall): OrchUIMessage["parts"][
           action: output.action,
           before: output.before,
           after: output.after,
+          boardHref:
+            "boardHref" in output && typeof output.boardHref === "string" ? output.boardHref : null,
         },
       };
     }
@@ -464,4 +493,55 @@ export function getMessageArtifacts(message: OrchUIMessage): AiUiArtifact[] {
 
 export function collectArtifactsFromMessages(messages: OrchUIMessage[]): AiUiArtifact[] {
   return messages.flatMap(getMessageArtifacts);
+}
+
+export type ConfirmedPlanProposal = {
+  proposalId: string;
+  status: "pending";
+  label: string;
+  action: unknown;
+  before: unknown;
+  after: unknown;
+  boardHref?: string;
+};
+
+/** Confirm plan creates DB rows; chat only shows Approve cards via orchProposal parts. */
+export function appendConfirmedProposalsToMessages(
+  messages: OrchUIMessage[],
+  proposals: ConfirmedPlanProposal[],
+): OrchUIMessage[] {
+  if (proposals.length === 0) return messages;
+  const parts: OrchUIMessage["parts"] = proposals.map((proposal) => ({
+    type: "data-orchProposal",
+    id: proposal.proposalId,
+    data: {
+      proposalId: proposal.proposalId,
+      status: "pending",
+      label: proposal.label,
+      action: proposal.action,
+      before: proposal.before,
+      after: proposal.after,
+      boardHref: proposal.boardHref ?? null,
+    },
+  }));
+  let lastAssistant = -1;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === "assistant") {
+      lastAssistant = index;
+      break;
+    }
+  }
+  if (lastAssistant < 0) {
+    return [
+      ...messages,
+      {
+        id: `orch-confirm-${proposals[0]?.proposalId ?? "plan"}`,
+        role: "assistant",
+        parts,
+      },
+    ];
+  }
+  return messages.map((message, index) =>
+    index === lastAssistant ? { ...message, parts: [...message.parts, ...parts] } : message,
+  );
 }

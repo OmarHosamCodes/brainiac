@@ -39,6 +39,24 @@ describe("aiUiArtifactSchema", () => {
     expect(parsed.kind).toBe("schema");
   });
 
+  test("accepts a workspaceBlock artifact", () => {
+    const parsed = aiUiArtifactSchema.parse({
+      id: "notes-preview",
+      kind: "workspaceBlock",
+      title: "Notes preview",
+      operation: "create",
+      block: {
+        id: "blk_1",
+        type: "notes",
+        title: "Brief",
+        createdAt: "2026-08-10T00:00:00.000Z",
+        updatedAt: "2026-08-10T00:00:00.000Z",
+        body: "Hello",
+      },
+    });
+    expect(parsed.kind).toBe("workspaceBlock");
+  });
+
   test("accepts a react artifact", () => {
     const parsed = aiUiArtifactSchema.parse({
       id: "chart",

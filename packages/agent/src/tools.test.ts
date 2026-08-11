@@ -217,7 +217,7 @@ function createFixture() {
   const runtime = createDashboardAgentWorkspaceRuntime({
     nodes: [node],
   });
-  const tools = buildDashboardAgentTools(runtime, [], "agent");
+  const tools = buildDashboardAgentTools(runtime, [], "agent", { directMutations: true });
 
   return {
     tools,
