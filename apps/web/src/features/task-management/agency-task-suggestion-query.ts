@@ -4,6 +4,8 @@ import type { TaskStatus } from "@/features/task-management/agency-work";
 
 import { filterTasksByTitleSearch } from "./agency-task-title-filter";
 
+export const TASK_SUGGESTION_LIMIT = 8;
+
 export const TASK_SUGGESTION_ACTIVE_STATUSES: TaskStatus[] = ["open", "in_progress"];
 
 type TaskSuggestionQueryFilters = {
@@ -43,6 +45,13 @@ export function buildTaskSuggestionQueryFilters({
 export function selectTaskSuggestions(
   tasks: AgencyProjectTask[],
   titleDraft: string,
+  options?: { affinityProjectId?: string },
 ): AgencyProjectTask[] {
-  return filterTasksByTitleSearch(tasks, titleDraft);
+  const ranked = filterTasksByTitleSearch(tasks, titleDraft);
+  const affinity = options?.affinityProjectId;
+  if (!affinity) return ranked.slice(0, TASK_SUGGESTION_LIMIT);
+
+  const preferred = ranked.filter((t) => t.projectId === affinity);
+  const rest = ranked.filter((t) => t.projectId !== affinity);
+  return [...preferred, ...rest].slice(0, TASK_SUGGESTION_LIMIT);
 }
