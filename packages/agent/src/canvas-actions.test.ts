@@ -97,10 +97,7 @@ describe("applyCanvasAction", () => {
 
   test("node.create with stamped id is stable across preview and approve", async () => {
     const preview = await applyCanvasAction([], { type: "node.create", title: "Brief" });
-    const stamped = stampCanvasCreateIds(
-      { type: "node.create", title: "Brief" },
-      preview.after,
-    );
+    const stamped = stampCanvasCreateIds({ type: "node.create", title: "Brief" }, preview.after);
     expect(stamped.type).toBe("node.create");
     if (stamped.type !== "node.create") return;
     const approved = await applyCanvasAction([], stamped);

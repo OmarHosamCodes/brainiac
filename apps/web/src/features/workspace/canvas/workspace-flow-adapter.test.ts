@@ -29,26 +29,31 @@ describe("applyFlowChangesToWorkspaceNodes", () => {
   test("keeps unchanged node identity when another node is dragged", () => {
     const keep = fakeNode({ id: "keep", x: 0, y: 0 });
     const move = fakeNode({ id: "move", x: 0, y: 0 });
-    const next = applyFlowChangesToWorkspaceNodes([keep, move], [
-      { type: "position", id: "move", dragging: true, position: { x: 40, y: 80 } },
-    ]);
+    const next = applyFlowChangesToWorkspaceNodes(
+      [keep, move],
+      [{ type: "position", id: "move", dragging: true, position: { x: 40, y: 80 } }],
+    );
     expect(next?.[0]).toBe(keep);
     expect(next?.[1]).toMatchObject({ id: "move", x: 40, y: 80 });
   });
 
   test("applies NodeResizer dimensions only while resizing", () => {
     const node = fakeNode({ id: "n1", width: 320, height: 240 });
-    const ignored = applyFlowChangesToWorkspaceNodes([node], [
-      { type: "dimensions", id: "n1", dimensions: { width: 400, height: 300 } },
-    ]);
-    const resized = applyFlowChangesToWorkspaceNodes([node], [
-      {
-        type: "dimensions",
-        id: "n1",
-        resizing: true,
-        dimensions: { width: 400, height: 300 },
-      },
-    ]);
+    const ignored = applyFlowChangesToWorkspaceNodes(
+      [node],
+      [{ type: "dimensions", id: "n1", dimensions: { width: 400, height: 300 } }],
+    );
+    const resized = applyFlowChangesToWorkspaceNodes(
+      [node],
+      [
+        {
+          type: "dimensions",
+          id: "n1",
+          resizing: true,
+          dimensions: { width: 400, height: 300 },
+        },
+      ],
+    );
     expect(ignored).toBeNull();
     expect(resized?.[0]).toMatchObject({ width: 400, height: 300 });
   });

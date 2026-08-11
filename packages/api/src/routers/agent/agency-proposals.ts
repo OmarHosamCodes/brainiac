@@ -495,7 +495,8 @@ export async function createCanvasProposalRecord(
   await db.insert(agentAgencyProposal).values({
     id,
     domain: "canvas",
-    teamId: input.teamId ?? (storedAction.type === "node.create" ? (storedAction.teamId ?? null) : null),
+    teamId:
+      input.teamId ?? (storedAction.type === "node.create" ? (storedAction.teamId ?? null) : null),
     actorUserId,
     conversationId: input.conversationId ?? null,
     messageId: null,
