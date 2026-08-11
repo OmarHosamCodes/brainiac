@@ -579,7 +579,7 @@ export const agencyMyTasksRailComposerRowClass =
 
 export const agencyMyTasksRailAddButtonClass = cn(
   "inline-flex size-8 shrink-0 items-center justify-center rounded-full",
-  "bg-success text-success-foreground hover:bg-success/90",
+  "bg-primary text-primary-foreground hover:bg-primary/90",
   "disabled:pointer-events-none disabled:opacity-50",
   agencyFocusRingClass,
 );
