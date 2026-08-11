@@ -98,6 +98,8 @@ export function AgencyTimeEntriesLogView({ view, renderGroupRow }: AgencyTimeEnt
                     teamId={view.teamId}
                     day={item.day}
                     highlightedEntryId={view.highlightedEntryId}
+                    relatedTaskId={view.relatedTaskId}
+                    relatedPulseTaskId={view.relatedPulseTaskId}
                     renderGroupRow={renderGroupRow}
                     selectedEntryIds={view.selectedEntryIds}
                     bulkEditActive={view.bulkEditDayKey === item.day.dateKey}

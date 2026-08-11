@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAgencyTimeEntriesLogStore } from "@/features/time-tracking/stores/agency-time-entries-log";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import {
+  useAgencyActiveTimerQuery,
   useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
@@ -37,6 +38,7 @@ import type { AgencyDayBulkDraft } from "@/features/time-tracking/entries/agency
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500] as const;
 const HIGHLIGHT_CLEAR_MS = 2_500;
+const RELATED_PULSE_MS = 420;
 const ESTIMATED_ENTRY_ROW_HEIGHT = 56;
 const ESTIMATED_DAY_HEADER_HEIGHT = 48;
 const WEEK_HEADER_HEIGHT = 40;
@@ -69,6 +71,8 @@ export type AgencyTimeEntriesLogViewModel = {
   updatingEntryIds: string[];
   duplicatingEntryIds: string[];
   highlightedEntryId: string | null;
+  relatedTaskId: string | null;
+  relatedPulseTaskId: string | null;
   onToggleGroupExpand: (collapseKey: string) => void;
   onRestart: (group: CollapsedEntryGroup) => void;
   onDeleteGroup: (entryIds: string[]) => void;
@@ -127,6 +131,36 @@ export function useAgencyTimeEntriesLog({
   const lastHighlightedEntryId = useAgencyTimeTrackingStore((s) => s.lastHighlightedEntryId);
   const clearHighlightedEntry = useAgencyTimeTrackingStore((s) => s.clearHighlightedEntry);
   const requestOpenTaskChooser = useAgencyTimeTrackingStore((s) => s.requestOpenTaskChooser);
+  const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
+  const relatedTaskId = activeTimerQuery.data?.timer?.taskId ?? null;
+  const prevRelatedTaskIdRef = useRef<string | null>(null);
+  const relatedPulseTimerRef = useRef<number | null>(null);
+  const [relatedPulseTaskId, setRelatedPulseTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const previousTaskId = prevRelatedTaskIdRef.current;
+    prevRelatedTaskIdRef.current = relatedTaskId;
+
+    if (!relatedTaskId || relatedTaskId === previousTaskId) return;
+
+    if (relatedPulseTimerRef.current !== null) {
+      window.clearTimeout(relatedPulseTimerRef.current);
+    }
+
+    setRelatedPulseTaskId(relatedTaskId);
+    relatedPulseTimerRef.current = window.setTimeout(() => {
+      setRelatedPulseTaskId(null);
+      relatedPulseTimerRef.current = null;
+    }, RELATED_PULSE_MS);
+  }, [relatedTaskId]);
+
+  useEffect(() => {
+    return () => {
+      if (relatedPulseTimerRef.current !== null) {
+        window.clearTimeout(relatedPulseTimerRef.current);
+      }
+    };
+  }, []);
 
   const page = useAgencyTimeEntriesLogStore((s) => s.page);
   const pageSize = useAgencyTimeEntriesLogStore((s) => s.pageSize);
@@ -508,6 +542,8 @@ export function useAgencyTimeEntriesLog({
     updatingEntryIds,
     duplicatingEntryIds,
     highlightedEntryId: lastHighlightedEntryId,
+    relatedTaskId,
+    relatedPulseTaskId,
     onToggleGroupExpand: toggleGroupExpand,
     onRestart: (group) => void restartEntry(group),
     onDeleteGroup: (entryIds) => void deleteGroupEntries(entryIds),

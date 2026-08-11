@@ -554,6 +554,9 @@ export const agencyMyTasksRailRowTrackingClass =
   "bg-primary/5 before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary";
 
 export const agencyMyTasksRailRowTrackingPulseClass = "agency-my-tasks-tracking-pulse";
+
+/** One-shot focal pulse when rail play starts — reuses my-tasks tracking keyframes. */
+export const agencyTimeEntryRowRelatedPulseClass = agencyMyTasksRailRowTrackingPulseClass;
 export const agencyMyTasksCheckPopClass = "agency-my-tasks-check-pop";
 export const agencyMyTasksCountTickClass = "agency-my-tasks-count-tick";
 export const agencyMyTasksCreateFlashClass = "agency-my-tasks-create-flash";
