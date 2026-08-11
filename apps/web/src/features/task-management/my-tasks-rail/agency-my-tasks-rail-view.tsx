@@ -1,12 +1,15 @@
 import { ListTodo, Loader2, PanelRightClose, PanelRightOpen, Plus, X } from "lucide-react";
-import { MotionConfig, motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
 import type { ReactNode } from "react";
 
 import type { AgencyMyTasksRailViewModel } from "@/features/task-management/hooks/use-agency-my-tasks-rail";
 import {
+  RAIL_CREATE_LAYOUT_ID,
+  railCollapseChromeVariants,
   railCollapsePanelVariants,
   railEmptyVariants,
   railFastTransition,
+  railLayoutTransition,
   railTapScale,
 } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
 import {
@@ -24,6 +27,7 @@ import {
   agencyTaskRailCollapsedClass,
   agencyTaskRailCollapsedWidthClass,
   agencyTaskRailExpandedWidthClass,
+  agencyTaskRailWidthTransitionClass,
 } from "@/features/shared/agency-ui";
 import { AgencyMyTasksQuickAddFieldView } from "@/features/task-management/my-tasks-rail/agency-my-tasks-quick-add-field-view";
 import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
@@ -101,11 +105,8 @@ function RailPanel({
       data-od-id="my-tasks-rail"
       aria-label="My Tasks"
     >
-      <header className="flex shrink-0 items-start justify-between gap-2 border-b border-default px-3 py-2.5 sm:px-4">
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold tracking-tight text-foreground">My Tasks</h2>
-          <p className="mt-0.5 text-xs text-muted">J/K move · Enter play</p>
-        </div>
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-default px-3 py-2.5 sm:px-4">
+        <h2 className="min-w-0 text-sm font-semibold tracking-tight text-foreground">My Tasks</h2>
         {showCollapseControl ? (
           <Button
             type="button"
@@ -175,20 +176,22 @@ function RailPanel({
             contentAlign="end"
             required
           />
-          <Button
-            type="submit"
-            size="icon"
-            className={agencyMyTasksRailAddButtonClass}
-            aria-label="Add task"
-            aria-busy={view.isCreatingTask}
-            disabled={!canSubmit}
-          >
-            {view.isCreatingTask ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <Plus className="size-4" aria-hidden />
-            )}
-          </Button>
+          <motion.div layoutId={RAIL_CREATE_LAYOUT_ID} transition={railLayoutTransition}>
+            <Button
+              type="submit"
+              size="icon"
+              className={agencyMyTasksRailAddButtonClass}
+              aria-label="Add task"
+              aria-busy={view.isCreatingTask}
+              disabled={!canSubmit}
+            >
+              {view.isCreatingTask ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Plus className="size-4" aria-hidden />
+              )}
+            </Button>
+          </motion.div>
         </div>
         {view.createError ? (
           <p className="text-xs text-destructive" role="alert">
@@ -301,64 +304,72 @@ export function AgencyMyTasksRailView({ view, renderList }: AgencyMyTasksRailVie
 
   return (
     <MotionConfig reducedMotion="user">
-      {view.collapsed ? (
-        <>
-          <aside
-            className={cn(agencyTaskRailCollapsedClass, agencyTaskRailCollapsedWidthClass)}
-            aria-label="My Tasks collapsed"
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-full"
-              aria-label="Expand My Tasks"
-              onClick={() => view.setCollapsed(false)}
-            >
-              <PanelRightOpen />
-            </Button>
-            <div
-              className="flex size-8 items-center justify-center rounded-full bg-success/15 text-xs font-semibold text-success"
-              aria-label={`${view.openCount} open tasks`}
-            >
-              <span
-                key={view.countTickKey}
-                className={cn("tabular-nums", agencyMyTasksCountTickClass)}
+      <aside
+        className={cn(
+          agencyTaskRailWidthTransitionClass,
+          view.collapsed
+            ? cn(agencyTaskRailCollapsedClass, agencyTaskRailCollapsedWidthClass)
+            : cn(agencyTaskRailClass, agencyTaskRailExpandedWidthClass),
+        )}
+        aria-label={view.collapsed ? "My Tasks collapsed" : undefined}
+      >
+        <LayoutGroup id="agency-my-tasks-rail-dock">
+          <AnimatePresence initial={false}>
+            {view.collapsed ? (
+              <motion.div
+                key="rail-collapsed"
+                className="flex h-full w-full min-w-0 flex-col items-center justify-start gap-2.5"
+                variants={railCollapseChromeVariants}
+                initial="collapsed"
+                animate="expanded"
+                exit="collapsed"
               >
-                {view.openCount > 99 ? "99+" : view.openCount}
-              </span>
-            </div>
-            <p
-              className="mt-auto pb-2 text-xs font-medium tracking-wide text-muted"
-              style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-            >
-              My Tasks
-            </p>
-          </aside>
-          {mobileFab}
-          {sheet}
-        </>
-      ) : (
-        <>
-          <aside className={agencyTaskRailExpandedWidthClass}>
-            <motion.div
-              className="h-full w-full min-w-0 origin-right"
-              variants={railCollapsePanelVariants}
-              initial="collapsed"
-              animate="expanded"
-            >
-              <RailPanel
-                view={view}
-                list={renderList()}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 rounded-full"
+                  aria-label="Expand My Tasks"
+                  onClick={() => view.setCollapsed(false)}
+                >
+                  <PanelRightOpen />
+                </Button>
+                <motion.div
+                  layoutId={RAIL_CREATE_LAYOUT_ID}
+                  transition={railLayoutTransition}
+                  className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
+                  aria-label={`${view.openCount} open tasks`}
+                >
+                  <span
+                    key={view.countTickKey}
+                    className={cn("tabular-nums", agencyMyTasksCountTickClass)}
+                  >
+                    {view.openCount > 99 ? "99+" : view.openCount}
+                  </span>
+                </motion.div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="rail-expanded"
                 className="h-full w-full min-w-0"
-                showCollapseControl
-              />
-            </motion.div>
-          </aside>
-          {mobileFab}
-          {sheet}
-        </>
-      )}
+                variants={railCollapsePanelVariants}
+                initial="collapsed"
+                animate="expanded"
+                exit="collapsed"
+              >
+                <RailPanel
+                  view={view}
+                  list={renderList()}
+                  className="h-full w-full min-w-0 rounded-none border-0 bg-transparent"
+                  showCollapseControl
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </LayoutGroup>
+      </aside>
+      {mobileFab}
+      {sheet}
     </MotionConfig>
   );
 }
