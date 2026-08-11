@@ -98,34 +98,7 @@ export const railEmptyVariants: Variants = {
   },
 };
 
-/**
- * Collapse/expand content: fade + slight slide from the dock edge.
- * Width is handled by CSS on the aside — avoid scaleX (reads as a squash).
- */
-export const railCollapsePanelVariants: Variants = {
-  collapsed: {
-    opacity: 0,
-    x: 10,
-    transition: { type: "tween", duration: RAIL_MS.fast, ease: RAIL_EASE },
-  },
-  expanded: {
-    opacity: 1,
-    x: 0,
-    transition: { type: "tween", duration: RAIL_MS.rail, ease: RAIL_EASE },
-  },
-};
-
-/** Collapsed chrome enter/exit — opacity only so the slim strip doesn't slide away. */
-export const railCollapseChromeVariants: Variants = {
-  collapsed: {
-    opacity: 0,
-    transition: { type: "tween", duration: RAIL_MS.fast, ease: RAIL_EASE },
-  },
-  expanded: {
-    opacity: 1,
-    transition: { type: "tween", duration: RAIL_MS.base, ease: RAIL_EASE },
-  },
-};
+/** Collapse/expand uses CSS width on the aside only — no content enter/exit morph. */
 
 export const railSectionExit = {
   opacity: 0,
