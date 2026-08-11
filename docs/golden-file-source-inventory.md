@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 740 |
+| golden-feature | 742 |
 | server-operation | 15 |
 | shared-infrastructure | 320 |
 | static-presentation | 22 |
@@ -51,7 +51,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | repository | 13 |
 | resourcing | 40 |
 | server-platform | 23 |
-| task-management | 62 |
+| task-management | 64 |
 | team | 19 |
 | time-tracking | 100 |
 | web-platform | 119 |
@@ -450,6 +450,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/shared/use-team-work-schedule.ts` | agency-shared | feature-hook | shared-infrastructure | agency-platform | Cross-cutting agency-shared feature-hook support rather than a feature-owned business workflow. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/task-management/agency-my-tasks-edit-draft.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/task-management/agency-my-tasks-edit-draft.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/task-management/agency-my-tasks-row-meta.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/task-management/agency-my-tasks-row-meta.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/task-management/agency-task-blueprints.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/task-management/agency-task-blueprints.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/task-management/agency-task-estimate.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |

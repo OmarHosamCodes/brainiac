@@ -65,15 +65,16 @@ export function AgencyMyTasksRail({ teamId }: AgencyMyTasksRailProps) {
                     {group.tasks.map((task) => {
                       const stagger = railStaggerIndex(rowIndex++);
                       const project = view.projects.find((item) => item.id === task.projectId);
-                      const assignedByLabel =
-                        view.memberNameById.get(task.createdByUserId) ?? "Unknown";
+                      const assignerMember =
+                        view.members.find((member) => member.userId === task.createdByUserId) ??
+                        null;
                       return (
                         <AgencyMyTasksRailRow
                           key={task.id}
                           task={task}
                           view={view}
                           projectName={project?.name ?? "Project"}
-                          assignedByLabel={assignedByLabel}
+                          assignerMember={assignerMember}
                           variants={railListItemVariants}
                           stagger={stagger}
                         />
