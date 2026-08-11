@@ -1,6 +1,12 @@
 import type { Variants } from "motion/react";
 import type { ReactNode } from "react";
 
+import type { AgencyMemberOption } from "@/features/shared/agency-member-option";
+import {
+  buildMyTasksTimeConsumer,
+  resolveMyTasksAssigner,
+  type MyTasksAssignerDisplay,
+} from "@/features/task-management/agency-my-tasks-row-meta";
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
 import type { AgencyMyTasksRailViewModel } from "@/features/task-management/hooks/use-agency-my-tasks-rail";
 import { AgencyMyTasksRailRowView } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-row-view";
@@ -10,7 +16,7 @@ type AgencyMyTasksRailRowProps = {
   task: AgencyProjectTask;
   view: AgencyMyTasksRailViewModel;
   projectName: string;
-  assignedByLabel: string;
+  assignerMember: AgencyMemberOption | null;
   variants: Variants;
   stagger: number;
 };
@@ -19,7 +25,7 @@ export function AgencyMyTasksRailRow({
   task,
   view,
   projectName,
-  assignedByLabel,
+  assignerMember,
   variants,
   stagger,
 }: AgencyMyTasksRailRowProps) {
@@ -27,6 +33,16 @@ export function AgencyMyTasksRailRow({
   const isSelected = view.selectedTaskId === task.id;
   const isTracking = view.runningTaskId === task.id;
   const pending = view.pendingTaskIds.includes(task.id) || view.deletingTaskIds.includes(task.id);
+
+  const assigner: MyTasksAssignerDisplay = resolveMyTasksAssigner({
+    createdByUserId: task.createdByUserId,
+    actorUserId: view.actorUserId,
+    member: assignerMember,
+  });
+  const timeConsumer = buildMyTasksTimeConsumer({
+    totalTrackedSeconds: task.totalTrackedSeconds,
+    estimateMinutes: task.estimateMinutes,
+  });
 
   const miniTimer: ReactNode = (
     <AgencyMiniTimerContainer
@@ -44,8 +60,8 @@ export function AgencyMyTasksRailRow({
       taskId={task.id}
       title={task.title}
       projectName={projectName}
-      assignedByLabel={assignedByLabel}
-      estimateMinutes={task.estimateMinutes ?? null}
+      assigner={assigner}
+      timeConsumer={timeConsumer}
       isDone={isDone}
       isSelected={isSelected}
       isTracking={isTracking}

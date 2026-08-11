@@ -1,11 +1,9 @@
 import { ListTodo, Loader2, PanelRightClose, PanelRightOpen, Plus, X } from "lucide-react";
-import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
+import { MotionConfig, motion } from "motion/react";
 import type { ReactNode } from "react";
 
 import type { AgencyMyTasksRailViewModel } from "@/features/task-management/hooks/use-agency-my-tasks-rail";
 import {
-  railCollapseChromeVariants,
-  railCollapsePanelVariants,
   railEmptyVariants,
   railFastTransition,
   railTapScale,
@@ -315,58 +313,40 @@ export function AgencyMyTasksRailView({ view, renderList }: AgencyMyTasksRailVie
         )}
         aria-label={view.collapsed ? "My Tasks collapsed" : undefined}
       >
-        <LayoutGroup id="agency-my-tasks-rail-dock">
-          <AnimatePresence initial={false}>
-            {view.collapsed ? (
-              <motion.div
-                key="rail-collapsed"
-                className="flex h-full w-full min-w-0 flex-col items-center justify-start gap-2.5"
-                variants={railCollapseChromeVariants}
-                initial="collapsed"
-                animate="expanded"
-                exit="collapsed"
+        {view.collapsed ? (
+          <div className="flex h-full w-full min-w-0 flex-col items-center justify-start gap-2.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 rounded-full"
+              aria-label="Expand My Tasks"
+              onClick={() => view.setCollapsed(false)}
+            >
+              <PanelRightOpen />
+            </Button>
+            <div
+              className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
+              aria-label={`${view.openCount} open tasks`}
+            >
+              <span
+                key={view.countTickKey}
+                className={cn("tabular-nums", agencyMyTasksCountTickClass)}
               >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-9 rounded-full"
-                  aria-label="Expand My Tasks"
-                  onClick={() => view.setCollapsed(false)}
-                >
-                  <PanelRightOpen />
-                </Button>
-                <div
-                  className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
-                  aria-label={`${view.openCount} open tasks`}
-                >
-                  <span
-                    key={view.countTickKey}
-                    className={cn("tabular-nums", agencyMyTasksCountTickClass)}
-                  >
-                    {view.openCount > 99 ? "99+" : view.openCount}
-                  </span>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="rail-expanded"
-                className="h-full w-full min-w-0"
-                variants={railCollapsePanelVariants}
-                initial="collapsed"
-                animate="expanded"
-                exit="collapsed"
-              >
-                <RailPanel
-                  view={view}
-                  list={renderList()}
-                  className="h-full w-full min-w-0 rounded-none border-0 bg-transparent"
-                  showCollapseControl
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </LayoutGroup>
+                {view.openCount > 99 ? "99+" : view.openCount}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="h-full w-full min-w-0">
+            <RailPanel
+              view={view}
+              list={renderList()}
+              className="h-full w-full min-w-0 rounded-none border-0 bg-transparent"
+              showCollapseControl
+            />
+          </div>
+        )}
       </aside>
       {mobileFab}
       {sheet}
