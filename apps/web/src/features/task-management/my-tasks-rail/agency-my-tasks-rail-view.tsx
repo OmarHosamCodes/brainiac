@@ -17,6 +17,7 @@ import {
   agencyMyTasksFilterPillClass,
   agencyMyTasksFilterPillClearIconClass,
   agencyMyTasksRailAddButtonClass,
+  agencyMyTasksRailComposerFormClass,
   agencyMyTasksRailComposerRowClass,
   agencyTaskChooserTriggerClass,
   agencyTaskRailClass,
@@ -24,10 +25,10 @@ import {
   agencyTaskRailCollapsedWidthClass,
   agencyTaskRailExpandedWidthClass,
 } from "@/features/shared/agency-ui";
+import { AgencyMyTasksQuickAddFieldView } from "@/features/task-management/my-tasks-rail/agency-my-tasks-quick-add-field-view";
 import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { Button } from "@/ui/button";
-import { Input } from "@/ui/input";
 import { Sheet, SheetContent, SheetTitle } from "@/ui/sheet";
 import { Skeleton } from "@/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
@@ -119,19 +120,24 @@ function RailPanel({
       </header>
 
       <form
-        className="flex shrink-0 flex-col gap-2 border-b border-default px-3 py-2.5 sm:px-4"
+        className={agencyMyTasksRailComposerFormClass}
         onSubmit={(event) => {
           event.preventDefault();
           void view.onCreateTask();
         }}
       >
-        <Input
-          id="my-tasks-title"
+        <AgencyMyTasksQuickAddFieldView
           value={view.titleDraft}
-          onChange={(event) => view.setTitleDraft(event.target.value)}
-          placeholder="Add task"
-          aria-label="Add task"
+          suggestions={view.titleSuggestions}
           disabled={view.isCreatingTask}
+          suggestionsOpen={view.titleSuggestionsOpen}
+          activeIndex={view.titleSuggestionActiveIndex}
+          onValueChange={view.onTitleDraftChange}
+          onFocus={view.onTitleFocus}
+          onBlur={view.onTitleBlur}
+          onActiveIndexChange={view.setTitleSuggestionActiveIndex}
+          onPickSuggestion={view.onPickTitleSuggestion}
+          onSuppressSuggestions={view.onSuppressTitleSuggestions}
         />
         <div className={agencyMyTasksRailComposerRowClass}>
           <AgencyMemberChooser
