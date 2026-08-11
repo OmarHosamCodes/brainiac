@@ -831,7 +831,9 @@ export async function updateAgencyProjectTask(
   if (
     input.status !== undefined ||
     input.assigneeUserIds !== undefined ||
-    input.assignedToTeam !== undefined
+    input.assignedToTeam !== undefined ||
+    input.title !== undefined ||
+    input.estimateMinutes !== undefined
   ) {
     await publishAgencyTaskUpdated(input.teamId, task);
   }
