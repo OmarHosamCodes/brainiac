@@ -12,12 +12,14 @@ type AgencyWorkSurfaceRootViewProps = {
   view: AgencyWorkSurfaceView;
   trackerControl: ReactNode;
   content: ReactNode;
+  taskRail?: ReactNode;
 };
 
 export function AgencyWorkSurfaceRootView({
   view,
   trackerControl,
   content,
+  taskRail,
 }: AgencyWorkSurfaceRootViewProps) {
   let surface: ReactNode;
 
@@ -45,6 +47,7 @@ export function AgencyWorkSurfaceRootView({
               {content}
             </div>
           }
+          taskRail={taskRail}
         />
       );
       break;

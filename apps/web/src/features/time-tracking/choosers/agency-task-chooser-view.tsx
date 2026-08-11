@@ -68,6 +68,8 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     onSearchChange,
     onSearchKeyDown,
     onSelectTask,
+    onSelectProject,
+    pickProject,
     onToggleProject,
     onToggleClient,
     onToggleProjectFavorite,
@@ -165,9 +167,10 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     showClientName: boolean,
     keyScope: string,
   ): ReactNode {
-    const expanded = isProjectExpanded(entry.project.id);
+    const expanded = !pickProject && isProjectExpanded(entry.project.id);
     const favorited = favoriteProjectIds.has(entry.project.id) || entry.isFavorite;
     const projectOptionKey = taskChooserProjectOptionKey(keyScope, entry.project.id);
+    const isSelectedProject = pickProject && value === entry.project.id;
     return (
       <div key={`${keyScope}-${entry.project.id}`}>
         <AgencyTaskChooserProjectRow
@@ -178,14 +181,18 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
           taskCount={entry.tasks.length}
           expanded={expanded}
           favorited={favorited}
-          active={activeOptionKey === projectOptionKey}
+          active={activeOptionKey === projectOptionKey || isSelectedProject}
           optionId={taskChooserOptionDomId(projectOptionKey)}
           searchTerm={searchTerm}
           highlightSearch={highlightSearch}
           showClientName={showClientName}
-          showCreateTask
+          showCreateTask={!pickProject}
           createMuted={createMuted}
-          onToggle={() => onToggleProject(entry.project.id)}
+          pickMode={pickProject}
+          onToggle={() => {
+            if (pickProject) onSelectProject(entry.project.id);
+            else onToggleProject(entry.project.id);
+          }}
           onToggleFavorite={() => onToggleProjectFavorite(entry.project.id)}
           onCreateTask={() => onOpenCreateTask(entry.project.id)}
         />
@@ -256,7 +263,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
               variant="outline"
               size="sm"
               disabled={disabled || loading}
-              aria-required={required && !value ? true : undefined}
+              aria-required={required && !(pickProject ? triggerProject : value) ? true : undefined}
               aria-haspopup="listbox"
               aria-expanded={open}
               className={cn(
@@ -302,7 +309,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                 id="agency-task-chooser-listbox"
                 ref={listRef}
                 role="listbox"
-                aria-label="Tasks"
+                aria-label={pickProject ? "Projects" : "Tasks"}
                 className="max-h-[min(24rem,60vh)] overflow-y-auto px-1.5 py-2"
               >
                 {loading ? (
@@ -361,7 +368,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                     )}
                   </AnimatePresence>
                 )}
-                {hasMoreTasks ? (
+                {hasMoreTasks && !pickProject ? (
                   <div className="px-2 pt-2">
                     <Button
                       type="button"

@@ -95,6 +95,17 @@ describe("buildTaskChooserKeyboardItems", () => {
       },
     ]);
   });
+
+  test("pickProject search keeps project rows as keyboard targets", () => {
+    const items = buildTaskChooserKeyboardItems({
+      favorites: [projectGroup("p1", "Acme", ["t1"])],
+      clientGroups: [],
+      isProjectExpanded: () => true,
+      isClientExpanded: () => true,
+      includeProjects: true,
+    });
+    expect(items.map((item) => item.kind)).toEqual(["project", "task"]);
+  });
 });
 
 describe("indexOfTaskChooserItem", () => {

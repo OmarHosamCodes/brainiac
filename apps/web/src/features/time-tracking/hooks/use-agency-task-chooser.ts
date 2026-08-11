@@ -79,6 +79,11 @@ export type UseAgencyTaskChooserOptions = {
   required?: boolean;
   /** Ranked suggestion best-match — highlighted when chooser opens. */
   bestMatchTaskId?: string | null;
+  /**
+   * When true, picking a project under a client sets the value (project id).
+   * Task rows and inline create-task are hidden.
+   */
+  pickProject?: boolean;
 };
 
 export type AgencyTaskChooserViewModel = {
@@ -110,6 +115,8 @@ export type AgencyTaskChooserViewModel = {
   onSearchChange: (value: string) => void;
   onSearchKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onSelectTask: (taskId: string, projectId?: string) => void;
+  onSelectProject: (projectId: string) => void;
+  pickProject: boolean;
   onToggleProject: (projectId: string) => void;
   onToggleClient: (clientName: string) => void;
   onToggleProjectFavorite: (projectId: string) => void;
@@ -163,6 +170,7 @@ export function useAgencyTaskChooser(
     required = false,
     filterProjectId,
     bestMatchTaskId = null,
+    pickProject = false,
   } = options;
 
   const { open, searchTerm, setSearchTerm, setOpen } = useAgencyChooserOpenState({
@@ -172,8 +180,8 @@ export function useAgencyTaskChooser(
   const deferredSearch = useDeferredValue(searchTerm.trim());
   const chooserTasksQuery = useAgencyProjectTasksForChooserQuery(
     teamId,
-    { search: deferredSearch || undefined },
-    { selectedTaskIds: value && !fallbackTaskTitle ? [value] : [] },
+    { search: deferredSearch || undefined, enabled: !pickProject },
+    { selectedTaskIds: !pickProject && value && !fallbackTaskTitle ? [value] : [] },
   );
   const taskCatalog = useMemo(() => {
     const byId = new Map(tasks.map((task) => [task.id, task]));
@@ -199,6 +207,7 @@ export function useAgencyTaskChooser(
   );
 
   const chooserTasks = useMemo(() => {
+    if (pickProject) return [];
     const seen = new Set<string>();
     return taskCatalog.filter((task) => {
       if (task.status === "archived") return false;
@@ -207,7 +216,7 @@ export function useAgencyTaskChooser(
       seen.add(task.id);
       return true;
     });
-  }, [taskCatalog, filterProjectId]);
+  }, [filterProjectId, pickProject, taskCatalog]);
 
   const chooserProjects = useMemo(() => {
     if (!filterProjectId) return projects;
@@ -220,14 +229,14 @@ export function useAgencyTaskChooser(
   );
 
   const selectedTask = useMemo(
-    () => taskCatalog.find((task) => task.id === value) ?? null,
-    [taskCatalog, value],
+    () => (pickProject ? null : (taskCatalog.find((task) => task.id === value) ?? null)),
+    [pickProject, taskCatalog, value],
   );
 
-  const selectedProject = useMemo(
-    () => (selectedTask ? (projectsById.get(selectedTask.projectId) ?? null) : null),
-    [projectsById, selectedTask],
-  );
+  const selectedProject = useMemo(() => {
+    if (pickProject && value) return projectsById.get(value) ?? null;
+    return selectedTask ? (projectsById.get(selectedTask.projectId) ?? null) : null;
+  }, [pickProject, projectsById, selectedTask, value]);
 
   const triggerProject = useMemo((): Project | null => {
     if (selectedProject) return selectedProject;
@@ -294,7 +303,7 @@ export function useAgencyTaskChooser(
         clientGroups: sections.clientGroups,
         isProjectExpanded: isProjectExpandedForList,
         isClientExpanded: isClientExpandedForList,
-        includeProjects: !searchTerm.trim(),
+        includeProjects: pickProject || !searchTerm.trim(),
       }),
     // expandEpoch invalidates after project/client toggles.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- expand helpers close over render state
@@ -392,6 +401,11 @@ export function useAgencyTaskChooser(
     setOpen(false);
   }
 
+  function selectProject(projectId: string) {
+    onValueChange(projectId, projectId);
+    setOpen(false);
+  }
+
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (!open) return;
 
@@ -421,6 +435,10 @@ export function useAgencyTaskChooser(
       event.preventDefault();
       if (item.kind === "task") {
         selectTask(item.taskId, item.projectId);
+        return;
+      }
+      if (pickProject) {
+        selectProject(item.projectId);
         return;
       }
       toggleProject(item.projectId);
@@ -473,6 +491,10 @@ export function useAgencyTaskChooser(
 
   function onProjectCreated(projectId: string) {
     setCreateProjectOpen(false);
+    if (pickProject) {
+      selectProject(projectId);
+      return;
+    }
     expandProject(projectId);
     onOpenCreateTask(projectId);
   }
@@ -481,7 +503,7 @@ export function useAgencyTaskChooser(
     value,
     teamId,
     disabled,
-    loading: loading || (chooserTasksQuery.isPending && taskCatalog.length === 0),
+    loading: loading || (!pickProject && chooserTasksQuery.isPending && taskCatalog.length === 0),
     placeholder,
     required,
     searchPlaceholder,
@@ -506,6 +528,8 @@ export function useAgencyTaskChooser(
     onSearchChange: setSearchTerm,
     onSearchKeyDown: handleSearchKeyDown,
     onSelectTask: selectTask,
+    onSelectProject: selectProject,
+    pickProject,
     onToggleProject: handleToggleProject,
     onToggleClient: handleToggleClient,
     onToggleProjectFavorite: handleToggleProjectFavorite,
