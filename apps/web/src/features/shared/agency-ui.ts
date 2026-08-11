@@ -122,6 +122,13 @@ export const agencyTaskRailCollapsedWidthClass = cn(
   "lg:flex lg:h-full lg:w-[5.5rem] lg:min-w-[5.5rem] lg:max-w-[5.5rem] lg:basis-[5.5rem]",
 );
 
+/** Smooth dock width change — keep in sync with `RAIL_MS.rail` (320ms). */
+export const agencyTaskRailWidthTransitionClass = cn(
+  "motion-reduce:transition-none",
+  "transition-[width,min-width,max-width,flex-basis] duration-[320ms]",
+  "ease-[cubic-bezier(0.25,1,0.5,1)]",
+);
+
 /** D08 — log rows that match the actively tracked task. */
 export const agencyTimeEntryRowRelatedClass =
   "bg-primary/5 ring-1 ring-inset ring-primary/20 motion-reduce:transition-none transition-colors duration-200";
