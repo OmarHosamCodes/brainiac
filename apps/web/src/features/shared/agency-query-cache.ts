@@ -1,4 +1,5 @@
 import type { QueryKey } from "@tanstack/react-query";
+import type { AgencyProjectTask } from "@orch/api/schemas/agency-ops";
 
 import { getQueryClient } from "@/lib/query-client";
 import { orpc } from "@/lib/orpc";
@@ -7,31 +8,6 @@ import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-optio
 type OrpcQueryMeta = {
   input?: Record<string, unknown>;
   type?: string;
-};
-
-type AgencyProjectTask = {
-  id: string;
-  teamId: string;
-  projectId: string;
-  title: string;
-  status: "open" | "in_progress" | "done" | "archived";
-  taskKind: "standard" | "journey_anchor" | "journey_milestone";
-  assignedToTeam: boolean;
-  isWaste: boolean;
-  estimateMinutes: number | null;
-  createdByUserId: string;
-  assignees: Array<{
-    userId: string;
-    userName: string;
-    userAvatar: string | null;
-    status: "open" | "in_progress" | "done";
-  }>;
-  viewerStatus?: "open" | "in_progress" | "done";
-  viewerCompletionCount?: number;
-  viewerBlueprints?: Array<{ id: string; description: string }>;
-  dueDate: string | null;
-  createdAt: string;
-  updatedAt: string;
 };
 
 type AgencyProjectTasksListQueryData = {

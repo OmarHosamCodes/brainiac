@@ -23,7 +23,7 @@ import {
   type ToggleFavoritePayload,
 } from "@/features/shared/stores/agency-favorites";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
-import type { AgencyProjectJourney } from "@orch/api/schemas/agency-ops";
+import type { AgencyProjectJourney, AgencyProjectTask } from "@orch/api/schemas/agency-ops";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 // Shared types (mirrored from API shapes — keep in sync with oRPC output)
@@ -48,31 +48,6 @@ type AgencyProject = {
   name: string;
   colorHueId: number | null;
   deletedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type AgencyProjectTask = {
-  id: string;
-  teamId: string;
-  projectId: string;
-  title: string;
-  status: "open" | "in_progress" | "done" | "archived";
-  taskKind: "standard" | "journey_anchor" | "journey_milestone";
-  assignedToTeam: boolean;
-  isWaste: boolean;
-  estimateMinutes: number | null;
-  createdByUserId: string;
-  assignees: Array<{
-    userId: string;
-    userName: string;
-    userAvatar: string | null;
-    status: "open" | "in_progress" | "done";
-  }>;
-  viewerStatus?: "open" | "in_progress" | "done";
-  viewerCompletionCount?: number;
-  viewerBlueprints?: Array<{ id: string; description: string }>;
-  dueDate: string | null;
   createdAt: string;
   updatedAt: string;
 };

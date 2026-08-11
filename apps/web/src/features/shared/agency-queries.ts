@@ -38,8 +38,9 @@ import {
   isAgencyTimeEntriesListQueryKey,
 } from "@/features/shared/agency-query-cache";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
+import type { AgencyProjectTask } from "@orch/api/schemas/agency-ops";
 
-export type AgencyProjectTaskStatus = "open" | "in_progress" | "done" | "archived";
+export type AgencyProjectTaskStatus = AgencyProjectTask["status"];
 
 export type AgencyProjectTasksFilters = {
   projectId?: string;
@@ -54,19 +55,7 @@ export type AgencyProjectTasksFilters = {
 };
 
 export type AgencyProjectTasksListPage = {
-  items: Array<{
-    id: string;
-    projectId: string;
-    title: string;
-    status: AgencyProjectTaskStatus;
-    assignees: Array<{ userId: string; userName: string }>;
-    assignedToTeam: boolean;
-    dueDate: string | null;
-    createdAt: string;
-    updatedAt: string;
-    teamId: string;
-    memberStatus?: AgencyProjectTaskStatus;
-  }>;
+  items: AgencyProjectTask[];
   page: number;
   pageSize: number;
   total: number;

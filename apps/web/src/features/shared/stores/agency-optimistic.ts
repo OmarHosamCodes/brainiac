@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import type { AgencyProjectTask } from "@orch/api/schemas/agency-ops";
 import {
   createEmptyListOverlay,
   pruneListOverlay,
@@ -28,29 +29,7 @@ export type AgencyOptimisticProject = {
   updatedAt: string;
 };
 
-export type AgencyOptimisticTask = {
-  id: string;
-  teamId: string;
-  projectId: string;
-  title: string;
-  status: "open" | "in_progress" | "done" | "archived";
-  taskKind: "standard" | "journey_anchor" | "journey_milestone";
-  assignedToTeam: boolean;
-  isWaste: boolean;
-  estimateMinutes: number | null;
-  createdByUserId: string;
-  assignees: Array<{
-    userId: string;
-    userName: string;
-    userAvatar: string | null;
-    status: "open" | "in_progress" | "done";
-  }>;
-  viewerStatus?: "open" | "in_progress" | "done";
-  viewerCompletionCount?: number;
-  dueDate: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
+export type AgencyOptimisticTask = AgencyProjectTask;
 
 export type AgencyOptimisticTag = {
   id: string;
