@@ -279,7 +279,6 @@ type AgencyTimeTrackingState = {
   manualCreateCount: number;
   trackerDraftsByTeam: Record<string, TrackerDraft>;
   timerLiveUpdatedAtByTeam: Record<string, string>;
-  lastHighlightedEntryId: string | null;
   taskChooserOpenRequest: number;
 } & AgencyTimeTrackingActions;
 
@@ -1149,10 +1148,6 @@ function createAgencyTimeTrackingActions(
       void refetchAgencyActiveTimerQueries(activeTimer.teamId);
       if (!payload.discard) {
         void refetchAgencyTimeEntriesListQueries(activeTimer.teamId);
-        const highlightedEntryId = result.createdEntry?.id ?? optimisticEntry?.id ?? null;
-        if (highlightedEntryId) {
-          set((s) => ({ ...s, lastHighlightedEntryId: highlightedEntryId }));
-        }
       }
 
       toast.success(payload.discard ? "Timer discarded" : "Timer stopped");
@@ -1742,7 +1737,6 @@ function createAgencyTimeTrackingActions(
       })) as AgencyTimeEntry;
 
       reconcileCreatedEntry(teamId, optimisticEntry.id, created);
-      set((s) => ({ ...s, lastHighlightedEntryId: created.id }));
     } catch (error) {
       patchDeletedEntries(teamId, [optimisticEntry]);
       restoreQuerySnapshots(logSnapshots);
@@ -1782,7 +1776,6 @@ function createAgencyTimeTrackingActions(
       })) as AgencyTimeEntry;
 
       reconcileCreatedEntry(teamId, optimisticEntry.id, created);
-      set((s) => ({ ...s, lastHighlightedEntryId: created.id }));
       return created;
     } catch (error) {
       patchDeletedEntries(teamId, [optimisticEntry]);
@@ -1929,10 +1922,6 @@ function createAgencyTimeTrackingActions(
     });
   }
 
-  function clearHighlightedEntry() {
-    set((s) => ({ ...s, lastHighlightedEntryId: null }));
-  }
-
   function requestOpenTaskChooser() {
     set((s) => ({ ...s, taskChooserOpenRequest: s.taskChooserOpenRequest + 1 }));
   }
@@ -1960,7 +1949,6 @@ function createAgencyTimeTrackingActions(
     createManualEntry,
     updateEntry,
     updateEntriesBulk,
-    clearHighlightedEntry,
     requestOpenTaskChooser,
   };
 }
@@ -1976,7 +1964,6 @@ export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, 
   manualCreateCount: 0,
   trackerDraftsByTeam: {},
   timerLiveUpdatedAtByTeam: {},
-  lastHighlightedEntryId: null,
   taskChooserOpenRequest: 0,
   ...createAgencyTimeTrackingActions(
     (fn) => set((state) => fn(state as AgencyTimeTrackingState)),

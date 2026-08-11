@@ -17,7 +17,6 @@ export function AgencyTimeEntriesLogContainer({
   const renderGroupRow: AgencyTimeEntryGroupRowRenderer = ({
     group,
     groupExpandKey,
-    highlighted,
     omitBottomBorder,
   }) => (
     <AgencyTimeEntryRowContainer
@@ -33,7 +32,6 @@ export function AgencyTimeEntriesLogContainer({
       deletingEntryIds={view.deletingEntryIds}
       updatingEntryIds={view.updatingEntryIds}
       duplicatingEntryIds={view.duplicatingEntryIds}
-      highlighted={highlighted}
       omitBottomBorder={omitBottomBorder}
       onToggleExpand={() => view.onToggleGroupExpand(groupExpandKey)}
       onRestart={view.onRestart}

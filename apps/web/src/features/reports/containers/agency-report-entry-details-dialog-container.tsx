@@ -17,7 +17,6 @@ export function AgencyReportEntryDetailsDialogContainer(
   const renderGroupRow: AgencyTimeEntryGroupRowRenderer = ({
     group,
     groupExpandKey,
-    highlighted,
     omitBottomBorder,
   }) => (
     <AgencyTimeEntryRowContainer
@@ -33,7 +32,6 @@ export function AgencyReportEntryDetailsDialogContainer(
       deletingEntryIds={viewModel.deletingEntryIds}
       updatingEntryIds={viewModel.updatingEntryIds}
       duplicatingEntryIds={viewModel.duplicatingEntryIds}
-      highlighted={highlighted}
       omitBottomBorder={omitBottomBorder}
       onToggleExpand={() => viewModel.onToggleGroupExpand(groupExpandKey)}
       onRestart={viewModel.onRestart}

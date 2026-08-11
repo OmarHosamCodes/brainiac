@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAtMs": 1786437833516,
+  "updatedAtMs": 1786445887789,
   "transcriptsDir": "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts",
   "transcripts": {
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/00047f3b-87f7-405e-9027-c8c663386362/00047f3b-87f7-405e-9027-c8c663386362.jsonl": {
@@ -158,6 +158,10 @@
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/11647655-1cd7-4497-bc90-b5bc3f4a393b/subagents/c4b4c959-e53f-4243-9193-7ea2bbef632c.jsonl": {
       "mtimeMs": 1783379026885.7976,
       "size": 26607
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/12542fec-0498-48f6-a5ef-34b2d0a80f31/12542fec-0498-48f6-a5ef-34b2d0a80f31.jsonl": {
+      "mtimeMs": 1786438582355.334,
+      "size": 40227
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/127fd14b-2bc4-4ddd-9867-c90c181ca31c/127fd14b-2bc4-4ddd-9867-c90c181ca31c.jsonl": {
       "mtimeMs": 1783289363972.0693,
@@ -370,6 +374,18 @@
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/1f74f4eb-0ac2-47cd-8af4-3a6ad6e85a6e/1f74f4eb-0ac2-47cd-8af4-3a6ad6e85a6e.jsonl": {
       "mtimeMs": 1785875407585.7808,
       "size": 9009
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/2071bfe4-566d-4283-8333-9c53887adecb/2071bfe4-566d-4283-8333-9c53887adecb.jsonl": {
+      "mtimeMs": 1786445765920.8162,
+      "size": 224743
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/2071bfe4-566d-4283-8333-9c53887adecb/subagents/100902f6-ea7d-40a4-9a32-cc77add90d51.jsonl": {
+      "mtimeMs": 1786445777945.8975,
+      "size": 1274
+    },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/2071bfe4-566d-4283-8333-9c53887adecb/subagents/215e912b-e606-411c-996d-e95fdd9a62c0.jsonl": {
+      "mtimeMs": 1786445290999.6074,
+      "size": 14172
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/22b4c525-78ee-4c20-b0ee-1c5d3120ad7a/22b4c525-78ee-4c20-b0ee-1c5d3120ad7a.jsonl": {
       "mtimeMs": 1782751806665.0752,
@@ -760,8 +776,8 @@
       "size": 101081
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/49598cbe-798a-48f9-be36-759fce9d4faf/49598cbe-798a-48f9-be36-759fce9d4faf.jsonl": {
-      "mtimeMs": 1786334850444.2107,
-      "size": 564404
+      "mtimeMs": 1786438625260.6238,
+      "size": 566467
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/49598cbe-798a-48f9-be36-759fce9d4faf/subagents/01517722-90fb-4fe1-b205-ada725ba76f0.jsonl": {
       "mtimeMs": 1784710839462.3984,
@@ -2884,8 +2900,8 @@
       "size": 47148
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/fdd0f806-2cf0-441d-87f1-29fdcf958fc2/fdd0f806-2cf0-441d-87f1-29fdcf958fc2.jsonl": {
-      "mtimeMs": 1786437745031.6165,
-      "size": 762622
+      "mtimeMs": 1786444084207.469,
+      "size": 859108
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/fdd0f806-2cf0-441d-87f1-29fdcf958fc2/subagents/069ff504-d4ac-4d7a-8020-f7c9749d67c5.jsonl": {
       "mtimeMs": 1786435031738.7207,
@@ -2971,9 +2987,13 @@
       "mtimeMs": 1786437594379.5876,
       "size": 9320
     },
+    "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/fdd0f806-2cf0-441d-87f1-29fdcf958fc2/subagents/7d04a1ae-e68d-43c5-acce-60c9b86d491c.jsonl": {
+      "mtimeMs": 1786444366738.3718,
+      "size": 885169
+    },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/fdd0f806-2cf0-441d-87f1-29fdcf958fc2/subagents/8e2f36ce-cc11-4f03-9d7d-284924a5f3b8.jsonl": {
-      "mtimeMs": 1786437763361.7415,
-      "size": 1552
+      "mtimeMs": 1786437839254.2598,
+      "size": 21772
     },
     "/home/omar/.cursor/projects/home-omar-Projects-brainiac/agent-transcripts/fdd0f806-2cf0-441d-87f1-29fdcf958fc2/subagents/911a1146-c8a6-4263-9b49-686afc505a01.jsonl": {
       "mtimeMs": 1786435622810.876,

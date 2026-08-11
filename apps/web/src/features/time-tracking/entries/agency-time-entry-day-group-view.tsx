@@ -7,8 +7,6 @@ import {
   agencyTimeEntryBulkToolbarClass,
   agencyTimeEntryDayGroupClass,
   agencyTimeEntryIconButtonClass,
-  agencyTimeEntryRowRelatedClass,
-  agencyTimeEntryRowRelatedPulseClass,
   agencyTimeEntrySectionHeaderBulkActiveClass,
   agencyTimeEntrySectionHeaderClass,
   agencyTimeTrackerIconActionClass,
@@ -43,9 +41,6 @@ type AgencyTimeEntryDayGroupViewProps = {
   teamId: string;
   day: TimeEntryDayGroup;
   renderGroupRow: AgencyTimeEntryGroupRowRenderer;
-  highlightedEntryId?: string | null;
-  relatedTaskId?: string | null;
-  relatedPulseTaskId?: string | null;
   selectedEntryIds?: Set<string>;
   bulkEditActive?: boolean;
   bulkFieldEditOpen?: boolean;
@@ -69,9 +64,6 @@ export function AgencyTimeEntryDayGroupView({
   teamId,
   day,
   renderGroupRow,
-  highlightedEntryId = null,
-  relatedTaskId = null,
-  relatedPulseTaskId = null,
   selectedEntryIds,
   bulkEditActive = false,
   bulkFieldEditOpen = false,
@@ -304,10 +296,6 @@ export function AgencyTimeEntryDayGroupView({
               className={cn(
                 bulkEditActive && "flex items-stretch",
                 selected && agencyTimeEntryBulkRowSelectedClass,
-                relatedTaskId && group.taskId === relatedTaskId && agencyTimeEntryRowRelatedClass,
-                relatedPulseTaskId &&
-                  group.taskId === relatedPulseTaskId &&
-                  agencyTimeEntryRowRelatedPulseClass,
                 "motion-reduce:transition-none transition-colors duration-150",
               )}
             >
@@ -325,7 +313,6 @@ export function AgencyTimeEntryDayGroupView({
                 {renderGroupRow({
                   group,
                   groupExpandKey,
-                  highlighted: highlightedEntryId === primaryEntry.id,
                   omitBottomBorder: index === lastDisplayIndex,
                 })}
               </div>

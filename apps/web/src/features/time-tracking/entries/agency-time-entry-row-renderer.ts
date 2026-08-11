@@ -5,6 +5,5 @@ import type { CollapsedEntryGroup } from "@/features/time-tracking/group-time-en
 export type AgencyTimeEntryGroupRowRenderer = (input: {
   group: CollapsedEntryGroup;
   groupExpandKey: string;
-  highlighted: boolean;
   omitBottomBorder: boolean;
 }) => ReactNode;

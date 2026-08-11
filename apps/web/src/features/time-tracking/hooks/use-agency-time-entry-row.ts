@@ -132,7 +132,6 @@ type UseAgencyTimeEntryRowOptions = {
       isWaste?: boolean;
     },
   ) => Promise<void>;
-  highlighted?: boolean;
 };
 
 export type AgencyTimeEntryRowViewModel = {
@@ -145,7 +144,6 @@ export type AgencyTimeEntryRowViewModel = {
   onCreateTag: (name: string) => void;
   expanded: boolean;
   isTimerMutationPending: boolean;
-  highlighted: boolean;
   isDark: boolean;
   isMulti: boolean;
   expandedChildGroups: CollapsedEntryGroup[];
@@ -218,7 +216,6 @@ export function useAgencyTimeEntryRow({
   onToggleWaste,
   onSaveEdit,
   onBulkPatch,
-  highlighted = false,
 }: UseAgencyTimeEntryRowOptions): AgencyTimeEntryRowViewModel {
   const { isDark } = useTheme();
   const activeTimer = useAgencyActiveTimerQuery(teamId).data?.timer ?? null;
@@ -540,7 +537,6 @@ export function useAgencyTimeEntryRow({
     onCreateTag,
     expanded,
     isTimerMutationPending,
-    highlighted,
     isDark,
     isMulti,
     expandedChildGroups,

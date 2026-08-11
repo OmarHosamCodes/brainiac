@@ -19,7 +19,6 @@ type AgencyTimeEntryWeekGroupViewProps = {
   teamId: string;
   week: TimeEntryWeekGroup;
   renderGroupRow: AgencyTimeEntryGroupRowRenderer;
-  highlightedEntryId?: string | null;
   selectedEntryIds?: Set<string>;
   bulkEditDayKey?: string | null;
   bulkFieldEditOpen?: boolean;
@@ -60,7 +59,6 @@ export function AgencyTimeEntryWeekGroupView({
   teamId,
   week,
   renderGroupRow,
-  highlightedEntryId = null,
   selectedEntryIds,
   bulkEditDayKey = null,
   bulkFieldEditOpen = false,
@@ -89,7 +87,6 @@ export function AgencyTimeEntryWeekGroupView({
             key={day.dateKey}
             teamId={teamId}
             day={day}
-            highlightedEntryId={highlightedEntryId}
             renderGroupRow={renderGroupRow}
             selectedEntryIds={selectedEntryIds}
             bulkEditActive={bulkEditDayKey === day.dateKey}

@@ -43,7 +43,6 @@ type AgencyTimeEntryRowContainerProps = {
       isWaste?: boolean;
     },
   ) => Promise<void>;
-  highlighted?: boolean;
   /** Suppress the row bottom border (last row in a day group, or last child in a multi group). */
   omitBottomBorder?: boolean;
   /** Child row inside an expanded multi-entry group. */
@@ -80,9 +79,6 @@ export function AgencyTimeEntryRowContainer({
             group={childGroup}
             expanded={false}
             multiGroupChild
-            highlighted={
-              props.highlighted === true && childGroup.entries[0]?.id === props.group.entries[0]?.id
-            }
             omitBottomBorder={index === view.expandedChildGroups.length - 1}
           />
         ))}

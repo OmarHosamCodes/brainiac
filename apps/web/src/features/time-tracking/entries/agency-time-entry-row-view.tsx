@@ -24,7 +24,6 @@ import {
   agencyTimeEntryRailTimeClass,
   agencyTimeEntryRowClass,
   agencyTimeEntryRowEditingClass,
-  agencyTimeEntryRowHighlightClass,
   agencyTimeEntryClockTimeInputClass,
   agencyTimeTrackerIconActionClass,
   agencyWorkCountBadgeClass,
@@ -50,7 +49,6 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     projects,
     tasks,
     expanded,
-    highlighted,
     isMulti,
     canRestart,
     primaryEntryId,
@@ -107,7 +105,6 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
       tabIndex={0}
       className={cn(
         agencyTimeEntryRowClass,
-        highlighted && agencyTimeEntryRowHighlightClass,
         (editingDescription || editingDuration || timeEditorOpen) && agencyTimeEntryRowEditingClass,
         className,
       )}

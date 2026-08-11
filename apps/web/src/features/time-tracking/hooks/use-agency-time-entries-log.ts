@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { useAgencyTimeEntriesLogStore } from "@/features/time-tracking/stores/agency-time-entries-log";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import {
-  useAgencyActiveTimerQuery,
   useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
@@ -35,12 +34,8 @@ import {
 } from "@/features/time-tracking/hooks/use-agency-tags";
 import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import type { AgencyDayBulkDraft } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
-import { RAIL_HOLD_MS } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500] as const;
-const HIGHLIGHT_CLEAR_MS = 2_500;
-/** Matches `--motion-duration-pulse` / `RAIL_HOLD_MS.pulse`. */
-const RELATED_PULSE_MS = RAIL_HOLD_MS.pulse;
 const ESTIMATED_ENTRY_ROW_HEIGHT = 56;
 const ESTIMATED_DAY_HEADER_HEIGHT = 48;
 const WEEK_HEADER_HEIGHT = 40;
@@ -72,9 +67,6 @@ export type AgencyTimeEntriesLogViewModel = {
   deletingEntryIds: string[];
   updatingEntryIds: string[];
   duplicatingEntryIds: string[];
-  highlightedEntryId: string | null;
-  relatedTaskId: string | null;
-  relatedPulseTaskId: string | null;
   onToggleGroupExpand: (collapseKey: string) => void;
   onRestart: (group: CollapsedEntryGroup) => void;
   onDeleteGroup: (entryIds: string[]) => void;
@@ -130,47 +122,7 @@ export function useAgencyTimeEntriesLog({
   const updatingEntryIds = useAgencyTimeTrackingStore((s) => s.updatingEntryIds);
   const duplicatingEntryIds = useAgencyTimeTrackingStore((s) => s.duplicatingEntryIds);
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
-  const lastHighlightedEntryId = useAgencyTimeTrackingStore((s) => s.lastHighlightedEntryId);
-  const clearHighlightedEntry = useAgencyTimeTrackingStore((s) => s.clearHighlightedEntry);
   const requestOpenTaskChooser = useAgencyTimeTrackingStore((s) => s.requestOpenTaskChooser);
-  const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
-  const relatedTaskId = activeTimerQuery.data?.timer?.taskId ?? null;
-  const prevRelatedTaskIdRef = useRef<string | null>(null);
-  const hasSettledActiveTimerRef = useRef(false);
-  const relatedPulseTimerRef = useRef<number | null>(null);
-  const [relatedPulseTaskId, setRelatedPulseTaskId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!activeTimerQuery.isFetched) return;
-
-    const previousTaskId = prevRelatedTaskIdRef.current;
-    prevRelatedTaskIdRef.current = relatedTaskId;
-
-    if (!hasSettledActiveTimerRef.current) {
-      hasSettledActiveTimerRef.current = true;
-      return;
-    }
-
-    if (!relatedTaskId || relatedTaskId === previousTaskId) return;
-
-    if (relatedPulseTimerRef.current !== null) {
-      window.clearTimeout(relatedPulseTimerRef.current);
-    }
-
-    setRelatedPulseTaskId(relatedTaskId);
-    relatedPulseTimerRef.current = window.setTimeout(() => {
-      setRelatedPulseTaskId(null);
-      relatedPulseTimerRef.current = null;
-    }, RELATED_PULSE_MS);
-  }, [relatedTaskId, activeTimerQuery.isFetched]);
-
-  useEffect(() => {
-    return () => {
-      if (relatedPulseTimerRef.current !== null) {
-        window.clearTimeout(relatedPulseTimerRef.current);
-      }
-    };
-  }, []);
 
   const page = useAgencyTimeEntriesLogStore((s) => s.page);
   const pageSize = useAgencyTimeEntriesLogStore((s) => s.pageSize);
@@ -270,32 +222,6 @@ export function useAgencyTimeEntriesLog({
   useEffect(() => {
     resetForTeam();
   }, [teamId, resetForTeam]);
-
-  useEffect(() => {
-    if (!lastHighlightedEntryId) return;
-
-    const virtualDayIndex = virtualDays.findIndex((item) =>
-      item.day.groups.some((group) =>
-        group.entries.some((entry) => entry.id === lastHighlightedEntryId),
-      ),
-    );
-    if (virtualDayIndex >= 0) virtualizer.scrollToIndex(virtualDayIndex, { align: "auto" });
-
-    const frame = requestAnimationFrame(() => {
-      scrollContainerRef.current
-        ?.querySelector(`[data-entry-id="${lastHighlightedEntryId}"]`)
-        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
-
-    const clearHandle = setTimeout(() => {
-      clearHighlightedEntry();
-    }, HIGHLIGHT_CLEAR_MS);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      clearTimeout(clearHandle);
-    };
-  }, [lastHighlightedEntryId, clearHighlightedEntry, entries, virtualDays, virtualizer]);
 
   const logQueryError = entriesQuery.error ?? projectsQuery.error ?? null;
 
@@ -551,9 +477,6 @@ export function useAgencyTimeEntriesLog({
     deletingEntryIds,
     updatingEntryIds,
     duplicatingEntryIds,
-    highlightedEntryId: lastHighlightedEntryId,
-    relatedTaskId,
-    relatedPulseTaskId,
     onToggleGroupExpand: toggleGroupExpand,
     onRestart: (group) => void restartEntry(group),
     onDeleteGroup: (entryIds) => void deleteGroupEntries(entryIds),
