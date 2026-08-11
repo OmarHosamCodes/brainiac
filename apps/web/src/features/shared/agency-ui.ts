@@ -126,20 +126,26 @@ export const agencyTaskRailCollapsedWidthClass = cn(
 export const agencyTimeEntryRowRelatedClass =
   "bg-primary/5 ring-1 ring-inset ring-primary/20 motion-reduce:transition-none transition-colors duration-200";
 
-/** Filter pills in My Tasks rail — same chip language as shell segments. */
+/** Filter pills in My Tasks rail — inactive = offer, active = selected + clear. */
 export const agencyMyTasksFilterPillClass = cn(
-  "inline-flex h-7 items-center gap-1 rounded-full border border-default bg-muted px-2.5 text-xs font-medium text-muted",
-  "transition-colors hover:bg-elevated hover:text-highlighted",
+  "inline-flex h-7 max-w-full items-center gap-1 rounded-full border border-dashed border-default bg-transparent px-2.5 text-xs font-medium text-muted",
+  "transition-colors hover:border-solid hover:bg-muted hover:text-highlighted",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
 );
 
-export const agencyMyTasksFilterPillActiveClass =
-  "border-primary/25 bg-primary/10 font-semibold text-primary hover:bg-primary/15 hover:text-primary";
+export const agencyMyTasksFilterPillActiveClass = cn(
+  "border-solid border-primary/40 bg-primary/15 font-semibold text-primary",
+  "ring-1 ring-inset ring-primary/20",
+  "hover:border-primary/50 hover:bg-primary/20 hover:text-primary",
+);
+
+export const agencyMyTasksFilterPillClearIconClass =
+  "size-3.5 shrink-0 opacity-70 transition-opacity group-hover/pill:opacity-100";
 
 /** Client group band inside the rail list — quieter than full log day headers. */
 export const agencyMyTasksClientGroupHeaderClass = cn(
-  "sticky top-0 z-[1] truncate bg-card px-2 py-1.5 text-[11px] font-semibold tracking-wide text-muted",
+  "sticky top-0 z-[1] truncate bg-card px-2 py-1.5 text-xs font-semibold tracking-wide text-muted",
 );
 
 /** Virtual-list height estimates — keep in sync with header padding/typography below. */
