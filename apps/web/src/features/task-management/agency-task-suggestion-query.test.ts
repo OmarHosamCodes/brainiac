@@ -95,8 +95,18 @@ describe("selectTaskSuggestions ranking", () => {
 
   test("prefers affinity project matches when scores tie", () => {
     const tasks = [
-      makeTask({ id: "other", projectId: "p2", title: "Brief", createdAt: "2026-01-02T00:00:00.000Z" }),
-      makeTask({ id: "aff", projectId: "p1", title: "Brief", createdAt: "2026-01-01T00:00:00.000Z" }),
+      makeTask({
+        id: "other",
+        projectId: "p2",
+        title: "Brief",
+        createdAt: "2026-01-02T00:00:00.000Z",
+      }),
+      makeTask({
+        id: "aff",
+        projectId: "p1",
+        title: "Brief",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
     ];
     expect(
       selectTaskSuggestions(tasks, "Brief", { affinityProjectId: "p1" }).map((t) => t.id),

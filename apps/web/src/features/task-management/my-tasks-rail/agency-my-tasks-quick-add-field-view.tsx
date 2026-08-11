@@ -45,9 +45,7 @@ export function AgencyMyTasksQuickAddFieldView({
   onPickSuggestion,
   onSuppressSuggestions,
 }: AgencyMyTasksQuickAddFieldViewProps) {
-  const showSuggestions = Boolean(
-    suggestionsOpen && (suggestions.length > 0 || value.trim()),
-  );
+  const showSuggestions = Boolean(suggestionsOpen && (suggestions.length > 0 || value.trim()));
   const activeSuggestion = suggestions[activeIndex] ?? null;
   const activeOptionId =
     showSuggestions && activeSuggestion
