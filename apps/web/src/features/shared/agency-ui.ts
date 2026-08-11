@@ -129,10 +129,6 @@ export const agencyTaskRailWidthTransitionClass = cn(
   "ease-[cubic-bezier(0.25,1,0.5,1)]",
 );
 
-/** D08 — log rows that match the actively tracked task. */
-export const agencyTimeEntryRowRelatedClass =
-  "bg-primary/5 ring-1 ring-inset ring-primary/20 motion-reduce:transition-none transition-colors duration-200";
-
 /** Filter pills in My Tasks rail — inactive = offer, active = selected + clear. */
 export const agencyMyTasksFilterPillClass = cn(
   "inline-flex h-7 max-w-full items-center gap-1 rounded-full border border-dashed border-default bg-transparent px-2.5 text-xs font-medium text-muted",
@@ -554,9 +550,6 @@ export const agencyTimeWeekGroupBodyClass = "flex flex-col gap-[20px] bg-backgro
 /** Stack of week sections — same gutter as days so week boundaries stay invisible. */
 export const agencyTimeWeekStackClass = "flex min-h-full flex-col gap-[20px] bg-background";
 
-export const agencyTimeEntryRowHighlightClass =
-  "bg-success/10 motion-reduce:transition-none transition-colors duration-500";
-
 export const agencyMyTasksRailRowClass = cn(
   "relative grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1.5",
   "transition-colors hover:bg-default/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -568,8 +561,6 @@ export const agencyMyTasksRailRowTrackingClass =
 
 export const agencyMyTasksRailRowTrackingPulseClass = "agency-my-tasks-tracking-pulse";
 
-/** One-shot focal pulse when rail play starts — reuses my-tasks tracking keyframes. */
-export const agencyTimeEntryRowRelatedPulseClass = agencyMyTasksRailRowTrackingPulseClass;
 export const agencyMyTasksCheckPopClass = "agency-my-tasks-check-pop";
 export const agencyMyTasksCountTickClass = "agency-my-tasks-count-tick";
 export const agencyMyTasksCreateFlashClass = "agency-my-tasks-create-flash";
@@ -582,7 +573,7 @@ export const agencyMyTasksRailComposerFormClass =
   "relative z-10 flex shrink-0 flex-col gap-2 overflow-visible border-b border-default px-3 py-2.5 sm:px-4";
 
 export const agencyMyTasksRailComposerRowClass =
-  "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2";
+  "grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2";
 
 export const agencyMyTasksRailAddButtonClass = cn(
   "inline-flex size-8 shrink-0 items-center justify-center rounded-full",

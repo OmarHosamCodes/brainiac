@@ -36,6 +36,7 @@ function makeTask(id: string, overrides: Record<string, unknown> = {}) {
     taskKind: "standard" as const,
     assignedToTeam: true,
     isWaste: false,
+    estimateMinutes: null,
     createdByUserId: "user-1",
     assignees: [],
     dueDate: null,

@@ -61,6 +61,7 @@ type AgencyProjectTask = {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  estimateMinutes: number | null;
   createdByUserId: string;
   assignees: Array<{
     userId: string;
@@ -204,6 +205,7 @@ type CreateProjectTaskPayload = {
   assignedToTeam?: boolean;
   assigneeUserIds?: string[];
   dueDate?: string;
+  estimateMinutes?: number | null;
   description?: string;
   /** True when an open/in-progress task with this title already exists on the project. */
   reusesExistingTitle?: boolean;
@@ -235,6 +237,7 @@ type UpdateProjectTaskPayload = {
   assignedToTeam?: boolean;
   assigneeUserIds?: string[];
   dueDate?: string | null;
+  estimateMinutes?: number | null;
 };
 
 type ArchiveClientPayload = {
@@ -858,6 +861,7 @@ function createAgencyOpsActions(
       taskKind,
       assignedToTeam: false,
       isWaste: false,
+      estimateMinutes: null,
       createdByUserId,
       assignees: assigneeIds.map((userId) => ({
         userId,
@@ -1011,6 +1015,7 @@ function createAgencyOpsActions(
       taskKind: "standard",
       assignedToTeam,
       isWaste: false,
+      estimateMinutes: payload.estimateMinutes ?? null,
       createdByUserId,
       // Assignees required so assignee-filtered active lists accept the optimistic row.
       assignees: assigneeUserIds.map((userId) => ({
@@ -1088,6 +1093,7 @@ function createAgencyOpsActions(
         assignedToTeam: payload.assignedToTeam,
         assigneeUserIds: payload.assigneeUserIds,
         dueDate: payload.dueDate,
+        estimateMinutes: payload.estimateMinutes,
         description: trimmedDescription || undefined,
       })) as AgencyProjectTask;
 
@@ -1490,6 +1496,7 @@ function createAgencyOpsActions(
           assignedToTeam: payload.assignedToTeam,
           assigneeUserIds: payload.assigneeUserIds,
           dueDate: payload.dueDate,
+          estimateMinutes: payload.estimateMinutes,
         })) as AgencyProjectTask;
 
         patchUpdatedProjectTask(payload.teamId, updated);
@@ -1534,6 +1541,8 @@ function createAgencyOpsActions(
                 );
               }),
       dueDate: payload.dueDate === undefined ? current.dueDate : payload.dueDate,
+      estimateMinutes:
+        payload.estimateMinutes === undefined ? current.estimateMinutes : payload.estimateMinutes,
       updatedAt: nowIso,
     };
 
@@ -1549,6 +1558,7 @@ function createAgencyOpsActions(
         assignedToTeam: payload.assignedToTeam,
         assigneeUserIds: payload.assigneeUserIds,
         dueDate: payload.dueDate,
+        estimateMinutes: payload.estimateMinutes,
       })) as AgencyProjectTask;
 
       patchUpdatedProjectTask(payload.teamId, updated);

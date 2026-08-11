@@ -37,6 +37,7 @@ export type AgencyOptimisticTask = {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  estimateMinutes: number | null;
   createdByUserId: string;
   assignees: Array<{
     userId: string;
