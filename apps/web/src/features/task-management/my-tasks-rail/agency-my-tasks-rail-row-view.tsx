@@ -14,6 +14,10 @@ import {
   agencyTaskRowCheckboxClass,
   agencyTaskRowCompleteClass,
 } from "@/features/shared/agency-ui";
+import {
+  railLayoutTransition,
+  railRowStateTransition,
+} from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -68,11 +72,13 @@ export function AgencyMyTasksRailRowView({
   return (
     <motion.li
       layout
+      layoutDependency={isDone}
       variants={variants}
       custom={stagger}
-      initial={false}
+      initial="hidden"
       animate="show"
       exit="exit"
+      transition={railLayoutTransition}
       data-task-id={taskId}
       tabIndex={0}
       aria-selected={isSelected}
@@ -96,7 +102,7 @@ export function AgencyMyTasksRailRowView({
         onPlayEnter();
       }}
     >
-      <button
+      <motion.button
         type="button"
         role="checkbox"
         aria-checked={isDone}
@@ -106,35 +112,57 @@ export function AgencyMyTasksRailRowView({
           "inline-flex size-7 items-center justify-center rounded-md",
           "transition-colors hover:bg-default/80",
         )}
+        animate={{ scale: completeFlash ? 1.08 : 1 }}
+        transition={railRowStateTransition}
         onClick={(event) => {
           event.stopPropagation();
           onToggleComplete();
         }}
       >
-        <span
+        <motion.span
+          layout
           className={cn(
             agencyTaskRowCheckboxClass,
             isDone && agencyTaskRowCheckboxCheckedClass,
             completeFlash && agencyMyTasksCheckPopClass,
           )}
           aria-hidden
+          initial={false}
+          animate={{
+            scale: isDone ? 1 : 0.92,
+            opacity: isDone ? 1 : 0.85,
+          }}
+          transition={railRowStateTransition}
         >
           {isDone ? <Check className="size-2" strokeWidth={3} /> : null}
-        </span>
-      </button>
+        </motion.span>
+      </motion.button>
 
       <div className="min-w-0">
-        <div
-          className={cn(
-            "truncate text-sm font-medium text-foreground",
-            isDone && "text-muted line-through decoration-muted/80",
-          )}
+        <motion.div
+          className={cn("truncate text-sm font-medium text-foreground")}
+          initial={false}
+          animate={{
+            opacity: isDone ? 0.65 : 1,
+            x: isDone ? 2 : 0,
+          }}
+          transition={railRowStateTransition}
+          style={{
+            textDecorationLine: isDone ? "line-through" : "none",
+            textDecorationColor:
+              "color-mix(in oklch, var(--color-muted-foreground) 80%, transparent)",
+          }}
         >
           {title}
-        </div>
-        <div className="mt-0.5 truncate text-[11px] text-muted">
+        </motion.div>
+        <motion.div
+          className="mt-0.5 truncate text-xs text-muted"
+          initial={false}
+          animate={{ opacity: isDone ? 0.55 : 1 }}
+          transition={railRowStateTransition}
+        >
           Assigned by {assignedByLabel} · {projectName}
-        </div>
+        </motion.div>
       </div>
 
       <div

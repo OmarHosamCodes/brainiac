@@ -14,6 +14,7 @@ import { selectIsCreatingTask, useAgencyOpsStore } from "@/features/shared/store
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
 import { groupTasksByClient } from "@/features/task-management/agency-task-utils";
 import { useAgencyMyTasksRailStore } from "@/features/task-management/stores/agency-my-tasks-rail";
+import { RAIL_HOLD_MS } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
@@ -100,7 +101,7 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     }
 
     if (!runningTaskId || runningTaskId === previousTaskId) return;
-    flashId(setJustPlayedTaskId, runningTaskId, 450);
+    flashId(setJustPlayedTaskId, runningTaskId, RAIL_HOLD_MS.pulse);
   }, [runningTaskId, activeTimerQuery.isFetched]);
 
   const showOpen = pills.has("open") || pills.size === 0;
@@ -233,12 +234,12 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
             : [],
     });
     if (createdId) {
-      flashId(setJustCreatedTaskId, createdId, 480);
+      flashId(setJustCreatedTaskId, createdId, RAIL_HOLD_MS.flash);
     }
   }
 
   async function onCompleteTask(taskId: string) {
-    flashId(setJustCompletedTaskId, taskId, 650);
+    flashId(setJustCompletedTaskId, taskId, RAIL_HOLD_MS.complete);
     await completeProjectTaskForMember({ teamId, taskId });
   }
 

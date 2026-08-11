@@ -35,10 +35,12 @@ import {
 } from "@/features/time-tracking/hooks/use-agency-tags";
 import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import type { AgencyDayBulkDraft } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
+import { RAIL_HOLD_MS } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500] as const;
 const HIGHLIGHT_CLEAR_MS = 2_500;
-const RELATED_PULSE_MS = 420;
+/** Matches `--motion-duration-pulse` / `RAIL_HOLD_MS.pulse`. */
+const RELATED_PULSE_MS = RAIL_HOLD_MS.pulse;
 const ESTIMATED_ENTRY_ROW_HEIGHT = 56;
 const ESTIMATED_DAY_HEADER_HEIGHT = 48;
 const WEEK_HEADER_HEIGHT = 40;
