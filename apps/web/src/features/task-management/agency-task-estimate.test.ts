@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { formatEstimateMinutes, parseEstimateInput } from "./agency-task-utils";
+import { formatEstimateMinutes, parseEstimateInput } from "./agency-task-estimate";
 
 describe("parseEstimateInput", () => {
   test("parses bare minutes", () => {

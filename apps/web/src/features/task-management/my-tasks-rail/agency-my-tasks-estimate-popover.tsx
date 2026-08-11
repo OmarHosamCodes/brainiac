@@ -7,21 +7,14 @@ import {
   agencyMyTasksFilterPillClass,
 } from "@/features/shared/agency-ui";
 import {
+  AGENCY_TASK_ESTIMATE_PRESETS,
   formatEstimateMinutes,
   parseEstimateInput,
-} from "@/features/task-management/agency-task-utils";
+} from "@/features/task-management/agency-task-estimate";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { cn } from "@/lib/utils";
-
-const ESTIMATE_PRESETS = [
-  { minutes: 15, label: "15m" },
-  { minutes: 30, label: "30m" },
-  { minutes: 60, label: "1h" },
-  { minutes: 120, label: "2h" },
-  { minutes: 240, label: "4h" },
-] as const;
 
 type AgencyMyTasksEstimatePopoverProps = {
   value: number | null;
@@ -92,7 +85,7 @@ export function AgencyMyTasksEstimatePopover({
         </div>
 
         <div className="flex flex-wrap gap-1.5" role="group" aria-label="Estimate presets">
-          {ESTIMATE_PRESETS.map((preset) => {
+          {AGENCY_TASK_ESTIMATE_PRESETS.map((preset) => {
             const active = value === preset.minutes;
             return (
               <button

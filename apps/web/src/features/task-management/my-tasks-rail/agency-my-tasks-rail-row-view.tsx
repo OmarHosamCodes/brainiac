@@ -18,7 +18,7 @@ import {
   railLayoutTransition,
   railRowStateTransition,
 } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
-import { formatEstimateMinutes } from "@/features/task-management/agency-task-utils";
+import { formatEstimateMinutes } from "@/features/task-management/agency-task-estimate";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
