@@ -30,6 +30,7 @@ export type AgencyProjectTaskRecord = {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  estimateMinutes: number | null;
   createdByUserId: string;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
@@ -55,6 +56,7 @@ export function mapProjectTaskRow(row: {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  estimateMinutes: number | null;
   createdByUserId: string;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
@@ -74,6 +76,7 @@ export function mapProjectTaskRow(row: {
     taskKind: row.taskKind,
     assignedToTeam: row.assignedToTeam,
     isWaste: row.isWaste,
+    estimateMinutes: row.estimateMinutes,
     createdByUserId: row.createdByUserId,
     assignees: row.assignees,
     ...(row.viewerStatus !== undefined ? { viewerStatus: row.viewerStatus } : {}),
@@ -268,6 +271,7 @@ export async function buildProjectTaskRecord(
     taskKind: "standard" | "journey_anchor" | "journey_milestone";
     assignedToTeam: boolean;
     isWaste: boolean;
+    estimateMinutes: number | null;
     createdByUserId: string;
     dueDate: Date | null;
     createdAt: Date;
@@ -333,6 +337,7 @@ export const projectTaskColumns = {
   taskKind: agencyOpsProjectTask.taskKind,
   assignedToTeam: agencyOpsProjectTask.assignedToTeam,
   isWaste: agencyOpsProjectTask.isWaste,
+  estimateMinutes: agencyOpsProjectTask.estimateMinutes,
   createdByUserId: agencyOpsProjectTask.createdByUserId,
   dueDate: agencyOpsProjectTask.dueDate,
   createdAt: agencyOpsProjectTask.createdAt,
@@ -348,6 +353,7 @@ export type ProjectTaskRow = {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  estimateMinutes: number | null;
   createdByUserId: string;
   dueDate: Date | null;
   createdAt: Date;

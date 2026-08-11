@@ -49,6 +49,7 @@ const agencyProjectTaskLiveSchema = z.object({
   taskKind: z.enum(["standard", "journey_anchor", "journey_milestone"]),
   assignedToTeam: z.boolean(),
   isWaste: z.boolean(),
+  estimateMinutes: z.number().int().min(1).max(1440).nullable(),
   createdByUserId: z.string().min(1),
   assignees: z.array(agencyProjectTaskAssigneeLiveSchema),
   viewerStatus: z.enum(["open", "in_progress", "done"]).optional(),
@@ -296,6 +297,7 @@ export async function publishAgencyTaskUpdated(
     taskKind: "standard" | "journey_anchor" | "journey_milestone";
     assignedToTeam: boolean;
     isWaste: boolean;
+    estimateMinutes: number | null;
     createdByUserId: string;
     assignees: Array<{
       userId: string;

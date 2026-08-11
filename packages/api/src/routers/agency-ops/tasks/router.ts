@@ -49,6 +49,7 @@ export const tasksRouter = {
           assignedToTeam: z.boolean().optional(),
           assigneeUserIds: z.array(z.string().min(1)).optional(),
           dueDate: z.string().datetime().optional(),
+          estimateMinutes: z.number().int().min(1).max(1440).nullable().optional(),
           description: z.string().max(4000).optional(),
         }),
       )
@@ -67,6 +68,7 @@ export const tasksRouter = {
           assignedToTeam: z.boolean().optional(),
           assigneeUserIds: z.array(z.string().min(1)).optional(),
           dueDate: z.string().datetime().nullable().optional(),
+          estimateMinutes: z.number().int().min(1).max(1440).nullable().optional(),
           isWaste: z.boolean().optional(),
         }),
       )

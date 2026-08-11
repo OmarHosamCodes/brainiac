@@ -483,6 +483,7 @@ export async function createAgencyProjectTask(
     assignedToTeam?: boolean;
     assigneeUserIds?: string[];
     dueDate?: string | null;
+    estimateMinutes?: number | null;
     description?: string;
   },
 ) {
@@ -499,6 +500,7 @@ export async function createAgencyProjectTask(
   const titleKey = normalizeTaskTitle(title);
   const assignedToTeam = input.assignedToTeam ?? false;
   const assigneeUserIds = assignedToTeam ? [] : [...new Set(input.assigneeUserIds ?? [])];
+  const estimateMinutes = input.estimateMinutes ?? null;
 
   if (!assignedToTeam) {
     for (const userId of assigneeUserIds) {
@@ -508,6 +510,7 @@ export async function createAgencyProjectTask(
 
   const existing = await findProjectTaskByTitleKey(input.teamId, input.projectId, titleKey);
   if (existing) {
+    // Title reuse merges assignees only — estimate stays on the existing task.
     const merged = await mergeAssigneesIntoExistingTask(existing, {
       assignedToTeam,
       assigneeUserIds,
@@ -536,6 +539,7 @@ export async function createAgencyProjectTask(
           title,
           status: input.status ?? "open",
           assignedToTeam,
+          estimateMinutes,
           dueDate,
           createdByUserId: actorUserId,
           createdAt: now,
@@ -726,6 +730,7 @@ export async function updateAgencyProjectTask(
     assignedToTeam?: boolean;
     assigneeUserIds?: string[];
     dueDate?: string | null;
+    estimateMinutes?: number | null;
     isWaste?: boolean;
   },
 ) {
@@ -765,6 +770,9 @@ export async function updateAgencyProjectTask(
         : null
       : current.dueDate;
 
+  const estimateMinutes =
+    input.estimateMinutes !== undefined ? input.estimateMinutes : current.estimateMinutes;
+
   let nextAssignedToTeam = current.assignedToTeam;
   let nextAssigneeUserIds: string[] | null = null;
 
@@ -791,6 +799,7 @@ export async function updateAgencyProjectTask(
           ? { assignedToTeam: nextAssignedToTeam }
           : {}),
         dueDate,
+        estimateMinutes,
         updatedAt: now,
       })
       .where(

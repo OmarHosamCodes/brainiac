@@ -80,6 +80,7 @@ export const agencyProjectTaskSchema = z.object({
   taskKind: agencyProjectTaskKindSchema,
   assignedToTeam: z.boolean(),
   isWaste: z.boolean(),
+  estimateMinutes: z.number().int().min(1).max(1440).nullable(),
   createdByUserId: z.string().min(1),
   assignees: z.array(agencyProjectTaskAssigneeSchema),
   viewerStatus: agencyProjectTaskMemberStatusSchema.optional(),
