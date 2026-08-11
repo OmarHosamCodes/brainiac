@@ -134,12 +134,20 @@ export function useAgencyTimeEntriesLog({
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
   const relatedTaskId = activeTimerQuery.data?.timer?.taskId ?? null;
   const prevRelatedTaskIdRef = useRef<string | null>(null);
+  const hasSettledActiveTimerRef = useRef(false);
   const relatedPulseTimerRef = useRef<number | null>(null);
   const [relatedPulseTaskId, setRelatedPulseTaskId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!activeTimerQuery.isFetched) return;
+
     const previousTaskId = prevRelatedTaskIdRef.current;
     prevRelatedTaskIdRef.current = relatedTaskId;
+
+    if (!hasSettledActiveTimerRef.current) {
+      hasSettledActiveTimerRef.current = true;
+      return;
+    }
 
     if (!relatedTaskId || relatedTaskId === previousTaskId) return;
 
@@ -152,7 +160,7 @@ export function useAgencyTimeEntriesLog({
       setRelatedPulseTaskId(null);
       relatedPulseTimerRef.current = null;
     }, RELATED_PULSE_MS);
-  }, [relatedTaskId]);
+  }, [relatedTaskId, activeTimerQuery.isFetched]);
 
   useEffect(() => {
     return () => {
