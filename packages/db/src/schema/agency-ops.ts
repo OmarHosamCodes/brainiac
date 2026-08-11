@@ -147,6 +147,7 @@ export const agencyOpsProjectTask = pgTable(
     taskKind: text("task_kind").$type<AgencyOpsProjectTaskKind>().notNull().default("standard"),
     assignedToTeam: boolean("assigned_to_team").notNull().default(false),
     isWaste: boolean("is_waste").notNull().default(false),
+    estimateMinutes: integer("estimate_minutes"),
     dueDate: timestamp("due_date"),
     createdByUserId: text("created_by_user_id")
       .notNull()
