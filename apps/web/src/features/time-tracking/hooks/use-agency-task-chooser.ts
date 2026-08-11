@@ -303,7 +303,7 @@ export function useAgencyTaskChooser(
         clientGroups: sections.clientGroups,
         isProjectExpanded: isProjectExpandedForList,
         isClientExpanded: isClientExpandedForList,
-        includeProjects: !searchTerm.trim(),
+        includeProjects: pickProject || !searchTerm.trim(),
       }),
     // expandEpoch invalidates after project/client toggles.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- expand helpers close over render state

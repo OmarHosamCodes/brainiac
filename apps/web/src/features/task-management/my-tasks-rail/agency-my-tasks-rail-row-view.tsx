@@ -70,7 +70,7 @@ export function AgencyMyTasksRailRowView({
       layout
       variants={variants}
       custom={stagger}
-      initial="hidden"
+      initial={false}
       animate="show"
       exit="exit"
       data-task-id={taskId}
@@ -89,11 +89,11 @@ export function AgencyMyTasksRailRowView({
       )}
       onClick={onSelect}
       onKeyDown={(event: KeyboardEvent<HTMLLIElement>) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          onSelect();
-          onPlayEnter();
-        }
+        if (event.key !== "Enter") return;
+        if (event.target !== event.currentTarget) return;
+        event.preventDefault();
+        onSelect();
+        onPlayEnter();
       }}
     >
       <button

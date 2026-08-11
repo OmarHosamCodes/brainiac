@@ -79,12 +79,29 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
 
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
   const runningTaskId = activeTimerQuery.data?.timer?.taskId ?? null;
+  const prevRunningTaskIdRef = useRef<string | null>(null);
+  const hasSettledRunningTaskRef = useRef(false);
 
   useEffect(() => {
     if (!projectId && projects[0]?.id) {
       setProjectId(activeTimerQuery.data?.timer?.projectId || projects[0].id);
     }
   }, [projectId, projects, activeTimerQuery.data?.timer?.projectId]);
+
+  useEffect(() => {
+    if (!activeTimerQuery.isFetched) return;
+
+    const previousTaskId = prevRunningTaskIdRef.current;
+    prevRunningTaskIdRef.current = runningTaskId;
+
+    if (!hasSettledRunningTaskRef.current) {
+      hasSettledRunningTaskRef.current = true;
+      return;
+    }
+
+    if (!runningTaskId || runningTaskId === previousTaskId) return;
+    flashId(setJustPlayedTaskId, runningTaskId, 450);
+  }, [runningTaskId, activeTimerQuery.isFetched]);
 
   const showOpen = pills.has("open") || pills.size === 0;
   const showDone = pills.has("done");
@@ -268,17 +285,21 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
       description: "",
       successDescription: "Timer started for this task.",
     });
-    flashId(setJustPlayedTaskId, taskId, 450);
   }
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        target.closest("input, textarea, select, [contenteditable=true]")
-      ) {
-        return;
+      if (target instanceof HTMLElement) {
+        if (target.closest("input, textarea, select, [contenteditable=true]")) {
+          return;
+        }
+        if (
+          target.closest("[data-od-id='my-tasks-rail']") &&
+          target.closest("button, [role=checkbox], [role=menuitem]")
+        ) {
+          return;
+        }
       }
 
       const railFocused =

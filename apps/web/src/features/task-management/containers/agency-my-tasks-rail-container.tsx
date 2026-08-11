@@ -25,7 +25,7 @@ export function AgencyMyTasksRail({ teamId }: AgencyMyTasksRailProps) {
         <motion.div
           className="flex flex-col gap-3"
           variants={railListContainerVariants}
-          initial="hidden"
+          initial={false}
           animate="show"
         >
           <AnimatePresence initial={false} mode="popLayout">
