@@ -420,7 +420,9 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
                   type="button"
                   className={controlButtonClass}
                   aria-label="Fit all nodes"
-                  onClick={fitAllNodes}
+                  onClick={() => {
+                    fitAllNodes();
+                  }}
                 >
                   <Scan className="size-4" />
                 </button>
