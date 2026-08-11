@@ -98,8 +98,13 @@
   --motion-duration-base: 180ms;
   --motion-duration-panel: 220ms;
   --motion-duration-rail: 320ms;
+  --motion-duration-pulse: 420ms;
+  --motion-duration-pop: 220ms;
+  --motion-duration-flash: 480ms;
+  --motion-duration-complete: 620ms;
   --motion-ease-out: cubic-bezier(0.25, 1, 0.5, 1);
   --motion-ease-rail: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Vercel theme (tweakcn) — light */
   --background: oklch(0.99 0 0);
@@ -967,13 +972,13 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
   0% {
     opacity: 0;
     transform: translateY(-6px) scale(0.985);
-    background: color-mix(in oklab, var(--primary) 14%, transparent);
+    background: color-mix(in oklch, var(--color-primary) 14%, transparent);
   }
 
   55% {
     opacity: 1;
     transform: translateY(0) scale(1);
-    background: color-mix(in oklab, var(--primary) 10%, transparent);
+    background: color-mix(in oklch, var(--color-primary) 10%, transparent);
   }
 
   100% {
@@ -1005,20 +1010,21 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
 }
 
 .agency-task-row-complete {
-  animation: agency-task-row-complete 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: agency-task-row-complete var(--motion-duration-complete) var(--motion-ease-emphasized)
+    both;
 }
 
 @keyframes agency-my-tasks-tracking-pulse {
   0% {
-    box-shadow: inset 0 0 0 0 color-mix(in oklab, var(--primary) 0%, transparent);
+    box-shadow: inset 0 0 0 0 color-mix(in oklch, var(--color-primary) 0%, transparent);
   }
   40% {
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 28%, transparent);
-    background: color-mix(in oklab, var(--primary) 8%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--color-primary) 28%, transparent);
+    background: color-mix(in oklch, var(--color-primary) 8%, transparent);
   }
   100% {
     box-shadow: inset 0 0 0 0 transparent;
-    background: color-mix(in oklab, var(--primary) 5%, transparent);
+    background: color-mix(in oklch, var(--color-primary) 5%, transparent);
   }
 }
 
@@ -1047,7 +1053,7 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
 
 @keyframes agency-my-tasks-create-flash {
   0% {
-    background: color-mix(in oklab, var(--success) 16%, transparent);
+    background: color-mix(in oklch, var(--color-success) 16%, transparent);
   }
   100% {
     background: transparent;
@@ -1055,19 +1061,20 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
 }
 
 .agency-my-tasks-tracking-pulse {
-  animation: agency-my-tasks-tracking-pulse 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: agency-my-tasks-tracking-pulse var(--motion-duration-pulse)
+    var(--motion-ease-emphasized) both;
 }
 
 .agency-my-tasks-check-pop {
-  animation: agency-my-tasks-check-pop 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: agency-my-tasks-check-pop var(--motion-duration-pop) var(--motion-ease-emphasized) both;
 }
 
 .agency-my-tasks-count-tick {
-  animation: agency-my-tasks-count-tick 180ms var(--motion-ease-out) both;
+  animation: agency-my-tasks-count-tick var(--motion-duration-base) var(--motion-ease-out) both;
 }
 
 .agency-my-tasks-create-flash {
-  animation: agency-my-tasks-create-flash 480ms var(--motion-ease-out) both;
+  animation: agency-my-tasks-create-flash var(--motion-duration-flash) var(--motion-ease-out) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
