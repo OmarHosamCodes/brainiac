@@ -53,9 +53,6 @@ export const railLayoutTransition: Transition = {
   ease: RAIL_EASE_EMPHASIZED,
 };
 
-/** Morph create (+) ↔ collapsed open-count chip across expand/collapse. */
-export const RAIL_CREATE_LAYOUT_ID = "agency-my-tasks-rail-create";
-
 export const railListContainerVariants: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0, delayChildren: 0 } },

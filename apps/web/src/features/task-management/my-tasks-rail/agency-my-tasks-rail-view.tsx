@@ -4,12 +4,10 @@ import type { ReactNode } from "react";
 
 import type { AgencyMyTasksRailViewModel } from "@/features/task-management/hooks/use-agency-my-tasks-rail";
 import {
-  RAIL_CREATE_LAYOUT_ID,
   railCollapseChromeVariants,
   railCollapsePanelVariants,
   railEmptyVariants,
   railFastTransition,
-  railLayoutTransition,
   railTapScale,
 } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
 import {
@@ -176,22 +174,20 @@ function RailPanel({
             contentAlign="end"
             required
           />
-          <motion.div layoutId={RAIL_CREATE_LAYOUT_ID} transition={railLayoutTransition}>
-            <Button
-              type="submit"
-              size="icon"
-              className={agencyMyTasksRailAddButtonClass}
-              aria-label="Add task"
-              aria-busy={view.isCreatingTask}
-              disabled={!canSubmit}
-            >
-              {view.isCreatingTask ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : (
-                <Plus className="size-4" aria-hidden />
-              )}
-            </Button>
-          </motion.div>
+          <Button
+            type="submit"
+            size="icon"
+            className={agencyMyTasksRailAddButtonClass}
+            aria-label="Add task"
+            aria-busy={view.isCreatingTask}
+            disabled={!canSubmit}
+          >
+            {view.isCreatingTask ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Plus className="size-4" aria-hidden />
+            )}
+          </Button>
         </div>
         {view.createError ? (
           <p className="text-xs text-destructive" role="alert">
@@ -334,9 +330,7 @@ export function AgencyMyTasksRailView({ view, renderList }: AgencyMyTasksRailVie
                 >
                   <PanelRightOpen />
                 </Button>
-                <motion.div
-                  layoutId={RAIL_CREATE_LAYOUT_ID}
-                  transition={railLayoutTransition}
+                <div
                   className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
                   aria-label={`${view.openCount} open tasks`}
                 >
@@ -346,7 +340,7 @@ export function AgencyMyTasksRailView({ view, renderList }: AgencyMyTasksRailVie
                   >
                     {view.openCount > 99 ? "99+" : view.openCount}
                   </span>
-                </motion.div>
+                </div>
               </motion.div>
             ) : (
               <motion.div
