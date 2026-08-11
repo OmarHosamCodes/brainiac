@@ -54,6 +54,7 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   const [projectId, setProjectId] = useState("");
   const [estimateMinutes, setEstimateMinutes] = useState<number | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [justCompletedTaskId, setJustCompletedTaskId] = useState<string | null>(null);
@@ -234,6 +235,7 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   }, [openCount]);
 
   const selectedProject = projects.find((project) => project.id === projectId) ?? null;
+  const editingTask = tasks.find((task) => task.id === editingTaskId) ?? null;
 
   const isLoading =
     (showOpen && openQuery.isLoading) ||
@@ -305,6 +307,14 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
 
   async function onDeleteTask(task: { id: string; title: string }) {
     await deleteProjectTask({ teamId, taskId: task.id, taskTitle: task.title });
+  }
+
+  function onEditTask(taskId: string) {
+    setEditingTaskId(taskId);
+  }
+
+  function onEditOpenChange(open: boolean) {
+    if (!open) setEditingTaskId(null);
   }
 
   function onSelectTask(taskId: string) {
@@ -455,6 +465,10 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     flatTaskIds,
     selectedTaskId,
     onSelectTask,
+    editingTaskId,
+    editingTask,
+    onEditTask,
+    onEditOpenChange,
     onKeyboardMove,
     onPlaySelected,
     runningTaskId,

@@ -45,6 +45,7 @@ type AgencyMyTasksRailRowViewProps = {
   miniTimer: ReactNode;
   onSelect: () => void;
   onToggleComplete: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   onPlayEnter: () => void;
   variants: Variants;
@@ -67,6 +68,7 @@ export function AgencyMyTasksRailRowView({
   miniTimer,
   onSelect,
   onToggleComplete,
+  onEdit,
   onDelete,
   onPlayEnter,
   variants,
@@ -194,6 +196,9 @@ export function AgencyMyTasksRailRowView({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuGroup>
+              <DropdownMenuItem disabled={pending} onClick={onEdit}>
+                Edit
+              </DropdownMenuItem>
               <DropdownMenuItem variant="destructive" disabled={pending} onClick={onDelete}>
                 Delete
               </DropdownMenuItem>

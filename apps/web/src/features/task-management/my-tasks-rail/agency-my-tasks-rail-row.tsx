@@ -59,6 +59,7 @@ export function AgencyMyTasksRailRow({
         if (isDone) void view.onReopenTask(task);
         else void view.onCompleteTask(task.id);
       }}
+      onEdit={() => view.onEditTask(task.id)}
       onDelete={() => void view.onDeleteTask(task)}
       onPlayEnter={() => view.onPlaySelected(task.id)}
       variants={variants}

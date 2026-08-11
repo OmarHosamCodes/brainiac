@@ -10,12 +10,23 @@ import {
   railSectionExit,
   railStaggerIndex,
 } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
+import { AgencyMyTasksEditDialog } from "@/features/task-management/my-tasks-rail/agency-my-tasks-edit-dialog";
 import { AgencyMyTasksRailRow } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-row";
 import { AgencyMyTasksRailView } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-view";
 
 type AgencyMyTasksRailProps = {
   teamId: string;
 };
+
+function projectLabelForTask(
+  projects: { id: string; name: string; clientName?: string | null }[],
+  projectId: string,
+): string {
+  const project = projects.find((item) => item.id === projectId);
+  if (!project) return "Project";
+  if (project.clientName) return `${project.name} · ${project.clientName}`;
+  return project.name;
+}
 
 export function AgencyMyTasksRail({ teamId }: AgencyMyTasksRailProps) {
   const view = useAgencyMyTasksRail({ teamId });
@@ -78,5 +89,19 @@ export function AgencyMyTasksRail({ teamId }: AgencyMyTasksRailProps) {
     );
   };
 
-  return <AgencyMyTasksRailView view={view} renderList={renderList} />;
+  return (
+    <>
+      <AgencyMyTasksRailView view={view} renderList={renderList} />
+      {view.editingTask ? (
+        <AgencyMyTasksEditDialog
+          open
+          onOpenChange={view.onEditOpenChange}
+          teamId={view.teamId}
+          task={view.editingTask}
+          projectLabel={projectLabelForTask(view.projects, view.editingTask.projectId)}
+          members={view.members}
+        />
+      ) : null}
+    </>
+  );
 }
