@@ -32,6 +32,8 @@ type AgencyTaskChooserProjectRowProps = {
   showClientName: boolean;
   showCreateTask: boolean;
   createMuted?: boolean;
+  /** Project-pick mode: row selects the project; hide expand chevron. */
+  pickMode?: boolean;
   onToggle: () => void;
   onToggleFavorite: () => void;
   onCreateTask: () => void;
@@ -52,6 +54,7 @@ export function AgencyTaskChooserProjectRow({
   showClientName,
   showCreateTask,
   createMuted = false,
+  pickMode = false,
   onToggle,
   onToggleFavorite,
   onCreateTask,
@@ -75,7 +78,7 @@ export function AgencyTaskChooserProjectRow({
         whileTap={chooserTapScale}
         transition={chooserBaseTransition}
         onClick={onToggle}
-        aria-expanded={expanded}
+        aria-expanded={pickMode ? undefined : expanded}
       >
         <AgencyProjectHueDot projectId={projectId} colorHueId={colorHueId} className="size-2" />
         <span className="min-w-0 flex-1 truncate text-sm leading-snug">
@@ -100,16 +103,20 @@ export function AgencyTaskChooserProjectRow({
             </span>
           ) : null}
         </span>
-        <span className="shrink-0 text-[11px] font-normal text-muted-foreground tabular-nums">
-          {taskCount} {taskCount === 1 ? "task" : "tasks"}
-        </span>
-        <motion.span
-          animate={{ rotate: expanded ? 180 : 0 }}
-          transition={chooserBaseTransition}
-          className="inline-flex shrink-0"
-        >
-          <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
-        </motion.span>
+        {!pickMode ? (
+          <span className="shrink-0 text-[11px] font-normal text-muted-foreground tabular-nums">
+            {taskCount} {taskCount === 1 ? "task" : "tasks"}
+          </span>
+        ) : null}
+        {!pickMode ? (
+          <motion.span
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={chooserBaseTransition}
+            className="inline-flex shrink-0"
+          >
+            <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
+          </motion.span>
+        ) : null}
       </motion.button>
       <motion.button
         type="button"
