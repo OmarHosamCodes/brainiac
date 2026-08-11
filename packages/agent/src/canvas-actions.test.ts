@@ -122,7 +122,11 @@ describe("applyCanvasAction", () => {
     );
     expect(bound.type).toBe("block.create");
     if (bound.type !== "block.create") return;
+    const expectedTabId = created.tabs[0]?.id;
+    if (!expectedTabId) {
+      throw new Error("expected created node to include a default tab");
+    }
     expect(bound.nodeId).toBe(created.id);
-    expect(bound.tabId).toBe(created.tabs[0]?.id);
+    expect(bound.tabId).toBe(expectedTabId);
   });
 });
