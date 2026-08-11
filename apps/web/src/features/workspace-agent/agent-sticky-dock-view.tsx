@@ -89,9 +89,7 @@ export function AgentStickyDockView({
           data-workspace-agent-sticky-dock
         >
           <header className="flex min-h-10 items-center gap-2 border-b border-border bg-muted/30 ps-3.5 pe-1.5">
-            <b className="text-[11px] font-semibold tracking-wide text-foreground">
-              Needs your input
-            </b>
+            <p className="text-sm font-semibold tracking-tight text-foreground">Needs your input</p>
             <span className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground ring-1 ring-border">
               {dockKindLabel(item.kind)}
             </span>
@@ -174,9 +172,13 @@ export function AgentStickyDockView({
 export function AgentStickyArchiveReceiptView({
   label,
   detail,
+  actionLabel,
+  onAction,
 }: {
   label: string;
   detail: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }) {
   return (
     <motion.div
@@ -187,12 +189,23 @@ export function AgentStickyArchiveReceiptView({
     >
       <span
         aria-hidden
-        className="inline-flex size-5 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground"
+        className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground"
       >
         ✓
       </span>
-      <span className="font-medium text-foreground">{label}</span>
-      <span className="ms-auto truncate text-muted-foreground">{detail}</span>
+      <span className="min-w-0 font-medium text-foreground">{label}</span>
+      <span className="min-w-0 truncate text-muted-foreground">{detail}</span>
+      {actionLabel && onAction ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="ms-auto h-7 shrink-0 rounded-full px-2.5 text-xs"
+          onClick={onAction}
+        >
+          {actionLabel}
+        </Button>
+      ) : null}
     </motion.div>
   );
 }

@@ -37,8 +37,6 @@ export function workspaceNodesToFlow(
     position: { x: node.x, y: node.y },
     width: node.width,
     height: node.height,
-    measured: { width: node.width, height: node.height },
-    style: { width: node.width, height: node.height },
     selected: selectedSet.has(node.id),
     data: {
       nodeType: node.nodeType,
@@ -83,36 +81,38 @@ export function applyFlowChangesToWorkspaceNodes(
   nodes: CanvasNodeModel[],
   changes: NodeChange<Node<WorkspaceFlowNodeData>>[],
 ): CanvasNodeModel[] | null {
-  let updated = false;
-  const nodeById = new Map(nodes.map((node) => [node.id, { ...node }]));
+  let next: CanvasNodeModel[] | null = null;
 
   for (const change of changes) {
-    if (change.type === "position" && change.position) {
-      const node = nodeById.get(change.id);
-      if (!node) {
-        continue;
-      }
-      node.x = change.position.x;
-      node.y = change.position.y;
-      updated = true;
+    if (change.type === "position" && change.position && change.dragging !== undefined) {
+      const index = nodes.findIndex((node) => node.id === change.id);
+      if (index < 0) continue;
+      const current = (next ?? nodes)[index];
+      if (!current) continue;
+      if (current.x === change.position.x && current.y === change.position.y) continue;
+      next ??= nodes.slice();
+      next[index] = { ...current, x: change.position.x, y: change.position.y };
+      continue;
     }
 
-    if (change.type === "dimensions" && change.dimensions) {
-      const node = nodeById.get(change.id);
-      if (!node) {
-        continue;
-      }
-      node.width = Math.max(change.dimensions.width, NODE_MIN_WIDTH);
-      node.height = Math.max(change.dimensions.height, NODE_MIN_HEIGHT);
-      updated = true;
+    if (
+      change.type === "dimensions" &&
+      change.dimensions &&
+      (change.resizing === true || Boolean(change.setAttributes))
+    ) {
+      const index = nodes.findIndex((node) => node.id === change.id);
+      if (index < 0) continue;
+      const current = (next ?? nodes)[index];
+      if (!current) continue;
+      const width = Math.max(Math.round(change.dimensions.width), NODE_MIN_WIDTH);
+      const height = Math.max(Math.round(change.dimensions.height), NODE_MIN_HEIGHT);
+      if (current.width === width && current.height === height) continue;
+      next ??= nodes.slice();
+      next[index] = { ...current, width, height };
     }
   }
 
-  if (!updated) {
-    return null;
-  }
-
-  return nodes.map((node) => nodeById.get(node.id)!);
+  return next;
 }
 
 export function flowConnectToPair(

@@ -27,6 +27,7 @@ const CATEGORY_ORDER = [
   "Nodes",
   "Tabs",
   "Blocks",
+  "Canvas",
   "Agency",
   "Utilities",
 ] as const;
@@ -45,6 +46,7 @@ function categoryForTool(name: string): ToolCategory {
   if (name.includes("marketplace")) return "Marketplace";
   if (name.includes("dashboard")) return "Dashboard";
   if (name.includes("agency")) return "Agency";
+  if (name.includes("canvas")) return "Canvas";
   if (name.includes("block")) return "Blocks";
   if (name.includes("tab")) return "Tabs";
   if (name.includes("node")) return "Nodes";
@@ -102,7 +104,9 @@ export function WorkspaceAgentToolMenuView({ tools, loading }: WorkspaceAgentToo
 
   if (tools.length === 0) {
     return (
-      <p className="px-3 py-1.5 text-sm text-foreground/70">No tools available on this surface.</p>
+      <p className="px-3 py-1.5 text-sm text-muted-foreground">
+        Tools appear once this menu loads.
+      </p>
     );
   }
 
@@ -119,7 +123,7 @@ export function WorkspaceAgentToolMenuView({ tools, loading }: WorkspaceAgentToo
         ) : null}
         {groups.map(({ category, items }) => (
           <div key={category} className="flex flex-col gap-0">
-            <p className="px-2 pb-0.5 pt-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
+            <p className="px-2 pb-0.5 pt-1 text-[11px] font-medium text-muted-foreground">
               {category}
             </p>
             {items.map((tool) => {

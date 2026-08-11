@@ -63,6 +63,10 @@ const defaultNodeDraft = (): NodeDraft => ({
   tint: "neutral",
   featuredBlocks: [],
 });
+
+function sameIdList(left: string[], right: string[]) {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
 export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   nodes: [],
   selectedNodeIds: [],
@@ -80,7 +84,10 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   syncedRevision: 0,
   nodeDraft: defaultNodeDraft(),
   setNodes: (nodes) => set({ nodes }),
-  setSelectedNodeIds: (selectedNodeIds) => set({ selectedNodeIds }),
+  setSelectedNodeIds: (selectedNodeIds) =>
+    set((state) =>
+      sameIdList(state.selectedNodeIds, selectedNodeIds) ? state : { selectedNodeIds },
+    ),
   setEditorOpen: (editorOpen) => set({ editorOpen }),
   setEditorMode: (editorMode) => set({ editorMode }),
   setActiveNodeId: (activeNodeId) => set({ activeNodeId }),

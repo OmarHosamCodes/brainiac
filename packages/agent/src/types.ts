@@ -17,6 +17,8 @@ export {
   aiUiArtifactsSchema,
   aiUiReactArtifactSchema,
   aiUiSchemaArtifactSchema,
+  aiUiWorkspaceBlockArtifactSchema,
+  aiUiWorkspaceNodeArtifactSchema,
   artifactFromToolCall,
   cappedArtifacts,
   parseUiPresentInput,
@@ -231,7 +233,9 @@ export const agentScopeRefKindSchema = z.enum([
   "block",
   "timeEntry",
   "project",
+  "task",
   "member",
+  "surface",
 ]);
 
 export const agentScopeRefSchema = z.object({
@@ -251,6 +255,7 @@ export const agentToolCatalogEntrySchema = z.object({
 export const agentToolCatalogInputSchema = z.object({
   surface: agentSurfaceSchema,
   mode: dashboardAgentToolPresetInputSchema,
+  unlockedSurfaces: z.array(agentSurfaceSchema).max(2).optional(),
 });
 
 export const agentToolCatalogResponseSchema = z.object({
@@ -266,6 +271,7 @@ export const agentChatTurnInputSchema = z
       .max(AGENT_TEXT_ATTACHMENT_MAX_FILES)
       .default([]),
     surface: agentSurfaceSchema.optional().default("canvas"),
+    unlockedSurfaces: z.array(agentSurfaceSchema).max(2).optional(),
     teamId: z.string().trim().min(1).optional(),
     nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
     scopeNodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
@@ -445,6 +451,7 @@ export type DashboardAgentWorkspaceContext = {
   userName?: string | null;
   activeTabId?: string | null;
   surface?: AgentSurface;
+  unlockedSurfaces?: AgentSurface[];
   scopeRefs?: AgentScopeRef[];
   teamId?: string | null;
 };
@@ -456,6 +463,7 @@ export type DashboardAgentConfig = {
   maxOutputTokens?: number;
   toolPreset?: DashboardAgentToolPreset;
   agencyRuntime?: AgencyAgentRuntime | null;
+  canvasRuntime?: CanvasAgentRuntime | null;
 };
 
 export type AgencyAgentRuntime = {
@@ -588,5 +596,21 @@ export type AgencyAgentRuntime = {
     before: unknown;
     after: unknown;
     label: string;
+  }>;
+};
+
+export type CanvasAgentRuntime = {
+  createProposal: (input: {
+    action: unknown;
+    label?: string;
+    conversationId?: string | null;
+  }) => Promise<{
+    proposalId: string;
+    status: "pending";
+    action: unknown;
+    before: unknown;
+    after: unknown;
+    label: string;
+    boardHref?: string | null;
   }>;
 };

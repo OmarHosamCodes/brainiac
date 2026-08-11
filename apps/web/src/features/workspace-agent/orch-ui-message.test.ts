@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  appendConfirmedProposalsToMessages,
   collectAnsweredQuestionIds,
+  collectResolvedPlanIdsFromMessages,
   createOrchEventToChunkMapper,
   dashboardMessagesToUIMessages,
   formatAgencyQuestionAnswerMessage,
@@ -317,6 +319,84 @@ describe("orch-ui-message", () => {
       "dynamic-tool",
       "text",
     ]);
+  });
+
+  test("collectResolvedPlanIdsFromMessages treats confirm-* proposals as plan done", () => {
+    expect(
+      collectResolvedPlanIdsFromMessages([
+        {
+          id: "a1",
+          role: "assistant",
+          content: "",
+          attachments: [],
+          contextNodeTitles: [],
+          model: null,
+          toolsCalled: [
+            {
+              id: "tool-plan",
+              name: "draft_canvas_plan",
+              input: {},
+              output: {
+                planId: "cplan-1",
+                title: "Todo",
+                summary: "Make a node",
+                steps: [{ label: "Create", action: { type: "node.create" } }],
+              },
+              status: "completed",
+            },
+            {
+              id: "confirm-aap-1",
+              name: "propose_canvas_action",
+              input: {},
+              output: {
+                proposalId: "aap-1",
+                label: "Create",
+                action: { type: "node.create" },
+                before: null,
+                after: { id: "n1" },
+              },
+              status: "completed",
+            },
+          ],
+          artifacts: [],
+          createdAt: "2026-08-10T00:00:00.000Z",
+        },
+      ]),
+    ).toEqual(new Set(["cplan-1"]));
+  });
+
+  test("appendConfirmedProposalsToMessages adds Approve parts on last assistant", () => {
+    const next = appendConfirmedProposalsToMessages(
+      [
+        { id: "u1", role: "user", parts: [{ type: "text", text: "Plan it" }] },
+        {
+          id: "a1",
+          role: "assistant",
+          parts: [
+            {
+              type: "data-orchPlan",
+              id: "p1",
+              data: { planId: "p1", title: "T", summary: "S", steps: [] },
+            },
+          ],
+        },
+      ],
+      [
+        {
+          proposalId: "aap-1",
+          status: "pending",
+          label: "Create Sprint notes",
+          action: { type: "node.create", title: "Sprint notes" },
+          before: null,
+          after: { id: "n1" },
+          boardHref: "/node/n1",
+        },
+      ],
+    );
+    const assistant = next[1];
+    expect(assistant?.parts.some((part) => part.type === "data-orchProposal")).toBe(true);
+    const proposal = assistant?.parts.find((part) => part.type === "data-orchProposal");
+    expect(proposal && "data" in proposal ? proposal.data.proposalId : null).toBe("aap-1");
   });
 
   test("formats and detects answered question ids", () => {

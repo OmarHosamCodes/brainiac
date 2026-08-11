@@ -1,13 +1,19 @@
-import type { AgencyDraftPlan } from "./agency-actions";
 import type { AgencyAgentQuestion } from "./agency-question";
 import type { AgentChatResponse, AgentToolCall, DashboardConversationUsageLatest } from "./types";
 import type { AiUiArtifact } from "./ui-artifact";
+
+export type AgentStreamDraftPlan = {
+  planId: string;
+  title: string;
+  summary: string;
+  steps: Array<{ label: string; action: unknown }>;
+};
 
 export type DashboardAgentStreamEvent =
   | { type: "token"; delta: string }
   | { type: "tool"; tool: AgentToolCall }
   | { type: "artifact"; artifact: AiUiArtifact }
-  | { type: "plan"; plan: AgencyDraftPlan }
+  | { type: "plan"; plan: AgentStreamDraftPlan }
   | { type: "question"; question: AgencyAgentQuestion }
   | {
       type: "proposal";
