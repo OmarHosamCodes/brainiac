@@ -52,6 +52,7 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   );
   const [assignedToTeam, setAssignedToTeam] = useState(false);
   const [projectId, setProjectId] = useState("");
+  const [estimateMinutes, setEstimateMinutes] = useState<number | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -267,6 +268,7 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     }
     setCreateError(null);
     setTitleDraft("");
+    setEstimateMinutes(null);
     const createdId = await createProjectTask({
       teamId,
       projectId,
@@ -279,6 +281,7 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
           : actorUserId
             ? [actorUserId]
             : [],
+      estimateMinutes,
     });
     if (createdId) {
       flashId(setJustCreatedTaskId, createdId, RAIL_HOLD_MS.flash);
@@ -442,6 +445,8 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     setAssignedToTeam,
     projectId,
     setProjectId,
+    estimateMinutes,
+    setEstimateMinutes,
     selectedProject,
     projects,
     members,

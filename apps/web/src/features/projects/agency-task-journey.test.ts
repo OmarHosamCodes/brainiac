@@ -17,6 +17,7 @@ const baseTask = {
   status: "open" as const,
   assignedToTeam: false,
   isWaste: false,
+  estimateMinutes: null,
   createdByUserId: "u1",
   dueDate: null,
   createdAt: "2026-01-01T00:00:00.000Z",

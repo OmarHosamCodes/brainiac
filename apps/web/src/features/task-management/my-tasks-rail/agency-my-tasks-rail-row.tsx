@@ -45,6 +45,7 @@ export function AgencyMyTasksRailRow({
       title={task.title}
       projectName={projectName}
       assignedByLabel={assignedByLabel}
+      estimateMinutes={task.estimateMinutes ?? null}
       isDone={isDone}
       isSelected={isSelected}
       isTracking={isTracking}

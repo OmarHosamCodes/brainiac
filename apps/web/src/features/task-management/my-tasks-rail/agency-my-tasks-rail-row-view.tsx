@@ -18,6 +18,7 @@ import {
   railLayoutTransition,
   railRowStateTransition,
 } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
+import { formatEstimateMinutes } from "@/features/task-management/agency-task-utils";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ type AgencyMyTasksRailRowViewProps = {
   title: string;
   projectName: string;
   assignedByLabel: string;
+  estimateMinutes: number | null;
   isDone: boolean;
   isSelected: boolean;
   isTracking: boolean;
@@ -54,6 +56,7 @@ export function AgencyMyTasksRailRowView({
   title,
   projectName,
   assignedByLabel,
+  estimateMinutes,
   isDone,
   isSelected,
   isTracking,
@@ -69,6 +72,9 @@ export function AgencyMyTasksRailRowView({
   variants,
   stagger,
 }: AgencyMyTasksRailRowViewProps) {
+  const estimateLabel =
+    estimateMinutes !== null && estimateMinutes > 0 ? formatEstimateMinutes(estimateMinutes) : null;
+
   return (
     <motion.li
       layout
@@ -162,6 +168,7 @@ export function AgencyMyTasksRailRowView({
           transition={railRowStateTransition}
         >
           Assigned by {assignedByLabel} · {projectName}
+          {estimateLabel ? ` · ${estimateLabel}` : null}
         </motion.div>
       </div>
 

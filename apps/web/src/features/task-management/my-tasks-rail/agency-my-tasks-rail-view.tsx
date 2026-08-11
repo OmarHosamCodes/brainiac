@@ -28,6 +28,7 @@ import {
   agencyTaskRailWidthTransitionClass,
 } from "@/features/shared/agency-ui";
 import { AgencyMyTasksQuickAddFieldView } from "@/features/task-management/my-tasks-rail/agency-my-tasks-quick-add-field-view";
+import { AgencyMyTasksEstimatePopover } from "@/features/task-management/my-tasks-rail/agency-my-tasks-estimate-popover";
 import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { Button } from "@/ui/button";
@@ -173,6 +174,11 @@ function RailPanel({
             )}
             contentAlign="end"
             required
+          />
+          <AgencyMyTasksEstimatePopover
+            value={view.estimateMinutes}
+            disabled={view.isCreatingTask}
+            onChange={view.setEstimateMinutes}
           />
           <Button
             type="submit"

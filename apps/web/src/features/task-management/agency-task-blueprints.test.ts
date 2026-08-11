@@ -11,6 +11,7 @@ const baseTask = {
   taskKind: "standard" as const,
   assignedToTeam: false,
   isWaste: false,
+  estimateMinutes: null,
   createdByUserId: "user-1",
   assignees: [],
   dueDate: null,

@@ -15,7 +15,11 @@ function makeTask(
   return {
     teamId: "team-1",
     status: "open",
+    taskKind: "standard",
     assignedToTeam: false,
+    isWaste: false,
+    estimateMinutes: null,
+    createdByUserId: "user-1",
     assignees: [],
     dueDate: null,
     createdAt: "2026-01-01T00:00:00.000Z",
