@@ -1,4 +1,5 @@
 import { Check, MoreVertical } from "lucide-react";
+import { motion, type Variants } from "motion/react";
 import type { ReactNode, KeyboardEvent } from "react";
 
 import {
@@ -40,6 +41,8 @@ type AgencyMyTasksRailRowViewProps = {
   onToggleComplete: () => void;
   onDelete: () => void;
   onPlayEnter: () => void;
+  variants: Variants;
+  stagger: number;
 };
 
 export function AgencyMyTasksRailRowView({
@@ -59,9 +62,17 @@ export function AgencyMyTasksRailRowView({
   onToggleComplete,
   onDelete,
   onPlayEnter,
+  variants,
+  stagger,
 }: AgencyMyTasksRailRowViewProps) {
   return (
-    <li
+    <motion.li
+      layout
+      variants={variants}
+      custom={stagger}
+      initial="hidden"
+      animate="show"
+      exit="exit"
       data-task-id={taskId}
       tabIndex={0}
       aria-selected={isSelected}
@@ -155,6 +166,6 @@ export function AgencyMyTasksRailRowView({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </li>
+    </motion.li>
   );
 }

@@ -1,3 +1,4 @@
+import type { Variants } from "motion/react";
 import type { ReactNode } from "react";
 
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
@@ -10,6 +11,8 @@ type AgencyMyTasksRailRowProps = {
   view: AgencyMyTasksRailViewModel;
   projectName: string;
   assignedByLabel: string;
+  variants: Variants;
+  stagger: number;
 };
 
 export function AgencyMyTasksRailRow({
@@ -17,6 +20,8 @@ export function AgencyMyTasksRailRow({
   view,
   projectName,
   assignedByLabel,
+  variants,
+  stagger,
 }: AgencyMyTasksRailRowProps) {
   const isDone = task.viewerStatus === "done";
   const isSelected = view.selectedTaskId === task.id;
@@ -55,6 +60,8 @@ export function AgencyMyTasksRailRow({
       }}
       onDelete={() => void view.onDeleteTask(task)}
       onPlayEnter={() => view.onPlaySelected(task.id)}
+      variants={variants}
+      stagger={stagger}
     />
   );
 }
