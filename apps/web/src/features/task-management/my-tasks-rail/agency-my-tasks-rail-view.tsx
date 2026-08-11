@@ -1,0 +1,332 @@
+import { ListTodo, Loader2, PanelRightClose, PanelRightOpen, Plus } from "lucide-react";
+import { MotionConfig, motion } from "motion/react";
+import type { ReactNode } from "react";
+
+import type { AgencyMyTasksRailViewModel } from "@/features/task-management/hooks/use-agency-my-tasks-rail";
+import {
+  railCollapsePanelVariants,
+  railEmptyVariants,
+  railFastTransition,
+  railTapScale,
+} from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
+import {
+  agencyEmptyPanelClass,
+  agencyErrorPanelClass,
+  agencyMyTasksCountTickClass,
+  agencyMyTasksFilterPillActiveClass,
+  agencyMyTasksFilterPillClass,
+  agencyMyTasksRailAddButtonClass,
+  agencyMyTasksRailComposerRowClass,
+  agencyTaskChooserTriggerClass,
+  agencyTaskRailClass,
+  agencyTaskRailCollapsedClass,
+  agencyTaskRailCollapsedWidthClass,
+  agencyTaskRailExpandedWidthClass,
+} from "@/features/shared/agency-ui";
+import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
+import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Sheet, SheetContent, SheetTitle } from "@/ui/sheet";
+import { Skeleton } from "@/ui/skeleton";
+import { cn } from "@/lib/utils";
+
+type AgencyMyTasksRailViewProps = {
+  view: AgencyMyTasksRailViewModel;
+  renderList: () => ReactNode;
+};
+
+function FilterPill({
+  label,
+  active,
+  onToggle,
+}: {
+  label: string;
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <motion.button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={active}
+      className={cn(agencyMyTasksFilterPillClass, active && agencyMyTasksFilterPillActiveClass)}
+      whileTap={railTapScale}
+      transition={railFastTransition}
+      layout
+    >
+      {label}
+    </motion.button>
+  );
+}
+
+function RailPanel({
+  view,
+  list,
+  className,
+  showCollapseControl,
+}: {
+  view: AgencyMyTasksRailViewModel;
+  list: ReactNode;
+  className?: string;
+  showCollapseControl?: boolean;
+}) {
+  const canSubmit =
+    Boolean(view.titleDraft.trim()) && Boolean(view.projectId) && !view.isCreatingTask;
+
+  return (
+    <div
+      className={cn(agencyTaskRailClass, className)}
+      data-od-id="my-tasks-rail"
+      aria-label="My Tasks"
+    >
+      <header className="flex shrink-0 items-start justify-between gap-2 border-b border-default px-3 py-2.5 sm:px-4">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">My Tasks</h2>
+          <p className="mt-0.5 text-[11px] text-muted">J/K move · Enter play</p>
+        </div>
+        {showCollapseControl ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Collapse My Tasks"
+            onClick={() => view.setCollapsed(true)}
+          >
+            <PanelRightClose />
+          </Button>
+        ) : null}
+      </header>
+
+      <form
+        className="flex shrink-0 flex-col gap-2 border-b border-default px-3 py-2.5 sm:px-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void view.onCreateTask();
+        }}
+      >
+        <Input
+          id="my-tasks-title"
+          value={view.titleDraft}
+          onChange={(event) => view.setTitleDraft(event.target.value)}
+          placeholder="Add task"
+          aria-label="Add task"
+          disabled={view.isCreatingTask}
+        />
+        <div className={agencyMyTasksRailComposerRowClass}>
+          <AgencyMemberChooser
+            mode="multiple"
+            assignedToTeam={view.assignedToTeam}
+            selectedUserIds={view.assigneeUserIds}
+            onAssignedToTeamChange={(nextAssignedToTeam) => {
+              view.setAssignedToTeam(nextAssignedToTeam);
+              if (nextAssignedToTeam) view.setAssigneeUserIds([]);
+            }}
+            onSelectedUserIdsChange={(nextIds) => {
+              view.setAssignedToTeam(false);
+              view.setAssigneeUserIds(nextIds);
+            }}
+            members={view.members}
+            placeholder="Owners"
+            triggerVariant="stack"
+            contentAlign="start"
+            className="shrink-0"
+          />
+          <AgencyTaskChooser
+            teamId={view.teamId}
+            value={view.projectId}
+            onValueChange={(nextProjectId) => view.setProjectId(nextProjectId)}
+            projects={view.projects}
+            tasks={[]}
+            placeholder="Project"
+            searchPlaceholder="Search projects or clients"
+            triggerFormat="project-client"
+            pickProject
+            className={cn(
+              agencyTaskChooserTriggerClass,
+              "h-8 w-full max-w-none rounded-2xl border border-transparent bg-input/50 px-3 text-sm",
+            )}
+            contentAlign="end"
+            required
+          />
+          <Button
+            type="submit"
+            size="icon"
+            className={agencyMyTasksRailAddButtonClass}
+            aria-label="Add task"
+            aria-busy={view.isCreatingTask}
+            disabled={!canSubmit}
+          >
+            {view.isCreatingTask ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Plus className="size-4" aria-hidden />
+            )}
+          </Button>
+        </div>
+        {view.createError ? (
+          <p className="text-xs text-destructive" role="alert">
+            {view.createError}
+          </p>
+        ) : null}
+      </form>
+
+      <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-default px-3 py-2 sm:px-4">
+        <FilterPill
+          label="Open"
+          active={view.pills.has("open")}
+          onToggle={() => view.togglePill("open")}
+        />
+        <FilterPill
+          label="Done"
+          active={view.pills.has("done")}
+          onToggle={() => view.togglePill("done")}
+        />
+        <FilterPill
+          label="Delegated"
+          active={view.pills.has("delegated")}
+          onToggle={() => view.togglePill("delegated")}
+        />
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 pt-1.5">
+        {view.isLoading ? (
+          <div className="flex flex-col gap-2 px-1" aria-busy="true" aria-label="Loading tasks">
+            <Skeleton className="h-12 w-full rounded-md" />
+            <Skeleton className="h-12 w-full rounded-md" />
+            <Skeleton className="h-12 w-full rounded-md" />
+          </div>
+        ) : view.errorMessage ? (
+          <div className={cn(agencyErrorPanelClass, "mx-1 my-2 p-4")} role="alert">
+            <p className="text-sm font-medium text-foreground">Tasks did not load</p>
+            <p className="mt-1 text-xs text-muted">{view.errorMessage}</p>
+            <Button type="button" size="sm" className="mt-3" onClick={view.onRetry}>
+              Retry
+            </Button>
+          </div>
+        ) : view.isEmpty ? (
+          <motion.div
+            className={cn(agencyEmptyPanelClass, "mx-1 my-2 p-5")}
+            variants={railEmptyVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <ListTodo className="mx-auto size-5 text-muted" aria-hidden />
+            <p className="mt-2 text-sm font-medium text-foreground">Nothing in this filter</p>
+            <p className="mt-1 text-xs text-muted">
+              Add a task above, or turn on Open / Done / Delegated
+            </p>
+          </motion.div>
+        ) : (
+          list
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function AgencyMyTasksRailView({ view, renderList }: AgencyMyTasksRailViewProps) {
+  const sheet = (
+    <Sheet open={view.sheetOpen} onOpenChange={view.setSheetOpen}>
+      <SheetContent
+        side="right"
+        className="flex w-full max-w-[min(100vw,24rem)] flex-col p-0 sm:max-w-96"
+      >
+        <SheetTitle className="sr-only">My Tasks</SheetTitle>
+        {view.sheetOpen ? (
+          <RailPanel
+            view={view}
+            list={renderList()}
+            className="h-full w-full min-w-0 rounded-none border-0 shadow-none"
+          />
+        ) : null}
+      </SheetContent>
+    </Sheet>
+  );
+
+  const mobileFab = (
+    <Button
+      type="button"
+      size="icon"
+      className="fixed right-4 bottom-4 z-40 size-12 rounded-full shadow-md lg:hidden"
+      aria-label="Open My Tasks"
+      onClick={() => view.setSheetOpen(true)}
+    >
+      <ListTodo />
+      {view.openCount > 0 ? (
+        <span
+          key={view.countTickKey}
+          className={cn(
+            "absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-success text-[10px] font-semibold text-success-foreground tabular-nums",
+            agencyMyTasksCountTickClass,
+          )}
+        >
+          {view.openCount > 99 ? "99+" : view.openCount}
+        </span>
+      ) : null}
+    </Button>
+  );
+
+  return (
+    <MotionConfig reducedMotion="user">
+      {view.collapsed ? (
+        <>
+          <aside
+            className={cn(agencyTaskRailCollapsedClass, agencyTaskRailCollapsedWidthClass)}
+            aria-label="My Tasks collapsed"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-9 rounded-full"
+              aria-label="Expand My Tasks"
+              onClick={() => view.setCollapsed(false)}
+            >
+              <PanelRightOpen />
+            </Button>
+            <div
+              className="flex size-8 items-center justify-center rounded-full bg-success/15 text-xs font-semibold text-success"
+              aria-label={`${view.openCount} open tasks`}
+            >
+              <span
+                key={view.countTickKey}
+                className={cn("tabular-nums", agencyMyTasksCountTickClass)}
+              >
+                {view.openCount > 99 ? "99+" : view.openCount}
+              </span>
+            </div>
+            <p
+              className="mt-auto pb-2 text-[10px] font-medium tracking-wide text-muted"
+              style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+            >
+              My Tasks
+            </p>
+          </aside>
+          {mobileFab}
+          {sheet}
+        </>
+      ) : (
+        <>
+          <aside className={agencyTaskRailExpandedWidthClass}>
+            <motion.div
+              className="h-full w-full min-w-0 origin-right"
+              variants={railCollapsePanelVariants}
+              initial="collapsed"
+              animate="expanded"
+            >
+              <RailPanel
+                view={view}
+                list={renderList()}
+                className="h-full w-full min-w-0"
+                showCollapseControl
+              />
+            </motion.div>
+          </aside>
+          {mobileFab}
+          {sheet}
+        </>
+      )}
+    </MotionConfig>
+  );
+}
