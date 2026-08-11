@@ -189,14 +189,6 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     [membersQuery.data?.items],
   );
 
-  const memberNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const member of members) {
-      map.set(member.userId, member.userName);
-    }
-    return map;
-  }, [members]);
-
   const tasks = useMemo(() => {
     const byId = new Map<string, AgencyProjectTask>();
     const push = (items: AgencyProjectTask[] | undefined) => {
@@ -460,7 +452,6 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     selectedProject,
     projects,
     members,
-    memberNameById,
     clientGroups,
     flatTaskIds,
     selectedTaskId,

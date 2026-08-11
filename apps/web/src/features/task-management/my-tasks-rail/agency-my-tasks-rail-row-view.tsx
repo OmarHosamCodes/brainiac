@@ -171,23 +171,7 @@ export function AgencyMyTasksRailRowView({
           transition={railRowStateTransition}
         >
           <span className="inline-flex min-w-0 items-center gap-1">
-            <span className="shrink-0">Assigned by</span>
-            {assigner.kind === "me" ? (
-              <span className="shrink-0">me</span>
-            ) : (
-              <span
-                className="inline-flex shrink-0 items-center"
-                aria-label={`Assigned by ${assigner.userName}`}
-              >
-                <AgencyMemberAvatar
-                  name={assigner.userName}
-                  userId={assigner.userId}
-                  avatarUrl={assigner.userAvatar}
-                  size="sm"
-                  className="size-3.5 rounded-full"
-                />
-              </span>
-            )}
+            <MyTasksAssignerCluster assigner={assigner} />
             <span className="min-w-0 truncate">· {projectName}</span>
             {timeConsumer ? (
               <span
@@ -252,5 +236,54 @@ export function AgencyMyTasksRailRowView({
         </DropdownMenu>
       </div>
     </motion.li>
+  );
+}
+
+function myTasksAssignerAriaLabel(assigner: MyTasksAssignerDisplay): string {
+  switch (assigner.kind) {
+    case "me":
+      return "Assigned by me";
+    case "member":
+      return `Assigned by ${assigner.userName}`;
+    default: {
+      const _exhaustive: never = assigner;
+      return _exhaustive;
+    }
+  }
+}
+
+function myTasksAssignerContent(assigner: MyTasksAssignerDisplay): ReactNode {
+  switch (assigner.kind) {
+    case "me":
+      return <span className="shrink-0">me</span>;
+    case "member":
+      return (
+        <span className="inline-flex shrink-0 items-center">
+          <AgencyMemberAvatar
+            name={assigner.userName}
+            userId={assigner.userId}
+            avatarUrl={assigner.userAvatar}
+            size="sm"
+            className="size-3.5 rounded-full"
+            alt=""
+          />
+        </span>
+      );
+    default: {
+      const _exhaustive: never = assigner;
+      return _exhaustive;
+    }
+  }
+}
+
+function MyTasksAssignerCluster({ assigner }: { assigner: MyTasksAssignerDisplay }) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1"
+      aria-label={myTasksAssignerAriaLabel(assigner)}
+    >
+      <span>Assigned by</span>
+      {myTasksAssignerContent(assigner)}
+    </span>
   );
 }

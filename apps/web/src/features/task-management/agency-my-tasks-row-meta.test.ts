@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  buildMyTasksTimeConsumer,
-  resolveMyTasksAssigner,
-} from "./agency-my-tasks-row-meta";
+import { buildMyTasksTimeConsumer, resolveMyTasksAssigner } from "./agency-my-tasks-row-meta";
 
 describe("resolveMyTasksAssigner", () => {
   test("returns me when creator is the actor", () => {
@@ -65,15 +62,15 @@ describe("buildMyTasksTimeConsumer", () => {
   });
 
   test("marks overdue when tracked exceeds estimate and caps bar ratio at 1", () => {
-    expect(buildMyTasksTimeConsumer({ totalTrackedSeconds: 5 * 3600, estimateMinutes: 240 })).toEqual(
-      {
-        trackedLabel: "5h",
-        estimateLabel: "4h",
-        ratio: 1,
-        overdue: true,
-        ariaLabel: "5h of 4h estimated, over estimate",
-      },
-    );
+    expect(
+      buildMyTasksTimeConsumer({ totalTrackedSeconds: 5 * 3600, estimateMinutes: 240 }),
+    ).toEqual({
+      trackedLabel: "5h",
+      estimateLabel: "4h",
+      ratio: 1,
+      overdue: true,
+      ariaLabel: "5h of 4h estimated, over estimate",
+    });
   });
 
   test("treats missing tracked as zero", () => {
