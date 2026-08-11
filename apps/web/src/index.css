@@ -1008,6 +1008,68 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
   animation: agency-task-row-complete 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@keyframes agency-my-tasks-tracking-pulse {
+  0% {
+    box-shadow: inset 0 0 0 0 color-mix(in oklab, var(--primary) 0%, transparent);
+  }
+  40% {
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 28%, transparent);
+    background: color-mix(in oklab, var(--primary) 8%, transparent);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 transparent;
+    background: color-mix(in oklab, var(--primary) 5%, transparent);
+  }
+}
+
+@keyframes agency-my-tasks-check-pop {
+  0% {
+    transform: scale(0.7);
+  }
+  55% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes agency-my-tasks-count-tick {
+  0% {
+    transform: translateY(0.35em);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes agency-my-tasks-create-flash {
+  0% {
+    background: color-mix(in oklab, var(--success) 16%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.agency-my-tasks-tracking-pulse {
+  animation: agency-my-tasks-tracking-pulse 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.agency-my-tasks-check-pop {
+  animation: agency-my-tasks-check-pop 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.agency-my-tasks-count-tick {
+  animation: agency-my-tasks-count-tick 180ms var(--motion-ease-out) both;
+}
+
+.agency-my-tasks-create-flash {
+  animation: agency-my-tasks-create-flash 480ms var(--motion-ease-out) both;
+}
+
 @keyframes project-share-panel-in {
   from {
     opacity: 0;
@@ -1129,6 +1191,10 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
   .shell-confirm-in,
   .agency-task-choice-wrap--attention,
   .agency-task-row-complete,
+  .agency-my-tasks-tracking-pulse,
+  .agency-my-tasks-check-pop,
+  .agency-my-tasks-count-tick,
+  .agency-my-tasks-create-flash,
   .agency-search-highlight-mark {
     animation: none;
     opacity: 1;

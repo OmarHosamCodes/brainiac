@@ -97,33 +97,50 @@ export const agencyErrorPanelClass = shellErrorPanelClass;
 
 export const agencyEmptyPanelClass = shellEmptyPanelClass;
 
-/** My Tasks execution rail — secondary neutral layer beside the work surface. */
+/** My Tasks rail — same card language as the tracker bar (`agencyWorkTrackerCardClass`). */
 export const agencyTaskRailClass =
-  "flex h-full flex-col overflow-hidden rounded-xl border border-default bg-elevated";
+  "flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card";
 
-/** Collapsed rail: top-aligned progress ring and summary. */
+/** Collapsed rail: top-aligned open count and expand control. */
 export const agencyTaskRailCollapsedClass = cn(
   agencyTaskRailClass,
-  "relative items-center justify-start gap-2 px-2 pt-2.5 pb-2",
+  "relative items-center justify-start gap-2.5 px-2 pt-2.5 pb-2",
 );
 
-export const agencyTaskRailExpandedWidthClass = "lg:w-[26rem] lg:max-w-[26rem]";
+/**
+ * Docked rail width is locked (min = width = max = basis) so flex content
+ * cannot widen/narrow it. Steps at lg/xl; below lg the rail is a Sheet.
+ */
+export const agencyTaskRailExpandedWidthClass = cn(
+  "hidden min-h-0 shrink-0 grow-0 flex-col overflow-hidden",
+  "lg:flex lg:h-full lg:w-80 lg:min-w-80 lg:max-w-80 lg:basis-80",
+  "xl:w-96 xl:min-w-96 xl:max-w-96 xl:basis-96",
+);
 
-export const agencyTaskRailCollapsedWidthClass = "lg:w-[5.5rem] lg:max-w-[5.5rem]";
+export const agencyTaskRailCollapsedWidthClass = cn(
+  "hidden min-h-0 shrink-0 grow-0 flex-col overflow-hidden",
+  "lg:flex lg:h-full lg:w-[5.5rem] lg:min-w-[5.5rem] lg:max-w-[5.5rem] lg:basis-[5.5rem]",
+);
 
-export const agencyTaskRailSummaryClass =
-  "flex shrink-0 items-center justify-between gap-3 border-b border-default px-4 py-2.5";
+/** D08 — log rows that match the actively tracked task. */
+export const agencyTimeEntryRowRelatedClass =
+  "bg-primary/5 ring-1 ring-inset ring-primary/20 motion-reduce:transition-none transition-colors duration-200";
 
-export const agencyTaskRailTrackingStripClass =
-  "flex shrink-0 items-center gap-2 border-b border-default px-4 py-1.5 text-xs text-muted";
+/** Filter pills in My Tasks rail — same chip language as shell segments. */
+export const agencyMyTasksFilterPillClass = cn(
+  "inline-flex h-7 items-center gap-1 rounded-full border border-default bg-muted px-2.5 text-xs font-medium text-muted",
+  "transition-colors hover:bg-elevated hover:text-highlighted",
+  agencyFocusRingClass,
+  "motion-reduce:transition-none",
+);
 
-export const agencyTaskRailSummaryMetricClass = "flex items-center gap-1.5 text-[11px]";
+export const agencyMyTasksFilterPillActiveClass =
+  "border-primary/25 bg-primary/10 font-semibold text-primary hover:bg-primary/15 hover:text-primary";
 
-export const agencyTaskRailSummaryLabelClass = "text-muted";
-
-export const agencyTaskRailSummaryValueClass = cn(agencyMetricClass, "text-xs font-semibold");
-
-export const agencyTaskRailSummaryDividerClass = "h-3 w-px shrink-0 bg-default";
+/** Client group band inside the rail list — quieter than full log day headers. */
+export const agencyMyTasksClientGroupHeaderClass = cn(
+  "sticky top-0 z-[1] truncate bg-card px-2 py-1.5 text-[11px] font-semibold tracking-wide text-muted",
+);
 
 /** Virtual-list height estimates — keep in sync with header padding/typography below. */
 export const AGENCY_TASK_CLIENT_GROUP_HEADER_HEIGHT = 44;
@@ -526,6 +543,34 @@ export const agencyTimeWeekStackClass = "flex min-h-full flex-col gap-[20px] bg-
 
 export const agencyTimeEntryRowHighlightClass =
   "bg-success/10 motion-reduce:transition-none transition-colors duration-500";
+
+export const agencyMyTasksRailRowClass = cn(
+  "relative grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1.5",
+  "transition-colors hover:bg-default/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+  "motion-reduce:transition-none",
+);
+
+export const agencyMyTasksRailRowTrackingClass =
+  "bg-primary/5 before:absolute before:top-2 before:bottom-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary";
+
+export const agencyMyTasksRailRowTrackingPulseClass = "agency-my-tasks-tracking-pulse";
+export const agencyMyTasksCheckPopClass = "agency-my-tasks-check-pop";
+export const agencyMyTasksCountTickClass = "agency-my-tasks-count-tick";
+export const agencyMyTasksCreateFlashClass = "agency-my-tasks-create-flash";
+
+export const agencyMyTasksRailRowSelectedClass = "bg-muted";
+
+export const agencyMyTasksRailRowDoneClass = "opacity-70";
+
+export const agencyMyTasksRailComposerRowClass =
+  "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2";
+
+export const agencyMyTasksRailAddButtonClass = cn(
+  "inline-flex size-8 shrink-0 items-center justify-center rounded-full",
+  "bg-success text-success-foreground hover:bg-success/90",
+  "disabled:pointer-events-none disabled:opacity-50",
+  agencyFocusRingClass,
+);
 
 export const agencyTimeEntryRowEditingClass = "bg-primary/5 hover:bg-primary/5";
 
