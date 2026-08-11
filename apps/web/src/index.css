@@ -1070,6 +1070,16 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
   animation: agency-my-tasks-create-flash 480ms var(--motion-ease-out) both;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .agency-task-row-complete,
+  .agency-my-tasks-tracking-pulse,
+  .agency-my-tasks-check-pop,
+  .agency-my-tasks-count-tick,
+  .agency-my-tasks-create-flash {
+    animation: none !important;
+  }
+}
+
 @keyframes project-share-panel-in {
   from {
     opacity: 0;
@@ -1190,11 +1200,6 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
   .shell-stagger-item,
   .shell-confirm-in,
   .agency-task-choice-wrap--attention,
-  .agency-task-row-complete,
-  .agency-my-tasks-tracking-pulse,
-  .agency-my-tasks-check-pop,
-  .agency-my-tasks-count-tick,
-  .agency-my-tasks-create-flash,
   .agency-search-highlight-mark {
     animation: none;
     opacity: 1;
