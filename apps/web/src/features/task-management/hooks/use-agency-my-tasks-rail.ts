@@ -12,7 +12,12 @@ import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-optio
 import { toAgencyMemberOption } from "@/features/shared/agency-member-option";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
+import {
+  buildTaskSuggestionQueryFilters,
+  selectTaskSuggestions,
+} from "@/features/task-management/agency-task-suggestion-query";
 import { groupTasksByClient } from "@/features/task-management/agency-task-utils";
+import type { MyTasksSuggestionItem } from "@/features/task-management/my-tasks-rail/agency-my-tasks-quick-add-field-view";
 import { useAgencyMyTasksRailStore } from "@/features/task-management/stores/agency-my-tasks-rail";
 import { RAIL_HOLD_MS } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
@@ -39,6 +44,9 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
 
   const [pills, setPills] = useState<Set<MyTasksFilterPill>>(() => new Set(["open"]));
   const [titleDraft, setTitleDraft] = useState("");
+  const [titleFieldFocused, setTitleFieldFocused] = useState(false);
+  const [titleSuggestionsSuppressed, setTitleSuggestionsSuppressed] = useState(false);
+  const [titleSuggestionActiveIndex, setTitleSuggestionActiveIndex] = useState(0);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>(() =>
     actorUserId ? [actorUserId] : [],
   );
@@ -77,6 +85,41 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const projects = projectsQuery.data?.items ?? [];
+
+  const suggestionsActive = titleFieldFocused && !titleSuggestionsSuppressed;
+  const suggestionFilters = buildTaskSuggestionQueryFilters({
+    suggestionsActive,
+    selectedProjectId: projectId,
+  });
+  const suggestionTasksQuery = useAgencyProjectTasksQuery(
+    teamId,
+    suggestionFilters.enabled
+      ? { ...suggestionFilters.filters, enabled: true }
+      : { enabled: false, statuses: ["open", "in_progress"] },
+  );
+
+  const titleSuggestions = useMemo((): MyTasksSuggestionItem[] => {
+    const ranked = selectTaskSuggestions(suggestionTasksQuery.data?.items ?? [], titleDraft, {
+      affinityProjectId: projectId || undefined,
+    });
+    return ranked.map((task) => {
+      const project = projects.find((p) => p.id === task.projectId);
+      return {
+        id: task.id,
+        title: task.title,
+        projectId: task.projectId,
+        projectName: project?.name ?? "Project",
+        clientName: project?.clientName ?? "Client",
+      };
+    });
+  }, [suggestionTasksQuery.data?.items, titleDraft, projectId, projects]);
+
+  const titleSuggestionsOpen =
+    titleFieldFocused && !titleSuggestionsSuppressed && titleDraft.trim().length > 0;
+
+  useEffect(() => {
+    setTitleSuggestionActiveIndex(0);
+  }, [titleDraft, titleSuggestions]);
 
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
   const runningTaskId = activeTimerQuery.data?.timer?.taskId ?? null;
@@ -261,6 +304,32 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     setSelectedTaskId(taskId);
   }
 
+  function onTitleDraftChange(next: string) {
+    setTitleDraft(next);
+    setTitleSuggestionsSuppressed(false);
+  }
+
+  function onPickTitleSuggestion(item: MyTasksSuggestionItem) {
+    setTitleDraft(item.title);
+    setProjectId(item.projectId);
+    setTitleSuggestionsSuppressed(true);
+    setTitleFieldFocused(false);
+    onSelectTask(item.id);
+  }
+
+  function onTitleFocus() {
+    setTitleFieldFocused(true);
+    setTitleSuggestionsSuppressed(false);
+  }
+
+  function onTitleBlur() {
+    setTitleFieldFocused(false);
+  }
+
+  function onSuppressTitleSuggestions() {
+    setTitleSuggestionsSuppressed(true);
+  }
+
   function onKeyboardMove(delta: 1 | -1) {
     if (flatTaskIds.length === 0) return;
     const currentIndex = selectedTaskId ? flatTaskIds.indexOf(selectedTaskId) : -1;
@@ -355,6 +424,15 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     togglePill,
     titleDraft,
     setTitleDraft,
+    onTitleDraftChange,
+    titleSuggestions,
+    titleSuggestionsOpen,
+    titleSuggestionActiveIndex,
+    setTitleSuggestionActiveIndex,
+    onTitleFocus,
+    onTitleBlur,
+    onSuppressTitleSuggestions,
+    onPickTitleSuggestion,
     assigneeUserIds,
     setAssigneeUserIds,
     assignedToTeam,
