@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 730 |
+| golden-feature | 733 |
 | server-operation | 15 |
 | shared-infrastructure | 320 |
 | static-presentation | 22 |
@@ -51,7 +51,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | repository | 13 |
 | resourcing | 40 |
 | server-platform | 23 |
-| task-management | 52 |
+| task-management | 55 |
 | team | 19 |
 | time-tracking | 100 |
 | web-platform | 119 |
@@ -455,6 +455,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/task-management/agency-task-suggestion-query.ts` | task-management | web-query | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical web-query layer. | content: feature query orchestration, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/task-management/agency-task-title-filter.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/task-management/agency-task-title-filter.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/task-management/agency-task-utils.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/task-management/agency-task-utils.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/task-management/agency-work-surface.tsx` | task-management | presentational-view | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/task-management/agency-work.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
@@ -465,6 +466,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/task-management/hooks/use-agency-task-group-row.ts` | task-management | feature-hook | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/task-management/hooks/use-agency-task-row.ts` | task-management | feature-hook | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/task-management/hooks/use-agency-work-surface.ts` | task-management | feature-hook | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical feature-hook layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/task-management/my-tasks-rail/agency-my-tasks-estimate-popover.tsx` | task-management | presentational-view | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/task-management/my-tasks-rail/agency-my-tasks-quick-add-field-view.tsx` | task-management | presentational-view | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
@@ -1092,6 +1094,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/db/src/migrations/0046_agency_currency_amount.sql` | agency-shared | persistence-migration | golden-feature | agency-platform | Feature-owned agency-shared artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0047_agency_expense_starts_at.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0048_agent_proposal_domain.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
+| `packages/db/src/migrations/0049_task_estimate_minutes.sql` | task-management | persistence-migration | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/meta/0000_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0001_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0002_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
