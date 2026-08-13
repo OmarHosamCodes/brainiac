@@ -6,7 +6,22 @@ export type WorkspaceAgentActiveMention = {
   end: number;
 };
 
-const ACTIVE_NODE_MENTION_PATTERN = /(^|[\s([{:;,])@([^\s@]*)$/;
+export type WorkspaceAgentComposerTriggerKind = "at" | "slash";
+
+export type WorkspaceAgentComposerTrigger = {
+  kind: WorkspaceAgentComposerTriggerKind;
+  query: string;
+  start: number;
+  end: number;
+};
+
+export type WorkspaceAgentSlashCandidate = {
+  kind: "project" | "task";
+  id: string;
+  label: string;
+};
+
+const ACTIVE_TRIGGER_PATTERN = /(^|[\s([{:;,])([@/])([^\s@/]*)$/;
 
 function normalizeMentionQuery(value: string) {
   return value.trim().toLowerCase();
@@ -31,15 +46,28 @@ function scoreMentionSuggestion(node: WorkspaceNode, normalizedQuery: string) {
   return 0;
 }
 
-export function getActiveWorkspaceAgentMention(draft: string): WorkspaceAgentActiveMention | null {
-  const match = ACTIVE_NODE_MENTION_PATTERN.exec(draft);
+export function getActiveWorkspaceAgentTrigger(
+  draft: string,
+): WorkspaceAgentComposerTrigger | null {
+  const match = ACTIVE_TRIGGER_PATTERN.exec(draft);
   if (!match) return null;
-
   const prefix = match[1] ?? "";
-  const query = match[2] ?? "";
+  const marker = match[2];
+  const query = match[3] ?? "";
   const start = match.index + prefix.length;
+  if (marker !== "@" && marker !== "/") return null;
+  return {
+    kind: marker === "@" ? "at" : "slash",
+    query,
+    start,
+    end: draft.length,
+  };
+}
 
-  return { query, start, end: draft.length };
+export function getActiveWorkspaceAgentMention(draft: string): WorkspaceAgentActiveMention | null {
+  const trigger = getActiveWorkspaceAgentTrigger(draft);
+  if (!trigger || trigger.kind !== "at") return null;
+  return { query: trigger.query, start: trigger.start, end: trigger.end };
 }
 
 export function getWorkspaceAgentMentionSuggestions(
@@ -64,8 +92,28 @@ export function getWorkspaceAgentMentionSuggestions(
     .map(({ node }) => node);
 }
 
+export function stripActiveWorkspaceAgentTrigger(draft: string) {
+  const trigger = getActiveWorkspaceAgentTrigger(draft);
+  if (!trigger) return draft;
+  return `${draft.slice(0, trigger.start)}${draft.slice(trigger.end)}`;
+}
+
 export function stripActiveWorkspaceAgentMention(draft: string) {
-  const activeMention = getActiveWorkspaceAgentMention(draft);
-  if (!activeMention) return draft;
-  return `${draft.slice(0, activeMention.start)}${draft.slice(activeMention.end)}`;
+  return stripActiveWorkspaceAgentTrigger(draft);
+}
+
+export function getWorkspaceAgentSlashSuggestions(
+  candidates: WorkspaceAgentSlashCandidate[],
+  query: string,
+  selectedIds: Set<string>,
+  limit = 6,
+) {
+  const normalized = query.trim().toLowerCase();
+  return candidates
+    .filter((entry) => !selectedIds.has(entry.id))
+    .filter((entry) => {
+      if (!normalized) return true;
+      return entry.label.toLowerCase().includes(normalized);
+    })
+    .slice(0, limit);
 }
