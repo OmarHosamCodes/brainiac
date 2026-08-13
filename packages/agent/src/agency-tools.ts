@@ -120,6 +120,35 @@ function buildAgencyReadTools(runtime: AgencyAgentRuntime) {
       execute: async (input) => runtime.listTimeGaps(flattenAgencyDateRangeInput(input)),
     }),
     tool({
+      name: "get_agency_client_bill",
+      description:
+        "Read one client's composed bill for a period (current + carry). Amounts are integer minor units. Does not export or send.",
+      inputSchema: z.object({
+        clientId: z.string().trim().min(1),
+        periodStart: z.string().datetime(),
+        periodEnd: z.string().datetime(),
+      }),
+      outputSchema: z.object({
+        clientId: z.string(),
+        clientName: z.string().nullable(),
+        amount: z.number().int(),
+        remainingAmount: z.number().int(),
+        wasteAmount: z.number().int(),
+        lines: z.array(
+          z.object({
+            id: z.string(),
+            kind: z.enum(["invoice", "ready"]),
+            isCarry: z.boolean(),
+            periodStart: z.string(),
+            periodEnd: z.string(),
+            amount: z.number().int(),
+            remainingAmount: z.number().int(),
+          }),
+        ),
+      }),
+      execute: async (input) => runtime.getClientBill(input),
+    }),
+    tool({
       name: "get_agency_time_entry",
       description: "Read one Agency time entry by id for the current user.",
       inputSchema: z.object({

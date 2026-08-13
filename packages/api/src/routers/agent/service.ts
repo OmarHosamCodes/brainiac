@@ -51,6 +51,7 @@ import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { getBillingStateForUser } from "../../billing-guard";
 import { listAgencyClients } from "../agency-ops/clients/service";
+import { listPeriodMoneyObligations } from "../agency-ops/billing/money-export-service";
 import { listAgencyProjects } from "../agency-ops/projects/service";
 import { getAgencyReportsSummary } from "../agency-ops/reports/service";
 import { listAgencyTags } from "../agency-ops/tags/service";
@@ -271,6 +272,40 @@ function createAgencyAgentRuntime(
         trackedSeconds,
         gapSeconds,
         gaps,
+      };
+    },
+    getClientBill: async ({ clientId, periodStart, periodEnd }) => {
+      const listed = await listPeriodMoneyObligations(actorUserId, {
+        teamId,
+        periodStart,
+        periodEnd,
+      });
+      const rows = listed.clients.filter((row) => row.clientId === clientId);
+      if (rows.length === 0) {
+        return {
+          clientId,
+          clientName: null,
+          amount: 0,
+          remainingAmount: 0,
+          wasteAmount: 0,
+          lines: [],
+        };
+      }
+      return {
+        clientId,
+        clientName: rows[0]!.clientName,
+        amount: rows.reduce((sum, row) => sum + row.amount, 0),
+        remainingAmount: rows.reduce((sum, row) => sum + row.remainingAmount, 0),
+        wasteAmount: rows.reduce((sum, row) => sum + row.wasteAmount, 0),
+        lines: rows.map((row) => ({
+          id: row.id,
+          kind: row.kind,
+          isCarry: row.isCarry,
+          periodStart: row.periodStart,
+          periodEnd: row.periodEnd,
+          amount: row.amount,
+          remainingAmount: row.remainingAmount,
+        })),
       };
     },
     getReportsSummary: async (input) => {
