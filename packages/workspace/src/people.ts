@@ -47,7 +47,7 @@ export const workspaceSeatPlannerFilterLabels: Record<WorkspaceSeatPlannerFilter
 
 export const workspaceTalentGridBoxLabels: Record<WorkspaceTalentGridBoxKey, string> = {
   risk: "Risk",
-  "average-joe": "Average Joe",
+  "average-joe": "Steady",
   specialist: "Specialist",
   "under-performer": "Under-performer",
   "core-player": "Core Player",
