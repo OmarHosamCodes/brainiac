@@ -66,13 +66,15 @@ export function ApprovalCard({
             >
               Deny
             </button>
-            <button
-              type="button"
-              onClick={onAlwaysAllow}
-              className="text-foreground/55 hover:bg-foreground/[0.06] hover:text-foreground/90 h-8 rounded-full px-3.5 text-xs font-medium transition-[background-color,color,scale] duration-150 active:scale-[0.96]"
-            >
-              Always allow
-            </button>
+            {onAlwaysAllow ? (
+              <button
+                type="button"
+                onClick={onAlwaysAllow}
+                className="text-foreground/55 hover:bg-foreground/[0.06] hover:text-foreground/90 h-8 rounded-full px-3.5 text-xs font-medium transition-[background-color,color,scale] duration-150 active:scale-[0.96]"
+              >
+                Always allow
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onAllowOnce}

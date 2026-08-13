@@ -1,4 +1,5 @@
 import type { AiUiArtifact } from "@orch/agent/types";
+import type { KeyboardEvent } from "react";
 
 import { ArtifactCard } from "@/components/elements/artifact-card";
 import { cn } from "@/lib/utils";
@@ -8,9 +9,9 @@ function artifactMeta(kind: AiUiArtifact["kind"]): string {
     case "react":
       return "Sandbox canvas";
     case "workspaceNode":
-      return "Node preview from this reply";
+      return "Node preview";
     case "workspaceBlock":
-      return "Block preview from this reply";
+      return "Block preview";
     case "schema":
       return "Canvas from this reply";
     default: {
@@ -30,19 +31,21 @@ export function AgentMessageArtifactCardView({
   onOpen: () => void;
   className?: string;
 }) {
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onOpen();
+  };
+
   return (
     <ArtifactCard
-      title={artifact.title}
-      meta={artifactMeta(artifact.kind)}
-      className={cn("max-w-[min(100%,36rem)]", className)}
       role="button"
       tabIndex={0}
+      title={artifact.title}
+      meta={artifactMeta(artifact.kind)}
       onClick={onOpen}
-      onKeyDown={(event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        onOpen();
-      }}
+      onKeyDown={onKeyDown}
+      className={cn("max-w-[min(100%,36rem)]", className)}
     />
   );
 }

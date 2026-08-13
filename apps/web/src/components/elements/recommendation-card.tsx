@@ -63,13 +63,15 @@ export function RecommendationCard({
               <span className={cn(mono, "text-foreground/40")}>{confidenceLabel}</span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onAlternatives}
-                className="text-foreground/55 hover:bg-foreground/[0.06] hover:text-foreground/90 h-8 rounded-full px-3.5 text-xs font-medium transition-[background-color,color,scale] duration-150 active:scale-[0.96]"
-              >
-                Alternatives
-              </button>
+              {onAlternatives ? (
+                <button
+                  type="button"
+                  onClick={onAlternatives}
+                  className="text-foreground/55 hover:bg-foreground/[0.06] hover:text-foreground/90 h-8 rounded-full px-3.5 text-xs font-medium transition-[background-color,color,scale] duration-150 active:scale-[0.96]"
+                >
+                  Alternatives
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={onAccept}
