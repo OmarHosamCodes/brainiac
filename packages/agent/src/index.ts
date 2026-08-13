@@ -23,6 +23,7 @@ import {
   shouldBootstrapAgencyMonthReports,
 } from "./agency-reports-canvas";
 import { createOpenRouterClient } from "./client";
+import { resolveOpenRouterReasoning } from "./reasoning-effort";
 import { resolveOpenRouterModel } from "./models";
 import {
   mergeToolCallFromStreamMessage,
@@ -41,6 +42,7 @@ import {
   type AgentChatResponse,
   type AgentModelInputMessage,
   type AgentToolCall,
+  type AgentModelPreset,
   type DashboardAgentConfig,
   type DashboardAgentToolPreset,
   type DashboardAgentWorkspaceContext,
@@ -556,6 +558,7 @@ function resolveAgentExecutionConfig(
 
 type ToolPassArgs = {
   model: string;
+  modelPreset?: AgentModelPreset;
   workspace: DashboardAgentWorkspaceContext;
   workspaceRuntime: DashboardAgentWorkspaceRuntime;
   toolPreset: DashboardAgentToolPreset;
@@ -679,6 +682,7 @@ async function* streamToolEnabledPass(
     : availableTools;
   const calls = new Map<string, AgentToolCall>();
   const callOrder: string[] = [];
+  const reasoning = resolveOpenRouterReasoning(args.modelPreset);
   const result = createOpenRouterClient().callModel({
     model: args.model,
     instructions: args.instructions,
@@ -687,6 +691,7 @@ async function* streamToolEnabledPass(
     stopWhen: [stepCountIs(args.maxSteps)],
     ...(args.temperature === undefined ? {} : { temperature: args.temperature }),
     ...(args.maxOutputTokens === undefined ? {} : { maxOutputTokens: args.maxOutputTokens }),
+    ...(reasoning ? { reasoning } : {}),
   });
 
   const queue: ToolPassLiveEvent[] = [];
@@ -836,6 +841,7 @@ async function* streamToolEnabledPass(
 
 async function* streamTextOnlyPass(args: {
   model: string;
+  modelPreset?: AgentModelPreset;
   instructions: string;
   normalizedMessages: ReturnType<typeof normalizeMessages>;
   temperature?: number;
@@ -843,12 +849,14 @@ async function* streamTextOnlyPass(args: {
   contextLength: number | null;
   signal?: AbortSignal;
 }): AsyncGenerator<ToolPassLiveEvent, ToolPassResult> {
+  const reasoning = resolveOpenRouterReasoning(args.modelPreset);
   const result = createOpenRouterClient().callModel({
     model: args.model,
     instructions: args.instructions,
     input: args.normalizedMessages,
     ...(args.temperature === undefined ? {} : { temperature: args.temperature }),
     ...(args.maxOutputTokens === undefined ? {} : { maxOutputTokens: args.maxOutputTokens }),
+    ...(reasoning ? { reasoning } : {}),
   });
 
   let accumulated = "";
@@ -981,6 +989,7 @@ export async function* streamDashboardAgent(
     try {
       const initialIterator = streamToolEnabledPass({
         model,
+        modelPreset: config.modelPreset,
         workspace: { ...workspace, surface },
         workspaceRuntime,
         toolPreset,
@@ -1022,6 +1031,7 @@ export async function* streamDashboardAgent(
         if (retryNote) {
           const retryIterator = streamToolEnabledPass({
             model,
+            modelPreset: config.modelPreset,
             workspace: { ...workspace, surface },
             workspaceRuntime,
             toolPreset,
@@ -1073,6 +1083,7 @@ export async function* streamDashboardAgent(
           const priorResults = toolResultsForRetry(toolCalls);
           const questionRetryIterator = streamToolEnabledPass({
             model,
+            modelPreset: config.modelPreset,
             workspace: { ...workspace, surface },
             workspaceRuntime,
             toolPreset,
@@ -1119,6 +1130,7 @@ export async function* streamDashboardAgent(
         const priorResults = toolResultsForRetry(toolCalls);
         const uiRetryIterator = streamToolEnabledPass({
           model,
+          modelPreset: config.modelPreset,
           workspace: { ...workspace, surface },
           workspaceRuntime,
           toolPreset,
@@ -1208,6 +1220,7 @@ export async function* streamDashboardAgent(
 
     const fallbackIterator = streamTextOnlyPass({
       model,
+      modelPreset: config.modelPreset,
       instructions: fallbackInstructions,
       normalizedMessages,
       temperature: config.temperature,
