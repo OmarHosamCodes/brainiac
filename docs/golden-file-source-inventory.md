@@ -19,9 +19,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 754 |
+| golden-feature | 770 |
 | server-operation | 15 |
-| shared-infrastructure | 453 |
+| shared-infrastructure | 454 |
 | static-presentation | 22 |
 
 ## Counts by domain
@@ -29,7 +29,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | Domain | Artifacts |
 | --- | ---: |
 | agency-shared | 132 |
-| agent | 100 |
+| agent | 116 |
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 14 |
@@ -38,7 +38,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | clients | 13 |
 | configuration | 3 |
 | dashboard | 8 |
-| database-platform | 36 |
+| database-platform | 37 |
 | deployment | 6 |
 | environment | 5 |
 | integrations | 2 |
@@ -741,6 +741,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/workspace-agent/assistant-ui-catalog.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations, process or filesystem tooling; structure: test filename |
 | `apps/web/src/features/workspace-agent/assistant-ui-catalog.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/chat-panel-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-agent/composer-draft-display.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/workspace-agent/composer-draft-display.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/containers/workspace-agent-container.tsx` | agent | container | golden-feature | agent-domain | Feature-owned agent artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/workspace-agent/hooks/use-agent-canvas-overlay.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-agent-scope-mode-listener.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
@@ -749,6 +751,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-model-preset.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/workspace-agent/model-library-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-agent/model-preset-effort.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/workspace-agent/model-preset-effort.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/orch-turn-stream-transport.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/workspace-agent/orch-turn-stream-transport.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/orch-ui-message.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
@@ -760,10 +764,17 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/workspace-agent/thinking-activity-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/tool-menu-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/tool-trace-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-agent/workspace-agent-composer-send-while-running.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/workspace-agent/workspace-agent-composer-trigger-controls.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-agent/workspace-agent-continue.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/workspace-agent/workspace-agent-continue.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/workspace-agent-host.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/workspace-agent-map-pins.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/workspace-agent/workspace-agent-map-pins.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/workspace-agent/workspace-agent-mentions.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/workspace-agent/workspace-agent-mentions.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/workspace-agent/workspace-agent-message-queue.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/workspace-agent/workspace-agent-message-queue.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/workspace-agent-quick-starts.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/workspace-agent/workspace-agent-quick-starts.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/workspace-agent-thread-composer-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -1001,6 +1012,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/agent/src/model-routing.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/agent/src/model-routing.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/agent/src/models.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
+| `packages/agent/src/reasoning-effort.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/agent/src/reasoning-effort.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/agent/src/stream-events.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/agent/src/stream-turn.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/agent/src/stream-turn.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |
@@ -1148,6 +1161,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agent/agency-proposals.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agent/agency-proposals.ts` | agent | api-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agent/append.integration.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations, database access, environment contract; structure: test filename |
+| `packages/api/src/routers/agent/composer-draft-service.ts` | agent | api-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
+| `packages/api/src/routers/agent/composer-draft.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agent/composer-draft.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agent/conversation-contracts.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agent/conversation-contracts.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agent/router.ts` | agent | api-router | golden-feature | agent-domain | Feature-owned agent artifact in the canonical api-router layer. | content: Zod contracts, oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
@@ -1249,6 +1265,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/db/src/migrations/0048_agent_proposal_domain.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0049_task_estimate_minutes.sql` | task-management | persistence-migration | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0050_agency_member_profile_alert_policy.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
+| `packages/db/src/migrations/0051_dashboard_composer_draft.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/meta/0000_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0001_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0002_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
