@@ -92,10 +92,13 @@ export const dashboardAgentLegacyToolPresetSchema = z.enum([
 export const dashboardAgentToolPresetSchema = dashboardAgentCanonicalToolPresetSchema;
 
 export const agentModelTierSchema = z.enum(["fast", "balanced", "pro"]);
+export const agentReasoningEffortSchema = z.enum(["low", "medium", "high"]);
+
 export const agentModelPresetSchema = z.object({
   tier: agentModelTierSchema.default("balanced"),
   auto: z.boolean().default(true),
   free: z.boolean().default(false),
+  effort: agentReasoningEffortSchema.optional(),
 });
 export const DEFAULT_AGENT_MODEL_PRESET = {
   tier: "balanced" as const,
