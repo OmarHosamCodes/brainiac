@@ -162,6 +162,7 @@ export type WorkspaceAgentThreadComposerViewProps = {
   queuedMessages: readonly QueuedAgentMessage[];
   runningQueueLabel: string;
   onCancelQueuedMessage: (id: string) => void;
+  onSend: (input: { text: string }) => boolean | Promise<boolean>;
 };
 
 export function WorkspaceAgentThreadComposerView({
@@ -196,6 +197,7 @@ export function WorkspaceAgentThreadComposerView({
   queuedMessages,
   runningQueueLabel,
   onCancelQueuedMessage,
+  onSend,
 }: WorkspaceAgentThreadComposerViewProps) {
   const entityChips = scopeChips.filter((chip) => chip.kind !== "surface");
   const surfaceUnlockChip = scopeChips.find((chip) => chip.kind === "surface") ?? null;
@@ -233,6 +235,7 @@ export function WorkspaceAgentThreadComposerView({
 
         <ThreadComposer
           placeholder={placeholder}
+          onSendWhileRunning={(text) => onSend({ text })}
           header={<WorkspaceAgentScopeChipView chips={entityChips} onRemove={onRemoveChip} />}
           leading={
             <>

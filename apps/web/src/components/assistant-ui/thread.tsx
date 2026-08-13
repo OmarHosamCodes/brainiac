@@ -41,6 +41,7 @@ import {
   type ImageMessagePartComponent,
   type ToolCallMessagePartComponent,
   useAuiState,
+  unstable_useComposerInput,
 } from "@assistant-ui/react";
 import {
   ArrowDownIcon,
@@ -229,12 +230,14 @@ export type ThreadComposerProps = {
   placeholder?: string;
   header?: ReactNode;
   leading?: ReactNode;
+  onSendWhileRunning?: (text: string) => boolean | Promise<boolean>;
 };
 
 export const ThreadComposer: FC<ThreadComposerProps> = ({
   placeholder = "Send a message...",
   header,
   leading,
+  onSendWhileRunning,
 }) => {
   return (
     <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
@@ -253,7 +256,7 @@ export const ThreadComposer: FC<ThreadComposerProps> = ({
             enterKeyHint="send"
             aria-label="Message input"
           />
-          <ComposerAction leading={leading} />
+          <ComposerAction leading={leading} onSendWhileRunning={onSendWhileRunning} />
         </div>
       </ComposerPrimitive.AttachmentDropzone>
     </ComposerPrimitive.Root>
@@ -264,7 +267,43 @@ const Composer: FC = () => {
   return <ThreadComposer />;
 };
 
-const ComposerAction: FC<{ leading?: ReactNode }> = ({ leading }) => {
+const ComposerSendWhileRunning: FC<{
+  onSendWhileRunning: (text: string) => boolean | Promise<boolean>;
+}> = ({ onSendWhileRunning }) => {
+  const { value: composerText, setText } = unstable_useComposerInput();
+  const canSend = composerText.trim().length > 0;
+
+  const handleSend = () => {
+    const text = composerText.trim();
+    if (!text) return;
+    void Promise.resolve(onSendWhileRunning(text)).then((accepted) => {
+      if (accepted) {
+        setText("");
+      }
+    });
+  };
+
+  return (
+    <TooltipIconButton
+      tooltip="Send message"
+      side="bottom"
+      type="button"
+      variant="default"
+      size="icon"
+      className="aui-composer-send-while-running size-7 rounded-full"
+      aria-label="Send message"
+      disabled={!canSend}
+      onClick={handleSend}
+    >
+      <ArrowUpIcon className="aui-composer-send-while-running-icon size-4.5" />
+    </TooltipIconButton>
+  );
+};
+
+const ComposerAction: FC<{
+  leading?: ReactNode;
+  onSendWhileRunning?: (text: string) => boolean | Promise<boolean>;
+}> = ({ leading, onSendWhileRunning }) => {
   return (
     <div className="aui-composer-action-wrapper relative flex items-center justify-between">
       <div className="flex min-w-0 items-center gap-1.5">
@@ -318,6 +357,11 @@ const ComposerAction: FC<{ leading?: ReactNode }> = ({ leading }) => {
             </TooltipIconButton>
           </ComposerPrimitive.Send>
         </AuiIf>
+        {onSendWhileRunning ? (
+          <AuiIf condition={(s) => s.thread.isRunning}>
+            <ComposerSendWhileRunning onSendWhileRunning={onSendWhileRunning} />
+          </AuiIf>
+        ) : null}
         <AuiIf condition={(s) => s.thread.isRunning}>
           <ComposerPrimitive.Cancel asChild>
             <Button

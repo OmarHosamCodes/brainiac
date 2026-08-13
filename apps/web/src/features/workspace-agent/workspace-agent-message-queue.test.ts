@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  canComposerSendWhileRunning,
+  shouldShowComposerSendWhileRunning,
+} from "./workspace-agent-composer-send-while-running";
+import {
   MAX_QUEUED_AGENT_MESSAGES,
   canEnqueueAgentMessage,
   cancelQueuedAgentMessage,
@@ -43,6 +47,28 @@ describe("dequeueAgentMessage", () => {
     expect(next?.text).toBe("a");
     expect(rest).toHaveLength(1);
     expect(rest[0]?.text).toBe("b");
+  });
+});
+
+describe("shouldShowComposerSendWhileRunning", () => {
+  test("shows only while running with a handler", () => {
+    expect(
+      shouldShowComposerSendWhileRunning({ isRunning: true, hasSendWhileRunningHandler: true }),
+    ).toBe(true);
+    expect(
+      shouldShowComposerSendWhileRunning({ isRunning: false, hasSendWhileRunningHandler: true }),
+    ).toBe(false);
+    expect(
+      shouldShowComposerSendWhileRunning({ isRunning: true, hasSendWhileRunningHandler: false }),
+    ).toBe(false);
+  });
+});
+
+describe("canComposerSendWhileRunning", () => {
+  test("requires non-empty trimmed text", () => {
+    expect(canComposerSendWhileRunning("  hi  ")).toBe(true);
+    expect(canComposerSendWhileRunning("   ")).toBe(false);
+    expect(canComposerSendWhileRunning("")).toBe(false);
   });
 });
 

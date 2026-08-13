@@ -169,6 +169,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                       queuedMessages={view.queuedMessages}
                       runningQueueLabel={view.runningQueueLabel}
                       onCancelQueuedMessage={view.onCancelQueuedMessage}
+                      onSend={view.sendMessage}
                     />
                   }
                 />
