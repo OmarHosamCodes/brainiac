@@ -20,6 +20,7 @@ import type { WorkspaceAgentQuickStart } from "@/features/workspace-agent/worksp
 import { WorkspaceAgentThreadDataUI } from "@/features/workspace-agent/workspace-agent-thread-data-ui";
 import { WorkspaceAgentThreadHistory } from "@/features/workspace-agent/workspace-agent-thread-history";
 import {
+  WorkspaceAgentReadAloudSlot,
   WorkspaceAgentStoppedRunSlot,
   WorkspaceAgentThreadMessageProvider,
   WorkspaceAgentThreadWelcome,
@@ -103,6 +104,9 @@ type WorkspaceAgentChatPanelViewProps = {
   onOpenBoard?: (href: string) => void;
   onContinueStoppedTurn: () => void;
   onDismissStoppedTurn: () => void;
+  readAloudPlaying: boolean;
+  readAloudSupported: boolean;
+  onToggleReadAloud: () => void;
   composer: ReactNode;
 };
 
@@ -163,6 +167,9 @@ export function WorkspaceAgentChatPanelView({
   emptyHint,
   onContinueStoppedTurn,
   onDismissStoppedTurn,
+  readAloudPlaying,
+  readAloudSupported,
+  onToggleReadAloud,
   composer,
 }: WorkspaceAgentChatPanelViewProps) {
   const showCanvas = activeArtifact !== null;
@@ -299,6 +306,9 @@ export function WorkspaceAgentChatPanelView({
           emptyHint,
           quickStarts,
           onSelectQuickStart,
+          readAloudPlaying,
+          readAloudSupported,
+          onToggleReadAloud,
         }}
       >
         {showCanvas && activeArtifact ? (
@@ -310,6 +320,7 @@ export function WorkspaceAgentChatPanelView({
                 composer={threadComposer}
                 components={{
                   Welcome: WorkspaceAgentThreadWelcome,
+                  AssistantActionExtra: WorkspaceAgentReadAloudSlot,
                 }}
               />
             </CanvasSplitThread>
@@ -330,6 +341,7 @@ export function WorkspaceAgentChatPanelView({
               composer={threadComposer}
               components={{
                 Welcome: WorkspaceAgentThreadWelcome,
+                AssistantActionExtra: WorkspaceAgentReadAloudSlot,
               }}
             />
           </div>

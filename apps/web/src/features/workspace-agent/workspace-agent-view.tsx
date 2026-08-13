@@ -147,6 +147,9 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                   emptyHint={view.emptyHint}
                   onContinueStoppedTurn={view.onContinueStoppedTurn}
                   onDismissStoppedTurn={view.onDismissStoppedTurn}
+                  readAloudPlaying={view.readAloudPlaying}
+                  readAloudSupported={view.readAloudSupported}
+                  onToggleReadAloud={view.onToggleReadAloud}
                   composer={
                     <WorkspaceAgentThreadComposerView
                       placeholder={view.placeholder}
