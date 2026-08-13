@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { formatTaskAssigneeLabel } from "@orch/api/schemas/agency-ops";
 import { UNASSIGNED_ASSIGNEE_VALUE } from "@/features/shared/agency-member-constants";
 import type { AgencyMemberOption } from "@/features/shared/agency-member-option";
+import { fitAssigneeAvatarStack } from "@/features/shared/choosers/agency-member-stack";
 
 type AgencyMemberChooserBaseOptions = {
   members: AgencyMemberOption[];
@@ -13,6 +14,8 @@ type AgencyMemberChooserBaseOptions = {
   className?: string;
   /** default: labeled pill. stack: overlapping avatars + plus (multiple mode). */
   triggerVariant?: "default" | "stack";
+  /** Cap stack trigger width and drop avatars into +N when they no longer fit. */
+  stackMaxWidthPx?: number;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   contentAlign?: "start" | "center" | "end";
@@ -46,6 +49,9 @@ export type AgencyMemberChooserViewModel = {
   searchPlaceholder: string;
   className?: string;
   triggerVariant: "default" | "stack";
+  stackMaxWidthPx?: number;
+  stackVisibleCount: number;
+  stackOverflowCount: number;
   contentAlign: "start" | "center" | "end";
   open: boolean;
   searchTerm: string;
@@ -101,6 +107,7 @@ export function useAgencyMemberChooser(
     searchPlaceholder = "Search members",
     className,
     triggerVariant = "default",
+    stackMaxWidthPx,
     open: controlledOpen,
     onOpenChange,
     contentAlign = "start",
@@ -149,6 +156,13 @@ export function useAgencyMemberChooser(
       .map((userId) => members.find((member) => member.userId === userId))
       .filter((member): member is AgencyMemberOption => Boolean(member));
 
+    const stackFit = stackMaxWidthPx
+      ? fitAssigneeAvatarStack(selectedMembers.length, stackMaxWidthPx)
+      : {
+          visible: Math.min(selectedMembers.length, 4),
+          overflow: Math.max(0, selectedMembers.length - 4),
+        };
+
     return {
       mode: "multiple" as const,
       disabled,
@@ -157,6 +171,9 @@ export function useAgencyMemberChooser(
       searchPlaceholder,
       className,
       triggerVariant,
+      stackMaxWidthPx,
+      stackVisibleCount: stackFit.visible,
+      stackOverflowCount: stackFit.overflow,
       contentAlign,
       open,
       searchTerm,
@@ -209,6 +226,9 @@ export function useAgencyMemberChooser(
     searchPlaceholder,
     className,
     triggerVariant,
+    stackMaxWidthPx,
+    stackVisibleCount: 0,
+    stackOverflowCount: 0,
     contentAlign,
     open,
     searchTerm,

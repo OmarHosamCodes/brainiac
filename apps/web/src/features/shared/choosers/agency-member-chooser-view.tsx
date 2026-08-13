@@ -12,8 +12,6 @@ import {
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
-const STACK_AVATAR_LIMIT = 4;
-
 type AgencyMemberChooserViewProps = {
   view: AgencyMemberChooserViewModel;
 };
@@ -27,6 +25,9 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
     searchPlaceholder,
     className,
     triggerVariant,
+    stackMaxWidthPx,
+    stackVisibleCount,
+    stackOverflowCount,
     contentAlign,
     open,
     searchTerm,
@@ -45,8 +46,8 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
   const isUnassigned = single?.isUnassigned ?? false;
   const assignedToTeam = multiple?.assignedToTeam ?? false;
   const stackMembers = multiple?.selectedMembers ?? [];
-  const stackVisible = stackMembers.slice(0, STACK_AVATAR_LIMIT);
-  const stackOverflow = stackMembers.length - stackVisible.length;
+  const stackVisible = stackMembers.slice(0, stackVisibleCount);
+  const stackOverflow = stackOverflowCount;
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -56,12 +57,13 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
             type="button"
             disabled={disabled || loading}
             className={cn(
-              "inline-flex items-center",
+              "inline-flex max-w-full items-center",
               "transition-opacity disabled:cursor-not-allowed disabled:opacity-50",
               agencyFocusRingClass,
               "motion-reduce:transition-none",
               className,
             )}
+            style={stackMaxWidthPx ? { maxWidth: stackMaxWidthPx } : undefined}
             aria-label={
               triggerLabel === "Unassigned" ? "Add assignees" : `Assignees: ${triggerLabel}`
             }
@@ -92,7 +94,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                   />
                 </span>
               ))
-            ) : (
+            ) : stackOverflow > 0 ? null : (
               <span
                 className={cn(
                   "relative z-0 size-6 shrink-0 rounded-md border border-default bg-elevated/40",
@@ -104,8 +106,9 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
             {stackOverflow > 0 && !assignedToTeam ? (
               <span
                 className={cn(
-                  "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-md",
-                  "bg-muted text-[9px] font-bold text-foreground",
+                  "relative z-10 flex size-6 shrink-0 items-center justify-center rounded-md",
+                  stackVisible.length > 0 && "-ml-2",
+                  "bg-muted text-[9px] font-bold text-foreground tabular-nums",
                   agencyAvatarStackRingClass,
                 )}
                 aria-hidden
@@ -113,18 +116,20 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                 +{stackOverflow}
               </span>
             ) : null}
-            <span
-              className={cn(
-                "relative z-20 flex size-6 shrink-0 items-center justify-center rounded-full",
-                "border border-dashed border-default bg-elevated text-muted",
-                "transition-colors hover:border-ring hover:bg-default hover:text-highlighted",
-                "motion-reduce:transition-none",
-                "-ml-1",
-              )}
-              aria-hidden
-            >
-              <Plus className="size-3" strokeWidth={2.5} />
-            </span>
+            {!assignedToTeam && stackVisible.length === 0 && stackOverflow === 0 ? (
+              <span
+                className={cn(
+                  "relative z-20 flex size-6 shrink-0 items-center justify-center rounded-full",
+                  "border border-dashed border-default bg-elevated text-muted",
+                  "transition-colors hover:border-ring hover:bg-default hover:text-highlighted",
+                  "motion-reduce:transition-none",
+                  "-ml-1",
+                )}
+                aria-hidden
+              >
+                <Plus className="size-3" strokeWidth={2.5} />
+              </span>
+            ) : null}
           </button>
         ) : (
           <button
