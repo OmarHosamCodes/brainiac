@@ -11,23 +11,19 @@ export function ComposerDraftBridge({
   onDraftChange: (value: string) => void;
 }) {
   const { value, setText } = unstable_useComposerInput();
-  const syncingFromStore = useRef(false);
+  const lastEmittedRef = useRef(draft);
 
   useEffect(() => {
-    if (syncingFromStore.current) {
-      syncingFromStore.current = false;
-      return;
-    }
-    if (value !== draft) {
-      onDraftChange(value);
-    }
-  }, [draft, onDraftChange, value]);
+    if (value === lastEmittedRef.current) return;
+    lastEmittedRef.current = value;
+    onDraftChange(value);
+  }, [onDraftChange, value]);
 
   useEffect(() => {
-    if (value === draft) return;
-    syncingFromStore.current = true;
+    if (draft === lastEmittedRef.current) return;
+    lastEmittedRef.current = draft;
     setText(draft);
-  }, [draft, setText, value]);
+  }, [draft, setText]);
 
   return null;
 }
