@@ -16,16 +16,18 @@ import {
   agencyMyTasksFilterPillClass,
   agencyMyTasksFilterPillClearIconClass,
   agencyMyTasksRailAddButtonClass,
+  agencyMyTasksRailComposerChooserClass,
   agencyMyTasksRailComposerFormClass,
   agencyMyTasksRailComposerRowClass,
-  agencyTaskChooserTriggerClass,
+  agencyMyTasksRailComposerStripClass,
+  agencyTimeTrackerRailDividerClass,
+  agencyTimeTrackerTaskChooserTriggerClass,
   agencyTaskRailClass,
   agencyTaskRailCollapsedClass,
   agencyTaskRailCollapsedWidthClass,
   agencyTaskRailExpandedWidthClass,
   agencyTaskRailWidthTransitionClass,
 } from "@/features/shared/agency-ui";
-import { AgencyMyTasksQuickAddFieldView } from "@/features/task-management/my-tasks-rail/agency-my-tasks-quick-add-field-view";
 import { AgencyMyTasksEstimatePopover } from "@/features/task-management/my-tasks-rail/agency-my-tasks-estimate-popover";
 import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
@@ -93,8 +95,7 @@ function RailPanel({
   className?: string;
   showCollapseControl?: boolean;
 }) {
-  const canSubmit =
-    Boolean(view.titleDraft.trim()) && Boolean(view.projectId) && !view.isCreatingTask;
+  const canSubmit = Boolean(view.composerTaskId) && !view.isAddingTask;
 
   return (
     <div
@@ -124,74 +125,66 @@ function RailPanel({
           void view.onCreateTask();
         }}
       >
-        <AgencyMyTasksQuickAddFieldView
-          value={view.titleDraft}
-          suggestions={view.titleSuggestions}
-          disabled={view.isCreatingTask}
-          suggestionsOpen={view.titleSuggestionsOpen}
-          activeIndex={view.titleSuggestionActiveIndex}
-          onValueChange={view.onTitleDraftChange}
-          onFocus={view.onTitleFocus}
-          onBlur={view.onTitleBlur}
-          onActiveIndexChange={view.setTitleSuggestionActiveIndex}
-          onPickSuggestion={view.onPickTitleSuggestion}
-          onSuppressSuggestions={view.onSuppressTitleSuggestions}
-        />
-        <div className={agencyMyTasksRailComposerRowClass}>
-          <AgencyMemberChooser
-            mode="multiple"
-            assignedToTeam={view.assignedToTeam}
-            selectedUserIds={view.assigneeUserIds}
-            onAssignedToTeamChange={(nextAssignedToTeam) => {
-              view.setAssignedToTeam(nextAssignedToTeam);
-              if (nextAssignedToTeam) view.setAssigneeUserIds([]);
-            }}
-            onSelectedUserIdsChange={(nextIds) => {
-              view.setAssignedToTeam(false);
-              view.setAssigneeUserIds(nextIds);
-            }}
-            members={view.members}
-            placeholder="Assignees"
-            triggerVariant="stack"
-            contentAlign="start"
-            className="shrink-0"
-          />
-          <AgencyTaskChooser
-            teamId={view.teamId}
-            value={view.projectId}
-            onValueChange={(nextProjectId) => view.setProjectId(nextProjectId)}
-            projects={view.projects}
-            tasks={[]}
-            placeholder="Project"
-            searchPlaceholder="Search projects or clients"
-            triggerFormat="project-client"
-            pickProject
-            className={cn(
-              agencyTaskChooserTriggerClass,
-              "h-8 w-full max-w-none rounded-2xl border border-transparent bg-input/50 px-3 text-sm",
-            )}
-            contentAlign="end"
-            required
-          />
-          <AgencyMyTasksEstimatePopover
-            value={view.estimateMinutes}
-            disabled={view.isCreatingTask}
-            onChange={view.setEstimateMinutes}
-          />
-          <Button
-            type="submit"
-            size="icon"
-            className={agencyMyTasksRailAddButtonClass}
-            aria-label="Add task"
-            aria-busy={view.isCreatingTask}
-            disabled={!canSubmit}
-          >
-            {view.isCreatingTask ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <Plus className="size-4" aria-hidden />
-            )}
-          </Button>
+        <div className={agencyMyTasksRailComposerStripClass}>
+          <div className={agencyMyTasksRailComposerChooserClass}>
+            <AgencyTaskChooser
+              teamId={view.teamId}
+              value={view.composerTaskId}
+              onValueChange={view.onComposerTaskChange}
+              projects={view.projects}
+              tasks={view.tasks}
+              placeholder="Choose task"
+              triggerFormat="task-client"
+              highlightSearch
+              required
+              contentAlign="start"
+              disabled={view.isAddingTask}
+              className={cn(
+                agencyTimeTrackerTaskChooserTriggerClass,
+                "w-full max-w-none justify-start",
+              )}
+            />
+          </div>
+          <span className={agencyTimeTrackerRailDividerClass} aria-hidden />
+          <div className={agencyMyTasksRailComposerRowClass}>
+            <AgencyMemberChooser
+              mode="multiple"
+              assignedToTeam={view.assignedToTeam}
+              selectedUserIds={view.assigneeUserIds}
+              onAssignedToTeamChange={(nextAssignedToTeam) => {
+                view.setAssignedToTeam(nextAssignedToTeam);
+                if (nextAssignedToTeam) view.setAssigneeUserIds([]);
+              }}
+              onSelectedUserIdsChange={(nextIds) => {
+                view.setAssignedToTeam(false);
+                view.setAssigneeUserIds(nextIds);
+              }}
+              members={view.members}
+              placeholder="Assignees"
+              triggerVariant="stack"
+              contentAlign="start"
+              className="shrink-0"
+            />
+            <AgencyMyTasksEstimatePopover
+              value={view.estimateMinutes}
+              disabled={view.isAddingTask}
+              onChange={view.setEstimateMinutes}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              className={agencyMyTasksRailAddButtonClass}
+              aria-label="Add task"
+              aria-busy={view.isAddingTask}
+              disabled={!canSubmit}
+            >
+              {view.isAddingTask ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Plus className="size-4" aria-hidden />
+              )}
+            </Button>
+          </div>
         </div>
         {view.createError ? (
           <p className="text-xs text-destructive" role="alert">

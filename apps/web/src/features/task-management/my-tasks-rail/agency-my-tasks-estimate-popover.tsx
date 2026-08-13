@@ -57,10 +57,10 @@ export function AgencyMyTasksEstimatePopover({
           aria-label={triggerLabel ? `Estimate ${triggerLabel}` : "Add estimate"}
           title={triggerLabel ? `Estimate ${triggerLabel}` : "Add estimate"}
           className={cn(
-            "h-8 shrink-0 gap-1 rounded-2xl border border-transparent px-2.5 text-xs font-medium",
+            "h-8 shrink-0 gap-1 rounded-full border border-transparent px-2 text-xs font-medium",
             triggerLabel
               ? "bg-primary/10 text-primary hover:bg-primary/15"
-              : "bg-input/50 text-muted hover:bg-input/80 hover:text-foreground",
+              : "text-muted hover:bg-muted hover:text-foreground",
             agencyFocusRingClass,
           )}
         >

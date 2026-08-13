@@ -8,16 +8,12 @@ import {
   useAgencyProjectTasksQuery,
   useAgencyProjectsQuery,
 } from "@/features/shared/agency-queries";
+import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";
 import { toAgencyMemberOption } from "@/features/shared/agency-member-option";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
-import {
-  buildTaskSuggestionQueryFilters,
-  selectTaskSuggestions,
-} from "@/features/task-management/agency-task-suggestion-query";
 import { groupTasksByClient } from "@/features/task-management/agency-task-utils";
-import type { MyTasksSuggestionItem } from "@/features/task-management/my-tasks-rail/agency-my-tasks-suggestion-item";
 import { useAgencyMyTasksRailStore } from "@/features/task-management/stores/agency-my-tasks-rail";
 import { RAIL_HOLD_MS } from "@/features/task-management/my-tasks-rail/agency-my-tasks-rail-motion";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
@@ -43,15 +39,11 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   }, [hydrate]);
 
   const [pills, setPills] = useState<Set<MyTasksFilterPill>>(() => new Set(["open"]));
-  const [titleDraft, setTitleDraft] = useState("");
-  const [titleFieldFocused, setTitleFieldFocused] = useState(false);
-  const [titleSuggestionsSuppressed, setTitleSuggestionsSuppressed] = useState(false);
-  const [titleSuggestionActiveIndex, setTitleSuggestionActiveIndex] = useState(0);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>(() =>
     actorUserId ? [actorUserId] : [],
   );
   const [assignedToTeam, setAssignedToTeam] = useState(false);
-  const [projectId, setProjectId] = useState("");
+  const [composerTaskId, setComposerTaskId] = useState("");
   const [estimateMinutes, setEstimateMinutes] = useState<number | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -88,55 +80,10 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const projects = projectsQuery.data?.items ?? [];
 
-  const suggestionsActive = titleFieldFocused && !titleSuggestionsSuppressed;
-  const suggestionFilters = buildTaskSuggestionQueryFilters({
-    suggestionsActive,
-    selectedProjectId: projectId,
-  });
-  const suggestionTasksQuery = useAgencyProjectTasksQuery(
-    teamId,
-    suggestionFilters.enabled
-      ? {
-          ...suggestionFilters.filters,
-          assigneeUserId: actorUserId || undefined,
-          enabled: true,
-        }
-      : { enabled: false, statuses: ["open", "in_progress"] },
-  );
-
-  const titleSuggestions = useMemo((): MyTasksSuggestionItem[] => {
-    const ranked = selectTaskSuggestions(suggestionTasksQuery.data?.items ?? [], titleDraft, {
-      affinityProjectId: projectId || undefined,
-    });
-    return ranked.map((task) => {
-      const project = projects.find((p) => p.id === task.projectId);
-      return {
-        id: task.id,
-        title: task.title,
-        projectId: task.projectId,
-        projectName: project?.name ?? "Project",
-        clientName: project?.clientName ?? "Client",
-      };
-    });
-  }, [suggestionTasksQuery.data?.items, titleDraft, projectId, projects]);
-
-  const titleSuggestionsOpen =
-    titleFieldFocused && !titleSuggestionsSuppressed && titleDraft.trim().length > 0;
-
-  useEffect(() => {
-    setTitleSuggestionActiveIndex(0);
-  }, [titleDraft, titleSuggestions]);
-
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
   const runningTaskId = activeTimerQuery.data?.timer?.taskId ?? null;
   const prevRunningTaskIdRef = useRef<string | null>(null);
   const hasSettledRunningTaskRef = useRef(false);
-
-  useEffect(() => {
-    if (!projectId && projects[0]?.id) {
-      setProjectId(activeTimerQuery.data?.timer?.projectId || projects[0].id);
-    }
-  }, [projectId, projects, activeTimerQuery.data?.timer?.projectId]);
 
   useEffect(() => {
     if (!activeTimerQuery.isFetched) return;
@@ -226,7 +173,6 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     setCountTickKey((key) => key + 1);
   }, [openCount]);
 
-  const selectedProject = projects.find((project) => project.id === projectId) ?? null;
   const editingTask = tasks.find((task) => task.id === editingTaskId) ?? null;
 
   const isLoading =
@@ -238,11 +184,14 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   const errorMessage = queryError ? getErrorMessage(queryError, "Couldn't load tasks.") : null;
 
   const createProjectTask = useAgencyOpsStore((s) => s.createProjectTask);
+  const updateProjectTask = useAgencyOpsStore((s) => s.updateProjectTask);
   const completeProjectTaskForMember = useAgencyOpsStore((s) => s.completeProjectTaskForMember);
   const deleteProjectTask = useAgencyOpsStore((s) => s.deleteProjectTask);
   const isCreatingTask = useAgencyOpsStore(selectIsCreatingTask);
   const pendingTaskIds = useAgencyOpsStore((s) => s.pendingTaskIds);
   const deletingTaskIds = useAgencyOpsStore((s) => s.deletingTaskIds);
+  const isAddingTask =
+    isCreatingTask || Boolean(composerTaskId && pendingTaskIds.includes(composerTaskId));
 
   function togglePill(pill: MyTasksFilterPill) {
     setPills((prev) => {
@@ -255,30 +204,36 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   }
 
   async function onCreateTask() {
-    const title = titleDraft.trim();
-    if (!title || !teamId || !projectId) {
-      setCreateError(!projectId ? "Choose a project." : null);
+    if (!teamId || !composerTaskId) {
+      setCreateError("Choose a task.");
       return;
     }
     setCreateError(null);
-    setTitleDraft("");
-    setEstimateMinutes(null);
-    const createdId = await createProjectTask({
-      teamId,
-      projectId,
-      title,
-      assignedToTeam,
-      assigneeUserIds: assignedToTeam
-        ? []
-        : assigneeUserIds.length > 0
-          ? assigneeUserIds
-          : actorUserId
-            ? [actorUserId]
-            : [],
-      estimateMinutes,
-    });
-    if (createdId) {
-      flashId(setJustCreatedTaskId, createdId, RAIL_HOLD_MS.flash);
+    const existing =
+      tasks.find((task) => task.id === composerTaskId) ??
+      findProjectTaskInCache(teamId, composerTaskId);
+    const nextAssignedToTeam = assignedToTeam || Boolean(existing?.assignedToTeam);
+    const nextAssigneeUserIds = nextAssignedToTeam
+      ? []
+      : [
+          ...new Set([
+            ...(existing?.assignees.map((assignee) => assignee.userId) ?? []),
+            ...(assigneeUserIds.length > 0 ? assigneeUserIds : actorUserId ? [actorUserId] : []),
+          ]),
+        ];
+    try {
+      await updateProjectTask({
+        teamId,
+        taskId: composerTaskId,
+        assignedToTeam: nextAssignedToTeam,
+        assigneeUserIds: nextAssigneeUserIds,
+        ...(estimateMinutes !== null ? { estimateMinutes } : {}),
+      });
+      flashId(setJustCreatedTaskId, composerTaskId, RAIL_HOLD_MS.flash);
+      setComposerTaskId("");
+      setEstimateMinutes(null);
+    } catch (error) {
+      setCreateError(getErrorMessage(error, "Couldn't add task."));
     }
   }
 
@@ -313,29 +268,9 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     setSelectedTaskId(taskId);
   }
 
-  function onTitleDraftChange(next: string) {
-    setTitleDraft(next);
-    setTitleSuggestionsSuppressed(false);
-  }
-
-  function onPickTitleSuggestion(item: MyTasksSuggestionItem) {
-    setTitleDraft(item.title);
-    setProjectId(item.projectId);
-    setTitleSuggestionsSuppressed(true);
-    onSelectTask(item.id);
-  }
-
-  function onTitleFocus() {
-    setTitleFieldFocused(true);
-    setTitleSuggestionsSuppressed(false);
-  }
-
-  function onTitleBlur() {
-    setTitleFieldFocused(false);
-  }
-
-  function onSuppressTitleSuggestions() {
-    setTitleSuggestionsSuppressed(true);
+  function onComposerTaskChange(taskId: string) {
+    setComposerTaskId(taskId);
+    setCreateError(null);
   }
 
   function onKeyboardMove(delta: 1 | -1) {
@@ -430,27 +365,16 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     setSheetOpen,
     pills,
     togglePill,
-    titleDraft,
-    setTitleDraft,
-    onTitleDraftChange,
-    titleSuggestions,
-    titleSuggestionsOpen,
-    titleSuggestionActiveIndex,
-    setTitleSuggestionActiveIndex,
-    onTitleFocus,
-    onTitleBlur,
-    onSuppressTitleSuggestions,
-    onPickTitleSuggestion,
+    composerTaskId,
+    onComposerTaskChange,
     assigneeUserIds,
     setAssigneeUserIds,
     assignedToTeam,
     setAssignedToTeam,
-    projectId,
-    setProjectId,
     estimateMinutes,
     setEstimateMinutes,
-    selectedProject,
     projects,
+    tasks,
     members,
     clientGroups,
     flatTaskIds,
@@ -467,7 +391,7 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     isLoading,
     errorMessage,
     createError,
-    isCreatingTask,
+    isAddingTask,
     pendingTaskIds,
     deletingTaskIds,
     onCreateTask,

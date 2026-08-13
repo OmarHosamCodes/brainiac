@@ -570,10 +570,14 @@ export const agencyMyTasksRailRowSelectedClass = "bg-muted";
 export const agencyMyTasksRailRowDoneClass = "opacity-70";
 
 export const agencyMyTasksRailComposerFormClass =
-  "relative z-10 flex shrink-0 flex-col gap-2 overflow-visible border-b border-default px-3 py-2.5 sm:px-4";
+  "relative z-10 flex min-w-0 shrink-0 flex-col gap-1 overflow-visible border-b border-default px-3 py-1.5 sm:px-4";
 
-export const agencyMyTasksRailComposerRowClass =
-  "grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2";
+export const agencyMyTasksRailComposerStripClass = "flex min-w-0 items-center gap-1";
+
+export const agencyMyTasksRailComposerChooserClass =
+  "flex min-w-0 flex-1 items-center [&>div]:flex [&>div]:w-full [&>div]:max-w-none";
+
+export const agencyMyTasksRailComposerRowClass = "flex shrink-0 items-center gap-1";
 
 export const agencyMyTasksRailAddButtonClass = cn(
   "inline-flex size-8 shrink-0 items-center justify-center rounded-full",
