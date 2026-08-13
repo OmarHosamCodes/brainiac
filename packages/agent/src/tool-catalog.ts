@@ -84,6 +84,12 @@ const TOOL_CATALOG: ToolCatalogDefinition[] = [
     modes: ALL_MODES,
   },
   {
+    name: "list_agency_time_gaps",
+    usage: "Checks uncovered time windows vs tracked entries for a YYYY-MM-DD range (read-only).",
+    surface: ["agency"],
+    modes: ALL_MODES,
+  },
+  {
     name: "list_agency_projects",
     usage: "Lists Agency projects and their clients for the active team.",
     surface: ["agency"],

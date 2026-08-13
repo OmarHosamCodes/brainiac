@@ -1071,6 +1071,81 @@ export async function listMyAgencyTimeEntries(
   };
 }
 
+function parseAgencyDateRangeBound(value: string, fieldName: string, bound: "start" | "end") {
+  const trimmed = value.trim();
+  const iso = trimmed.includes("T")
+    ? trimmed
+    : bound === "start"
+      ? `${trimmed}T00:00:00.000Z`
+      : `${trimmed}T23:59:59.999Z`;
+  return parseIsoDateTime(iso, fieldName);
+}
+
+export async function listMyAgencyTimeEntriesInRange(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    from: string;
+    to: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const from = parseAgencyDateRangeBound(input.from, "from", "start");
+  const to = parseAgencyDateRangeBound(input.to, "to", "end");
+
+  if (from > to) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "from must be before or equal to to.",
+    });
+  }
+
+  const rows = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      userName: user.name,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      source: agencyOpsTimeEntry.source,
+      description: agencyOpsTimeEntry.description,
+      isBillable: agencyOpsTimeEntry.isBillable,
+      isWaste: agencyOpsTimeEntry.isWaste,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      createdAt: agencyOpsTimeEntry.createdAt,
+      updatedAt: agencyOpsTimeEntry.updatedAt,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
+    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+        gte(agencyOpsTimeEntry.startedAt, from),
+        lte(agencyOpsTimeEntry.endedAt, to),
+      ),
+    )
+    .orderBy(asc(agencyOpsTimeEntry.startedAt))
+    .limit(500);
+
+  const tagsByEntryId = await listTagsByTimeEntryIds(rows.map((row) => row.id));
+  const items = rows.map((row) => mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? []));
+
+  return { items };
+}
+
 export async function createManualAgencyTimeEntry(
   actorUserId: string,
   input: {

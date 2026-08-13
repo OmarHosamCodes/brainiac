@@ -228,6 +228,7 @@ function buildAgencyInstructions(workspace: DashboardAgentWorkspaceContext) {
     "Be concise, concrete, and factual.",
     `Today's date (UTC) is ${todayUtc}. Use YYYY-MM-DD for from/to. For "this month", use month start through today.`,
     "Prefer get_agency_reports_summary for project/client breakdowns; get_agency_time_summary for per-member totals.",
+    "Time gap fill: call list_agency_time_gaps first. Report window, tracked hours, uncovered rows, and projected total. Do not propose time_entry.create until the user asks to insert. New entries must not overlap existing ones. Inherit project/task from the gap neighbor. Never mark a whole day as waste.",
     UI_PRESENT_SYSTEM_GUIDANCE,
     userLabel,
     workspace.teamId ? `Active team id: ${workspace.teamId}.` : "Active team id is unavailable.",
@@ -253,6 +254,7 @@ function buildAgencyPlanInstructions(workspace: DashboardAgentWorkspaceContext) 
     "Do not call draft_agency_plan until ask_agency_question has been used this turn (or the user already answered a prior question). Do not claim changes were applied.",
     "After draft_agency_plan, call ui_present with a schema overview of the plan (steps, targets, impact). Then tell the user to Confirm in the UI.",
     "Never invent ids — use tool results. Do not call propose_agency_action in Plan mode.",
+    "Time gap insert: propose time_entry.create per gap; one proposal per entry unless the user asks for a batch; always ui_present before/after. Do not insert during check.",
   ].join("\n");
 }
 
@@ -263,6 +265,7 @@ function buildAgencyAgentModeInstructions(workspace: DashboardAgentWorkspaceCont
     "When you need clarification, call ask_agency_question (do not ask only in prose). Prefer ui_present for before/after.",
     "Required: after each propose_agency_action, call ui_present with a clear before/after illustration, then tell the user to Approve or Reject.",
     "Never claim a write succeeded until the user Approves. Prefer one proposal at a time unless the user asks for a batch.",
+    "Time gap insert: propose time_entry.create per gap; one proposal per entry unless the user asks for a batch; always ui_present before/after. Do not insert during check.",
   ].join("\n");
 }
 

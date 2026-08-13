@@ -98,6 +98,28 @@ function buildAgencyReadTools(runtime: AgencyAgentRuntime) {
       execute: async ({ page, pageSize }) => runtime.listMyTimeEntries({ page, pageSize }),
     }),
     tool({
+      name: "list_agency_time_gaps",
+      description:
+        "Check uncovered time windows vs the current user's tracked entries for from/to (YYYY-MM-DD). Does not insert entries. Default the model should use today when the user omits a range.",
+      inputSchema: agencyDateRangeInputSchema,
+      outputSchema: z.object({
+        from: z.string(),
+        to: z.string(),
+        trackedSeconds: z.number().int().nonnegative(),
+        gapSeconds: z.number().int().nonnegative(),
+        gaps: z.array(
+          z.object({
+            startAt: z.string(),
+            endAt: z.string(),
+            durationSeconds: z.number().int().nonnegative(),
+            projectId: z.string().nullable(),
+            taskId: z.string().nullable(),
+          }),
+        ),
+      }),
+      execute: async (input) => runtime.listTimeGaps(flattenAgencyDateRangeInput(input)),
+    }),
+    tool({
       name: "get_agency_time_entry",
       description: "Read one Agency time entry by id for the current user.",
       inputSchema: z.object({

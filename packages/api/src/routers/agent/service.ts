@@ -59,7 +59,9 @@ import {
   getAgencyActiveTimer,
   getAgencyTimeSummary,
   listMyAgencyTimeEntries,
+  listMyAgencyTimeEntriesInRange,
 } from "../agency-ops/time-tracking/service";
+import { carveAgencyTimeGaps } from "../agency-ops/time-tracking/time-gaps";
 import { listTeamMembers } from "../team/service";
 import {
   getWorkspaceMarketplaceItems,
@@ -243,6 +245,32 @@ function createAgencyAgentRuntime(
           seconds: member.totalSeconds,
           isTiming: member.isActive,
         })),
+      };
+    },
+    listTimeGaps: async ({ from, to }) => {
+      const fromMs = Date.parse(`${from}T00:00:00.000Z`);
+      const toMs = Date.parse(`${to}T00:00:00.000Z`) + 86_400_000;
+      const listed = await listMyAgencyTimeEntriesInRange(actorUserId, {
+        teamId,
+        from,
+        to,
+      });
+      const entries = listed.items.map((entry) => ({
+        startedAt: entry.startedAt,
+        endedAt: entry.endedAt,
+        projectId: entry.projectId,
+        taskId: entry.taskId,
+        durationSeconds: entry.durationSeconds,
+      }));
+      const trackedSeconds = entries.reduce((sum, entry) => sum + entry.durationSeconds, 0);
+      const gaps = carveAgencyTimeGaps({ fromMs, toMs, entries });
+      const gapSeconds = gaps.reduce((sum, gap) => sum + gap.durationSeconds, 0);
+      return {
+        from,
+        to,
+        trackedSeconds,
+        gapSeconds,
+        gaps,
       };
     },
     getReportsSummary: async (input) => {
