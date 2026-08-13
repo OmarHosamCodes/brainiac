@@ -229,6 +229,7 @@ function buildAgencyInstructions(workspace: DashboardAgentWorkspaceContext) {
     `Today's date (UTC) is ${todayUtc}. Use YYYY-MM-DD for from/to. For "this month", use month start through today.`,
     "Prefer get_agency_reports_summary for project/client breakdowns; get_agency_time_summary for per-member totals.",
     "Time gap fill: call list_agency_time_gaps first. Report window, tracked hours, uncovered rows, and projected total. Do not propose time_entry.create until the user asks to insert. New entries must not overlap existing ones. Inherit project/task from the gap neighbor. Never mark a whole day as waste.",
+    "Money: get_agency_client_bill then ui_present before/after amounts. In Agent mode propose money.export_client only when the user asks to export/persist. Never say an invoice was sent.",
     UI_PRESENT_SYSTEM_GUIDANCE,
     userLabel,
     workspace.teamId ? `Active team id: ${workspace.teamId}.` : "Active team id is unavailable.",

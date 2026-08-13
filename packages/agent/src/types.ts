@@ -569,6 +569,26 @@ export type AgencyAgentRuntime = {
       taskId: string | null;
     }>;
   }>;
+  getClientBill: (input: {
+    clientId: string;
+    periodStart: string;
+    periodEnd: string;
+  }) => Promise<{
+    clientId: string;
+    clientName: string | null;
+    amount: number;
+    remainingAmount: number;
+    wasteAmount: number;
+    lines: Array<{
+      id: string;
+      kind: "invoice" | "ready";
+      isCarry: boolean;
+      periodStart: string;
+      periodEnd: string;
+      amount: number;
+      remainingAmount: number;
+    }>;
+  }>;
   getReportsSummary: (input: {
     from: string;
     to: string;

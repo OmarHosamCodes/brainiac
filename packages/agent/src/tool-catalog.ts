@@ -90,6 +90,13 @@ const TOOL_CATALOG: ToolCatalogDefinition[] = [
     modes: ALL_MODES,
   },
   {
+    name: "get_agency_client_bill",
+    usage:
+      "Reads one client's composed bill for a period (current + carry); amounts in integer minor units.",
+    surface: ["agency"],
+    modes: ALL_MODES,
+  },
+  {
     name: "list_agency_projects",
     usage: "Lists Agency projects and their clients for the active team.",
     surface: ["agency"],
