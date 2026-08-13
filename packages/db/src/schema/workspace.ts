@@ -186,6 +186,26 @@ export const dashboardConversationMessage = pgTable(
   ],
 );
 
+export const dashboardComposerDraft = pgTable(
+  "dashboard_composer_draft",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    conversationId: text("conversation_id").references(() => dashboardConversation.id, {
+      onDelete: "cascade",
+    }),
+    text: text("text").notNull().default(""),
+    attachments: jsonb("attachments")
+      .$type<DashboardConversationMessageAttachmentRecord[]>()
+      .notNull()
+      .default([]),
+    savedAt: timestamp("saved_at").defaultNow().notNull(),
+  },
+  (table) => [index("dashboard_composer_draft_user_idx").on(table.userId)],
+);
+
 export type AgentAgencyProposalStatus =
   | "pending"
   | "approved"
