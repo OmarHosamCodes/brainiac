@@ -1,4 +1,9 @@
-export function shouldOfferComposerDraftRestore(input: { liveDraft: string; serverText: string }) {
+export function shouldOfferComposerDraftRestore(input: {
+  liveDraft: string;
+  serverText: string;
+  isBusy?: boolean;
+}) {
+  if (input.isBusy) return false;
   return input.liveDraft.trim().length === 0 && input.serverText.trim().length > 0;
 }
 
