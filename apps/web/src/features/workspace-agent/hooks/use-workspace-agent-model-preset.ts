@@ -7,6 +7,8 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { effortForOutboundPreset } from "@/features/workspace-agent/model-preset-effort";
+
 const PRESET_STORAGE_KEY = "orch:agent-model-preset";
 const STICKY_STORAGE_KEY = "orch:agent-model-sticky";
 const PIN_STORAGE_KEY = "orch:agent-model-pin";
@@ -45,6 +47,9 @@ export function useWorkspaceAgentModelPreset(args: {
   const [free, setFreeState] = useState(
     () => readJson<AgentModelPreset>(PRESET_STORAGE_KEY)?.free ?? DEFAULT_AGENT_MODEL_PRESET.free,
   );
+  const [effort, setEffortState] = useState<AgentModelPreset["effort"]>(
+    () => readJson<AgentModelPreset>(PRESET_STORAGE_KEY)?.effort,
+  );
   const [pinnedModelId, setPinnedModelIdState] = useState<string | null>(
     () => readJson<string | null>(PIN_STORAGE_KEY) ?? null,
   );
@@ -55,8 +60,8 @@ export function useWorkspaceAgentModelPreset(args: {
   const [freeDefaultApplied, setFreeDefaultApplied] = useState(false);
 
   useEffect(() => {
-    writeJson(PRESET_STORAGE_KEY, { tier, auto, free } satisfies AgentModelPreset);
-  }, [auto, free, tier]);
+    writeJson(PRESET_STORAGE_KEY, { tier, auto, free, effort } satisfies AgentModelPreset);
+  }, [auto, effort, free, tier]);
 
   useEffect(() => {
     writeJson(PIN_STORAGE_KEY, pinnedModelId);
@@ -95,6 +100,13 @@ export function useWorkspaceAgentModelPreset(args: {
 
   const setTier = useCallback((next: AgentModelTier) => {
     setTierState(next);
+    if (next === "pro") {
+      setEffortState((current) => current ?? "medium");
+    }
+  }, []);
+
+  const setEffort = useCallback((next: AgentModelPreset["effort"]) => {
+    setEffortState(next);
   }, []);
 
   const setAuto = useCallback((next: boolean) => {
@@ -136,7 +148,10 @@ export function useWorkspaceAgentModelPreset(args: {
     [tier],
   );
 
-  const modelPreset: AgentModelPreset = useMemo(() => ({ tier, auto, free }), [auto, free, tier]);
+  const modelPreset: AgentModelPreset = useMemo(
+    () => ({ tier, auto, free, effort: effortForOutboundPreset(tier, effort) }),
+    [auto, effort, free, tier],
+  );
 
   const outboundModelId = useMemo(() => {
     if (auto) {
@@ -170,6 +185,7 @@ export function useWorkspaceAgentModelPreset(args: {
     tier,
     auto,
     free,
+    effort,
     pinnedModelId,
     outboundModelId,
     selectedModelLabel,
@@ -179,6 +195,7 @@ export function useWorkspaceAgentModelPreset(args: {
     setTier,
     setAuto,
     setFree,
+    setEffort,
     pinModel,
     rememberResolvedModel,
   };

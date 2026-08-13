@@ -154,9 +154,11 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                       modelTier={view.modelTier}
                       modelAuto={view.modelAuto}
                       modelFree={view.modelFree}
+                      modelEffort={view.modelEffort}
                       onModelTierChange={view.setModelTier}
                       onModelAutoChange={view.setModelAuto}
                       onModelFreeChange={view.setModelFree}
+                      onModelEffortChange={view.setModelEffort}
                       modelMenuOpen={view.modelMenuOpen}
                       onModelMenuOpenChange={view.setModelMenuOpen}
                       onOpenModelLibrary={() => view.setModelLibraryOpen(true)}
