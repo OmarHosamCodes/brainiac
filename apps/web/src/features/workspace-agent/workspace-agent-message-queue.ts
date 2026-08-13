@@ -33,3 +33,15 @@ export function dequeueAgentMessage(queue: readonly QueuedAgentMessage[]): {
   const [next, ...rest] = queue;
   return { next: next ?? null, rest };
 }
+
+export function nextSendAction(input: {
+  isStreaming: boolean;
+  queueLength: number;
+  text: string;
+}): "send" | "queue" | "ignore" {
+  if (!input.text.trim()) return "ignore";
+  if (input.isStreaming) {
+    return canEnqueueAgentMessage(input) ? "queue" : "ignore";
+  }
+  return "send";
+}

@@ -6,6 +6,7 @@ import {
   cancelQueuedAgentMessage,
   dequeueAgentMessage,
   enqueueAgentMessage,
+  nextSendAction,
 } from "./workspace-agent-message-queue";
 
 describe("canEnqueueAgentMessage", () => {
@@ -42,5 +43,19 @@ describe("dequeueAgentMessage", () => {
     expect(next?.text).toBe("a");
     expect(rest).toHaveLength(1);
     expect(rest[0]?.text).toBe("b");
+  });
+});
+
+describe("nextSendAction", () => {
+  test("sends immediately when idle", () => {
+    expect(nextSendAction({ isStreaming: false, queueLength: 0, text: "hi" })).toBe("send");
+  });
+
+  test("queues when streaming", () => {
+    expect(nextSendAction({ isStreaming: true, queueLength: 0, text: "hi" })).toBe("queue");
+  });
+
+  test("drops empty idle sends", () => {
+    expect(nextSendAction({ isStreaming: false, queueLength: 0, text: "  " })).toBe("ignore");
   });
 });

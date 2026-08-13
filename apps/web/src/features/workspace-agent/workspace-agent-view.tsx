@@ -165,6 +165,10 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                       onToolsMenuOpenChange={view.setToolsMenuOpen}
                       tools={view.tools}
                       toolsLoading={view.toolsLoading}
+                      isStreaming={view.isStreaming}
+                      queuedMessages={view.queuedMessages}
+                      runningQueueLabel={view.runningQueueLabel}
+                      onCancelQueuedMessage={view.onCancelQueuedMessage}
                     />
                   }
                 />
