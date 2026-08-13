@@ -144,7 +144,7 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 px-1">
           <div>
-            <h2 className="text-sm font-black tracking-tight text-foreground">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
               Leadership Rhythm Planner
             </h2>
             <p className="text-xs text-toned">Track recurring meetings to prevent cadence gaps.</p>
@@ -162,54 +162,16 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
           </Button>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
-              Cadence Health
-            </p>
-            <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
-              {summary.cadenceHealthPercent}%
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-success/10 bg-success/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">
-              Upcoming
-            </p>
-            <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
-              {summary.upcomingCount}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-destructive/10 bg-destructive/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/60">
-              Missed
-            </p>
-            <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
-              {summary.missedCount}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-secondary/10 bg-secondary/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">
-              Total
-            </p>
-            <p className="mt-2 text-xl font-black tracking-tight text-secondary sm:text-2xl">
-              {summary.totalMeetings}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-muted bg-background p-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              Cadence coverage
-            </p>
-            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-primary/60">
-              {summary.cadenceHealthPercent}% on track
-            </span>
-          </div>
-          <BlockProgressBar value={summary.cadenceHealthPercent} max={100} className="mt-2 h-1.5" />
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm text-muted-foreground">
+            {summary.cadenceHealthPercent}% cadence health · {summary.upcomingCount} upcoming ·{" "}
+            {summary.missedCount} missed · {summary.totalMeetings} total
+          </p>
+          <BlockProgressBar
+            className="min-w-24 max-w-48 flex-1"
+            value={summary.cadenceHealthPercent}
+            max={100}
+          />
         </div>
       </section>
 
@@ -236,13 +198,21 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
       </div>
 
       {visibleMeetings.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+        <div className="rounded-xl border border-dashed border-muted bg-background py-10 text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
             <Calendar className="size-6" />
           </div>
-          <p className="mt-3 text-xs font-bold text-muted-foreground">
-            No meetings match this filter
-          </p>
+          {block.meetings.length === 0 ? (
+            <>
+              <p className="mt-3 text-sm text-toned">No meetings yet.</p>
+              <Button type="button" variant="ghost" size="sm" className="mt-3" onClick={addMeeting}>
+                <Plus />
+                Add
+              </Button>
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-toned">No meetings match this filter.</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -259,7 +229,7 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
                   <Input
                     value={meeting.name}
                     placeholder="Meeting name"
-                    className="border-0 bg-transparent px-0 text-base font-black uppercase tracking-tight shadow-none focus-visible:ring-0"
+                    className="border-0 bg-transparent px-0 text-base font-semibold tracking-tight shadow-none focus-visible:ring-0"
                     onChange={(event) =>
                       mutateMeeting(meeting.id, (entry) => {
                         entry.name = event.target.value.slice(0, 120);
@@ -401,15 +371,15 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
                       {workspaceLeadershipRhythmLabels[meeting.rhythm]}
                     </span>
                     {isLeadershipMeetingUpcoming(meeting) ? (
-                      <span className="mt-1 text-sm font-black tracking-tight text-primary">
+                      <span className="mt-1 text-sm font-semibold tracking-tight text-primary">
                         Upcoming
                       </span>
                     ) : isLeadershipMeetingMissed(meeting) ? (
-                      <span className="mt-1 text-sm font-black tracking-tight text-destructive">
+                      <span className="mt-1 text-sm font-semibold tracking-tight text-destructive">
                         Attention
                       </span>
                     ) : (
-                      <span className="mt-1 text-sm font-black tracking-tight text-foreground">
+                      <span className="mt-1 text-sm font-semibold tracking-tight text-foreground">
                         On track
                       </span>
                     )}

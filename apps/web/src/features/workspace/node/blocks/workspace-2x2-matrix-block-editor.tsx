@@ -1,36 +1,12 @@
-import {
-  createWorkspace2x2MatrixItem,
-  get2x2MatrixSummary,
-  type Workspace2x2MatrixBlock,
-} from "@orch/workspace";
-import { Plus, SquareDashed, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { createWorkspace2x2MatrixItem, type Workspace2x2MatrixBlock } from "@orch/workspace";
+import { Plus, Trash2 } from "lucide-react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
-import { cn } from "@/lib/utils";
 
-const quadrants = [
-  {
-    key: "topLeft" as const,
-    tone: "border-emerald-300/40 bg-emerald-500/5",
-    accent: "text-emerald-500",
-  },
-  { key: "topRight" as const, tone: "border-sky-300/40 bg-sky-500/5", accent: "text-sky-500" },
-  {
-    key: "bottomLeft" as const,
-    tone: "border-amber-300/40 bg-amber-500/5",
-    accent: "text-amber-500",
-  },
-  {
-    key: "bottomRight" as const,
-    tone: "border-rose-300/40 bg-rose-500/5",
-    accent: "text-rose-500",
-  },
-];
+const quadrants = ["topLeft", "topRight", "bottomLeft", "bottomRight"] as const;
 
 type MatrixField =
   | "xAxisLabel"
@@ -45,8 +21,6 @@ export function Workspace2x2MatrixBlockEditor({
   tabId,
 }: WorkspaceBlockEditorProps<Workspace2x2MatrixBlock>) {
   const { mutateTypedBlock } = useWorkspaceNodeEditorContext();
-  const summary = useMemo(() => get2x2MatrixSummary(block), [block]);
-  const averageItemsPerQuadrant = Number((summary.itemCount / 4).toFixed(1));
 
   function updateMatrixField(field: MatrixField, value: string, limit: number) {
     mutateTypedBlock(tabId, block.id, "2x2-matrix", (entry) => {
@@ -54,121 +28,56 @@ export function Workspace2x2MatrixBlockEditor({
     });
   }
 
-  function updateQuadrantName(quadrantKey: (typeof quadrants)[number]["key"], value: string) {
+  function updateQuadrantName(quadrantKey: (typeof quadrants)[number], value: string) {
     mutateTypedBlock(tabId, block.id, "2x2-matrix", (entry) => {
       entry.quadrants[quadrantKey].name = value.slice(0, 80);
     });
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-3xl border border-muted bg-muted p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              Decision Matrix
-            </p>
-            <p className="mt-1 text-sm text-toned">
-              Compare ideas across four quadrants with clearer axis labels and easier item
-              management.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="rounded-2xl">
-              {summary.itemCount} items
-            </Badge>
-            <Badge variant="secondary" className="rounded-2xl">
-              {averageItemsPerQuadrant} avg / quadrant
-            </Badge>
-            <Badge variant="secondary" className="rounded-2xl">
-              {block.xAxisLabel || "Horizontal axis"}
-            </Badge>
-            <Badge variant="secondary" className="rounded-2xl">
-              {block.yAxisLabel || "Vertical axis"}
-            </Badge>
-          </div>
-        </div>
+    <div className="space-y-3 rounded-xl border border-muted p-4">
+      <div className="flex items-center justify-between gap-2">
+        <Input
+          value={block.yEndLabel}
+          placeholder="Y high"
+          className="max-w-40 rounded-xl"
+          aria-label="Vertical axis high label"
+          onChange={(event) => updateMatrixField("yEndLabel", event.target.value, 60)}
+        />
+        <Input
+          value={block.yAxisLabel}
+          placeholder="Vertical axis"
+          className="max-w-48 rounded-xl"
+          aria-label="Vertical axis"
+          onChange={(event) => updateMatrixField("yAxisLabel", event.target.value, 80)}
+        />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ["Items", summary.itemCount, ""],
-            ["Axis X", block.xAxisLabel, ""],
-            ["Axis Y", block.yAxisLabel, "border-primary/20 bg-primary/10 text-primary"],
-            ["Quadrants", 4, ""],
-          ].map(([label, value, extra]) => (
-            <div
-              key={String(label)}
-              className={cn("rounded-3xl border border-muted bg-muted p-5", extra)}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">{label}</p>
-              <p className="mt-1 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-                {value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid gap-3 rounded-3xl border border-muted bg-background p-4 sm:grid-cols-2 lg:w-[360px]">
-          {(
-            [
-              ["xAxisLabel", "Horizontal axis", 80],
-              ["yAxisLabel", "Vertical axis", 80],
-              ["xStartLabel", "X low", 60],
-              ["xEndLabel", "X high", 60],
-              ["yStartLabel", "Y low", 60],
-              ["yEndLabel", "Y high", 60],
-            ] as const
-          ).map(([field, placeholder, limit]) => (
-            <Input
-              key={field}
-              value={block[field]}
-              placeholder={placeholder}
-              className="rounded-2xl"
-              aria-label={placeholder}
-              onChange={(event) => updateMatrixField(field, event.target.value, limit)}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-muted bg-background p-4">
-        <div className="mb-3 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-          <span>{block.yEndLabel}</span>
-          <span>{block.yAxisLabel}</span>
-        </div>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          {quadrants.map((quadrant) => (
-            <article
-              key={quadrant.key}
-              className={cn("rounded-2xl border p-4 transition-colors", quadrant.tone)}
-            >
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <SquareDashed className={cn("size-4", quadrant.accent)} />
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                      {block.quadrants[quadrant.key].items.length} items
-                    </p>
-                  </div>
-                  <Input
-                    value={block.quadrants[quadrant.key].name}
-                    className="rounded-2xl"
-                    aria-label={`Quadrant name for ${quadrant.key}`}
-                    onChange={(event) => updateQuadrantName(quadrant.key, event.target.value)}
-                  />
-                </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {quadrants.map((quadrantKey) => (
+          <article key={quadrantKey} className="rounded-xl border border-muted p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-xs text-muted-foreground">
+                  {block.quadrants[quadrantKey].items.length} items
+                </p>
+                <Input
+                  value={block.quadrants[quadrantKey].name}
+                  className="rounded-xl"
+                  aria-label={`Quadrant name for ${quadrantKey}`}
+                  onChange={(event) => updateQuadrantName(quadrantKey, event.target.value)}
+                />
+              </div>
+              {block.quadrants[quadrantKey].items.length > 0 ? (
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   className="rounded-full"
-                  aria-label={`Add item to ${block.quadrants[quadrant.key].name || "quadrant"}`}
+                  aria-label={`Add item to ${block.quadrants[quadrantKey].name || "quadrant"}`}
                   onClick={() =>
                     mutateTypedBlock(tabId, block.id, "2x2-matrix", (entry) => {
-                      entry.quadrants[quadrant.key].items.push(
+                      entry.quadrants[quadrantKey].items.push(
                         createWorkspace2x2MatrixItem({ text: "" }),
                       );
                     })
@@ -177,72 +86,106 @@ export function Workspace2x2MatrixBlockEditor({
                   <Plus />
                   Add
                 </Button>
-              </div>
+              ) : null}
+            </div>
 
-              <div className="space-y-2">
-                {block.quadrants[quadrant.key].items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-2 rounded-2xl border border-muted bg-background p-2"
+            <div className="space-y-2">
+              {block.quadrants[quadrantKey].items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-2 rounded-xl border border-muted p-2"
+                >
+                  <Input
+                    value={item.text}
+                    placeholder="Matrix item"
+                    className="flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
+                    onChange={(event) =>
+                      mutateTypedBlock(tabId, block.id, "2x2-matrix", (entry) => {
+                        const target = entry.quadrants[quadrantKey].items.find(
+                          (candidate) => candidate.id === item.id,
+                        );
+                        if (target) {
+                          target.text = event.target.value.slice(0, 200);
+                        }
+                      })
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-lg hover:text-destructive"
+                    aria-label="Remove matrix item"
+                    onClick={() =>
+                      mutateTypedBlock(tabId, block.id, "2x2-matrix", (entry) => {
+                        entry.quadrants[quadrantKey].items = entry.quadrants[
+                          quadrantKey
+                        ].items.filter((candidate) => candidate.id !== item.id);
+                      })
+                    }
                   >
-                    <Input
-                      value={item.text}
-                      placeholder="Matrix item"
-                      className="flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
-                      onChange={(event) =>
-                        mutateTypedBlock(tabId, block.id, "2x2-matrix", (entry) => {
-                          const target = entry.quadrants[quadrant.key].items.find(
-                            (candidate) => candidate.id === item.id,
-                          );
-                          if (target) {
-                            target.text = event.target.value.slice(0, 200);
-                          }
-                        })
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-lg hover:text-destructive"
-                      aria-label="Remove matrix item"
-                      onClick={() =>
-                        mutateTypedBlock(tabId, block.id, "2x2-matrix", (entry) => {
-                          entry.quadrants[quadrant.key].items = entry.quadrants[
-                            quadrant.key
-                          ].items.filter((candidate) => candidate.id !== item.id);
-                        })
-                      }
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                ))}
+                    <Trash2 />
+                  </Button>
+                </div>
+              ))}
 
-                {block.quadrants[quadrant.key].items.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-muted bg-background py-8 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                      Empty Quadrant
-                    </p>
-                    <p className="mt-2 text-sm text-toned">
-                      Add the first item to clarify what belongs here.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-3 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-          <span>{block.xStartLabel}</span>
-          <span>{block.xAxisLabel}</span>
-          <span>{block.xEndLabel}</span>
-        </div>
-        <div className="mt-1 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-          {block.yStartLabel}
-        </div>
+              {block.quadrants[quadrantKey].items.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="text-sm text-muted-foreground">No items in this quadrant.</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3 rounded-full"
+                    aria-label={`Add item to ${block.quadrants[quadrantKey].name || "quadrant"}`}
+                    onClick={() =>
+                      mutateTypedBlock(tabId, block.id, "2x2-matrix", (entry) => {
+                        entry.quadrants[quadrantKey].items.push(
+                          createWorkspace2x2MatrixItem({ text: "" }),
+                        );
+                      })
+                    }
+                  >
+                    <Plus />
+                    Add
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          </article>
+        ))}
       </div>
+
+      <div className="flex items-center justify-between gap-2">
+        <Input
+          value={block.xStartLabel}
+          placeholder="X low"
+          className="max-w-32 rounded-xl"
+          aria-label="Horizontal axis low label"
+          onChange={(event) => updateMatrixField("xStartLabel", event.target.value, 60)}
+        />
+        <Input
+          value={block.xAxisLabel}
+          placeholder="Horizontal axis"
+          className="max-w-48 rounded-xl"
+          aria-label="Horizontal axis"
+          onChange={(event) => updateMatrixField("xAxisLabel", event.target.value, 80)}
+        />
+        <Input
+          value={block.xEndLabel}
+          placeholder="X high"
+          className="max-w-32 rounded-xl"
+          aria-label="Horizontal axis high label"
+          onChange={(event) => updateMatrixField("xEndLabel", event.target.value, 60)}
+        />
+      </div>
+      <Input
+        value={block.yStartLabel}
+        placeholder="Y low"
+        className="max-w-40 rounded-xl"
+        aria-label="Vertical axis low label"
+        onChange={(event) => updateMatrixField("yStartLabel", event.target.value, 60)}
+      />
     </div>
   );
 }

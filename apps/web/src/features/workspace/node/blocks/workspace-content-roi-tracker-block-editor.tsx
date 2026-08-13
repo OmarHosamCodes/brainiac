@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 
 const rowGridStyle = {
   gridTemplateColumns:
-    "minmax(16rem,1.6fr) minmax(8rem,0.8fr) minmax(10rem,1fr) minmax(10rem,1fr) minmax(7rem,0.7fr) minmax(6rem,0.6fr) minmax(12rem,1fr) minmax(12rem,1fr) minmax(18rem,1.4fr)",
+    "minmax(16rem,1.6fr) minmax(8rem,0.8fr) minmax(10rem,1fr) minmax(10rem,1fr) minmax(7rem,0.7fr) minmax(6rem,0.6fr) minmax(12rem,1fr) minmax(12rem,1fr) minmax(18rem,1.4fr) auto",
 };
 
 const tableHeaders = [
@@ -39,6 +39,7 @@ const tableHeaders = [
   "Conversion Influence",
   "Repurpose Value",
   "ROI Status",
+  "Actions",
 ] as const;
 
 const platformOptions = WORKSPACE_CONTENT_PLATFORMS.map((platform) => ({
@@ -144,49 +145,16 @@ export function WorkspaceContentRoiTrackerBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Top Platform
-          </p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.topPlatform ? workspaceContentPlatformLabels[summary.topPlatform] : "None"}
-          </p>
-          <p className="mt-1 text-sm text-toned">Highest average ROI across current rows</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Top Campaign
-          </p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.topCampaign || "No campaign"}
-          </p>
-          <p className="mt-1 text-sm text-toned">Most impactful marketing push</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Influenced Leads
-          </p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.totalInfluencedLeads}
-          </p>
-          <p className="mt-1 text-sm text-toned">Lead count weighted by conversion influence</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Average ROI</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.averageScore}
-          </p>
-          <p className="mt-1 text-sm text-toned">
-            {summary.highReturnCount} high-return pieces right now
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          Top platform{" "}
+          {summary.topPlatform ? workspaceContentPlatformLabels[summary.topPlatform] : "none"} · Top
+          campaign {summary.topCampaign || "no campaign"} · {summary.totalInfluencedLeads}{" "}
+          influenced leads · {summary.averageScore} avg ROI ({summary.highReturnCount} high return)
+        </p>
       </div>
 
-      <div className="rounded-3xl border border-muted bg-muted p-4">
+      <div className="rounded-xl border border-muted bg-muted p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -218,25 +186,22 @@ export function WorkspaceContentRoiTrackerBlockEditor({
             ) : null}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <div className="flex flex-wrap gap-2">
-              {WORKSPACE_CONTENT_ROI_SORT_OPTIONS.map((sortBy) => (
-                <Button
-                  key={sortBy}
-                  type="button"
-                  variant={block.sortBy === sortBy ? "default" : "secondary"}
-                  className="rounded-full px-4"
-                  aria-pressed={block.sortBy === sortBy}
-                  onClick={() =>
-                    mutateTypedBlock(tabId, block.id, "content-roi-tracker", (entry) => {
-                      entry.sortBy = sortBy;
-                    })
-                  }
-                >
-                  Sort: {workspaceContentRoiSortLabels[sortBy]}
-                </Button>
-              ))}
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <BlockSelect
+              value={block.sortBy}
+              options={WORKSPACE_CONTENT_ROI_SORT_OPTIONS.map((sortBy) => ({
+                label: workspaceContentRoiSortLabels[sortBy],
+                value: sortBy,
+              }))}
+              className="w-36 rounded-xl"
+              aria-label="Sort content ROI rows"
+              onValueChange={(value) =>
+                mutateTypedBlock(tabId, block.id, "content-roi-tracker", (entry) => {
+                  entry.sortBy =
+                    value === "reach" || value === "leads" || value === "roi" ? value : "roi";
+                })
+              }
+            />
 
             <Button
               type="button"
@@ -246,24 +211,34 @@ export function WorkspaceContentRoiTrackerBlockEditor({
               onClick={addItem}
             >
               <Plus />
-              Add Content Piece
+              Add
             </Button>
           </div>
         </div>
       </div>
 
       {sortedItems.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+        <div className="rounded-xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No content ROI rows yet.</p>
           <p className="mt-2 text-sm text-toned">
             Add the first content piece to compare commercial performance across campaigns and
             platforms.
           </p>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-4 rounded-full px-4"
+            aria-label="Add first content ROI row"
+            onClick={addItem}
+          >
+            <Plus />
+            Add
+          </Button>
         </div>
       ) : (
         <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
           <div
-            className="grid min-w-[1520px] gap-px overflow-hidden rounded-3xl border border-muted bg-muted/20"
+            className="grid min-w-[1520px] gap-px overflow-hidden rounded-xl border border-muted bg-muted/20"
             style={rowGridStyle}
           >
             {tableHeaders.map((label) => (
@@ -372,7 +347,7 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                       <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         Score
                       </span>
-                      <span className="text-sm font-black text-primary">
+                      <span className="text-sm font-semibold text-primary">
                         {item.conversionInfluence}
                       </span>
                     </div>
@@ -396,7 +371,9 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                       <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                         Score
                       </span>
-                      <span className="text-sm font-black text-primary">{item.repurposeValue}</span>
+                      <span className="text-sm font-semibold text-primary">
+                        {item.repurposeValue}
+                      </span>
                     </div>
                     <input
                       type="range"
@@ -414,36 +391,32 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                   </div>
 
                   <div className="bg-background p-3">
-                    <div className={cn("min-w-0 rounded-2xl border p-3", getStatusClasses(score))}>
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.18em]">
-                            {workspaceContentRoiStatusLabels[status]}
-                          </p>
-                          <p className="mt-1 text-2xl font-black tracking-tight">{score}</p>
-                          <p className="mt-1 text-xs leading-relaxed opacity-70">
-                            {getPerformanceSummary(score)}
-                          </p>
-                          <p className="mt-2 text-xs leading-relaxed opacity-70">
-                            {item.leads} leads, sorted by{" "}
-                            {workspaceContentRoiSortLabels[block.sortBy]}
-                          </p>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                          aria-label={`Remove ${item.title || "content row"}`}
-                          onClick={() => removeItem(item.id)}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </div>
-
+                    <div className={cn("min-w-0 rounded-xl border p-3", getStatusClasses(score))}>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em]">
+                        {workspaceContentRoiStatusLabels[status]}
+                      </p>
+                      <p className="mt-1 text-2xl font-semibold tracking-tight">{score}</p>
+                      <p className="mt-1 text-xs leading-relaxed opacity-70">
+                        {getPerformanceSummary(score)}
+                      </p>
+                      <p className="mt-2 text-xs leading-relaxed opacity-70">
+                        {item.leads} leads, sorted by {workspaceContentRoiSortLabels[block.sortBy]}
+                      </p>
                       <BlockProgressBar value={score} max={100} className="mt-3 h-1.5" />
                     </div>
+                  </div>
+
+                  <div className="flex items-center bg-background p-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                      aria-label={`Remove ${item.title || "content row"}`}
+                      onClick={() => removeItem(item.id)}
+                    >
+                      <Trash2 />
+                    </Button>
                   </div>
                 </div>
               );

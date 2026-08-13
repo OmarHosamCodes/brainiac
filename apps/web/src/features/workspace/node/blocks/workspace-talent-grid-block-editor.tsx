@@ -6,7 +6,7 @@ import {
   type WorkspaceTalentGridBlock,
   type WorkspaceTalentGridBoxKey,
 } from "@orch/workspace";
-import { Trash2, UserPlus, Users } from "lucide-react";
+import { Trash2, UserPlus } from "lucide-react";
 import { Fragment, useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
@@ -51,7 +51,7 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
       return "border-primary/35 bg-primary/5";
     case "core-player":
     case "average-joe":
-      return "border-muted/35 bg-background0";
+      return "border-muted/35 bg-background";
     case "risk":
     case "under-performer":
       return "border-destructive/35 bg-destructive/10";
@@ -201,62 +201,31 @@ export function WorkspaceTalentGridBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Team</p>
-          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
-            {summary.memberCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-success/20 bg-success/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
-            Growth Ready
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
-            {summary.superstarCount + summary.growthStarCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-muted bg-muted p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Core Contributors
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-foreground sm:text-2xl">
-            {summary.corePlayerCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-warning/20 bg-warning/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
-            Development Focus
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {summary.memberCount} team · {summary.superstarCount + summary.growthStarCount} growth
+          ready · {summary.corePlayerCount} core contributors ·{" "}
+          <span className="text-warning">
             {summary.riskCount + summary.boxCounts["under-performer"]}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">
-            Talent Development Grid
-          </h2>
-          <p className="text-xs text-toned">
-            Assess performance (1-5) and growth potential to support team development.
-          </p>
-        </div>
-
+          </span>{" "}
+          development focus
+        </p>
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="rounded-full"
+          className="ml-auto rounded-full"
           onClick={addMember}
         >
           <UserPlus />
           Add Member
         </Button>
+      </div>
+
+      <div className="px-1">
+        <p className="text-xs text-toned">
+          Assess performance (1-5) and growth potential to support team development.
+        </p>
       </div>
 
       <div className="overflow-x-auto pb-2">
@@ -284,7 +253,7 @@ export function WorkspaceTalentGridBlockEditor({
               {row.cells.map((cell) => (
                 <div
                   key={cell}
-                  className={cn("min-h-[140px] rounded-2xl border p-3.5", getCellClasses(cell))}
+                  className={cn("min-h-[140px] rounded-xl border p-3.5", getCellClasses(cell))}
                 >
                   <div className="mb-3 flex items-start justify-between gap-2">
                     <div className="flex-1">
@@ -304,7 +273,7 @@ export function WorkspaceTalentGridBlockEditor({
                         key={member.id}
                         className="rounded-full border border-muted bg-background px-2.5 py-0.5 text-[11px] font-semibold text-foreground"
                       >
-                        {member.name || "—"}
+                        {member.name || "Unnamed"}
                       </div>
                     ))}
                   </div>
@@ -316,12 +285,19 @@ export function WorkspaceTalentGridBlockEditor({
       </div>
 
       {block.members.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
-            <Users className="size-6" />
-          </div>
-          <p className="mt-3 text-xs font-bold text-muted-foreground">No team members yet</p>
-          <p className="mt-1 text-[11px] text-toned">Add members to assess and develop your team</p>
+        <div className="rounded-xl border border-dashed border-muted bg-background py-10 text-center">
+          <p className="text-sm font-semibold text-muted-foreground">No team members yet.</p>
+          <p className="mt-1 text-sm text-toned">Add members to assess and develop your team.</p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-4 rounded-full"
+            onClick={addMember}
+          >
+            <UserPlus />
+            Add
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -330,10 +306,7 @@ export function WorkspaceTalentGridBlockEditor({
             const boxDescription = getBoxDescription(boxKey);
 
             return (
-              <article
-                key={member.id}
-                className="rounded-2xl border border-muted bg-background p-4 transition-all hover:border-muted"
-              >
+              <article key={member.id} className="rounded-xl border border-muted bg-background p-4">
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <Input
@@ -368,7 +341,7 @@ export function WorkspaceTalentGridBlockEditor({
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-muted bg-muted p-3">
+                  <div>
                     <div className="mb-2 flex items-center justify-between">
                       <label
                         className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
@@ -376,7 +349,7 @@ export function WorkspaceTalentGridBlockEditor({
                       >
                         Performance
                       </label>
-                      <span className="text-xs font-black text-primary">
+                      <span className="text-xs font-semibold text-primary">
                         {member.performance}/5
                       </span>
                     </div>
@@ -392,7 +365,7 @@ export function WorkspaceTalentGridBlockEditor({
                     />
                   </div>
 
-                  <div className="rounded-xl border border-muted bg-muted p-3">
+                  <div>
                     <div className="mb-2 flex items-center justify-between">
                       <label
                         className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
@@ -400,7 +373,9 @@ export function WorkspaceTalentGridBlockEditor({
                       >
                         Growth Potential
                       </label>
-                      <span className="text-xs font-black text-primary">{member.potential}/5</span>
+                      <span className="text-xs font-semibold text-primary">
+                        {member.potential}/5
+                      </span>
                     </div>
                     <input
                       id={`potential-${member.id}`}
@@ -416,9 +391,7 @@ export function WorkspaceTalentGridBlockEditor({
                 </div>
 
                 {boxDescription ? (
-                  <div className="mt-3 rounded-lg bg-background px-3 py-2">
-                    <p className="text-[10px] leading-snug text-toned">{boxDescription}</p>
-                  </div>
+                  <p className="mt-3 text-xs leading-snug text-toned">{boxDescription}</p>
                 ) : null}
               </article>
             );

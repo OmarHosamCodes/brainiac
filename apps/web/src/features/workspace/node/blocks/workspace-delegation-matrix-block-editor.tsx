@@ -9,6 +9,7 @@ import { ArrowRight, BadgeDollarSign, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { BlockFieldLabel } from "@/features/workspace/node/blocks/shared/block-field-label";
 import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
@@ -26,14 +27,8 @@ const sortOptions = [
   { label: "Task name", value: "task" },
 ] as const;
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
-
-function formatCurrency(value: number) {
-  return currencyFormatter.format(value);
+function formatAmount(value: number) {
+  return Math.round(value).toLocaleString("en-US");
 }
 
 function toHours(value: string | number | undefined) {
@@ -64,17 +59,6 @@ function getStatusCardClasses(status: WorkspaceDelegationStatus) {
       return "border-warning/20 bg-warning/5";
     default:
       return "border-destructive/20 bg-destructive/5";
-  }
-}
-
-function getStatusAccentClasses(status: WorkspaceDelegationStatus) {
-  switch (status) {
-    case "delegated":
-      return "bg-success";
-    case "transitioning":
-      return "bg-warning";
-    default:
-      return "bg-destructive";
   }
 }
 
@@ -161,40 +145,6 @@ export function WorkspaceDelegationMatrixBlockEditor({
     );
   }, [block.items, filterStatus, sortMode]);
 
-  const summaryCards = useMemo(
-    () => [
-      {
-        key: "hours",
-        label: "Recoverable",
-        value: `${summary.totalHoursPerWeek}h`,
-        supporting: "Total founder time currently listed each week",
-        accentClass: "text-foreground",
-      },
-      {
-        key: "stuck",
-        label: "Still Trapped",
-        value: `${summary.pendingHoursPerWeek}h`,
-        supporting: `${summary.stuckCount} stuck · ${summary.transitioningCount} transitioning`,
-        accentClass: "text-warning",
-      },
-      {
-        key: "cost",
-        label: "Weekly Cost",
-        value: formatCurrency(summary.pendingRecoverableValue),
-        supporting: "Based on the hourly rate set for this matrix",
-        accentClass: "text-primary",
-      },
-      {
-        key: "coverage",
-        label: "Delegated",
-        value: `${delegatedCoverage}%`,
-        supporting: `${summary.delegatedCount} handoffs complete`,
-        accentClass: "text-success",
-      },
-    ],
-    [delegatedCoverage, summary],
-  );
-
   function mutateDelegationBlock(mutator: (entry: WorkspaceDelegationMatrixBlock) => void) {
     mutateTypedBlock(tabId, block.id, "delegation-matrix", mutator);
   }
@@ -228,26 +178,21 @@ export function WorkspaceDelegationMatrixBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {summaryCards.map((card) => (
-          <div key={card.key} className="rounded-3xl border border-muted bg-muted p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              {card.label}
-            </p>
-            <p
-              className={cn(
-                "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
-                card.accentClass,
-              )}
-            >
-              {card.value}
-            </p>
-            <p className="mt-1 text-sm text-toned">{card.supporting}</p>
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {summary.totalHoursPerWeek}h recoverable ·{" "}
+          <span className="text-warning">{summary.pendingHoursPerWeek}h</span> trapped ·{" "}
+          {formatAmount(summary.pendingRecoverableValue)} weekly cost ·{" "}
+          <span className="text-success">{delegatedCoverage}%</span> delegated
+        </p>
+        <BlockProgressBar
+          className="min-w-24 max-w-48 flex-1"
+          value={delegatedCoverage}
+          max={100}
+        />
       </div>
 
-      <div className="rounded-3xl border border-muted bg-muted p-4">
+      <div className="rounded-xl border border-muted bg-muted p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-foreground">Delegation tracker</p>
@@ -337,14 +282,24 @@ export function WorkspaceDelegationMatrixBlockEditor({
       </div>
 
       {block.items.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+        <div className="rounded-xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No delegation items yet.</p>
           <p className="mt-1 text-sm text-toned">
             Add a recurring task to begin mapping handoff opportunities.
           </p>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-4 rounded-full px-4"
+            aria-label="Add first delegation task"
+            onClick={addItem}
+          >
+            <Plus />
+            Add
+          </Button>
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+        <div className="rounded-xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No items match this filter.</p>
           <p className="mt-1 text-sm text-toned">
             Switch to another status filter to continue planning handoffs.
@@ -355,19 +310,9 @@ export function WorkspaceDelegationMatrixBlockEditor({
           {filteredItems.map((item) => (
             <article
               key={item.id}
-              className={cn(
-                "relative overflow-hidden rounded-3xl border p-5",
-                getStatusCardClasses(item.status),
-              )}
+              className={cn("rounded-xl border p-5", getStatusCardClasses(item.status))}
             >
-              <div
-                className={cn(
-                  "absolute inset-y-0 left-0 w-1.5",
-                  getStatusAccentClasses(item.status),
-                )}
-              />
-
-              <div className="flex flex-wrap items-start justify-between gap-4 pl-2">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <Input
                     value={item.task}
@@ -381,8 +326,8 @@ export function WorkspaceDelegationMatrixBlockEditor({
                     }
                   />
                   <p className="mt-2 text-sm text-toned">
-                    {item.hoursPerWeek}h/week ·{" "}
-                    {formatCurrency(item.hoursPerWeek * block.hourlyRate)} of founder time
+                    {item.hoursPerWeek}h/week · {formatAmount(item.hoursPerWeek * block.hourlyRate)}{" "}
+                    of founder time
                   </p>
                 </div>
 
@@ -465,7 +410,7 @@ export function WorkspaceDelegationMatrixBlockEditor({
                 </div>
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2 pl-2">
+              <div className="mt-5 flex flex-wrap gap-2">
                 {statusOptions.map((status) => (
                   <button
                     key={status}

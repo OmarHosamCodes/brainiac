@@ -4,7 +4,6 @@ import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { formatDateTime } from "@/lib/utils/format-date-time";
@@ -72,69 +71,15 @@ export function WorkspaceTrackerBlockEditor({
     trend.direction === "up" ? TrendingUp : trend.direction === "down" ? TrendingDown : Minus;
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-3xl border border-muted bg-muted p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              Performance Tracker
-            </p>
-            <p className="mt-1 text-sm text-toned">
-              Track progress over time, compare against a goal, and keep key entries easy to scan.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="rounded-full px-4"
-            aria-label="Add tracker entry"
-            onClick={() => addTrackerEntry(tabId, block.id)}
-          >
-            <Plus />
-            Add Entry
-          </Button>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="rounded-2xl">
-            {block.entries.length} entries
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {block.goal === null || block.goal === undefined
-              ? "No goal"
-              : formatStatValue(block.goal)}
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {latestEntry?.label || "No entries yet"}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-primary/20 bg-primary/5 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Latest</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-primary sm:text-3xl">
-            {latestEntry ? formatStatValue(latestEntry.value) : "0"}
-          </p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
-            {latestEntry?.label || "No entries yet"}
-          </p>
-        </div>
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Average</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {formatStatValue(averageValue)}
-          </p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
-            {block.entries.length} data points
-          </p>
-        </div>
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Trend</p>
-          <div className="mt-2 flex items-center gap-2">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-toned">
+          <span>Latest {latestEntry ? formatStatValue(latestEntry.value) : "None"}</span>
+          <span>Avg {formatStatValue(averageValue)}</span>
+          <span className="inline-flex items-center gap-1">
             <TrendIcon
               className={cn(
-                "size-6",
+                "size-4",
                 trend.direction === "up"
                   ? "text-success"
                   : trend.direction === "down"
@@ -142,18 +87,24 @@ export function WorkspaceTrackerBlockEditor({
                     : "text-muted-foreground",
               )}
             />
-            <p className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-              {trend.delta > 0 ? "+" : ""}
-              {formatStatValue(trend.delta)}
-            </p>
-          </div>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
-            {trend.percentChange === null ? "No baseline yet" : `${trend.percentChange}% change`}
-          </p>
-        </div>
-        <div className="rounded-3xl border border-warning/20 bg-warning/5 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Goal</p>
+            {trend.delta > 0 ? "+" : ""}
+            {formatStatValue(trend.delta)}
+          </span>
+          <label className="inline-flex items-center gap-2">
+            <span>Goal</span>
+            <Input
+              type="number"
+              value={block.goal === null || block.goal === undefined ? "" : String(block.goal)}
+              placeholder="Set target"
+              className="h-8 w-24 rounded-xl"
+              aria-label="Tracker goal"
+              onChange={(event) =>
+                mutateTypedBlock(tabId, block.id, "tracker", (entry) => {
+                  const nextValue = event.target.value;
+                  entry.goal = nextValue === "" ? null : toNumber(nextValue, 0);
+                })
+              }
+            />
             {block.goal !== null ? (
               <Button
                 type="button"
@@ -170,46 +121,49 @@ export function WorkspaceTrackerBlockEditor({
                 <X />
               </Button>
             ) : null}
-          </div>
-          <Input
-            type="number"
-            value={block.goal === null || block.goal === undefined ? "" : String(block.goal)}
-            placeholder="Set target"
-            className="mt-3 rounded-2xl font-mono font-bold"
-            aria-label="Tracker goal"
-            onChange={(event) =>
-              mutateTypedBlock(tabId, block.id, "tracker", (entry) => {
-                const nextValue = event.target.value;
-                entry.goal = nextValue === "" ? null : toNumber(nextValue, 0);
-              })
-            }
-          />
+          </label>
         </div>
+        {block.entries.length > 0 ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-full px-4"
+            aria-label="Add tracker entry"
+            onClick={() => addTrackerEntry(tabId, block.id)}
+          >
+            <Plus />
+            Add entry
+          </Button>
+        ) : null}
       </div>
 
       {chartHeights.length > 0 ? (
-        <div className="relative overflow-hidden rounded-3xl border border-muted bg-background p-8 shadow-inner">
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-50" />
+        <div className="relative overflow-hidden rounded-xl border border-muted p-6">
           <div className="relative flex h-36 items-end gap-2 lg:gap-3">
             {chartHeights.map((point, index) => (
               <div
                 key={`${block.id}-chart-${index}`}
-                className="group relative min-w-2 flex-1 rounded-t-full bg-primary/20 transition-all hover:bg-primary/60"
-                style={{ height: `${point}%` }}
+                className="flex min-w-2 flex-1 flex-col items-center justify-end gap-1"
+                style={{ height: "100%" }}
               >
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                <span className="text-xs font-semibold text-foreground">
                   {block.entries[index]?.value}
-                </div>
+                </span>
+                <div
+                  className="w-full rounded-t-md bg-primary/30"
+                  style={{ height: `${point}%` }}
+                />
               </div>
             ))}
           </div>
           {goalPosition !== null ? (
             <div
-              className="pointer-events-none absolute inset-x-8"
-              style={{ bottom: `calc(2rem + ${goalPosition}%)` }}
+              className="pointer-events-none absolute inset-x-6"
+              style={{ bottom: `calc(1.5rem + ${goalPosition}%)` }}
             >
               <div className="flex items-center gap-2">
-                <span className="rounded-full bg-warning px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white">
+                <span className="rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">
                   Goal {formatStatValue(block.goal)}
                 </span>
                 <div className="h-px flex-1 border-t border-dashed border-warning/70" />
@@ -219,68 +173,67 @@ export function WorkspaceTrackerBlockEditor({
         </div>
       ) : null}
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between px-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Data Log</p>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            {block.entries.length} entries
-          </p>
-        </div>
-        <div className="space-y-2">
-          {block.entries.map((entry) => (
-            <div
-              key={entry.id}
-              className="group flex items-center gap-4 rounded-2xl border border-muted bg-background p-3 transition-all hover:border-primary/40 hover:bg-background"
+      <div className="space-y-2">
+        {block.entries.map((entry) => (
+          <div
+            key={entry.id}
+            className="flex items-center gap-4 rounded-xl border border-muted p-3"
+          >
+            <div className="min-w-0 flex-1">
+              <Input
+                value={entry.label}
+                placeholder="Entry context..."
+                className="w-full border-0 bg-transparent px-0 text-sm leading-tight font-semibold shadow-none focus-visible:ring-0"
+                onChange={(event) =>
+                  mutateTrackerEntry(tabId, block.id, entry.id, (item) => {
+                    item.label = event.target.value.slice(0, 120);
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground">{formatDateTime(entry.createdAt)}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                step={0.1}
+                value={String(entry.value)}
+                className="w-24 rounded-xl font-mono font-semibold"
+                aria-label="Entry value"
+                onChange={(event) =>
+                  mutateTrackerEntry(tabId, block.id, entry.id, (item) => {
+                    item.value = toNumber(event.target.value);
+                  })
+                }
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-lg text-toned hover:text-destructive"
+                aria-label={`Remove ${entry.label || "tracker"} entry`}
+                onClick={() => removeTrackerEntry(tabId, block.id, entry.id)}
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          </div>
+        ))}
+        {block.entries.length === 0 ? (
+          <div className="py-8 text-center">
+            <p className="text-sm text-muted-foreground">No entries yet.</p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-3 rounded-full px-4"
+              aria-label="Add tracker entry"
+              onClick={() => addTrackerEntry(tabId, block.id)}
             >
-              <div className="min-w-0 flex-1">
-                <Input
-                  value={entry.label}
-                  placeholder="Entry context..."
-                  className="w-full border-0 bg-transparent px-0 text-sm leading-tight font-bold shadow-none focus-visible:ring-0"
-                  onChange={(event) =>
-                    mutateTrackerEntry(tabId, block.id, entry.id, (item) => {
-                      item.label = event.target.value.slice(0, 120);
-                    })
-                  }
-                />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-highlighted">
-                  {formatDateTime(entry.createdAt)}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Input
-                  type="number"
-                  step={0.1}
-                  value={String(entry.value)}
-                  className="w-24 rounded-xl font-mono font-bold"
-                  aria-label="Entry value"
-                  onChange={(event) =>
-                    mutateTrackerEntry(tabId, block.id, entry.id, (item) => {
-                      item.value = toNumber(event.target.value);
-                    })
-                  }
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-lg text-toned hover:text-destructive"
-                  aria-label={`Remove ${entry.label || "tracker"} entry`}
-                  onClick={() => removeTrackerEntry(tabId, block.id, entry.id)}
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-            </div>
-          ))}
-          {block.entries.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                No data entries
-              </p>
-            </div>
-          ) : null}
-        </div>
+              <Plus />
+              Add entry
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

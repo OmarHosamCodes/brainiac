@@ -56,7 +56,6 @@ export function WorkspaceTaskListBlockEditor({
 
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const progress = useMemo(() => getTaskListProgress(block), [block]);
-  const openTaskCount = block.tasks.filter((task) => !task.completed).length;
 
   function toggleTask(taskId: string) {
     setExpandedTaskId((current) => (current === taskId ? null : taskId));
@@ -66,58 +65,50 @@ export function WorkspaceTaskListBlockEditor({
     mutateTask(tabId, block.id, taskId, mutator);
   }
 
+  function handleAddTask() {
+    addTask(tabId, block.id);
+  }
+
+  if (block.tasks.length === 0) {
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="text-sm text-muted-foreground">Add a task to start tracking work.</p>
+        <Button type="button" className="rounded-full" onClick={handleAddTask}>
+          <Plus />
+          Add task
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-6">
-            <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <span className="text-xl font-black tracking-tight sm:text-2xl">
-                {Math.round((progress.completed / Math.max(progress.total, 1)) * 100)}%
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Task progress
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary" className="rounded-2xl">
-                  {progress.completed} completed
-                </Badge>
-                <Badge variant="secondary" className="rounded-2xl">
-                  {openTaskCount} open
-                </Badge>
-                <Badge variant="secondary" className="rounded-2xl">
-                  {progress.total} total
-                </Badge>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            {progress.completed} / {progress.total}
-          </p>
-        </div>
-
-        <BlockProgressBar value={progress.completed} max={Math.max(progress.total, 1)} />
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {progress.completed} of {progress.total} complete
+        </p>
+        <BlockProgressBar
+          className="min-w-24 max-w-48 flex-1"
+          value={progress.completed}
+          max={progress.total}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="ml-auto rounded-full"
+          onClick={handleAddTask}
+        >
+          <Plus />
+          Add task
+        </Button>
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between gap-3 px-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Tasks</p>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            {openTaskCount} open
-          </p>
-        </div>
-
         {block.tasks.map((task) => (
           <div
             key={task.id}
-            className={cn(
-              "group flex flex-col overflow-hidden rounded-2xl border border-muted bg-background transition-all hover:border-primary/40 hover:bg-background",
-              expandedTaskId === task.id && "ring-1 ring-primary/30",
-            )}
+            className="flex flex-col overflow-hidden rounded-xl border border-muted"
           >
             <div className="flex items-center gap-3 p-3">
               <BlockCheckbox
@@ -134,7 +125,10 @@ export function WorkspaceTaskListBlockEditor({
               <Input
                 value={task.text}
                 placeholder="What needs to be done?"
-                className="flex-1 border-0 bg-transparent px-0 font-medium text-foreground shadow-none focus-visible:ring-0"
+                className={cn(
+                  "flex-1 border-0 bg-transparent px-0 font-medium shadow-none focus-visible:ring-0",
+                  task.completed ? "text-muted-foreground line-through" : "text-foreground",
+                )}
                 onChange={(event) =>
                   updateTask(task.id, (entry) => {
                     entry.text = event.target.value.slice(0, 240);
@@ -146,10 +140,7 @@ export function WorkspaceTaskListBlockEditor({
                 {task.priority ? (
                   <Badge
                     variant="secondary"
-                    className={cn(
-                      "rounded-lg text-[9px] font-bold uppercase tracking-wider",
-                      getPriorityBadgeClass(task.priority),
-                    )}
+                    className={cn("rounded-full", getPriorityBadgeClass(task.priority))}
                   >
                     {task.priority}
                   </Badge>
@@ -159,7 +150,7 @@ export function WorkspaceTaskListBlockEditor({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="rounded-lg"
+                  className="rounded-full"
                   aria-label={
                     expandedTaskId === task.id ? "Hide task details" : "Show task details"
                   }
@@ -172,7 +163,7 @@ export function WorkspaceTaskListBlockEditor({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="rounded-lg hover:text-destructive"
+                  className="rounded-full hover:text-destructive"
                   aria-label="Delete task"
                   onClick={() => removeTask(tabId, block.id, task.id)}
                 >
@@ -182,7 +173,7 @@ export function WorkspaceTaskListBlockEditor({
             </div>
 
             {expandedTaskId === task.id ? (
-              <div className="grid gap-6 border-t border-muted bg-background p-5 transition-all lg:grid-cols-2">
+              <div className="grid gap-6 border-t border-muted p-5 lg:grid-cols-2">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <BlockFieldLabel>Due Date</BlockFieldLabel>
@@ -235,7 +226,7 @@ export function WorkspaceTaskListBlockEditor({
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <BlockFieldLabel>Urgency</BlockFieldLabel>
-                        <span className="text-xs font-black text-primary">{task.urgency}</span>
+                        <span className="text-xs font-semibold">{task.urgency}</span>
                       </div>
                       <input
                         value={task.urgency}
@@ -254,7 +245,7 @@ export function WorkspaceTaskListBlockEditor({
                     <div className="space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <BlockFieldLabel>Importance</BlockFieldLabel>
-                        <span className="text-xs font-black text-primary">{task.importance}</span>
+                        <span className="text-xs font-semibold">{task.importance}</span>
                       </div>
                       <input
                         value={task.importance}
@@ -280,7 +271,7 @@ export function WorkspaceTaskListBlockEditor({
                         min={0}
                         step={5}
                         value={String(task.estimateMinutes)}
-                        className="rounded-xl pl-10 font-mono font-bold"
+                        className="rounded-xl pl-10 font-mono font-semibold"
                         onChange={(event) =>
                           updateTask(task.id, (entry) => {
                             entry.estimateMinutes = clampEstimate(event.target.value);
@@ -294,25 +285,7 @@ export function WorkspaceTaskListBlockEditor({
             ) : null}
           </div>
         ))}
-
-        {block.tasks.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              No tasks added yet
-            </p>
-          </div>
-        ) : null}
       </div>
-
-      <Button
-        type="button"
-        variant="secondary"
-        className="w-full rounded-2xl py-3 text-sm font-bold shadow-sm"
-        onClick={() => addTask(tabId, block.id)}
-      >
-        <Plus />
-        Add task
-      </Button>
     </div>
   );
 }

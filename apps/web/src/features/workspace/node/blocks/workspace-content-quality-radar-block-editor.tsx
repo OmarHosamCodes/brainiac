@@ -8,6 +8,7 @@ import {
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
@@ -90,30 +91,18 @@ function getLabelAnchor(x: number) {
 
 function getQualityBand(averageScore: number) {
   if (averageScore >= 8) {
-    return {
-      label: "Execution-ready",
-      interpretation: "Quality is strong enough to scale confidently across channels.",
-    };
+    return "Execution-ready";
   }
 
   if (averageScore >= 6.5) {
-    return {
-      label: "Solid baseline",
-      interpretation: "Core quality is stable, with a few areas still limiting conversion.",
-    };
+    return "Solid baseline";
   }
 
   if (averageScore >= 5) {
-    return {
-      label: "Needs tightening",
-      interpretation: "Content has potential but weak dimensions are reducing impact.",
-    };
+    return "Needs tightening";
   }
 
-  return {
-    label: "High risk",
-    interpretation: "Quality is too inconsistent; improve weakest dimensions before scaling.",
-  };
+  return "High risk";
 }
 
 export function WorkspaceContentQualityRadarBlockEditor({
@@ -175,8 +164,7 @@ export function WorkspaceContentQualityRadarBlockEditor({
     () =>
       [...WORKSPACE_CONTENT_QUALITY_DIMENSIONS]
         .sort((left, right) => block.scores[left] - block.scores[right])
-        .slice(-3)
-        .reverse(),
+        .slice(0, 3),
     [block.scores],
   );
 
@@ -195,58 +183,29 @@ export function WorkspaceContentQualityRadarBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Average</p>
-          <p
-            className={cn(
-              "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
-              averageToneClasses,
-            )}
-          >
-            {summary.averageScore}
-          </p>
-          <p className="mt-1 text-sm text-toned">Live average across all 10 quality dimensions</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Quality band
-          </p>
-          <p
-            className={cn(
-              "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
-              averageToneClasses,
-            )}
-          >
-            {qualityBand.label}
-          </p>
-          <p className="mt-1 text-sm text-toned">{qualityBand.interpretation}</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Strongest</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-success sm:text-3xl">
-            {summary.strongestDimension
-              ? workspaceContentQualityDimensionLabels[summary.strongestDimension]
-              : "None"}
-          </p>
-          <p className="mt-1 text-sm text-toned">The highest-performing quality pillar</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Weakest</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-destructive sm:text-3xl">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          <span className={averageToneClasses}>{summary.averageScore}</span> average · {qualityBand}{" "}
+          · Strongest{" "}
+          {summary.strongestDimension
+            ? workspaceContentQualityDimensionLabels[summary.strongestDimension]
+            : "none"}{" "}
+          · Weakest{" "}
+          <span className="text-destructive">
             {summary.weakestDimension
               ? workspaceContentQualityDimensionLabels[summary.weakestDimension]
-              : "None"}
-          </p>
-          <p className="mt-1 text-sm text-toned">Priority area for the next content iteration</p>
-        </div>
+              : "none"}
+          </span>
+        </p>
+        <BlockProgressBar
+          className="min-w-24 max-w-48 flex-1"
+          value={summary.averageScore}
+          max={10}
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[20rem_minmax(0,1fr)]">
-        <section className="rounded-3xl border border-muted bg-muted p-5">
+        <section className="rounded-xl border border-muted bg-muted p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-foreground">Radar view</p>
@@ -259,7 +218,10 @@ export function WorkspaceContentQualityRadarBlockEditor({
             <div className="text-right">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Score</p>
               <p
-                className={cn("text-2xl font-black tracking-tight sm:text-3xl", averageToneClasses)}
+                className={cn(
+                  "text-2xl font-semibold tracking-tight sm:text-3xl",
+                  averageToneClasses,
+                )}
               >
                 {summary.averageScore}
               </p>
@@ -338,7 +300,7 @@ export function WorkspaceContentQualityRadarBlockEditor({
                     </p>
                     <span
                       className={cn(
-                        "text-xs font-black",
+                        "text-xs font-semibold",
                         getScoreToneClasses(block.scores[dimension]),
                       )}
                     >
@@ -352,7 +314,7 @@ export function WorkspaceContentQualityRadarBlockEditor({
           </div>
         </section>
 
-        <section className="rounded-3xl border border-muted bg-background p-5">
+        <section className="rounded-xl border border-muted bg-background p-5">
           <div className="mb-5">
             <p className="text-sm font-semibold text-foreground">Dimension controls</p>
             <p className="text-sm text-toned">
@@ -370,7 +332,7 @@ export function WorkspaceContentQualityRadarBlockEditor({
                   </p>
                   <span
                     className={cn(
-                      "text-sm font-black",
+                      "text-sm font-semibold",
                       getScoreToneClasses(block.scores[dimension]),
                     )}
                   >

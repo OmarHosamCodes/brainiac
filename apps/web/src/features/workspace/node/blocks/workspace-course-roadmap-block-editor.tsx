@@ -32,10 +32,6 @@ export function WorkspaceCourseRoadmapBlockEditor({
   const { mutateTypedBlock } = useWorkspaceNodeEditorContext();
 
   const summary = useMemo(() => getCourseRoadmapSummary(block), [block]);
-  const totalOutcomeCount = useMemo(
-    () => block.courses.reduce((count, course) => count + course.outcomes.length, 0),
-    [block.courses],
-  );
 
   function mutateCourse(
     courseId: string,
@@ -99,80 +95,43 @@ export function WorkspaceCourseRoadmapBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Courses</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.courseCount}
-          </p>
-          <p className="mt-1 text-sm text-toned">Total curriculum units</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Recorded</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.recordedLessons}/{summary.lessonCount}
-          </p>
-          <p className="mt-1 text-sm text-toned">Production progress</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Average</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.averageCompletionPercent}%
-          </p>
-          <p className="mt-1 text-sm text-toned">Overall completion rate</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Active</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.inProgressCount}
-          </p>
-          <p className="mt-1 text-sm text-toned">Courses currently in progress</p>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {summary.courseCount} courses · {summary.recordedLessons}/{summary.lessonCount} recorded ·{" "}
+          {summary.averageCompletionPercent}% average · {summary.inProgressCount} active
+        </p>
+        <BlockProgressBar
+          className="min-w-24 max-w-48 flex-1"
+          value={summary.recordedLessons}
+          max={Math.max(summary.lessonCount, 1)}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="ml-auto rounded-full"
+          aria-label="Add course roadmap course"
+          onClick={addCourse}
+        >
+          <Plus />
+          Add course
+        </Button>
       </div>
 
-      <div className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-foreground">Course roadmap</p>
-            <p className="text-sm text-toned">
-              Track lesson recording progress per course and keep the promised outcomes visible.
-            </p>
-          </div>
-
+      {block.courses.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-muted bg-background py-12 text-center">
+          <p className="text-sm text-muted-foreground">Add course</p>
           <Button
             type="button"
-            variant="secondary"
-            className="rounded-full px-4"
+            variant="ghost"
+            size="sm"
+            className="mt-3"
             aria-label="Add course roadmap course"
             onClick={addCourse}
           >
             <Plus />
-            Add Course
+            Add course
           </Button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="rounded-2xl">
-            {summary.courseCount} courses
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {summary.lessonCount} lessons
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {totalOutcomeCount} outcomes
-          </Badge>
-          <Badge className="rounded-2xl">
-            {summary.averageCompletionPercent}% average completion
-          </Badge>
-        </div>
-      </div>
-
-      {block.courses.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
-          <p className="text-sm font-semibold text-muted-foreground">No courses mapped yet.</p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -182,7 +141,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
             return (
               <article
                 key={course.id}
-                className={cn("rounded-3xl border p-5", getCourseClasses(course.status))}
+                className={cn("rounded-xl border p-5", getCourseClasses(course.status))}
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0 flex-1 space-y-3">
@@ -263,36 +222,6 @@ export function WorkspaceCourseRoadmapBlockEditor({
                       <Plus />
                       Add Lesson
                     </Button>
-                  </div>
-
-                  <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
-                    {course.lessons.map((lesson, lessonIndex) => (
-                      <button
-                        key={lesson.id}
-                        type="button"
-                        className={cn(
-                          "flex min-w-40 items-center gap-2 rounded-2xl border px-3 py-2 text-left transition",
-                          lesson.recorded
-                            ? "border-success/20 bg-success/10 text-success"
-                            : "border-muted bg-background text-toned hover:border-primary/30 hover:text-foreground",
-                        )}
-                        onClick={() => toggleLesson(course.id, lesson.id)}
-                      >
-                        <span
-                          className={cn(
-                            "flex size-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold",
-                            lesson.recorded
-                              ? "border-success/20 bg-success/10"
-                              : "border-muted bg-muted",
-                          )}
-                        >
-                          {lesson.recorded ? <Check className="size-3.5" /> : lessonIndex + 1}
-                        </span>
-                        <span className="truncate text-sm font-semibold">
-                          {lesson.title.trim() || `Lesson ${lessonIndex + 1}`}
-                        </span>
-                      </button>
-                    ))}
                   </div>
 
                   <div className="grid gap-3 xl:grid-cols-2">

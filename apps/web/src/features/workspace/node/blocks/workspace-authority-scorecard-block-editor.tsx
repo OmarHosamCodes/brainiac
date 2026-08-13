@@ -111,29 +111,25 @@ export function WorkspaceAuthorityScorecardBlockEditor({
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
-            On Target
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
+        <div className="rounded-xl border border-muted bg-muted p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">On Target</p>
+          <p className="mt-2 text-xl font-semibold tracking-tight text-primary">
             {summary.atTargetCount}/{summary.metricCount}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-secondary/20 bg-secondary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/80">
+        <div className="rounded-xl border border-muted bg-muted p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
             Avg Progress
           </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-secondary sm:text-2xl">
+          <p className="mt-2 text-xl font-semibold tracking-tight text-secondary">
             {summary.averageProgress}%
           </p>
         </div>
 
-        <div className="rounded-2xl border border-success/20 bg-success/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
-            Strongest
-          </p>
-          <p className="mt-2 text-lg font-black tracking-tight text-success sm:text-xl">
+        <div className="rounded-xl border border-muted bg-muted p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Strongest</p>
+          <p className="mt-2 text-xl font-semibold tracking-tight text-success">
             {summary.strongestMetric
               ? workspaceAuthorityScoreMetricLabels[summary.strongestMetric]
               : "None"}
@@ -143,7 +139,9 @@ export function WorkspaceAuthorityScorecardBlockEditor({
 
       <div className="flex items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">Authority Metrics</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+            Authority Metrics
+          </h2>
           <p className="text-xs text-toned">
             Track key authority indicators with quick increments and precise editing.
           </p>
@@ -156,10 +154,7 @@ export function WorkspaceAuthorityScorecardBlockEditor({
           const Icon = metricIcons[metricKey];
 
           return (
-            <div
-              key={metricKey}
-              className={cn("rounded-2xl border p-4 transition-all", tone.surface)}
-            >
+            <div key={metricKey} className={cn("rounded-xl border p-4", tone.surface)}>
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-muted bg-background text-muted-foreground">
@@ -172,7 +167,7 @@ export function WorkspaceAuthorityScorecardBlockEditor({
                     </p>
                     <p
                       className={cn(
-                        "mt-0.5 truncate text-xl font-black tracking-tight sm:text-2xl",
+                        "mt-0.5 truncate text-xl font-semibold tracking-tight sm:text-2xl",
                         tone.badge,
                       )}
                     >

@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   Eye,
   Camera,
-  Layers,
   Lightbulb,
   Link,
   Music2,
@@ -24,7 +23,6 @@ import {
   Plus,
   Rocket,
   Trash2,
-  TrendingUp,
   User,
   type LucideIcon,
 } from "lucide-react";
@@ -135,12 +133,12 @@ export function WorkspaceContentPipelineBlockEditor({
     });
   }
 
-  function addItem() {
+  function addItem(status: WorkspaceContentPipelineStatus = "ideas") {
     mutatePipelineBlock((entry) => {
       entry.items.unshift(
         createWorkspaceContentPipelineItem({
           title: "",
-          status: "ideas",
+          status,
         }),
       );
     });
@@ -247,100 +245,24 @@ export function WorkspaceContentPipelineBlockEditor({
     clearDragState();
   }
 
-  function getTopPlatformLabel() {
-    return summary.topPlatform ? workspaceContentPlatformLabels[summary.topPlatform] : "None";
-  }
-
-  const TopPlatformIcon = summary.topPlatform ? getPlatformIcon(summary.topPlatform) : TrendingUp;
-
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="group relative overflow-hidden rounded-[24px] border border-muted bg-background p-5 transition-all hover:bg-muted">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Total Pieces
-              </p>
-              <p className="mt-2 text-3xl font-black tracking-tight text-foreground">
-                {summary.totalItems}
-              </p>
-            </div>
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10">
-              <Layers className="size-5 text-primary" />
-            </div>
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-toned">Active items in pipeline</p>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-[24px] border border-muted bg-background p-5 transition-all hover:bg-muted">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Review Queue
-              </p>
-              <p className="mt-2 text-3xl font-black tracking-tight text-foreground">
-                {summary.reviewCount}
-              </p>
-            </div>
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-warning/10">
-              <Eye className="size-5 text-warning" />
-            </div>
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-toned">Awaiting approval</p>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-[24px] border border-muted bg-background p-5 transition-all hover:bg-muted">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Published
-              </p>
-              <p className="mt-2 text-3xl font-black tracking-tight text-foreground">
-                {summary.publishedCount}
-              </p>
-            </div>
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-success/10">
-              <Rocket className="size-5 text-success" />
-            </div>
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-toned">Live content pieces</p>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-[24px] border border-muted bg-background p-5 transition-all hover:bg-muted">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Top Platform
-              </p>
-              <p className="mt-2 text-3xl font-black tracking-tight text-foreground">
-                {summary.topPlatform ? summary.topPlatform.slice(0, 3).toUpperCase() : "N/A"}
-              </p>
-            </div>
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-secondary/10">
-              <TopPlatformIcon className="size-5 text-secondary" />
-            </div>
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-toned">{getTopPlatformLabel()}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-4 px-1">
-        <div className="space-y-1">
-          <h3 className="text-base font-bold text-foreground">Content Pipeline</h3>
-          <p className="text-xs text-toned">
-            Drag items between stages or use the move buttons for keyboard-safe updates.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">
+          {summary.totalItems} pieces · {summary.reviewCount} in review · {summary.publishedCount}{" "}
+          published
+          {summary.topPlatform ? ` · ${workspaceContentPlatformLabels[summary.topPlatform]}` : ""}
+        </p>
 
         <Button
           type="button"
+          variant="secondary"
           size="sm"
-          className="rounded-full px-5 py-2.5 font-bold shadow-lg shadow-primary/20"
-          onClick={addItem}
+          className="rounded-full px-4"
+          onClick={() => addItem()}
         >
           <Plus />
-          New Piece
+          Add
         </Button>
       </div>
 
@@ -354,11 +276,9 @@ export function WorkspaceContentPipelineBlockEditor({
               <section
                 key={column.status}
                 className={cn(
-                  "flex w-[300px] shrink-0 snap-start flex-col rounded-[32px] border p-4 transition-all duration-300",
+                  "flex w-[300px] shrink-0 snap-start flex-col rounded-xl border p-4",
                   column.className,
-                  dragOverStatus === column.status
-                    ? "shadow-xl ring-2 ring-primary/30 brightness-110"
-                    : "",
+                  dragOverStatus === column.status ? "ring-2 ring-primary/30" : "",
                 )}
                 onDragOver={(event) => onColumnDragOver(column.status, event)}
                 onDragLeave={(event) => onColumnDragLeave(column.status, event)}
@@ -366,13 +286,13 @@ export function WorkspaceContentPipelineBlockEditor({
               >
                 <div className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-8 items-center justify-center rounded-xl border border-muted bg-background shadow-sm">
+                    <div className="flex size-8 items-center justify-center rounded-xl border border-muted bg-background">
                       <ColumnIcon
                         className={cn("size-4", column.dotClass.replace("bg-", "text-"))}
                       />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase leading-none tracking-[0.2em] text-toned">
+                      <p className="text-[10px] font-semibold uppercase leading-none tracking-[0.2em] text-toned">
                         {workspaceContentPipelineStatusLabels[column.status]}
                       </p>
                       <p className="mt-1 text-xs font-bold leading-none text-foreground/60">
@@ -391,9 +311,9 @@ export function WorkspaceContentPipelineBlockEditor({
                         key={item.id}
                         draggable
                         className={cn(
-                          "group relative rounded-[24px] border border-muted bg-background p-4 shadow-sm transition-all hover:border-primary/30 hover:bg-background hover:shadow-md",
+                          "group relative rounded-xl border border-muted bg-background p-4",
                           draggingItemId === item.id
-                            ? "pointer-events-none scale-95 opacity-40 grayscale"
+                            ? "pointer-events-none opacity-40"
                             : "cursor-grab active:cursor-grabbing",
                         )}
                         onDragStart={(event) => onItemDragStart(item.id, event)}
@@ -485,13 +405,20 @@ export function WorkspaceContentPipelineBlockEditor({
                   })}
 
                   {columnItems.length === 0 ? (
-                    <div className="flex h-full flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-muted bg-background p-6 text-center">
-                      <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-background">
-                        <ColumnIcon className="size-5 text-muted" />
-                      </div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-toned">
-                        No {column.status}
+                    <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-muted bg-background p-6 text-center">
+                      <p className="text-sm font-semibold text-muted-foreground">
+                        No {workspaceContentPipelineStatusLabels[column.status]} yet.
                       </p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="mt-3 rounded-full"
+                        onClick={() => addItem(column.status)}
+                      >
+                        <Plus />
+                        Add
+                      </Button>
                     </div>
                   ) : null}
                 </div>

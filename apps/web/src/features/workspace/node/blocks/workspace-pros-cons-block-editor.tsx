@@ -12,7 +12,6 @@ import {
   ProsConsBalanceBar,
   ProsConsWeightButtons,
 } from "@/features/workspace/node/blocks/shared/pros-cons-helpers";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
@@ -25,14 +24,7 @@ export function WorkspaceProsConsBlockEditor({
   const summary = useMemo(() => getProsConsSummary(block), [block]);
 
   const verdictLabel =
-    summary.verdict === "do-it" ? "DO IT" : summary.verdict === "dont" ? "DON'T" : "TIE";
-
-  const verdictClass =
-    summary.verdict === "do-it"
-      ? "border-success/30 bg-success/10 text-success"
-      : summary.verdict === "dont"
-        ? "border-destructive/30 bg-destructive/10 text-destructive"
-        : "border-warning/30 bg-warning/10 text-warning";
+    summary.verdict === "do-it" ? "Do it" : summary.verdict === "dont" ? "Don't" : "Tie";
 
   function addItem(list: "pros" | "cons") {
     mutateTypedBlock(tabId, block.id, "pros-cons", (entry) => {
@@ -67,33 +59,19 @@ export function WorkspaceProsConsBlockEditor({
   function renderList(list: "pros" | "cons", title: string, placeholder: string) {
     const items = block[list];
     const isPros = list === "pros";
+    const addLabel = isPros ? "Add pro" : "Add con";
 
     return (
-      <section className="space-y-4">
-        <div className="flex items-center justify-between px-2">
-          <div
-            className={cn("flex items-center gap-2", isPros ? "text-success" : "text-destructive")}
-          >
-            {isPros ? <PlusCircle className="size-5" /> : <MinusCircle className="size-5" />}
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">{title}</h3>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="rounded-full px-4"
-            onClick={() => addItem(list)}
-          >
-            <Plus />
-            Add Point
-          </Button>
+      <section className="space-y-3">
+        <div
+          className={cn("flex items-center gap-2", isPros ? "text-success" : "text-destructive")}
+        >
+          {isPros ? <PlusCircle className="size-5" /> : <MinusCircle className="size-5" />}
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         </div>
 
         {items.map((item) => (
-          <div
-            key={item.id}
-            className="group space-y-3 rounded-2xl border border-muted bg-background p-3 transition-all hover:bg-background"
-          >
+          <div key={item.id} className="space-y-3 rounded-xl border border-muted p-3">
             <div className="flex items-start gap-3">
               <Input
                 value={item.text}
@@ -113,14 +91,7 @@ export function WorkspaceProsConsBlockEditor({
               </Button>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p
-                className={cn(
-                  "text-[10px] font-bold uppercase tracking-[0.2em]",
-                  isPros ? "text-success/70" : "text-destructive/70",
-                )}
-              >
-                Weight
-              </p>
+              <p className="text-xs font-semibold text-muted-foreground">Weight</p>
               <ProsConsWeightButtons
                 list={list}
                 currentWeight={item.weight}
@@ -129,69 +100,38 @@ export function WorkspaceProsConsBlockEditor({
             </div>
           </div>
         ))}
+
+        {items.length === 0 ? (
+          <p className="py-4 text-sm text-muted-foreground">
+            {isPros ? "No pros yet." : "No cons yet."}
+          </p>
+        ) : null}
+
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full px-4"
+          aria-label={addLabel}
+          onClick={() => addItem(list)}
+        >
+          <Plus />
+          Add
+        </Button>
       </section>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className={cn("space-y-5 rounded-3xl border p-6 transition-colors", verdictClass)}>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="rounded-2xl">
-            {block.pros.length} pros
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {block.cons.length} cons
-          </Badge>
-          <Badge variant="success" className="rounded-2xl">
-            {summary.prosWeight} pro weight
-          </Badge>
-          <Badge variant="destructive" className="rounded-2xl">
-            {summary.consWeight} con weight
-          </Badge>
-        </div>
-
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Verdict</p>
-            <p className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">{verdictLabel}</p>
-          </div>
-          <div className="flex-1 px-4 sm:px-8">
-            <ProsConsBalanceBar prosWeight={summary.prosWeight} consWeight={summary.consWeight} />
-            <div className="mt-4 text-center">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">
-                Score Delta
-              </p>
-              <p className="text-lg font-black tracking-tight">
-                {summary.totalScore > 0 ? "+" : ""}
-                {summary.totalScore}
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">
-              Current Signal
-            </p>
-            <p className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
-              {summary.verdict === "tie" ? "Balanced" : verdictLabel}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Pro score</p>
-            <p className="mt-1 text-xl font-black tracking-tight sm:text-2xl">
-              {summary.prosWeight}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Con score</p>
-            <p className="mt-1 text-xl font-black tracking-tight sm:text-2xl">
-              {summary.consWeight}
-            </p>
-          </div>
-        </div>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-foreground">
+          {verdictLabel}
+          {summary.totalScore !== 0
+            ? ` · ${summary.totalScore > 0 ? "+" : ""}${summary.totalScore}`
+            : ""}
+        </p>
+        <ProsConsBalanceBar prosWeight={summary.prosWeight} consWeight={summary.consWeight} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

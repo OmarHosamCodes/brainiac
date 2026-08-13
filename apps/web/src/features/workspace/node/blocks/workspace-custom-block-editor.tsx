@@ -15,23 +15,6 @@ import { cn } from "@/lib/utils";
 
 type BlockStatusTone = "success" | "warning" | "error" | "primary";
 
-function getStatusAccentClass(tone: BlockStatusTone) {
-  switch (tone) {
-    case "success":
-      return "text-success";
-    case "warning":
-      return "text-warning";
-    case "error":
-      return "text-error";
-    case "primary":
-      return "text-primary";
-    default: {
-      const _never: never = tone;
-      return _never;
-    }
-  }
-}
-
 function getStatusBadgeClass(tone: BlockStatusTone) {
   switch (tone) {
     case "success":
@@ -136,9 +119,6 @@ export function WorkspaceCustomBlockEditor({
 
   const incompleteFieldCount = Math.max(0, fieldTotal - completedFieldCount);
 
-  const completionPercent =
-    fieldTotal === 0 ? 0 : Math.round((completedFieldCount / fieldTotal) * 100);
-
   const hasPromptTemplate = Boolean(template?.aiPromptTemplate?.trim());
   const hasLatestOutput = block.latestAiOutput.trim().length > 0;
   const latestOutputEntry = block.outputHistory[0] ?? null;
@@ -208,55 +188,6 @@ export function WorkspaceCustomBlockEditor({
     hasLatestOutput,
   ]);
 
-  const summaryCards = useMemo(
-    () => [
-      {
-        key: "status",
-        label: "Block state",
-        value: blockStatus.label,
-        supporting: blockStatus.description,
-        accentClass: getStatusAccentClass(blockStatus.tone),
-      },
-      {
-        key: "fields",
-        label: "Field coverage",
-        value: `${completedFieldCount}/${fieldTotal}`,
-        supporting: `${completionPercent}% completion`,
-        accentClass: "text-foreground",
-      },
-      {
-        key: "formula",
-        label: "Formula",
-        value: template?.formula ? formatFormulaResult(formulaResult) : "No formula",
-        supporting: template?.formula?.label || "Optional computed metric",
-        accentClass: template?.formula ? "text-primary" : "text-muted-foreground",
-      },
-      {
-        key: "ai",
-        label: "AI outputs",
-        value: hasPromptTemplate ? String(block.outputHistory.length) : "Disabled",
-        supporting: latestOutputEntry
-          ? `Last run ${formatDateTime(latestOutputEntry.createdAt)}`
-          : hasPromptTemplate
-            ? "No output generated yet"
-            : "Template has no AI prompt",
-        accentClass: hasPromptTemplate ? "text-foreground" : "text-muted-foreground",
-      },
-    ],
-    [
-      blockStatus,
-      completedFieldCount,
-      fieldTotal,
-      completionPercent,
-      template,
-      formulaResult,
-      formatFormulaResult,
-      hasPromptTemplate,
-      latestOutputEntry,
-      block.outputHistory.length,
-    ],
-  );
-
   function mutateCustomBlock(mutator: (entry: WorkspaceCustomBlock) => void) {
     mutateTypedBlock(tabId, block.id, "custom", mutator);
   }
@@ -304,7 +235,7 @@ export function WorkspaceCustomBlockEditor({
 
   if (!template) {
     return (
-      <div className="flex items-start gap-3 rounded-3xl border border-warning/30 bg-warning/10 p-4 text-warning">
+      <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4 text-warning">
         <AlertTriangle className="mt-0.5 size-5 shrink-0" />
         <div>
           <p className="text-sm font-semibold">Template removed</p>
@@ -319,182 +250,122 @@ export function WorkspaceCustomBlockEditor({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-muted bg-muted p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge
-                variant="secondary"
-                className="rounded-full border-warning/30 bg-warning/10 text-warning"
-              >
-                Legacy block
-              </Badge>
-              <Badge variant="secondary" className="rounded-full">
-                {template.name}
-              </Badge>
-              <Badge
-                variant="secondary"
-                className={cn("rounded-full", getStatusBadgeClass(blockStatus.tone))}
-              >
-                {blockStatus.label}
-              </Badge>
-            </div>
-            <p className="mt-2 text-sm text-toned">{blockStatus.description}</p>
-          </div>
-
-          {operationState.pending ? (
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge
               variant="secondary"
-              className="rounded-full border-primary/30 bg-primary/10 text-primary"
+              className="rounded-full border-warning/30 bg-warning/10 text-warning"
             >
-              <span className="inline-flex items-center gap-1.5">
-                <Loader2 className="size-3.5 animate-spin" />
-                {operationState.label || "Running"}
-              </span>
+              Legacy block
             </Badge>
-          ) : null}
-        </div>
-      </section>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => (
-          <div key={card.key} className="rounded-3xl border border-muted bg-muted p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              {card.label}
-            </p>
-            <p
-              className={cn(
-                "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
-                card.accentClass,
-              )}
+            <Badge variant="secondary" className="rounded-full">
+              {template.name}
+            </Badge>
+            <Badge
+              variant="secondary"
+              className={cn("rounded-full", getStatusBadgeClass(blockStatus.tone))}
             >
-              {card.value}
-            </p>
-            <p className="mt-1 text-sm text-toned">{card.supporting}</p>
+              {blockStatus.label}
+            </Badge>
+            <span className="text-sm text-toned">
+              {completedFieldCount}/{fieldTotal} fields
+            </span>
           </div>
+          <p className="text-sm text-toned">{blockStatus.description}</p>
+        </div>
+
+        {hasPromptTemplate ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-full px-4"
+            disabled={operationState.pending}
+            onClick={handleRunPrompt}
+          >
+            {operationState.pending ? (
+              <Loader2 className="animate-spin motion-reduce:animate-none" />
+            ) : (
+              <Play />
+            )}
+            {operationState.pending ? "Running" : "Run"}
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {template.fields.map((field) => (
+          <article key={field.id} className="space-y-3 rounded-xl border border-muted p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-foreground">{field.label}</p>
+              <Badge variant="secondary" className="rounded-full capitalize">
+                {field.type}
+              </Badge>
+            </div>
+
+            {field.type === "textarea" ? (
+              <Textarea
+                value={getTextValue(block, field)}
+                rows={4}
+                className="w-full rounded-xl"
+                aria-label={field.label}
+                onChange={(event) => updateFieldValue(field, event.target.value)}
+              />
+            ) : field.type === "checkbox" ? (
+              <label className="flex items-center justify-between gap-3 rounded-xl border border-muted px-3 py-2">
+                <span className="text-sm text-toned">
+                  {getCheckedValue(block, field) ? "Enabled" : "Disabled"}
+                </span>
+                <BlockCheckbox
+                  checked={getCheckedValue(block, field)}
+                  aria-label={field.label}
+                  onCheckedChange={(checked) => updateFieldValue(field, checked)}
+                />
+              </label>
+            ) : (
+              <Input
+                value={
+                  field.type === "number"
+                    ? getNumericValue(block, field)
+                    : getTextValue(block, field)
+                }
+                type={field.type === "number" ? "number" : "text"}
+                className="w-full rounded-xl"
+                aria-label={field.label}
+                onChange={(event) => updateFieldValue(field, event.target.value)}
+              />
+            )}
+          </article>
         ))}
       </div>
 
-      <section className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">Template inputs</h3>
-            <p className="mt-1 text-sm text-toned">
-              Fill each field to keep formula outputs and AI responses grounded in real context.
-            </p>
-          </div>
-          <Badge variant="secondary" className="rounded-full">
-            {completedFieldCount} / {fieldTotal} complete
-          </Badge>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          {template.fields.map((field) => (
-            <article key={field.id} className="rounded-2xl border border-muted bg-background p-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground">{field.label}</p>
-                <Badge variant="secondary" className="rounded-full capitalize">
-                  {field.type}
-                </Badge>
-              </div>
-
-              {field.type === "textarea" ? (
-                <Textarea
-                  value={getTextValue(block, field)}
-                  rows={4}
-                  className="w-full rounded-2xl"
-                  aria-label={field.label}
-                  onChange={(event) => updateFieldValue(field, event.target.value)}
-                />
-              ) : field.type === "checkbox" ? (
-                <label className="flex items-center justify-between gap-3 rounded-2xl border border-muted bg-background px-3 py-2">
-                  <span className="text-sm text-toned">
-                    {getCheckedValue(block, field) ? "Enabled" : "Disabled"}
-                  </span>
-                  <BlockCheckbox
-                    checked={getCheckedValue(block, field)}
-                    aria-label={field.label}
-                    onCheckedChange={(checked) => updateFieldValue(field, checked)}
-                  />
-                </label>
-              ) : (
-                <Input
-                  value={
-                    field.type === "number"
-                      ? getNumericValue(block, field)
-                      : getTextValue(block, field)
-                  }
-                  type={field.type === "number" ? "number" : "text"}
-                  className="w-full rounded-2xl"
-                  aria-label={field.label}
-                  onChange={(event) => updateFieldValue(field, event.target.value)}
-                />
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
-
       {template.formula ? (
-        <section className="rounded-3xl border border-muted bg-muted p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                {template.formula.label}
-              </p>
-              <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-                {formatFormulaResult(formulaResult)}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-muted bg-background px-3 py-2 text-xs text-toned">
-              Expression: {template.formula.expression}
-            </div>
-          </div>
-        </section>
+        <p className="text-sm text-toned">
+          <span className="font-semibold text-foreground">{template.formula.label}: </span>
+          {formatFormulaResult(formulaResult)}
+        </p>
       ) : null}
 
       {template.includeNotes ? (
-        <section className="space-y-3 rounded-3xl border border-muted bg-muted p-5">
+        <div className="space-y-2">
           <h3 className="text-sm font-semibold text-foreground">Notes</h3>
           <Textarea
             value={block.notes}
             rows={4}
-            className="w-full rounded-2xl"
+            className="w-full rounded-xl"
             aria-label="Template notes"
             onChange={(event) => updateNotes(event.target.value)}
           />
-        </section>
+        </div>
       ) : null}
 
       {template.aiPromptTemplate ? (
-        <section className="space-y-4 rounded-3xl border border-muted bg-background p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-foreground">AI prompt template</p>
-              <p className="text-sm text-toned">{getCustomPromptPreview(block)}</p>
-              <p className="text-xs text-toned">
-                {hasLatestOutput
-                  ? "Regenerate after important field changes."
-                  : "Generate an initial draft once key fields are filled."}
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="rounded-full px-4"
-              disabled={operationState.pending}
-              onClick={handleRunPrompt}
-            >
-              {operationState.pending ? <Loader2 className="animate-spin" /> : <Play />}
-              {operationState.pending ? "Running" : "Run"}
-            </Button>
-          </div>
+        <div className="space-y-3">
+          <p className="text-sm text-toned">{getCustomPromptPreview(block)}</p>
 
           {runError ? (
-            <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
               <AlertCircle className="mt-0.5 size-5 shrink-0" />
               <div>
                 <p className="text-sm font-semibold">Could not run template</p>
@@ -503,11 +374,9 @@ export function WorkspaceCustomBlockEditor({
             </div>
           ) : null}
 
-          <div className="rounded-2xl border border-muted bg-muted p-4">
+          <div className="rounded-xl border border-muted p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Latest output
-              </p>
+              <p className="text-sm font-semibold text-foreground">Latest output</p>
               {latestOutputEntry ? (
                 <span className="text-xs text-toned">
                   {formatDateTime(latestOutputEntry.createdAt)}
@@ -521,15 +390,10 @@ export function WorkspaceCustomBlockEditor({
 
           {block.outputHistory.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Recent runs
-              </p>
+              <p className="text-sm font-semibold text-foreground">Recent runs</p>
               <div className="grid gap-2">
                 {block.outputHistory.slice(0, 3).map((entry) => (
-                  <article
-                    key={entry.id}
-                    className="rounded-2xl border border-muted bg-background p-3"
-                  >
+                  <article key={entry.id} className="rounded-xl border border-muted p-3">
                     <p className="text-[11px] text-muted-foreground">
                       {formatDateTime(entry.createdAt)}
                     </p>
@@ -544,7 +408,7 @@ export function WorkspaceCustomBlockEditor({
               </div>
             </div>
           ) : null}
-        </section>
+        </div>
       ) : null}
     </div>
   );

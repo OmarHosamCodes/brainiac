@@ -4,7 +4,6 @@ import { useMemo, useState, type DragEvent } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Textarea } from "@/ui/textarea";
@@ -37,16 +36,6 @@ export function WorkspaceKanbanBlockEditor({
         ]),
       ),
     [block.columns, block.cards],
-  );
-
-  const boardSummary = useMemo(
-    () => ({
-      columnCount: block.columns.length,
-      cardCount: block.cards.length,
-      assignedCount: block.cards.filter((card) => Boolean(card.assignee?.trim())).length,
-      scheduledCount: block.cards.filter((card) => Boolean(card.dueDate)).length,
-    }),
-    [block.columns.length, block.cards],
   );
 
   function canRemoveColumn() {
@@ -111,42 +100,22 @@ export function WorkspaceKanbanBlockEditor({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold tracking-wider text-foreground uppercase">
-              Flow Board
-            </h3>
-            <p className="mt-1 text-xs text-toned">Drag cards to advance workflow</p>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="rounded-full px-4"
-            aria-label="Add kanban column"
-            onClick={() => addKanbanColumn(tabId, block.id)}
-          >
-            <Plus />
-            Add Column
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="rounded-2xl">
-            {boardSummary.columnCount} columns
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {boardSummary.cardCount} cards
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {boardSummary.assignedCount} assigned
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {boardSummary.scheduledCount} scheduled
-          </Badge>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-toned">
+          {block.columns.length} columns · {block.cards.length} cards
+        </p>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full px-4"
+          aria-label="Add kanban column"
+          onClick={() => addKanbanColumn(tabId, block.id)}
+        >
+          <Plus />
+          Add column
+        </Button>
       </div>
 
       <div className="-mx-2 flex gap-4 overflow-x-auto px-2 pb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -154,29 +123,26 @@ export function WorkspaceKanbanBlockEditor({
           <section
             key={column.id}
             className={cn(
-              "flex min-w-[300px] max-w-[300px] flex-col rounded-3xl border border-muted bg-background p-4 transition-all duration-300",
-              dragOverColumnId === column.id
-                ? "bg-primary/5 ring-2 ring-primary/20 brightness-105"
-                : "",
+              "flex min-w-[300px] max-w-[300px] flex-col rounded-xl border border-muted bg-background p-4",
+              dragOverColumnId === column.id ? "ring-2 ring-primary/20" : "",
             )}
             onDragOver={(event) => onColumnDragOver(column.id, event)}
             onDragLeave={(event) => onColumnDragLeave(column.id, event)}
             onDrop={(event) => onColumnDrop(column.id, event)}
           >
-            <div className="mb-4 flex items-center justify-between px-2">
+            <div className="mb-4 flex items-center justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="size-2 shrink-0 rounded-full bg-primary/60" />
                 <Input
                   value={column.title}
-                  placeholder="Column Title"
-                  className="flex-1 border-0 bg-transparent px-0 text-sm font-black tracking-tight text-foreground uppercase placeholder:text-muted shadow-none focus-visible:ring-0"
+                  placeholder="Column title"
+                  className="flex-1 border-0 bg-transparent px-0 text-sm font-semibold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
                   onChange={(event) =>
                     mutateKanbanColumn(tabId, block.id, column.id, (entry) => {
                       entry.title = event.target.value.slice(0, 80);
                     })
                   }
                 />
-                <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-toned">
+                <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs font-semibold text-toned">
                   {cardsByColumn[column.id]?.length || 0}
                 </span>
               </div>
@@ -185,7 +151,7 @@ export function WorkspaceKanbanBlockEditor({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="rounded-lg text-toned transition-colors hover:text-destructive/80"
+                className="rounded-lg text-toned hover:text-destructive/80"
                 disabled={!canRemoveColumn()}
                 aria-label={`Remove ${column.title || "kanban"} column`}
                 onClick={() => removeKanbanColumn(tabId, block.id, column.id)}
@@ -195,24 +161,16 @@ export function WorkspaceKanbanBlockEditor({
             </div>
 
             <div className="flex-1 space-y-3">
-              {(cardsByColumn[column.id] ?? []).length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-muted bg-background py-8 text-center text-xs font-medium text-muted">
-                  Drop a card here or add one below
-                </div>
-              ) : null}
-
               {(cardsByColumn[column.id] ?? []).map((card) => (
                 <article
                   key={card.id}
                   draggable
                   className={cn(
-                    "group relative flex flex-col rounded-2xl border border-muted bg-background p-4 transition-all hover:border-primary/30 hover:shadow-sm",
+                    "group relative flex flex-col rounded-xl border border-muted bg-background p-4",
                     draggingCardId === card.id
-                      ? "pointer-events-none scale-95 opacity-40 grayscale"
+                      ? "pointer-events-none opacity-40"
                       : "cursor-grab active:cursor-grabbing",
-                    expandedCardId === card.id
-                      ? "bg-background shadow-inner ring-2 ring-primary/20"
-                      : "",
+                    expandedCardId === card.id ? "ring-2 ring-primary/20" : "",
                   )}
                   onDragStart={(event) => onCardDragStart(card.id, event)}
                   onDragEnd={clearDragState}
@@ -222,7 +180,7 @@ export function WorkspaceKanbanBlockEditor({
                       <Input
                         value={card.title}
                         placeholder="Task title..."
-                        className="w-full border-0 bg-transparent px-0 py-0 text-sm leading-tight font-bold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
+                        className="w-full border-0 bg-transparent px-0 py-0 text-sm leading-tight font-semibold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
                         onChange={(event) =>
                           mutateKanbanCard(tabId, block.id, card.id, (entry) => {
                             entry.title = event.target.value.slice(0, 240);
@@ -240,7 +198,7 @@ export function WorkspaceKanbanBlockEditor({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="rounded-lg text-toned transition-colors hover:text-foreground"
+                      className="rounded-lg text-toned hover:text-foreground"
                       aria-label={
                         expandedCardId === card.id ? "Collapse card details" : "Expand card details"
                       }
@@ -257,7 +215,7 @@ export function WorkspaceKanbanBlockEditor({
                   {expandedCardId === card.id ? (
                     <div className="mt-4 space-y-4 border-t border-muted pt-4">
                       <div className="space-y-1">
-                        <label className="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
+                        <label className="px-1 text-xs font-semibold text-muted-foreground">
                           Description
                         </label>
                         <Textarea
@@ -275,7 +233,7 @@ export function WorkspaceKanbanBlockEditor({
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
+                          <label className="px-1 text-xs font-semibold text-muted-foreground">
                             Assignee
                           </label>
                           <div className="relative">
@@ -293,8 +251,8 @@ export function WorkspaceKanbanBlockEditor({
                         </div>
 
                         <div className="space-y-1">
-                          <label className="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                            Due Date
+                          <label className="px-1 text-xs font-semibold text-muted-foreground">
+                            Due date
                           </label>
                           <div className="relative">
                             <Calendar className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -339,13 +297,13 @@ export function WorkspaceKanbanBlockEditor({
                   ) : card.assignee || card.dueDate ? (
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       {card.assignee ? (
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-toned uppercase">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-toned">
                           <User className="size-3" />
                           <span>{card.assignee}</span>
                         </div>
                       ) : null}
                       {card.dueDate ? (
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-toned uppercase">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-toned">
                           <Calendar className="size-3" />
                           <span>{card.dueDate}</span>
                         </div>
@@ -355,15 +313,19 @@ export function WorkspaceKanbanBlockEditor({
                 </article>
               ))}
 
+              {(cardsByColumn[column.id] ?? []).length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">No cards yet.</p>
+              ) : null}
+
               <Button
                 type="button"
                 variant="ghost"
-                className="mt-2 w-full rounded-2xl border border-dashed border-muted bg-transparent py-3 text-[10px] font-bold tracking-widest text-toned uppercase hover:bg-background"
+                className="w-full rounded-full border border-dashed border-muted py-3 text-sm font-semibold text-toned"
                 aria-label={`Add card to ${column.title || "this"} column`}
                 onClick={() => addKanbanCard(tabId, block.id, column.id)}
               >
                 <Plus />
-                Add Task
+                Add task
               </Button>
             </div>
           </section>

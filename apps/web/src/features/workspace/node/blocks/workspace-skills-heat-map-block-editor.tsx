@@ -11,6 +11,7 @@ import { Plus, Trash2, UserPlus, X } from "lucide-react";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
@@ -182,44 +183,21 @@ export function WorkspaceSkillsHeatMapBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-primary/10 bg-primary/5 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Team</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-primary sm:text-3xl">
-            {summary.memberCount}
-          </p>
-        </div>
-
-        <div className="rounded-3xl border border-success/10 bg-success/5 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Avg Score</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-success sm:text-3xl">
-            {summary.overallAverage}/10
-          </p>
-        </div>
-
-        <div className="rounded-3xl border border-destructive/10 bg-destructive/5 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Critical Gaps
-          </p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-destructive sm:text-3xl">
-            {summary.criticalGapCount}
-          </p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Strongest</p>
-          <p className="mt-2 text-lg font-black tracking-tight text-foreground">
-            {strongestDimensionLabel}
-          </p>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
-            {strongestDimensionAverage === null
-              ? "Add scores to rank the team."
-              : `${strongestDimensionAverage}/10 team average`}
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {summary.memberCount} team · {summary.overallAverage}/10 avg ·{" "}
+          <span className="text-destructive">{summary.criticalGapCount}</span> critical gaps ·
+          Strongest {strongestDimensionLabel}
+          {strongestDimensionAverage === null ? "" : ` (${strongestDimensionAverage}/10)`}
+        </p>
+        <BlockProgressBar
+          className="min-w-24 max-w-48 flex-1"
+          value={summary.overallAverage}
+          max={10}
+        />
       </div>
 
-      <div className="rounded-3xl border border-muted bg-muted p-5">
+      <div className="rounded-xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-foreground">Skills matrix</p>
@@ -273,7 +251,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
       </div>
 
       {block.dimensions.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+        <div className="rounded-xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">
             No skill dimensions added yet.
           </p>
@@ -292,7 +270,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
           </Button>
         </div>
       ) : block.members.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
+        <div className="rounded-xl border border-dashed border-muted bg-background py-12 text-center">
           <p className="text-sm font-semibold text-muted-foreground">No team members added yet.</p>
           <p className="mt-2 text-sm text-toned">
             Add a team member to start scoring strengths and gaps.
@@ -318,7 +296,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                 </th>
                 {block.dimensions.map((dimension) => (
                   <th key={dimension.id} className="px-3 pb-1 text-center">
-                    <div className="group flex flex-col items-center gap-1">
+                    <div className="flex flex-col items-center gap-1">
                       <Input
                         value={dimension.label}
                         placeholder="Skill"
@@ -331,7 +309,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="-mt-1 h-4 w-4 rounded-full p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
+                          className="-mt-1 h-4 w-4 rounded-full p-0 hover:text-destructive"
                           aria-label={`Remove ${dimension.label || "skill"} skill`}
                           onClick={() => removeDimension(dimension.id)}
                         >
@@ -383,7 +361,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                           <button
                             type="button"
                             className={cn(
-                              "w-full rounded-2xl border px-3 py-4 text-lg font-black tracking-tight transition hover:scale-[1.02]",
+                              "w-full rounded-xl border px-3 py-4 text-lg font-semibold tracking-tight",
                               getScoreClasses(score),
                             )}
                             aria-label={`${dimension.label} score for ${memberLabel}`}
@@ -398,7 +376,7 @@ export function WorkspaceSkillsHeatMapBlockEditor({
                     <td className="border-y border-muted bg-background px-3 py-4 text-center">
                       <div
                         className={cn(
-                          "rounded-2xl border px-3 py-4 text-lg font-black tracking-tight",
+                          "rounded-xl border px-3 py-4 text-lg font-semibold tracking-tight",
                           getScoreClasses(memberAverage),
                         )}
                       >

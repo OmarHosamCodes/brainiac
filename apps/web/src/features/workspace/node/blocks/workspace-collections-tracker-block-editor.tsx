@@ -48,7 +48,7 @@ const headerLabels = [
 ];
 
 function formatCurrency(value: number) {
-  return `${Math.round(value).toLocaleString("en-US")} EGP`;
+  return Math.round(value).toLocaleString("en-US");
 }
 
 function toInteger(value: string | number | undefined, fallback = 0) {
@@ -152,46 +152,13 @@ export function WorkspaceCollectionsTrackerBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
-            Outstanding
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
-            {formatCurrency(summary.totalOutstanding)}
-          </p>
-          <p className="mt-1 text-sm text-toned">{block.invoices.length} tracked invoices</p>
-        </div>
-
-        <div className="rounded-3xl border border-destructive/20 bg-destructive/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/70">
-            Overdue
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
-            {formatCurrency(summary.overdueAmount)}
-          </p>
-          <p className="mt-1 text-sm text-toned">{overdueCount} invoices need follow-up</p>
-        </div>
-
-        <div className="rounded-3xl border border-warning/20 bg-warning/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
-            Due This Week
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
-            {formatCurrency(summary.dueThisWeekAmount)}
-          </p>
-          <p className="mt-1 text-sm text-toned">{highRiskCount} high-risk exposures</p>
-        </div>
-
-        <div className="rounded-3xl border border-success/20 bg-success/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
-            Collected This Month
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
-            {formatCurrency(summary.collectedThisMonth)}
-          </p>
-          <p className="mt-1 text-sm text-toned">{paidCount} invoices marked paid</p>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {formatCurrency(summary.totalOutstanding)} outstanding ·{" "}
+          {formatCurrency(summary.overdueAmount)} overdue ({overdueCount}) ·{" "}
+          {formatCurrency(summary.dueThisWeekAmount)} due this week ·{" "}
+          {formatCurrency(summary.collectedThisMonth)} collected ({paidCount} paid)
+        </p>
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-3 px-1">
@@ -251,18 +218,26 @@ export function WorkspaceCollectionsTrackerBlockEditor({
       </div>
 
       {filteredInvoices.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            No invoices match the current filter
+        <div className="rounded-xl border border-dashed border-muted bg-background py-12 text-center">
+          <p className="text-sm text-toned">
+            {block.invoices.length === 0 ? "No invoices yet." : "No invoices match this filter."}
           </p>
-          <p className="mt-2 text-sm text-toned">
-            Add a receivable or switch the filter to review another part of the cash pipeline.
-          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mt-3"
+            aria-label="Add receivable invoice"
+            onClick={addInvoice}
+          >
+            <Plus />
+            Add
+          </Button>
         </div>
       ) : (
         <div className="overflow-x-auto pb-4">
           <div
-            className="grid min-w-[1560px] gap-px overflow-hidden rounded-3xl border border-muted bg-muted/20"
+            className="grid min-w-[1560px] gap-px overflow-hidden rounded-xl border border-muted bg-muted/20"
             style={rowGridStyle}
           >
             {headerLabels.map((label) => (

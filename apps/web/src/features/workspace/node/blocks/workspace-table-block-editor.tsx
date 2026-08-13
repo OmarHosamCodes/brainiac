@@ -9,7 +9,6 @@ import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 
@@ -20,103 +19,30 @@ export function WorkspaceTableBlockEditor({
   const { mutateTypedBlock } = useWorkspaceNodeEditorContext();
 
   const summary = useMemo(() => getTableSummary(block), [block]);
-  const completionPercent = Math.round(
-    (summary.filledCellCount / Math.max(summary.rowCount * summary.columnCount, 1)) * 100,
-  );
 
-  function getRowFilledCellCount(row: WorkspaceTableBlock["rows"][number]) {
-    return block.columns.filter((column) => Boolean(row.cells[column.id]?.trim())).length;
+  function addColumn() {
+    mutateTypedBlock(tabId, block.id, "table", (entry) => {
+      const column = createWorkspaceTableColumn({
+        label: `Column ${entry.columns.length + 1}`,
+      });
+      entry.columns.push(column);
+      entry.rows = entry.rows.map((row) => ({
+        ...row,
+        cells: { ...row.cells, [column.id]: "" },
+      }));
+    });
+  }
+
+  function addRow() {
+    mutateTypedBlock(tabId, block.id, "table", (entry) => {
+      entry.rows.push(createWorkspaceTableRow({}, entry.columns));
+    });
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-3xl border border-muted bg-muted p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Columns</p>
-              <p className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-                {summary.columnCount}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Rows</p>
-              <p className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-                {summary.rowCount}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Filled Cells
-              </p>
-              <p className="text-2xl font-black tracking-tight text-primary sm:text-3xl">
-                {summary.filledCellCount}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Coverage
-              </p>
-              <p className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-                {completionPercent}%
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="rounded-2xl">
-              {summary.columnCount} columns
-            </Badge>
-            <Badge variant="secondary" className="rounded-2xl">
-              {summary.rowCount} rows
-            </Badge>
-            <Badge variant="secondary" className="rounded-2xl">
-              {summary.filledCellCount} filled
-            </Badge>
-          </div>
-        </div>
-
-        <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-muted pt-6">
-          <Button
-            type="button"
-            variant="secondary"
-            className="rounded-full"
-            aria-label="Add table column"
-            onClick={() =>
-              mutateTypedBlock(tabId, block.id, "table", (entry) => {
-                const column = createWorkspaceTableColumn({
-                  label: `Column ${entry.columns.length + 1}`,
-                });
-                entry.columns.push(column);
-                entry.rows = entry.rows.map((row) => ({
-                  ...row,
-                  cells: { ...row.cells, [column.id]: "" },
-                }));
-              })
-            }
-          >
-            <Plus />
-            Add Column
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className="rounded-full"
-            aria-label="Add table row"
-            onClick={() =>
-              mutateTypedBlock(tabId, block.id, "table", (entry) => {
-                entry.rows.push(createWorkspaceTableRow({}, entry.columns));
-              })
-            }
-          >
-            <Plus />
-            Add Row
-          </Button>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-3xl border border-muted bg-background p-4">
-        <table className="min-w-full border-separate border-spacing-y-3">
+    <div className="space-y-4">
+      <div className="overflow-x-auto rounded-xl border border-muted">
+        <table className="min-w-full border-separate border-spacing-y-2 p-3">
           <caption className="sr-only">
             Editable workspace table with {summary.rowCount} rows and {summary.columnCount} columns
           </caption>
@@ -124,7 +50,7 @@ export function WorkspaceTableBlockEditor({
             <tr>
               <th
                 scope="col"
-                className="w-20 px-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
+                className="w-16 px-2 text-left text-xs font-semibold text-muted-foreground"
               >
                 Row
               </th>
@@ -133,7 +59,7 @@ export function WorkspaceTableBlockEditor({
                   <div className="flex items-center gap-2">
                     <Input
                       value={column.label}
-                      className="flex-1 rounded-2xl"
+                      className="flex-1 rounded-xl"
                       aria-label={`Column label for ${column.label || "table column"}`}
                       onChange={(event) =>
                         mutateTypedBlock(tabId, block.id, "table", (entry) => {
@@ -170,31 +96,23 @@ export function WorkspaceTableBlockEditor({
                   </div>
                 </th>
               ))}
-              <th
-                scope="col"
-                className="w-28 px-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
-              >
-                Status
-              </th>
               <th className="w-12" />
             </tr>
           </thead>
           <tbody>
             {block.rows.map((row, rowIndex) => (
               <tr key={row.id}>
-                <th scope="row" className="px-2 align-middle text-sm font-bold text-toned">
-                  <div className="space-y-1">
-                    <p>Row {rowIndex + 1}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-highlighted">
-                      {getRowFilledCellCount(row)}/{block.columns.length} filled
-                    </p>
-                  </div>
+                <th
+                  scope="row"
+                  className="px-2 align-middle text-sm font-semibold text-muted-foreground"
+                >
+                  {rowIndex + 1}
                 </th>
                 {block.columns.map((column) => (
                   <td key={`${row.id}-${column.id}`} className="px-2 align-middle">
                     <Input
                       value={row.cells[column.id] ?? ""}
-                      className="rounded-2xl"
+                      className="rounded-xl"
                       aria-label={`Value for row ${rowIndex + 1}, ${column.label || "column"}`}
                       onChange={(event) =>
                         mutateTypedBlock(tabId, block.id, "table", (entry) => {
@@ -207,13 +125,6 @@ export function WorkspaceTableBlockEditor({
                     />
                   </td>
                 ))}
-                <td className="px-2 align-middle">
-                  <Badge variant="secondary" className="rounded-2xl">
-                    {getRowFilledCellCount(row) === block.columns.length
-                      ? "Complete"
-                      : "In progress"}
-                  </Badge>
-                </td>
                 <td className="px-2 align-middle">
                   <Button
                     type="button"
@@ -236,15 +147,48 @@ export function WorkspaceTableBlockEditor({
         </table>
 
         {block.rows.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              No rows added yet
-            </p>
-            <p className="mt-2 text-sm text-toned">
-              Start by adding a row or column to build this table.
-            </p>
+          <div className="px-4 py-8 text-center">
+            <p className="text-sm text-muted-foreground">No rows yet.</p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-3 rounded-full"
+              aria-label="Add table row"
+              onClick={addRow}
+            >
+              <Plus />
+              Add row
+            </Button>
           </div>
         ) : null}
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-muted p-3">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-full"
+            aria-label="Add table column"
+            onClick={addColumn}
+          >
+            <Plus />
+            Add column
+          </Button>
+          {block.rows.length > 0 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="rounded-full"
+              aria-label="Add table row"
+              onClick={addRow}
+            >
+              <Plus />
+              Add row
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

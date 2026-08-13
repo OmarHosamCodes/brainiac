@@ -8,7 +8,6 @@ import { Columns2, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
-import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -58,6 +57,18 @@ export function WorkspaceDecisionMatrixBlockEditor({
     }),
     [block.options.length],
   );
+
+  const recommendedLine = useMemo(() => {
+    const winners = summary.optionScores.filter((option) => option.isWinner);
+    if (winners.length === 0) {
+      return null;
+    }
+    const names = winners.map((option) => option.label).join(", ");
+    if (summary.hasTie) {
+      return `Tied lead: ${names}`;
+    }
+    return `Recommended: ${names}`;
+  }, [summary.hasTie, summary.optionScores]);
 
   function getOptionSummary(optionId: string) {
     return summaryByOptionId.get(optionId) ?? null;
@@ -149,10 +160,10 @@ export function WorkspaceDecisionMatrixBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-muted bg-muted p-5">
+      <div className="rounded-xl border border-muted bg-muted p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
               Decision prompt
             </p>
             <p className="text-sm text-toned">
@@ -160,15 +171,15 @@ export function WorkspaceDecisionMatrixBlockEditor({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="rounded-2xl">
+            <Badge variant="secondary" className="rounded-xl">
               {summary.criteriaCount} criteria
             </Badge>
-            <Badge variant="secondary" className="rounded-2xl">
+            <Badge variant="secondary" className="rounded-xl">
               {block.options.length} options
             </Badge>
             <Badge
               variant="secondary"
-              className="rounded-2xl border-primary/20 bg-primary/10 text-primary"
+              className="rounded-xl border-primary/20 bg-primary/10 text-primary"
             >
               {summary.totalWeight} weight pts
             </Badge>
@@ -178,73 +189,12 @@ export function WorkspaceDecisionMatrixBlockEditor({
           value={block.question}
           placeholder="What decision are you making?"
           aria-label="Decision question"
-          className="mt-4 w-full border-0 bg-transparent px-0 text-xl font-bold tracking-tight text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
+          className="mt-4 w-full border-0 bg-transparent px-0 text-xl font-semibold tracking-tight text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
           onChange={(event) => updateQuestion(event.target.value)}
         />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {block.options.map((option) => (
-          <article key={option.id} className="rounded-3xl border border-muted bg-background p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary" className="rounded-2xl">
-                    Rank #{getOptionRank(option.id) ?? "—"}
-                  </Badge>
-                  {getOptionSummary(option.id)?.isWinner ? (
-                    <Badge
-                      variant="secondary"
-                      className="rounded-full px-3 text-[10px] uppercase tracking-[0.18em] text-primary"
-                    >
-                      {summary.hasTie ? "Tied lead" : "Recommended"}
-                    </Badge>
-                  ) : null}
-                </div>
-                <Input
-                  value={option.label}
-                  placeholder="Option name"
-                  aria-label={`Option label for ${option.label || "decision option"}`}
-                  className="mt-3 w-full border-0 bg-transparent px-0 text-lg font-bold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
-                  onChange={(event) => updateOptionLabel(option.id, event.target.value)}
-                />
-                <p className="mt-2 text-2xl font-black tracking-tight text-primary sm:text-3xl">
-                  {getOptionSummary(option.id)?.totalScore ?? 0}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="rounded-2xl hover:text-destructive"
-                disabled={block.options.length <= 1}
-                aria-label={`Remove ${option.label || "decision"} option`}
-                onClick={() => removeOption(option.id)}
-              >
-                <Trash2 />
-              </Button>
-            </div>
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                <span>Relative score</span>
-                <span>{getOptionSummary(option.id)?.progress ?? 0}%</span>
-              </div>
-              <BlockProgressBar
-                value={getOptionSummary(option.id)?.progress ?? 0}
-                max={100}
-                className="h-1.5"
-              />
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <Badge variant="secondary" className="rounded-2xl">
-                  Avg {getOptionSummary(option.id)?.averageScore ?? 0}
-                </Badge>
-                <Badge variant="secondary" className="rounded-2xl text-primary">
-                  {getOptionSummary(option.id)?.totalScore ?? 0} weighted pts
-                </Badge>
-              </div>
-            </div>
-          </article>
-        ))}
+        {recommendedLine ? (
+          <p className="mt-3 text-sm font-semibold text-foreground">{recommendedLine}</p>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
@@ -279,13 +229,15 @@ export function WorkspaceDecisionMatrixBlockEditor({
 
       <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
         <div
-          className="grid min-w-[760px] gap-px overflow-hidden rounded-3xl border border-muted bg-muted/20"
+          className="grid min-w-[760px] gap-px overflow-hidden rounded-xl border border-muted bg-muted/20"
           style={matrixGridStyle}
           role="table"
           aria-label="Decision matrix scoring grid"
         >
           <div className="flex flex-col justify-center bg-muted p-4" role="columnheader">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Criteria</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
+              Criteria
+            </p>
             <p className="mt-1 text-xs font-medium text-toned">
               {summary.criteriaCount} criteria, {summary.totalWeight} weight pts
             </p>
@@ -297,14 +249,31 @@ export function WorkspaceDecisionMatrixBlockEditor({
               className="flex flex-col justify-center bg-muted p-4"
               role="columnheader"
             >
-              <p className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                {option.label || "Option"}
-              </p>
-              <p className="mt-1 text-lg font-black text-foreground">
+              <div className="flex items-start justify-between gap-2">
+                <Input
+                  value={option.label}
+                  placeholder="Option name"
+                  aria-label={`Option label for ${option.label || "decision option"}`}
+                  className="min-w-0 flex-1 border-0 bg-transparent px-0 text-sm font-semibold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
+                  onChange={(event) => updateOptionLabel(option.id, event.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-lg hover:text-destructive"
+                  disabled={block.options.length <= 1}
+                  aria-label={`Remove ${option.label || "decision"} option`}
+                  onClick={() => removeOption(option.id)}
+                >
+                  <Trash2 />
+                </Button>
+              </div>
+              <p className="mt-1 text-lg font-semibold text-foreground">
                 {getOptionSummary(option.id)?.totalScore ?? 0}
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-toned">
-                Rank #{getOptionRank(option.id) ?? "—"}
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-toned">
+                Rank #{getOptionRank(option.id) ?? "-"}
               </p>
             </div>
           ))}
@@ -336,7 +305,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
                 </Button>
               </div>
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
+                <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
                   <span>Weight</span>
                   <span>{criterion.weight}/10</span>
                 </div>
@@ -357,7 +326,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
                 className="flex flex-col justify-center bg-background p-4"
                 role="cell"
               >
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
+                <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
                   <span>Score</span>
                   <span>{option.scores[criterion.id] ?? 0}/10</span>
                 </div>
@@ -374,7 +343,7 @@ export function WorkspaceDecisionMatrixBlockEditor({
                 />
                 <div className="mt-3 flex justify-between text-xs font-medium text-toned">
                   <span>Weighted</span>
-                  <span className="font-black text-foreground">
+                  <span className="font-semibold text-foreground">
                     {(option.scores[criterion.id] ?? 0) * criterion.weight}
                   </span>
                 </div>

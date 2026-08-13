@@ -135,72 +135,6 @@ export function WorkspaceTimeOrchestratorBlockEditor({
     return block.settings.quadrants.map((quadrant) => summary.quadrants[quadrant]);
   }, [summary, block.settings.quadrants]);
 
-  const primarySummaryCards = useMemo(
-    () => [
-      {
-        key: "overdue",
-        label: "Overdue",
-        value: summary?.overdue.length ?? 0,
-        supportingLabel: "tasks",
-        className: "border-destructive/30 bg-destructive/5",
-        valueClassName: "text-destructive",
-      },
-      {
-        key: "upcoming",
-        label: "Upcoming",
-        value: summary?.upcoming.length ?? 0,
-        supportingLabel: "next 7 days",
-        className: "border-info/30 bg-info/5",
-        valueClassName: "text-info",
-      },
-      {
-        key: "high-priority",
-        label: "High Priority",
-        value: summary?.highPriority.length ?? 0,
-        supportingLabel: "tasks",
-        className: "border-warning/30 bg-warning/5",
-        valueClassName: "text-warning",
-      },
-      {
-        key: "workload",
-        label: "Estimated Workload",
-        value: formatMinutes(summary?.totalEstimateMinutes ?? 0),
-        supportingLabel: `${summary?.totalOpenTasks ?? 0} open task${
-          (summary?.totalOpenTasks ?? 0) === 1 ? "" : "s"
-        }`,
-        className: "border-primary/30 bg-primary/5",
-        valueClassName: "text-primary",
-      },
-    ],
-    [summary],
-  );
-
-  const secondarySummaryStats = useMemo(
-    () => [
-      {
-        key: "open",
-        label: "Open Tasks",
-        value: String(summary?.totalOpenTasks ?? 0),
-      },
-      {
-        key: "urgency",
-        label: "Avg Urgency",
-        value: String(summary?.averageUrgency ?? 0),
-      },
-      {
-        key: "importance",
-        label: "Avg Importance",
-        value: String(summary?.averageImportance ?? 0),
-      },
-      {
-        key: "quadrants",
-        label: "Visible Quadrants",
-        value: String(visibleQuadrants.length),
-      },
-    ],
-    [summary, visibleQuadrants.length],
-  );
-
   function updateSettings(mutator: (settings: WorkspaceTimeOrchestratorBlock["settings"]) => void) {
     mutateTypedBlock(tabId, block.id, "time-orchestrator", (entry) => {
       const nextSettings = createWorkspaceTimeOrchestratorSettings(entry.settings);
@@ -254,7 +188,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-muted bg-muted p-5 backdrop-blur-sm">
+      <div className="rounded-xl border border-muted bg-background p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-primary">
@@ -309,10 +243,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
                   type="button"
                   size="sm"
                   variant={domain.active ? "secondary" : "outline"}
-                  className={cn(
-                    "rounded-xl",
-                    domain.active && "border-primary/20 bg-primary/10 text-primary",
-                  )}
+                  className="rounded-xl"
                   aria-pressed={domain.active}
                   aria-label={`${domain.active ? "Disable" : "Enable"} ${domain.label} domain filter`}
                   onClick={() =>
@@ -320,7 +251,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
                   }
                 >
                   {domain.label}
-                  <span className="ml-2 text-[10px] font-black opacity-60">{domain.count}</span>
+                  <span className="ml-2 text-[10px] font-semibold opacity-60">{domain.count}</span>
                 </Button>
               ))}
             </div>
@@ -337,16 +268,15 @@ export function WorkspaceTimeOrchestratorBlockEditor({
                   type="button"
                   size="sm"
                   variant={quadrant.active ? "secondary" : "outline"}
-                  className={cn(
-                    "rounded-xl",
-                    quadrant.active && "border-primary/20 bg-primary/10 text-primary",
-                  )}
+                  className="rounded-xl"
                   aria-pressed={quadrant.active}
                   aria-label={`${quadrant.active ? "Disable" : "Enable"} ${quadrant.label} quadrant filter`}
                   onClick={() => toggleQuadrant(quadrant.key)}
                 >
                   {quadrant.label}
-                  <span className="ml-2 text-[10px] font-black opacity-60">{quadrant.count}</span>
+                  <span className="ml-2 text-[10px] font-semibold opacity-60">
+                    {quadrant.count}
+                  </span>
                 </Button>
               ))}
             </div>
@@ -354,42 +284,18 @@ export function WorkspaceTimeOrchestratorBlockEditor({
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {primarySummaryCards.map((card) => (
-          <div key={card.key} className={cn("rounded-3xl border p-5", card.className)}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              {card.label}
-            </p>
-            <p
-              className={cn(
-                "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
-                card.valueClassName,
-              )}
-            >
-              {card.value}
-            </p>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted">
-              {card.supportingLabel}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="rounded-3xl border border-muted bg-background px-5 py-4">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {secondarySummaryStats.map((stat) => (
-            <div key={stat.key} className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                {stat.label}
-              </p>
-              <p className="text-lg font-black tracking-tight text-foreground">{stat.value}</p>
-            </div>
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {summary?.overdue.length ?? 0} overdue · {summary?.upcoming.length ?? 0} upcoming ·{" "}
+          {summary?.highPriority.length ?? 0} high priority ·{" "}
+          {formatMinutes(summary?.totalEstimateMinutes ?? 0)} workload ·{" "}
+          {summary?.totalOpenTasks ?? 0} open · avg urgency {summary?.averageUrgency ?? 0} · avg
+          importance {summary?.averageImportance ?? 0} · {visibleQuadrants.length} quadrants
+        </p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <section className="rounded-3xl border border-muted bg-background p-5">
+        <section className="rounded-xl border border-muted bg-background p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
@@ -459,7 +365,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-3xl border border-muted bg-background p-5">
+          <section className="rounded-xl border border-muted bg-background p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
@@ -498,7 +404,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
             </div>
           </section>
 
-          <section className="rounded-3xl border border-muted bg-background p-5">
+          <section className="rounded-xl border border-muted bg-background p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
@@ -570,7 +476,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
         )}
       >
         {visibleQuadrants.map((quadrant) => (
-          <section key={quadrant.key} className="rounded-3xl border border-muted bg-background p-5">
+          <section key={quadrant.key} className="rounded-xl border border-muted bg-background p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-bold text-foreground">{quadrant.label}</p>

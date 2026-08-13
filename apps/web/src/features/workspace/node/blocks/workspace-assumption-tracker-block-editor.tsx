@@ -11,7 +11,7 @@ import {
   type WorkspaceStrategicAssumptionLinkType,
   type WorkspaceStrategicAssumptionStatus,
 } from "@orch/workspace";
-import { Activity, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
@@ -22,7 +22,6 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Textarea } from "@/ui/textarea";
-import { cn } from "@/lib/utils";
 
 const filterOptions: Array<{
   label: string;
@@ -45,19 +44,6 @@ const statusOptions: WorkspaceStrategicAssumptionStatus[] = [
 function clampConfidence(value: string) {
   const numeric = Number(value || 3);
   return Math.min(5, Math.max(1, Math.round(numeric)));
-}
-
-function getStatusClasses(status: WorkspaceStrategicAssumptionStatus) {
-  switch (status) {
-    case "confirmed":
-      return "border-success/40 bg-success/5 text-success";
-    case "at-risk":
-      return "border-destructive/40 bg-destructive/5 text-destructive";
-    case "false":
-      return "border-muted/40 bg-muted text-muted-foreground";
-    default:
-      return "border-warning/40 bg-warning/5 text-warning";
-  }
 }
 
 function getAssumptionLinkValue(assumption: WorkspaceStrategicAssumption) {
@@ -194,41 +180,16 @@ export function WorkspaceAssumptionTrackerBlockEditor({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
-            Tracked
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
-            {summary.total}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/70">
-            At Risk
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
-            {summary.atRiskCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-warning/20 bg-warning/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
-            Avg Confidence
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
-            {summary.averageConfidence}/5
-          </p>
-        </div>
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
             Strategic Assumptions
           </h2>
           <p className="text-xs text-toned">Track bets behind the strategy and surface risks.</p>
+          <p className="mt-1 text-xs text-toned">
+            {summary.total} tracked · {summary.atRiskCount} at risk · avg confidence{" "}
+            {summary.averageConfidence}/5
+          </p>
         </div>
 
         <Button
@@ -265,13 +226,26 @@ export function WorkspaceAssumptionTrackerBlockEditor({
         ))}
       </div>
 
-      {visibleAssumptions.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
-            <Activity className="size-6" />
-          </div>
-          <p className="mt-3 text-xs font-bold text-muted-foreground">
-            No assumptions in this filter
+      {block.assumptions.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-muted bg-background py-10 text-center">
+          <p className="text-sm font-semibold text-muted-foreground">
+            Add an assumption to track a strategic bet.
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-4 rounded-full"
+            onClick={addAssumption}
+          >
+            <Plus />
+            Add
+          </Button>
+        </div>
+      ) : visibleAssumptions.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-muted bg-background py-10 text-center">
+          <p className="text-sm font-semibold text-muted-foreground">
+            No assumptions match this filter.
           </p>
         </div>
       ) : (
@@ -279,17 +253,14 @@ export function WorkspaceAssumptionTrackerBlockEditor({
           {visibleAssumptions.map((assumption) => (
             <article
               key={assumption.id}
-              className={cn(
-                "rounded-2xl border p-4 transition-colors",
-                getStatusClasses(assumption.status),
-              )}
+              className="rounded-xl border border-muted bg-background p-4"
             >
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <Input
                     value={assumption.statement}
                     placeholder="Assumption statement"
-                    className="w-full border-0 bg-transparent px-0 text-base font-black text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
+                    className="w-full border-0 bg-transparent px-0 text-base font-semibold text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                     onChange={(event) =>
                       mutateBlock(tabId, block.id, (entry) => {
                         if (entry.type !== "assumption-tracker") {
@@ -340,6 +311,7 @@ export function WorkspaceAssumptionTrackerBlockEditor({
                     Link
                   </Label>
                   <BlockSelect
+                    id={`link-${assumption.id}`}
                     value={getAssumptionLinkValue(assumption)}
                     options={getLinkOptions(assumption)}
                     className="rounded-xl text-sm"

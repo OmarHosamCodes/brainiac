@@ -3,12 +3,10 @@ import {
   createWorkspaceOkrObjective,
   getOkrHealth,
   getOkrObjectiveProgress,
-  getOkrTrackerSummary,
   type WorkspaceOkrHealth,
   type WorkspaceOkrTrackerBlock,
 } from "@orch/workspace";
-import { Plus, Target, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { Plus, Trash2 } from "lucide-react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
 import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
@@ -49,7 +47,6 @@ export function WorkspaceOkrTrackerBlockEditor({
   tabId,
 }: WorkspaceBlockEditorProps<WorkspaceOkrTrackerBlock>) {
   const { mutateBlock } = useWorkspaceNodeEditorContext();
-  const summary = useMemo(() => getOkrTrackerSummary(block), [block]);
 
   function addObjective() {
     mutateBlock(tabId, block.id, (entry) => {
@@ -103,58 +100,43 @@ export function WorkspaceOkrTrackerBlockEditor({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Average Progress
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
-            {summary.averageProgress}%
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Off Track</p>
-          <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
-            {summary.offTrackCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-success/10 bg-success/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Healthy</p>
-          <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
-            {summary.healthyCount}
-          </p>
-        </div>
-      </div>
-
       <div className="flex items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">Objectives</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">Objectives</h2>
           <p className="text-xs text-toned">
             Track objective health from the average of key results.
           </p>
         </div>
 
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="rounded-full"
-          onClick={addObjective}
-        >
-          <Plus />
-          New Objective
-        </Button>
+        {block.objectives.length > 0 ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-full"
+            onClick={addObjective}
+          >
+            <Plus />
+            New Objective
+          </Button>
+        ) : null}
       </div>
 
       {block.objectives.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
-            <Target className="size-6" />
-          </div>
-          <p className="mt-3 text-xs font-bold text-muted-foreground">No objectives yet</p>
-          <p className="mt-1 text-[11px] text-toned">Add objectives to track progress and health</p>
+        <div className="rounded-xl border border-dashed border-muted bg-background py-10 text-center">
+          <p className="text-sm font-semibold text-muted-foreground">
+            Add an objective to track key results.
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-4 rounded-full"
+            onClick={addObjective}
+          >
+            <Plus />
+            Add
+          </Button>
         </div>
       ) : (
         <div className="space-y-4">
@@ -166,7 +148,7 @@ export function WorkspaceOkrTrackerBlockEditor({
               <article
                 key={objective.id}
                 className={cn(
-                  "overflow-hidden rounded-2xl border border-l-4 border-muted bg-background p-4 transition-colors",
+                  "overflow-hidden rounded-xl border border-l-4 border-muted bg-background p-4 transition-colors",
                   getHealthClasses(health),
                 )}
               >
@@ -175,7 +157,7 @@ export function WorkspaceOkrTrackerBlockEditor({
                     <Input
                       value={objective.title}
                       placeholder="Objective title"
-                      className="border-0 bg-transparent px-0 text-base font-black shadow-none focus-visible:ring-0"
+                      className="border-0 bg-transparent px-0 text-base font-semibold shadow-none focus-visible:ring-0"
                       onChange={(event) =>
                         mutateBlock(tabId, block.id, (entry) => {
                           if (entry.type !== "okr-tracker") {
@@ -191,7 +173,7 @@ export function WorkspaceOkrTrackerBlockEditor({
                         })
                       }
                     />
-                    <p className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
+                    <p className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
                       {objective.keyResults.length} key result
                       {objective.keyResults.length !== 1 ? "s" : ""}
                     </p>
@@ -199,12 +181,12 @@ export function WorkspaceOkrTrackerBlockEditor({
 
                   <div className="flex shrink-0 items-start gap-3">
                     <div className="text-right">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
                         Progress
                       </p>
                       <p
                         className={cn(
-                          "mt-1 text-xl font-black tracking-tight sm:text-2xl",
+                          "mt-1 text-xl font-semibold tracking-tight sm:text-2xl",
                           getHealthTextClasses(health),
                         )}
                       >
@@ -235,7 +217,7 @@ export function WorkspaceOkrTrackerBlockEditor({
                         <Input
                           value={keyResult.title}
                           placeholder="Key result"
-                          className="flex-1 border-0 bg-transparent px-0 text-sm font-bold shadow-none focus-visible:ring-0"
+                          className="flex-1 border-0 bg-transparent px-0 text-sm font-semibold shadow-none focus-visible:ring-0"
                           onChange={(event) =>
                             mutateBlock(tabId, block.id, (entry) => {
                               if (entry.type !== "okr-tracker") {
@@ -255,7 +237,7 @@ export function WorkspaceOkrTrackerBlockEditor({
                           }
                         />
 
-                        <span className="min-w-12 text-right font-mono text-sm font-bold text-primary">
+                        <span className="min-w-12 text-right font-mono text-sm font-semibold text-primary">
                           {keyResult.progress}%
                         </span>
 
@@ -273,56 +255,32 @@ export function WorkspaceOkrTrackerBlockEditor({
 
                       <div className="space-y-1.5">
                         <BlockProgressBar value={keyResult.progress} max={100} />
-                        <div className="flex items-center gap-2">
-                          <input
-                            id={`kr-progress-${keyResult.id}`}
-                            value={keyResult.progress}
-                            type="range"
-                            min={0}
-                            max={100}
-                            className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-                            aria-label="Key result progress"
-                            onChange={(event) =>
-                              mutateBlock(tabId, block.id, (entry) => {
-                                if (entry.type !== "okr-tracker") {
-                                  return;
-                                }
-                                const targetObjective = entry.objectives.find(
-                                  (candidate) => candidate.id === objective.id,
-                                );
-                                const targetKeyResult = targetObjective?.keyResults.find(
-                                  (candidate) => candidate.id === keyResult.id,
-                                );
-                                if (!targetKeyResult) {
-                                  return;
-                                }
-                                targetKeyResult.progress = clampProgress(event.target.value);
-                              })
-                            }
-                          />
-                          <Input
-                            type="number"
-                            value={String(keyResult.progress)}
-                            className="w-14 rounded-lg text-center text-xs font-mono"
-                            onChange={(event) =>
-                              mutateBlock(tabId, block.id, (entry) => {
-                                if (entry.type !== "okr-tracker") {
-                                  return;
-                                }
-                                const targetObjective = entry.objectives.find(
-                                  (candidate) => candidate.id === objective.id,
-                                );
-                                const targetKeyResult = targetObjective?.keyResults.find(
-                                  (candidate) => candidate.id === keyResult.id,
-                                );
-                                if (!targetKeyResult) {
-                                  return;
-                                }
-                                targetKeyResult.progress = clampProgress(event.target.value);
-                              })
-                            }
-                          />
-                        </div>
+                        <input
+                          id={`kr-progress-${keyResult.id}`}
+                          value={keyResult.progress}
+                          type="range"
+                          min={0}
+                          max={100}
+                          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+                          aria-label="Key result progress"
+                          onChange={(event) =>
+                            mutateBlock(tabId, block.id, (entry) => {
+                              if (entry.type !== "okr-tracker") {
+                                return;
+                              }
+                              const targetObjective = entry.objectives.find(
+                                (candidate) => candidate.id === objective.id,
+                              );
+                              const targetKeyResult = targetObjective?.keyResults.find(
+                                (candidate) => candidate.id === keyResult.id,
+                              );
+                              if (!targetKeyResult) {
+                                return;
+                              }
+                              targetKeyResult.progress = clampProgress(event.target.value);
+                            })
+                          }
+                        />
                       </div>
                     </div>
                   ))}

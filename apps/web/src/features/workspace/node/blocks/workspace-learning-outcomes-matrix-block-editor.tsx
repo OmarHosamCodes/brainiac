@@ -71,7 +71,7 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
   }, [availableCourses, block.courseBlockId, block.courseId]);
 
   const renderedLatestOutput = useMemo(
-    () => renderSimpleMarkdown(block.latestOutput || "No analysis saved yet."),
+    () => (block.latestOutput ? renderSimpleMarkdown(block.latestOutput) : ""),
     [block.latestOutput],
   );
 
@@ -190,10 +190,12 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+      <section className="rounded-xl border border-muted bg-background p-4">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-black tracking-tight text-foreground">Education Agent</h2>
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              Education Agent
+            </h2>
             <p className="mt-0.5 text-xs text-toned">
               Generate outcomes matrix from course roadmap context.
             </p>
@@ -234,6 +236,7 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
               Selected Course
             </Label>
             <BlockSelect
+              id="course-select"
               value={selectedCourseOption?.value ?? ""}
               options={availableCourses}
               className="rounded-xl"
@@ -283,10 +286,12 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-muted bg-background p-4">
+      <section className="rounded-xl border border-muted bg-background p-4">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-black tracking-tight text-foreground">Analysis Output</h2>
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
+              Analysis Output
+            </h2>
             <p className="mt-0.5 text-xs text-toned">
               Structured matrix mapping modules to capabilities and behaviors.
             </p>
@@ -299,16 +304,33 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
           ) : null}
         </div>
 
-        <div
-          className="prose prose-sm dark:prose-invert max-w-none rounded-xl border border-muted bg-background p-4 text-sm leading-relaxed text-toned"
-          dangerouslySetInnerHTML={{ __html: renderedLatestOutput }}
-        />
+        {block.latestOutput ? (
+          <div
+            className="prose prose-sm dark:prose-invert max-w-none rounded-xl border border-muted bg-background p-4 text-sm leading-relaxed text-toned"
+            dangerouslySetInnerHTML={{ __html: renderedLatestOutput }}
+          />
+        ) : (
+          <div className="rounded-xl border border-dashed border-muted bg-background py-12 text-center">
+            <p className="text-sm text-toned">No analysis yet.</p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mt-3"
+              disabled={!selectedCourseOption || !block.prompt.trim() || isRunning}
+              onClick={runAnalysis}
+            >
+              {isRunning ? <Loader2 className="animate-spin" /> : <Sparkles />}
+              Run AI
+            </Button>
+          </div>
+        )}
       </section>
 
       {block.outputHistory.length > 1 ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-black tracking-tight text-foreground">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
               Previous Iterations
             </h3>
             <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted">

@@ -9,8 +9,8 @@ import { Check, Minus, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
@@ -52,6 +52,9 @@ export function WorkspaceHabitGridBlockEditor({
   }
 
   function resetWeek() {
+    if (!window.confirm("Reset all habit checks for this week?")) {
+      return;
+    }
     mutateTypedBlock(tabId, block.id, "habit-grid", (entry) => {
       entry.habits = entry.habits.map((habit) => ({
         ...habit,
@@ -72,32 +75,33 @@ export function WorkspaceHabitGridBlockEditor({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4 rounded-3xl border border-muted bg-muted p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              Habit Tracking
-            </p>
-            <p className="mt-1 text-sm text-toned">
-              Review weekly consistency, update each habit quickly, and keep daily progress easy to
-              scan.
-            </p>
-          </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-48 flex-1 space-y-2">
+          <p className="text-sm text-toned">
+            {summary.totalHabits} habits · {summary.completedChecks}/{summary.possibleChecks} checks
+            · {summary.overallPercent}%
+          </p>
+          <BlockProgressBar
+            value={summary.completedChecks}
+            max={Math.max(summary.possibleChecks, 1)}
+          />
+        </div>
 
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="rounded-full px-4"
-              disabled={block.habits.length === 0}
-              aria-label="Reset all habit checks for the week"
-              onClick={resetWeek}
-            >
-              <RotateCcw />
-              Reset Week
-            </Button>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-full px-4"
+            disabled={block.habits.length === 0}
+            aria-label="Reset all habit checks for the week"
+            onClick={resetWeek}
+          >
+            <RotateCcw />
+            Reset week
+          </Button>
+          {block.habits.length > 0 ? (
             <Button
               type="button"
               variant="secondary"
@@ -107,69 +111,31 @@ export function WorkspaceHabitGridBlockEditor({
               onClick={addHabit}
             >
               <Plus />
-              Add Habit
+              Add habit
             </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-3xl border border-muted bg-background p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Habits</p>
-            <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-              {summary.totalHabits}
-            </p>
-          </div>
-          <div className="rounded-3xl border border-muted bg-background p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              Weekly Checks
-            </p>
-            <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-              {summary.completedChecks}/{summary.possibleChecks}
-            </p>
-          </div>
-          <div className="rounded-3xl border border-primary/10 bg-primary/5 p-5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
-              Overall
-            </p>
-            <p className="mt-2 text-2xl font-black tracking-tight text-primary sm:text-3xl">
-              {summary.overallPercent}%
-            </p>
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-toned">
-              {trackedDayCount} tracked days
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="rounded-2xl">
-            {summary.totalHabits} habits
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {summary.completedChecks} checks completed
-          </Badge>
-          <Badge className="rounded-2xl">{summary.overallPercent}% overall</Badge>
+          ) : null}
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-3xl border border-muted bg-background p-1">
+      <div className="overflow-x-auto rounded-xl border border-muted p-1">
         <table className="min-w-full border-separate border-spacing-y-2">
           <caption className="sr-only">
             Habit grid with {block.habits.length} habits and {trackedDayCount} day toggles per habit
           </caption>
           <thead>
             <tr>
-              <th className="min-w-[200px] px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
+              <th className="min-w-[200px] px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
                 Habit
               </th>
               {WORKSPACE_HABIT_GRID_DAYS.map((day) => (
                 <th
                   key={day}
-                  className="w-14 px-1 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
+                  className="w-14 px-1 py-3 text-center text-xs font-semibold text-muted-foreground"
                 >
                   {dayLabels[day].slice(0, 3)}
                 </th>
               ))}
-              <th className="w-20 px-4 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
+              <th className="w-20 px-4 py-3 text-center text-xs font-semibold text-muted-foreground">
                 %
               </th>
               <th className="w-12 px-4 py-3" />
@@ -178,7 +144,7 @@ export function WorkspaceHabitGridBlockEditor({
           {block.habits.length > 0 ? (
             <tbody>
               {block.habits.map((habit) => (
-                <tr key={habit.id} className="group">
+                <tr key={habit.id}>
                   <td className="px-3">
                     <Input
                       value={habit.name}
@@ -197,10 +163,10 @@ export function WorkspaceHabitGridBlockEditor({
                       <button
                         type="button"
                         className={cn(
-                          "mx-auto flex min-h-9 min-w-9 items-center justify-center rounded-xl border px-2 text-[10px] font-bold transition-all hover:scale-105 active:scale-95",
+                          "mx-auto flex min-h-9 min-w-9 items-center justify-center rounded-xl border px-2 text-xs font-semibold",
                           habit.days[day]
                             ? "border-primary/30 bg-primary/10 text-primary"
-                            : "border-muted bg-background text-muted hover:border-muted/40",
+                            : "border-muted bg-background text-muted",
                         )}
                         aria-pressed={habit.days[day]}
                         aria-label={`${habit.days[day] ? "Uncheck" : "Check"} ${dayLabels[day]} for ${habit.name || "this habit"}`}
@@ -220,7 +186,7 @@ export function WorkspaceHabitGridBlockEditor({
                     </td>
                   ))}
                   <td className="px-4 text-center">
-                    <span className="text-sm font-black text-foreground">
+                    <span className="text-sm font-semibold text-foreground">
                       {getHabitPercent(habit.days)}%
                     </span>
                   </td>
@@ -243,22 +209,18 @@ export function WorkspaceHabitGridBlockEditor({
         </table>
 
         {block.habits.length === 0 ? (
-          <div className="mx-3 mb-3 rounded-2xl border border-dashed border-muted bg-background py-12 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              No habits tracked yet
-            </p>
-            <p className="mt-2 text-sm text-toned">
-              Add the first habit to start logging daily consistency.
-            </p>
+          <div className="px-3 py-8 text-center">
+            <p className="text-sm text-muted-foreground">No habits yet.</p>
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              className="mt-4 rounded-full px-4"
+              className="mt-3 rounded-full px-4"
+              aria-label="Add tracked habit"
               onClick={addHabit}
             >
               <Plus />
-              Add First Habit
+              Add habit
             </Button>
           </div>
         ) : null}

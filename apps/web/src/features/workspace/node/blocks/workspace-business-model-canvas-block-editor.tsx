@@ -5,12 +5,11 @@ import {
   type WorkspaceBusinessModelCanvasBlock,
   type WorkspaceBusinessModelCanvasCellKey,
 } from "@orch/workspace";
-import { AlertTriangle, Sparkles } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/textarea";
 import { formatDateTime } from "@/lib/utils/format-date-time";
@@ -113,42 +112,17 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
-            Coverage
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
-            {summary.filledCellCount}/9
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-warning/20 bg-warning/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
-            Missing
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
-            {summary.missingCellCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-success/20 bg-success/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
-            Readiness
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
-            {getReadinessLabel(summary.readiness)}
-          </p>
-        </div>
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
             Business Model Canvas
           </h2>
           <p className="text-xs text-toned">
             Pressure-test how the model creates, delivers, and captures value.
+          </p>
+          <p className="mt-1 text-xs text-toned">
+            Coverage {summary.filledCellCount}/9 · Missing {summary.missingCellCount} ·{" "}
+            {getReadinessLabel(summary.readiness)}
           </p>
         </div>
 
@@ -159,79 +133,56 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
           className="rounded-full"
           onClick={runAnalysis}
         >
-          <Sparkles />
-          AI Analyze
+          Analyze gaps
         </Button>
       </div>
 
       <div className="overflow-x-auto pb-2">
         <div
-          className="grid gap-3 lg:min-w-[1000px] lg:grid-cols-5"
-          style={{
-            gridTemplateAreas: undefined,
-          }}
+          className={cn(
+            "grid gap-3 lg:min-w-[1000px] lg:grid-cols-5",
+            "lg:[grid-template-areas:'partners_activities_value_relationships_segments'_'partners_resources_value_channels_segments'_'costs_costs_revenue_revenue_revenue']",
+          )}
         >
-          <style>{`
-            @media (min-width: 1024px) {
-              .bmc-grid {
-                grid-template-areas:
-                  "partners activities value relationships segments"
-                  "partners resources value channels segments"
-                  "costs costs revenue revenue revenue";
-              }
-            }
-          `}</style>
-          <div className="bmc-grid contents">
-            {canvasCells.map((cell) => {
-              const filled = block.cells[cell.key].trim().length > 0;
+          {canvasCells.map((cell) => (
+            <article
+              key={cell.key}
+              className={cn(
+                "rounded-xl border border-muted bg-background p-4",
+                gridAreaClass[cell.area],
+              )}
+            >
+              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
+                {workspaceBusinessModelCanvasCellLabels[cell.key]}
+              </p>
 
-              return (
-                <article
-                  key={cell.key}
-                  className={cn(
-                    "rounded-2xl border p-4 transition-colors",
-                    gridAreaClass[cell.area],
-                    filled ? "border-muted bg-background" : "border-warning/30 bg-warning/5",
-                  )}
-                >
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                      {workspaceBusinessModelCanvasCellLabels[cell.key]}
-                    </p>
-                    <Badge variant={filled ? "default" : "secondary"} className="rounded-lg px-2">
-                      {filled ? "Filled" : "Empty"}
-                    </Badge>
-                  </div>
-
-                  <Textarea
-                    value={block.cells[cell.key]}
-                    rows={cell.key === "costStructure" || cell.key === "revenueStreams" ? 3 : 5}
-                    className="min-h-24 rounded-xl bg-muted"
-                    placeholder={filled ? "" : cell.placeholder}
-                    onChange={(event) =>
-                      mutateBlock(tabId, block.id, (entry) => {
-                        if (entry.type !== "business-model-canvas") {
-                          return;
-                        }
-                        entry.cells[cell.key] = event.target.value.slice(0, 4000);
-                      })
+              <Textarea
+                value={block.cells[cell.key]}
+                rows={cell.key === "costStructure" || cell.key === "revenueStreams" ? 3 : 5}
+                className="min-h-24 rounded-xl bg-muted"
+                placeholder={block.cells[cell.key].trim() ? "" : cell.placeholder}
+                onChange={(event) =>
+                  mutateBlock(tabId, block.id, (entry) => {
+                    if (entry.type !== "business-model-canvas") {
+                      return;
                     }
-                  />
-                </article>
-              );
-            })}
-          </div>
+                    entry.cells[cell.key] = event.target.value.slice(0, 4000);
+                  })
+                }
+              />
+            </article>
+          ))}
         </div>
       </div>
 
       {summary.missingCellCount > 0 ? (
-        <div className="rounded-2xl border border-warning/20 bg-warning/5 p-4">
+        <div className="rounded-xl border border-warning/20 bg-warning/5 p-4">
           <div className="flex items-start gap-3">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
               <AlertTriangle className="size-4" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-warning">Incomplete canvas</p>
+              <p className="text-sm font-semibold text-warning">Incomplete canvas</p>
               <p className="mt-1 text-xs text-toned">
                 {summary.missingCellCount} cell{summary.missingCellCount !== 1 ? "s" : ""} need
                 {summary.missingCellCount === 1 ? "s" : ""} attention. Fill all cells for a complete
@@ -242,26 +193,30 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-black tracking-tight text-foreground">Analysis Output</h3>
-            <p className="mt-0.5 text-xs text-toned">
-              Identifies strengths, gaps, and strategic questions.
-            </p>
+      {block.analysis ? (
+        <section className="rounded-xl border border-muted bg-background p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                Analysis Output
+              </h3>
+              <p className="mt-0.5 text-xs text-toned">
+                Identifies strengths, gaps, and strategic questions.
+              </p>
+            </div>
+
+            {block.analysisUpdatedAt ? (
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
+                Last analyzed {formatDateTime(block.analysisUpdatedAt)}
+              </p>
+            ) : null}
           </div>
 
-          {block.analysisUpdatedAt ? (
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              Last analyzed {formatDateTime(block.analysisUpdatedAt)}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="mt-3 rounded-xl border border-muted bg-background p-4 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
-          {block.analysis || "Run AI Analyze to generate a gap analysis of the current canvas."}
-        </div>
-      </section>
+          <div className="mt-3 rounded-xl border border-muted bg-muted p-4 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
+            {block.analysis}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

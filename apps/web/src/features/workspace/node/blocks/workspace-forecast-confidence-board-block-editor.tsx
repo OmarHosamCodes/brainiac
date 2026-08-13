@@ -12,13 +12,9 @@ import {
   ArrowLeft,
   ArrowRight,
   Award,
-  Banknote,
-  Calculator,
   ListTodo,
   Plus,
-  ShieldAlert,
   Sparkles,
-  Target,
   Trash2,
   TrendingUp,
   User,
@@ -26,6 +22,7 @@ import {
 import { useMemo, useState } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -33,14 +30,8 @@ import { Input } from "@/ui/input";
 import { Textarea } from "@/ui/textarea";
 import { cn } from "@/lib/utils";
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "EGP",
-  maximumFractionDigits: 0,
-});
-
-function formatCurrency(value: number) {
-  return currencyFormatter.format(value);
+function formatAmount(value: number) {
+  return Math.round(value).toLocaleString("en-US");
 }
 
 function toCurrencyValue(value: string, fallback = 0) {
@@ -201,101 +192,40 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div className="group relative overflow-hidden rounded-[24px] border border-success/10 bg-success/5 p-5 transition-all hover:bg-success/10">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">
-                Commit Revenue
-              </p>
-              <p className="mt-2 text-3xl font-black tracking-tight text-success">
-                {formatCurrency(summary.commitRevenue)}
-              </p>
-            </div>
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-success/10">
-              <Banknote className="size-5 text-success" />
-            </div>
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-success/60">Guaranteed closing value</p>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-[24px] border border-primary/10 bg-primary/5 p-5 transition-all hover:bg-primary/10">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
-                Weighted Forecast
-              </p>
-              <p className="mt-2 text-3xl font-black tracking-tight text-primary">
-                {formatCurrency(summary.weightedForecast)}
-              </p>
-            </div>
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10">
-              <Calculator className="size-5 text-primary" />
-            </div>
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-primary/60">Adjusted for confidence</p>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-[24px] border border-destructive/10 bg-destructive/5 p-5 transition-all hover:bg-destructive/10">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/60">
-                At-Risk Value
-              </p>
-              <p className="mt-2 text-3xl font-black tracking-tight text-destructive">
-                {formatCurrency(summary.atRiskValue)}
-              </p>
-            </div>
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-destructive/10">
-              <ShieldAlert className="size-5 text-destructive" />
-            </div>
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-destructive/60">Low confidence deals</p>
-        </div>
-
-        <div className="group relative overflow-hidden rounded-[24px] border border-warning/10 bg-warning/5 p-5 transition-all hover:bg-warning/10">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/60">
-                Coverage vs Target
-              </p>
-              <p
-                className={cn(
-                  "mt-2 text-3xl font-black tracking-tight",
-                  getCoverageTextClasses(summary.coveragePercent),
-                )}
-              >
-                {summary.coveragePercent}%
-              </p>
-            </div>
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-warning/10">
-              <Target className="size-5 text-warning" />
-            </div>
-          </div>
-          <p className="mt-4 text-xs leading-relaxed text-warning/60">
-            Avg. Confidence {summary.averageConfidence}%
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          Commit revenue {formatAmount(summary.commitRevenue)} · Weighted forecast{" "}
+          {formatAmount(summary.weightedForecast)} · At-risk {formatAmount(summary.atRiskValue)} ·
+          Coverage{" "}
+          <span className={getCoverageTextClasses(summary.coveragePercent)}>
+            {summary.coveragePercent}%
+          </span>
+        </p>
+        <BlockProgressBar
+          className="min-w-24 max-w-48 flex-1"
+          value={summary.coveragePercent}
+          max={100}
+        />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-6 px-1">
         <div className="max-w-md">
-          <h3 className="text-base font-bold text-foreground">Forecast Board</h3>
+          <h3 className="text-base font-semibold text-foreground">Forecast Board</h3>
           <p className="mt-1 text-xs leading-relaxed text-toned">
             Manage your sales pipeline by deal confidence and track performance against targets.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-3 rounded-2xl border border-muted bg-background p-1.5">
-            <label className="ml-3 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.2em] text-toned">
+          <div className="flex items-center gap-3 rounded-xl border border-muted bg-background p-1.5">
+            <label className="ml-3 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
               Target
             </label>
             <Input
               type="number"
               value={String(block.targetRevenueEgp)}
-              className="w-32 border-0 bg-transparent font-bold shadow-none focus-visible:ring-0"
+              className="w-32 border-0 bg-transparent font-semibold shadow-none focus-visible:ring-0"
               onChange={(event) =>
                 mutateTypedBlock(tabId, block.id, "forecast-confidence-board", (entry) => {
                   entry.targetRevenueEgp = toCurrencyValue(event.target.value, 50000);
@@ -306,7 +236,7 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
 
           <Button
             type="button"
-            className="rounded-full px-5 py-2.5 font-bold shadow-lg shadow-primary/20"
+            className="rounded-full px-5 py-2.5 font-semibold"
             onClick={addDeal}
           >
             <Plus />
@@ -325,11 +255,9 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
               <section
                 key={bucket}
                 className={cn(
-                  "flex w-[320px] shrink-0 snap-start flex-col rounded-[32px] border p-4 transition-all duration-300",
+                  "flex w-[320px] shrink-0 snap-start flex-col rounded-xl border p-4",
                   bucketClasses.column,
-                  dragOverBucket === bucket
-                    ? "shadow-xl ring-2 ring-primary/30 brightness-110"
-                    : "",
+                  dragOverBucket === bucket ? "ring-2 ring-primary/30" : "",
                 )}
                 onDragOver={(event) => {
                   if (!draggingDealId) {
@@ -374,14 +302,14 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                 <div className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex size-8 items-center justify-center rounded-xl border border-muted bg-background shadow-sm">
+                      <div className="flex size-8 items-center justify-center rounded-xl border border-muted bg-background">
                         <BucketIcon className={cn("size-4", bucketClasses.text)} />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase leading-none tracking-[0.2em] text-toned">
+                        <p className="text-[10px] font-semibold uppercase leading-none tracking-[0.2em] text-toned">
                           {workspaceSalesForecastBucketLabels[bucket]}
                         </p>
-                        <p className="mt-1 text-xs font-bold leading-none text-foreground/60">
+                        <p className="mt-1 text-xs font-semibold leading-none text-foreground/60">
                           {getBucketSummary(bucket).dealCount} deals
                         </p>
                       </div>
@@ -389,11 +317,11 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                   </div>
 
                   <div className="mt-6 flex items-baseline justify-between">
-                    <p className="text-2xl font-black tracking-tight text-foreground">
-                      {formatCurrency(getBucketSummary(bucket).totalValue)}
+                    <p className="text-2xl font-semibold tracking-tight text-foreground">
+                      {formatAmount(getBucketSummary(bucket).totalValue)}
                     </p>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-toned">
-                      Wgt: {formatCurrency(getBucketSummary(bucket).weightedValue)}
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-toned">
+                      Wgt: {formatAmount(getBucketSummary(bucket).weightedValue)}
                     </p>
                   </div>
                 </div>
@@ -404,7 +332,7 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                       key={deal.id}
                       draggable
                       className={cn(
-                        "group relative rounded-[24px] border border-muted bg-background p-5 shadow-sm transition-all hover:border-primary/30 hover:bg-background hover:shadow-md",
+                        "group relative rounded-xl border border-muted bg-background p-5",
                         draggingDealId === deal.id
                           ? "pointer-events-none scale-95 opacity-40 grayscale"
                           : "cursor-grab active:cursor-grabbing",
@@ -428,20 +356,18 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                           <Input
                             value={deal.clientName}
                             placeholder="Client Name"
-                            className="border-0 bg-transparent p-0 text-base font-black shadow-none focus-visible:ring-0"
+                            className="border-0 bg-transparent p-0 text-base font-semibold shadow-none focus-visible:ring-0"
                             onChange={(event) =>
                               mutateDeal(deal.id, (entry) => {
                                 entry.clientName = event.target.value.slice(0, 120);
                               })
                             }
                           />
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-toned">
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-toned">
                             <Badge variant="secondary" className="rounded-full">
                               {workspaceSalesForecastBucketLabels[deal.bucket]}
                             </Badge>
-                            <span>
-                              Weighted {formatCurrency(getForecastDealWeightedValue(deal))}
-                            </span>
+                            <span>Weighted {formatAmount(getForecastDealWeightedValue(deal))}</span>
                           </div>
                         </div>
 
@@ -484,13 +410,13 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                       <div className="mt-6 space-y-4">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
-                            <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-highlighted">
-                              VALUE (EGP)
+                            <label className="ml-1 text-[10px] font-semibold uppercase tracking-widest text-highlighted">
+                              Amount
                             </label>
                             <Input
                               type="number"
                               value={String(deal.valueEgp)}
-                              className="rounded-xl border-muted bg-background font-bold"
+                              className="rounded-xl border-muted bg-background font-semibold"
                               onChange={(event) =>
                                 mutateDeal(deal.id, (entry) => {
                                   entry.valueEgp = toCurrencyValue(event.target.value);
@@ -499,8 +425,8 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-highlighted">
-                              CLOSE MONTH
+                            <label className="ml-1 text-[10px] font-semibold uppercase tracking-widest text-highlighted">
+                              Close month
                             </label>
                             <Input
                               type="month"
@@ -516,11 +442,11 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-highlighted">
-                            OWNER
+                          <label className="ml-1 text-[10px] font-semibold uppercase tracking-widest text-highlighted">
+                            Owner
                           </label>
                           <div className="relative">
-                            <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+                            <User className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
                             <Input
                               value={deal.owner}
                               placeholder="Owner Name"
@@ -536,10 +462,10 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
 
                         <div className="pt-2">
                           <div className="mb-2 flex items-center justify-between px-1">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-highlighted">
+                            <span className="text-[10px] font-semibold uppercase tracking-widest text-highlighted">
                               Confidence
                             </span>
-                            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-black text-foreground">
+                            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-foreground">
                               {deal.confidence}%
                             </span>
                           </div>
@@ -562,8 +488,8 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                           />
                         </div>
 
-                        <div className="space-y-1.5 rounded-2xl border border-muted bg-background p-3">
-                          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-highlighted">
+                        <div className="space-y-1.5 rounded-xl border border-muted bg-background p-3">
+                          <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-highlighted">
                             <ListTodo className="size-3" />
                             Next Action
                           </label>
@@ -584,12 +510,9 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                   ))}
 
                   {dealsByBucket[bucket].length === 0 ? (
-                    <div className="flex h-full flex-col items-center justify-center rounded-[32px] border-2 border-dashed border-muted bg-background p-8 text-center">
-                      <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-background">
-                        <BucketIcon className="size-6 text-muted" />
-                      </div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-toned">
-                        Empty {bucket}
+                    <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-muted bg-background p-8 text-center">
+                      <p className="text-sm font-semibold text-muted-foreground">
+                        No {workspaceSalesForecastBucketLabels[bucket]} deals yet.
                       </p>
                     </div>
                   ) : null}

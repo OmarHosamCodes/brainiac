@@ -8,20 +8,11 @@ import {
   type WorkspaceFinancePaymentStatus,
   type WorkspaceProfitabilityCashFlowBlock,
 } from "@orch/workspace";
-import {
-  Calculator,
-  Percent,
-  Plus,
-  Receipt,
-  Trash2,
-  TrendingDown,
-  TrendingUp,
-  Users2,
-  Wallet,
-} from "lucide-react";
+import { Calculator, Plus, Receipt, Trash2, Users2 } from "lucide-react";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { BlockFieldLabel } from "@/features/workspace/node/blocks/shared/block-field-label";
 import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
@@ -38,7 +29,7 @@ const paymentStatusOptions = Object.entries(workspaceFinancePaymentStatusLabels)
 );
 
 function formatCurrency(value: number) {
-  return `${Math.round(value).toLocaleString("en-US")} EGP`;
+  return Math.round(value).toLocaleString("en-US");
 }
 
 function toInteger(value: string, fallback = 0) {
@@ -132,8 +123,6 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
     [block.expenses],
   );
 
-  const revenueTone = getProfitTone(summary.totalRevenue > 0 ? 1 : 0);
-  const expenseTone = getProfitTone(-1);
   const profitTone = getProfitTone(summary.totalProfit);
   const marginTone = getMarginTone(summary.marginPercent);
 
@@ -220,7 +209,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3 px-1">
           <div>
-            <h2 className="text-lg font-black tracking-tight text-foreground">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
               Cash Flow Overview
             </h2>
             <p className="text-xs text-toned">
@@ -229,112 +218,19 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div
-            className={cn(
-              "rounded-3xl border p-5 transition-colors",
-              revenueTone.bg,
-              revenueTone.border,
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <div
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-xl text-success",
-                  revenueTone.icon,
-                )}
-              >
-                <TrendingUp className="size-[18px]" />
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Revenue</p>
-            </div>
-            <p className="mt-3 truncate font-mono text-2xl font-black tracking-tight text-success sm:text-3xl">
-              {formatCurrency(summary.totalRevenue)}
-            </p>
-          </div>
-
-          <div
-            className={cn(
-              "rounded-3xl border p-5 transition-colors",
-              expenseTone.bg,
-              expenseTone.border,
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <div
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-xl text-destructive",
-                  expenseTone.icon,
-                )}
-              >
-                <TrendingDown className="size-[18px]" />
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Expenses
-              </p>
-            </div>
-            <p className="mt-3 truncate font-mono text-2xl font-black tracking-tight text-destructive sm:text-3xl">
-              {formatCurrency(summary.totalExpenses)}
-            </p>
-          </div>
-
-          <div
-            className={cn(
-              "rounded-3xl border p-5 transition-colors",
-              profitTone.bg,
-              profitTone.border,
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <div
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-xl",
-                  profitTone.icon,
-                )}
-              >
-                <Wallet className="size-[18px]" />
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                Net Profit
-              </p>
-            </div>
-            <p
-              className={cn(
-                "mt-3 truncate font-mono text-2xl font-black tracking-tight sm:text-3xl",
-                profitTone.text,
-              )}
-            >
-              {formatCurrency(summary.totalProfit)}
-            </p>
-          </div>
-
-          <div
-            className={cn(
-              "rounded-3xl border p-5 transition-colors",
-              marginTone.bg,
-              marginTone.border,
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <div
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-xl",
-                  marginTone.icon,
-                )}
-              >
-                <Percent className="size-[18px]" />
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Margin</p>
-            </div>
-            <p
-              className={cn(
-                "mt-3 truncate font-mono text-2xl font-black tracking-tight sm:text-3xl",
-                marginTone.text,
-              )}
-            >
-              {summary.marginPercent}%
-            </p>
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm text-muted-foreground">
+            <span className="text-success">{formatCurrency(summary.totalRevenue)}</span> revenue ·{" "}
+            <span className="text-destructive">{formatCurrency(summary.totalExpenses)}</span>{" "}
+            expenses ·{" "}
+            <span className={profitTone.text}>{formatCurrency(summary.totalProfit)}</span> net
+            profit · <span className={marginTone.text}>{summary.marginPercent}%</span> margin
+          </p>
+          <BlockProgressBar
+            className="min-w-24 max-w-48 flex-1"
+            value={summary.marginPercent}
+            max={100}
+          />
         </div>
       </section>
 
@@ -342,7 +238,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
         <section className="min-w-0 space-y-6">
           <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-black tracking-tight text-foreground">
+              <h2 className="text-lg font-semibold tracking-tight text-foreground">
                 Client Portfolio
               </h2>
               <p className="text-xs text-toned">
@@ -363,7 +259,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
           </div>
 
           {block.clients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted bg-background py-10 text-center">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-muted bg-background py-10 text-center">
               <div className="flex size-16 items-center justify-center rounded-2xl bg-muted text-muted">
                 <Users2 className="size-8" />
               </div>
@@ -385,14 +281,14 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                 return (
                   <article
                     key={client.id}
-                    className="group relative rounded-2xl border border-muted bg-background p-5 transition-all hover:border-muted"
+                    className="group relative rounded-xl border border-muted bg-background p-5 transition-all hover:border-muted"
                   >
                     <div className="mb-5 flex items-start justify-between gap-4 border-b border-muted pb-4">
                       <div className="min-w-0 flex-1">
                         <Input
                           value={client.name}
                           placeholder="Client name"
-                          className="border-0 bg-transparent px-0 text-xl font-black tracking-tight text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
+                          className="border-0 bg-transparent px-0 text-xl font-semibold tracking-tight text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                           onChange={(event) =>
                             mutateClient(client.id, (target) => {
                               target.name = event.target.value.slice(0, 120);
@@ -437,7 +333,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                       </div>
 
                       <div>
-                        <BlockFieldLabel className="mb-2 block">Revenue (EGP)</BlockFieldLabel>
+                        <BlockFieldLabel className="mb-2 block">Revenue</BlockFieldLabel>
                         <Input
                           value={String(client.revenueEgp)}
                           type="number"
@@ -451,7 +347,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                       </div>
 
                       <div>
-                        <BlockFieldLabel className="mb-2 block">Direct Cost (EGP)</BlockFieldLabel>
+                        <BlockFieldLabel className="mb-2 block">Direct Cost</BlockFieldLabel>
                         <Input
                           value={String(client.costEgp)}
                           type="number"
@@ -482,7 +378,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                               })
                             }
                           />
-                          <span className="text-xs font-black text-primary/60">%</span>
+                          <span className="text-xs font-semibold text-primary/60">%</span>
                         </div>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -502,10 +398,10 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
           )}
         </section>
 
-        <section className="flex flex-col gap-5 rounded-2xl border border-muted bg-background p-6 lg:sticky lg:top-8 lg:h-fit">
+        <section className="flex flex-col gap-5 rounded-xl border border-muted bg-background p-6 lg:sticky lg:top-8 lg:h-fit">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-black tracking-tight text-foreground">
+              <h2 className="text-base font-semibold tracking-tight text-foreground">
                 Monthly Overhead
               </h2>
               <p className="mt-0.5 text-[11px] text-muted-foreground">Recurring operating costs.</p>
@@ -526,7 +422,11 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
           {block.expenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-muted bg-background py-8 text-center">
               <Receipt className="size-6 text-muted" />
-              <p className="mt-3 text-xs font-bold text-muted-foreground">No overhead costs</p>
+              <p className="mt-3 text-xs font-bold text-muted-foreground">No overhead costs yet.</p>
+              <Button type="button" variant="ghost" size="sm" className="mt-3" onClick={addExpense}>
+                <Plus />
+                Add
+              </Button>
             </div>
           ) : (
             <div className="space-y-3">
@@ -563,7 +463,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
 
                   <div className="flex items-end justify-between gap-3">
                     <div className="flex-1">
-                      <BlockFieldLabel className="mb-1.5 block">Monthly (EGP)</BlockFieldLabel>
+                      <BlockFieldLabel className="mb-1.5 block">Monthly</BlockFieldLabel>
                       <Input
                         value={String(expense.amountEgp)}
                         type="number"
@@ -577,7 +477,7 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                     </div>
 
                     <div className="pb-0.5 text-right">
-                      <p className="font-mono text-xs font-black text-toned">
+                      <p className="font-mono text-xs font-semibold text-toned">
                         {getExpenseSharePercent(expense, totalExpenseBreakdown)}%
                       </p>
                     </div>
@@ -585,12 +485,12 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
                 </article>
               ))}
 
-              <div className="flex items-center justify-between rounded-xl border border-primary/10 bg-primary/5 p-4">
+              <div className="flex items-center justify-between rounded-xl border border-muted bg-background p-4">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
                     Total Monthly
                   </p>
-                  <p className="mt-1 font-mono text-lg font-black tracking-tight text-primary">
+                  <p className="mt-1 font-mono text-lg font-semibold tracking-tight text-primary">
                     {formatCurrency(totalExpenseBreakdown)}
                   </p>
                 </div>

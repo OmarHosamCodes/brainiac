@@ -3,14 +3,12 @@ import {
   getSeatPlannerSummary,
   isSeatUncovered,
   matchesSeatPlannerFilter,
-  workspaceSeatHealthLabels,
-  workspaceSeatLoadLevelLabels,
   workspaceSeatPlannerFilterLabels,
   type WorkspaceSeatHealth,
   type WorkspaceSeatLoadLevel,
   type WorkspaceSeatPlannerBlock,
 } from "@orch/workspace";
-import { Plus, Trash2, Users } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
@@ -114,58 +112,29 @@ export function WorkspaceSeatPlannerBlockEditor({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Filled Seats
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
-            {summary.filledSeats}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Fragile</p>
-          <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
-            {summary.fragileSeats}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-destructive/10 bg-destructive/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Uncovered</p>
-          <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
-            {summary.uncoveredSeats}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-muted bg-muted p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Overloaded</p>
-          <p className="mt-2 text-xl font-black tracking-tight text-foreground sm:text-2xl">
-            {summary.overloadedSeats}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">
-            Seat Ownership Planner
-          </h2>
-          <p className="text-xs text-toned">
-            Clarify critical functions, fragile seats, and coverage gaps.
-          </p>
-        </div>
-
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {summary.filledSeats} filled ·{" "}
+          <span className="text-warning">{summary.fragileSeats}</span> fragile ·{" "}
+          <span className="text-destructive">{summary.uncoveredSeats}</span> uncovered ·{" "}
+          {summary.overloadedSeats} overloaded
+        </p>
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="rounded-full"
+          className="ml-auto rounded-full"
           onClick={addSeat}
         >
           <Plus />
           Add Seat
         </Button>
+      </div>
+
+      <div className="px-1">
+        <p className="text-xs text-toned">
+          Clarify critical functions, fragile seats, and coverage gaps.
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -191,11 +160,27 @@ export function WorkspaceSeatPlannerBlockEditor({
       </div>
 
       {visibleSeats.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
-            <Users className="size-6" />
-          </div>
-          <p className="mt-3 text-xs font-bold text-muted-foreground">No seats match this filter</p>
+        <div className="rounded-xl border border-dashed border-muted bg-background py-10 text-center">
+          {block.seats.length === 0 ? (
+            <>
+              <p className="text-sm font-semibold text-muted-foreground">No seats yet.</p>
+              <p className="mt-1 text-sm text-toned">Add a seat to map ownership and coverage.</p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="mt-4 rounded-full"
+                onClick={addSeat}
+              >
+                <Plus />
+                Add
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm font-semibold text-muted-foreground">
+              No seats match this filter.
+            </p>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto pb-2">
@@ -345,38 +330,9 @@ export function WorkspaceSeatPlannerBlockEditor({
         </div>
       )}
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-muted bg-background p-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Health</p>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {healthOptions.map((option) => (
-              <Badge key={option.value} variant="secondary" className="rounded-full px-2">
-                {workspaceSeatHealthLabels[option.value]}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-muted bg-background p-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Load</p>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {loadOptions.map((option) => (
-              <Badge key={option.value} variant="secondary" className="rounded-full px-2">
-                {workspaceSeatLoadLevelLabels[option.value]}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-muted bg-background p-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Coverage Rule
-          </p>
-          <p className="mt-2.5 text-xs text-toned">
-            Uncovered when owner missing, backup missing, or marked as gap.
-          </p>
-        </div>
-      </div>
+      <p className="text-xs text-toned">
+        Uncovered when owner missing, backup missing, or marked as gap.
+      </p>
     </div>
   );
 }

@@ -9,12 +9,11 @@ import {
   type WorkspaceSalesPipelineStage,
   type WorkspaceSalesTemperature,
 } from "@orch/workspace";
-import { BadgeDollarSign, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
 import { BlockFieldLabel } from "@/features/workspace/node/blocks/shared/block-field-label";
-import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Badge } from "@/ui/badge";
@@ -36,14 +35,8 @@ const stageOptions = (["lead", "consultation", "proposal", "negotiation", "close
   }),
 ) satisfies Array<{ label: string; value: WorkspaceSalesPipelineStage }>;
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "EGP",
-  maximumFractionDigits: 0,
-});
-
-function formatCurrency(value: number) {
-  return currencyFormatter.format(value);
+function formatAmount(value: number) {
+  return Math.round(value).toLocaleString("en-US");
 }
 
 function toCurrencyValue(value: string) {
@@ -61,17 +54,6 @@ function clampScore(value: string) {
   return Math.min(100, Math.max(0, Math.round(numeric)));
 }
 
-function getTemperatureDotClasses(temperature: WorkspaceSalesTemperature) {
-  switch (temperature) {
-    case "hot":
-      return "bg-destructive";
-    case "warm":
-      return "bg-warning";
-    default:
-      return "bg-muted";
-  }
-}
-
 function getScoreTextClasses(score: number) {
   switch (getDealScoreTone(score)) {
     case "strong":
@@ -81,41 +63,6 @@ function getScoreTextClasses(score: number) {
     default:
       return "text-destructive";
   }
-}
-
-function getCardClasses(score: number) {
-  switch (getDealScoreTone(score)) {
-    case "strong":
-      return "border-success/20 bg-success/5";
-    case "medium":
-      return "border-warning/20 bg-warning/5";
-    default:
-      return "border-destructive/20 bg-destructive/5";
-  }
-}
-
-function getPriorityLabel(score: number) {
-  if (score >= 75) {
-    return "Strong";
-  }
-
-  if (score >= 50) {
-    return "Watch";
-  }
-
-  return "Weak";
-}
-
-function getPrioritySummary(score: number) {
-  if (score >= 75) {
-    return "High-priority opportunity with strong momentum.";
-  }
-
-  if (score >= 50) {
-    return "Worth advancing, but it still needs focused follow-through.";
-  }
-
-  return "Low-confidence opportunity that needs qualification or a reset.";
 }
 
 export function WorkspaceDealScoringMatrixBlockEditor({
@@ -162,47 +109,15 @@ export function WorkspaceDealScoringMatrixBlockEditor({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Pipeline</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {formatCurrency(summary.totalValue)}
-          </p>
-          <p className="mt-1 text-sm text-toned">{summary.dealCount} active deals</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Avg Score</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.averageScore}
-          </p>
-          <p className="mt-1 text-sm text-toned">Prioritization score out of 100</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">Hot Deals</p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {summary.hotCount}
-          </p>
-          <p className="mt-1 text-sm text-toned">Immediate follow-up required</p>
-        </div>
-
-        <div className="rounded-3xl border border-muted bg-muted p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Advanced Stage
-          </p>
-          <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            {advancedStageCount}
-          </p>
-          <p className="mt-1 text-sm text-toned">Proposal or later</p>
-        </div>
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
           <p className="text-sm font-semibold text-foreground">Deal priority stack</p>
           <p className="text-sm text-toned">
             Deals are automatically ranked by score so the best opportunities stay at the top.
+          </p>
+          <p className="mt-1 text-xs text-toned">
+            {formatAmount(summary.totalValue)} pipeline · avg score {summary.averageScore} ·{" "}
+            {summary.hotCount} hot · {advancedStageCount} advanced
           </p>
         </div>
 
@@ -213,47 +128,51 @@ export function WorkspaceDealScoringMatrixBlockEditor({
             </Badge>
           ) : null}
 
-          <Button type="button" variant="secondary" className="rounded-full px-4" onClick={addDeal}>
-            <Plus />
-            Add Deal
-          </Button>
+          {sortedDeals.length > 0 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="rounded-full px-4"
+              onClick={addDeal}
+            >
+              <Plus />
+              Add Deal
+            </Button>
+          ) : null}
         </div>
       </div>
 
       {sortedDeals.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-muted bg-background py-12 text-center">
-          <p className="text-sm font-semibold text-muted-foreground">No scored deals yet.</p>
-          <p className="mt-1 text-sm text-toned">
-            Add your first opportunity to start ranking the pipeline.
+        <div className="rounded-xl border border-dashed border-muted bg-background py-12 text-center">
+          <p className="text-sm font-semibold text-muted-foreground">
+            Add a deal to start ranking the pipeline.
           </p>
+          <Button
+            type="button"
+            variant="secondary"
+            className="mt-4 rounded-full px-4"
+            onClick={addDeal}
+          >
+            <Plus />
+            Add
+          </Button>
         </div>
       ) : (
         <div className="space-y-4">
           {sortedDeals.map((deal, index) => (
-            <article
-              key={deal.id}
-              className={cn("rounded-3xl border p-5 transition-colors", getCardClasses(deal.score))}
-            >
+            <article key={deal.id} className="rounded-xl border border-muted bg-background p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        "size-2.5 shrink-0 rounded-full",
-                        getTemperatureDotClasses(deal.temperature),
-                      )}
-                    />
-                    <Input
-                      value={deal.clientName}
-                      placeholder="Client name"
-                      className="w-full border-0 bg-transparent px-0 text-lg font-bold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
-                      onChange={(event) =>
-                        mutateDeal(deal.id, (target) => {
-                          target.clientName = event.target.value.slice(0, 120);
-                        })
-                      }
-                    />
-                  </div>
+                  <Input
+                    value={deal.clientName}
+                    placeholder="Client name"
+                    className="w-full border-0 bg-transparent px-0 text-lg font-semibold text-foreground placeholder:text-muted shadow-none focus-visible:ring-0"
+                    onChange={(event) =>
+                      mutateDeal(deal.id, (target) => {
+                        target.clientName = event.target.value.slice(0, 120);
+                      })
+                    }
+                  />
 
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="rounded-full">
@@ -273,56 +192,32 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                      Score
-                    </p>
-                    <p
-                      className={cn(
-                        "mt-1 text-2xl font-black tracking-tight sm:text-3xl",
-                        getScoreTextClasses(deal.score),
-                      )}
-                    >
-                      {deal.score}
-                    </p>
-                    <p
-                      className={cn("mt-1 text-xs font-semibold", getScoreTextClasses(deal.score))}
-                    >
-                      {getPriorityLabel(deal.score)}
-                    </p>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="rounded-2xl hover:text-destructive"
-                    aria-label={`Remove ${deal.clientName || "deal"}`}
-                    onClick={() => removeDeal(deal.id)}
-                  >
-                    <Trash2 />
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-xl hover:text-destructive"
+                  aria-label={`Remove ${deal.clientName || "deal"}`}
+                  onClick={() => removeDeal(deal.id)}
+                >
+                  <Trash2 />
+                </Button>
               </div>
 
               <div className="mt-5 grid gap-4 lg:grid-cols-4">
                 <div className="space-y-1.5">
                   <Label>
-                    <BlockFieldLabel>Deal Value (EGP)</BlockFieldLabel>
+                    <BlockFieldLabel>Amount</BlockFieldLabel>
                   </Label>
-                  <div className="relative">
-                    <BadgeDollarSign className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      value={String(deal.valueEgp)}
-                      type="number"
-                      className="w-full rounded-2xl pl-9"
-                      onChange={(event) =>
-                        mutateDeal(deal.id, (target) => {
-                          target.valueEgp = toCurrencyValue(event.target.value);
-                        })
-                      }
-                    />
-                  </div>
+                  <Input
+                    value={String(deal.valueEgp)}
+                    type="number"
+                    className="w-full rounded-xl"
+                    onChange={(event) =>
+                      mutateDeal(deal.id, (target) => {
+                        target.valueEgp = toCurrencyValue(event.target.value);
+                      })
+                    }
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -332,7 +227,7 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                   <BlockSelect
                     value={deal.temperature}
                     options={temperatureOptions}
-                    className="rounded-2xl"
+                    className="rounded-xl"
                     onValueChange={(value) =>
                       mutateDeal(deal.id, (target) => {
                         target.temperature =
@@ -349,7 +244,7 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                   <BlockSelect
                     value={deal.stage}
                     options={stageOptions}
-                    className="rounded-2xl"
+                    className="rounded-xl"
                     onValueChange={(value) =>
                       mutateDeal(deal.id, (target) => {
                         target.stage =
@@ -372,7 +267,7 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                   <Input
                     value={deal.dueDate ?? ""}
                     type="date"
-                    className="w-full rounded-2xl"
+                    className="w-full rounded-xl"
                     onChange={(event) =>
                       mutateDeal(deal.id, (target) => {
                         target.dueDate = event.target.value || null;
@@ -382,16 +277,13 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                 </div>
               </div>
 
-              <div className="mt-5 space-y-3">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                  <span>Priority Score</span>
-                  <span className={getScoreTextClasses(deal.score)}>
-                    {getPriorityLabel(deal.score)}
+              <div className="mt-5 space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.2em] text-toned">
+                  <span>Score</span>
+                  <span className={cn("font-semibold", getScoreTextClasses(deal.score))}>
+                    {deal.score}
                   </span>
                 </div>
-
-                <BlockProgressBar value={deal.score} max={100} className="h-1.5" />
-
                 <input
                   value={deal.score}
                   type="range"
@@ -399,6 +291,7 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                   max={100}
                   step={1}
                   className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+                  aria-label={`Score for ${deal.clientName || "deal"}`}
                   onChange={(event) =>
                     mutateDeal(deal.id, (target) => {
                       target.score = clampScore(event.target.value);
@@ -407,38 +300,21 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                 />
               </div>
 
-              <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_14rem]">
-                <div className="space-y-1.5">
-                  <Label>
-                    <BlockFieldLabel>Next Action</BlockFieldLabel>
-                  </Label>
-                  <Input
-                    value={deal.nextAction}
-                    className="w-full rounded-2xl"
-                    placeholder="What needs to happen next?"
-                    onChange={(event) =>
-                      mutateDeal(deal.id, (target) => {
-                        target.nextAction = event.target.value.slice(0, 240);
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="rounded-2xl border border-muted bg-background p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-                    Priority context
-                  </p>
-                  <p className="mt-2 text-sm font-semibold text-foreground">
-                    {workspaceSalesPipelineStageLabels[deal.stage]}
-                  </p>
-                  <p className="mt-1 text-sm text-toned">{getPrioritySummary(deal.score)}</p>
-                </div>
+              <div className="mt-5 space-y-1.5">
+                <Label>
+                  <BlockFieldLabel>Next Action</BlockFieldLabel>
+                </Label>
+                <Input
+                  value={deal.nextAction}
+                  className="w-full rounded-xl"
+                  placeholder="What needs to happen next?"
+                  onChange={(event) =>
+                    mutateDeal(deal.id, (target) => {
+                      target.nextAction = event.target.value.slice(0, 240);
+                    })
+                  }
+                />
               </div>
-
-              <p className="mt-4 text-sm text-toned">
-                {formatCurrency(deal.valueEgp)} opportunity with{" "}
-                {workspaceSalesTemperatureLabels[deal.temperature].toLowerCase()} urgency.
-              </p>
             </article>
           ))}
         </div>

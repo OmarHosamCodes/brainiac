@@ -1,11 +1,8 @@
-import { cn } from "@/lib/utils";
 import type { WorkspaceNotesBlock } from "@orch/workspace";
-import { Eye, Pencil, StickyNote } from "lucide-react";
-import { useMemo } from "react";
+import { Eye, Pencil } from "lucide-react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/textarea";
 
@@ -17,10 +14,7 @@ export function WorkspaceNotesBlockEditor({
     useWorkspaceNodeEditorContext();
 
   const isPreview = isNotePreviewEnabled(block.id);
-  const wordCount = useMemo(
-    () => block.body.trim().split(/\s+/).filter(Boolean).length,
-    [block.body],
-  );
+  const isEmpty = !block.body.trim();
 
   function updateBody(value: string) {
     mutateTypedBlock(tabId, block.id, "notes", (entry) => {
@@ -28,64 +22,49 @@ export function WorkspaceNotesBlockEditor({
     });
   }
 
-  return (
-    <div className="group relative flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="rounded-2xl">
-            {isPreview ? "Preview" : "Editing"}
-          </Badge>
-          <Badge variant="secondary" className="rounded-2xl">
-            {wordCount} {wordCount === 1 ? "word" : "words"}
-          </Badge>
-        </div>
+  function handleTogglePreview() {
+    toggleNotePreview(block.id);
+  }
 
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-            Markdown supported
-          </p>
+  return (
+    <div className="flex flex-col gap-3">
+      {isPreview && isEmpty ? null : (
+        <div className="flex justify-end">
           <Button
             type="button"
             variant="secondary"
             size="sm"
-            className="rounded-full px-3"
+            className="rounded-full"
             aria-label={isPreview ? "Switch to note editing" : "Switch to note preview"}
-            onClick={() => toggleNotePreview(block.id)}
+            onClick={handleTogglePreview}
           >
             {isPreview ? <Pencil /> : <Eye />}
             {isPreview ? "Edit" : "Preview"}
           </Button>
         </div>
-      </div>
+      )}
 
-      <div
-        className={cn(
-          "min-h-[240px] rounded-3xl border border-muted bg-background shadow-sm transition-all focus-within:border-primary/40 focus-within:bg-background",
-          isPreview && "p-8",
-        )}
-      >
-        {!isPreview ? (
-          <Textarea
-            value={block.body}
-            placeholder="Capture notes, decisions, or raw thinking..."
-            rows={12}
-            className="min-h-[240px] w-full resize-y border-0 bg-transparent p-8 font-serif text-base leading-relaxed text-highlighted shadow-none placeholder:text-muted focus-visible:ring-0"
-            onChange={(event) => updateBody(event.target.value)}
-          />
-        ) : !block.body.trim() ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <StickyNote className="mb-3 size-8 text-muted" />
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              No notes to preview
-            </p>
-          </div>
-        ) : (
-          <div
-            className="prose prose-primary dark:prose-invert max-w-none text-foreground selection:bg-primary/20 [&_p]:leading-[1.8] [&]:font-serif"
-            dangerouslySetInnerHTML={{ __html: renderNotesPreview(block.body) }}
-          />
-        )}
-      </div>
+      {!isPreview ? (
+        <Textarea
+          value={block.body}
+          placeholder="Capture notes, decisions, or raw thinking..."
+          rows={12}
+          className="min-h-[240px] resize-y rounded-xl text-base leading-relaxed"
+          onChange={(event) => updateBody(event.target.value)}
+        />
+      ) : isEmpty ? (
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-sm text-muted-foreground">Nothing to preview yet.</p>
+          <Button type="button" className="rounded-full" onClick={handleTogglePreview}>
+            Edit
+          </Button>
+        </div>
+      ) : (
+        <div
+          className="prose prose-primary dark:prose-invert max-w-none text-foreground selection:bg-primary/20 [&_p]:leading-[1.8]"
+          dangerouslySetInnerHTML={{ __html: renderNotesPreview(block.body) }}
+        />
+      )}
     </div>
   );
 }

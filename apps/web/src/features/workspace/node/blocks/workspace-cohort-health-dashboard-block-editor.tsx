@@ -19,12 +19,11 @@ import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
-import { cn } from "@/lib/utils";
 
 const statusOptions: WorkspaceCohortStatus[] = ["planning", "selling", "running", "completed"];
 
 function formatCurrency(value: number) {
-  return `${Math.round(value).toLocaleString("en-US")} EGP`;
+  return Math.round(value).toLocaleString("en-US");
 }
 
 function toPositiveInt(value: string | number | null | undefined, fallback: number) {
@@ -32,14 +31,18 @@ function toPositiveInt(value: string | number | null | undefined, fallback: numb
   return Math.max(0, Math.round(Number.isFinite(numeric) ? numeric : fallback));
 }
 
-function getHealthClasses(health: ReturnType<typeof getCohortHealth>) {
+function getHealthLabel(health: ReturnType<typeof getCohortHealth>) {
   switch (health) {
     case "healthy":
-      return "border-success/30 bg-success/5 text-success";
+      return "Healthy";
     case "watch":
-      return "border-warning/30 bg-warning/5 text-warning";
-    default:
-      return "border-destructive/30 bg-destructive/5 text-destructive";
+      return "Watch";
+    case "at-risk":
+      return "At risk";
+    default: {
+      const _never: never = health;
+      return _never;
+    }
   }
 }
 
@@ -49,8 +52,12 @@ function getHealthBadgeVariant(health: ReturnType<typeof getCohortHealth>) {
       return "success" as const;
     case "watch":
       return "warning" as const;
-    default:
+    case "at-risk":
       return "destructive" as const;
+    default: {
+      const _never: never = health;
+      return _never;
+    }
   }
 }
 
@@ -107,59 +114,21 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
-            Seats Sold
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
-            {summary.totalSeatsSold}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-success/20 bg-success/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
-            Capacity Filled
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
-            {summary.fillPercent}%
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-secondary/20 bg-secondary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/80">
-            Booked Revenue
-          </p>
-          <p className="mt-2 font-mono text-lg font-black tracking-tight text-secondary sm:text-xl">
-            {formatCurrency(summary.bookedRevenueEgp)}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/70">
-            At Risk
-          </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
-            {summary.atRiskCount}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-start justify-between gap-3 px-1">
-        <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">
-            Cohort Health Dashboard
-          </h2>
-          <p className="text-xs text-toned">
-            Track fill rate, revenue, and delivery risk per cohort.
-          </p>
-        </div>
-
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted-foreground">
+          {summary.totalSeatsSold} seats sold · {summary.fillPercent}% capacity ·{" "}
+          {formatCurrency(summary.bookedRevenueEgp)} booked · {summary.atRiskCount} at risk
+        </p>
+        <BlockProgressBar
+          className="min-w-24 max-w-48 flex-1"
+          value={summary.fillPercent}
+          max={100}
+        />
         <Button
           type="button"
           variant="secondary"
           size="sm"
-          className="rounded-full"
+          className="ml-auto rounded-full"
           onClick={addCohort}
         >
           <Plus />
@@ -167,12 +136,27 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
         </Button>
       </div>
 
+      <div className="flex flex-wrap items-start justify-between gap-3 px-1">
+        <div>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">
+            Cohort Health Dashboard
+          </h2>
+          <p className="text-xs text-toned">
+            Track fill rate, revenue, and delivery risk per cohort.
+          </p>
+        </div>
+      </div>
+
       {block.cohorts.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-muted bg-background py-10 text-center">
+        <div className="rounded-xl border border-dashed border-muted bg-background py-10 text-center">
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-muted">
             <Users className="size-6" />
           </div>
-          <p className="mt-3 text-xs font-bold text-muted-foreground">No cohorts tracked yet</p>
+          <p className="mt-3 text-sm text-toned">No cohorts yet.</p>
+          <Button type="button" variant="ghost" size="sm" className="mt-3" onClick={addCohort}>
+            <Plus />
+            Add
+          </Button>
         </div>
       ) : (
         <div className="grid gap-4">
@@ -181,17 +165,14 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
             const fillPercent = getCohortFillPercent(cohort);
 
             return (
-              <article
-                key={cohort.id}
-                className={cn("rounded-2xl border p-4 transition-colors", getHealthClasses(health))}
-              >
+              <article key={cohort.id} className="rounded-xl border border-muted bg-background p-4">
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <Input
                         value={cohort.name}
                         placeholder="Cohort name"
-                        className="min-w-[12rem] flex-1 border-0 bg-transparent px-0 text-base font-black text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
+                        className="min-w-[12rem] flex-1 border-0 bg-transparent px-0 text-base font-semibold text-foreground shadow-none placeholder:text-muted focus-visible:ring-0"
                         onChange={(event) =>
                           mutateCohort(cohort.id, (entry) => {
                             entry.name = event.target.value.slice(0, 120);
@@ -200,7 +181,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                       />
 
                       <Badge variant={getHealthBadgeVariant(health)} className="rounded-lg px-3">
-                        {health}
+                        {getHealthLabel(health)}
                       </Badge>
                     </div>
 
@@ -291,7 +272,7 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                         htmlFor={`revenue-${cohort.id}`}
                         className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
                       >
-                        Revenue (EGP)
+                        Revenue
                       </Label>
                       <Input
                         id={`revenue-${cohort.id}`}

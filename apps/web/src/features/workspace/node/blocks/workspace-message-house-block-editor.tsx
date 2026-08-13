@@ -15,6 +15,7 @@ import { Label } from "@/ui/label";
 import { Textarea } from "@/ui/textarea";
 import { formatDateTime } from "@/lib/utils/format-date-time";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { renderSimpleMarkdown } from "@/lib/utils/render-simple-markdown";
 
 const bottomSections = [
   {
@@ -79,36 +80,36 @@ export function WorkspaceMessageHouseBlockEditor({
   return (
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4">
+        <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Filled</p>
-          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
+          <p className="mt-2 text-xl font-semibold tracking-tight text-primary sm:text-2xl">
             {summary.filledSectionCount}/7
           </p>
         </div>
 
-        <div className="rounded-2xl border border-secondary/10 bg-secondary/5 p-4">
+        <div className="rounded-xl border border-secondary/10 bg-secondary/5 p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">
             Pillars
           </p>
-          <p className="mt-2 text-xl font-black tracking-tight text-secondary sm:text-2xl">
+          <p className="mt-2 text-xl font-semibold tracking-tight text-secondary sm:text-2xl">
             {summary.pillarCount}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
+        <div className="rounded-xl border border-warning/10 bg-warning/5 p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/60">
             Stress Test
           </p>
-          <p className="mt-2 text-lg font-black tracking-tight text-warning sm:text-xl">
+          <p className="mt-2 text-lg font-semibold tracking-tight text-warning sm:text-xl">
             {summary.latestStressTestAvailable ? "Saved" : "Pending"}
           </p>
         </div>
       </div>
 
-      <section className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+      <section className="rounded-xl border border-primary/20 bg-primary/5 p-5">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-black tracking-tight text-foreground">Brand Promise</h2>
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">Brand Promise</h2>
             <p className="mt-0.5 text-xs text-toned">
               The line the whole team can repeat without improvising.
             </p>
@@ -130,7 +131,7 @@ export function WorkspaceMessageHouseBlockEditor({
         <Textarea
           value={block.brandPromise}
           rows={3}
-          className="rounded-2xl bg-background text-lg leading-relaxed font-black tracking-tight"
+          className="rounded-xl bg-background text-lg leading-relaxed font-semibold tracking-tight"
           placeholder="What is the single promise this brand owns?"
           onChange={(event) =>
             mutateBlock(tabId, block.id, (entry) => {
@@ -145,10 +146,7 @@ export function WorkspaceMessageHouseBlockEditor({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {block.pillars.map((pillar) => (
-          <article
-            key={pillar.id}
-            className="rounded-2xl border border-muted bg-background p-4 transition-colors hover:border-muted"
-          >
+          <article key={pillar.id} className="rounded-xl border border-muted bg-background p-4">
             <div className="mb-3">
               <Label
                 htmlFor={`pillar-title-${pillar.id}`}
@@ -160,7 +158,7 @@ export function WorkspaceMessageHouseBlockEditor({
                 id={`pillar-title-${pillar.id}`}
                 value={pillar.title}
                 placeholder="Pillar title"
-                className="border-0 bg-transparent px-0 text-base font-black tracking-tight uppercase shadow-none focus-visible:ring-0"
+                className="border-0 bg-transparent px-0 text-base font-semibold tracking-tight uppercase shadow-none focus-visible:ring-0"
                 onChange={(event) =>
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== "message-house") {
@@ -207,10 +205,7 @@ export function WorkspaceMessageHouseBlockEditor({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {bottomSections.map((section) => (
-          <article
-            key={section.key}
-            className="rounded-2xl border border-muted bg-background p-4 transition-colors hover:border-muted"
-          >
+          <article key={section.key} className="rounded-xl border border-muted bg-background p-4">
             <Label
               htmlFor={section.key}
               className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] text-toned"
@@ -236,10 +231,10 @@ export function WorkspaceMessageHouseBlockEditor({
         ))}
       </div>
 
-      <section className="rounded-2xl border border-warning/20 bg-warning/5 p-4">
+      <section className="rounded-xl border border-warning/20 bg-warning/5 p-4">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-black tracking-tight text-foreground">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground">
               Stress-Test Output
             </h2>
             <p className="mt-0.5 text-xs text-toned">Finds gaps, contradictions, and weak proof.</p>
@@ -254,10 +249,15 @@ export function WorkspaceMessageHouseBlockEditor({
 
         <div className="min-h-[80px] rounded-xl border border-muted bg-background p-4 text-sm leading-relaxed text-toned">
           {block.latestStressTest ? (
-            <p className="whitespace-pre-wrap">{block.latestStressTest}</p>
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed text-toned"
+              dangerouslySetInnerHTML={{
+                __html: renderSimpleMarkdown(block.latestStressTest),
+              }}
+            />
           ) : (
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-toned">
-              Run AI Stress-Test to get a critique of the messaging
+            <p className="text-sm text-toned">
+              Run AI Stress-Test to get a critique of the messaging.
             </p>
           )}
         </div>
