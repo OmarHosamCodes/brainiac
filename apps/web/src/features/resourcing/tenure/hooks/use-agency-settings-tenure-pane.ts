@@ -11,6 +11,7 @@ import { useTeamStore } from "@/features/team/team-store";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
+import { emptyAlertPolicyDraft, type AlertPolicyDraft } from "../agency-settings-alert-policy";
 import type { TenurePolicyDraft } from "../agency-settings-tenure-policy";
 import type {
   PeopleGuidedHrDraft,
@@ -135,6 +136,17 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     ),
   );
 
+  const alertPolicyQuery = useQuery(
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.memberProfile.alertPolicy.get.queryOptions({ input: { teamId } }),
+        enabled: Boolean(teamId) && active,
+      },
+      "cold",
+      { liveGated: true, teamId },
+    ),
+  );
+
   const summaryQuery = useQuery(
     withAgencySyncQueryOptions(
       {
@@ -246,7 +258,27 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     });
   }, [policy]);
 
+  const [alertPolicyDraft, setAlertPolicyDraft] = useState<AlertPolicyDraft>(emptyAlertPolicyDraft);
+  const alertPolicy = alertPolicyQuery.data?.policy ?? null;
+
+  useEffect(() => {
+    if (!alertPolicy) return;
+    setAlertPolicyDraft({
+      abnormalDayEnabled: alertPolicy.abnormalDayEnabled,
+      abnormalDayExtraHours: String(alertPolicy.abnormalDayExtraHours),
+      monthPaceEnabled: alertPolicy.monthPaceEnabled,
+      monthPacePercent: String(alertPolicy.monthPacePercent),
+      quarterPaceEnabled: alertPolicy.quarterPaceEnabled,
+      quarterPacePercent: String(alertPolicy.quarterPacePercent),
+      wasteSpikeEnabled: alertPolicy.wasteSpikeEnabled,
+      wasteSpikePercent: String(alertPolicy.wasteSpikePercent),
+    });
+  }, [alertPolicy]);
+
   const savePolicyMutation = useMutation(orpc.agencyOps.tenure.policy.upsert.mutationOptions());
+  const saveAlertPolicyMutation = useMutation(
+    orpc.agencyOps.memberProfile.alertPolicy.upsert.mutationOptions(),
+  );
   const saveProfileMutation = useMutation(orpc.agencyOps.tenure.profiles.upsert.mutationOptions());
   const saveExemptionMutation = useMutation(
     orpc.agencyOps.tenure.exemptions.upsert.mutationOptions(),
@@ -469,6 +501,9 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
         queryKey: orpc.agencyOps.tenure.policy.get.key({ input: { teamId } }),
       }),
       queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.memberProfile.alertPolicy.get.key({ input: { teamId } }),
+      }),
+      queryClient.invalidateQueries({
         queryKey: orpc.agencyOps.tenure.summary.list.key({ input: { teamId } }),
       }),
       queryClient.invalidateQueries({
@@ -528,6 +563,31 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
       setDefaultsOpen(false);
     } catch (error) {
       toast.error("Couldn't save defaults", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    }
+  }
+
+  async function saveAlertPolicy() {
+    if (!teamId || !isOwner) return;
+    try {
+      await saveAlertPolicyMutation.mutateAsync({
+        teamId,
+        abnormalDayEnabled: alertPolicyDraft.abnormalDayEnabled,
+        abnormalDayExtraHours: Number.parseInt(alertPolicyDraft.abnormalDayExtraHours, 10),
+        monthPaceEnabled: alertPolicyDraft.monthPaceEnabled,
+        monthPacePercent: Number.parseInt(alertPolicyDraft.monthPacePercent, 10),
+        quarterPaceEnabled: alertPolicyDraft.quarterPaceEnabled,
+        quarterPacePercent: Number.parseInt(alertPolicyDraft.quarterPacePercent, 10),
+        wasteSpikeEnabled: alertPolicyDraft.wasteSpikeEnabled,
+        wasteSpikePercent: Number.parseInt(alertPolicyDraft.wasteSpikePercent, 10),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.memberProfile.alertPolicy.get.key({ input: { teamId } }),
+      });
+      toast.success("Profile alerts saved");
+    } catch (error) {
+      toast.error("Couldn't save profile alerts", {
         description: getErrorMessage(error, "Try again."),
       });
     }
@@ -906,6 +966,10 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
     fiscalYearPreview,
     savingPolicy: savePolicyMutation.isPending,
     savePolicy,
+    alertPolicyDraft,
+    setAlertPolicyDraft,
+    savingAlertPolicy: saveAlertPolicyMutation.isPending,
+    saveAlertPolicy,
     defaultsOpen,
     setDefaultsOpen,
     policyEnabled,

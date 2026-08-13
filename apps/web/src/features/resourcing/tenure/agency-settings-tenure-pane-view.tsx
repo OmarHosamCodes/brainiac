@@ -6,6 +6,7 @@ import { Skeleton } from "@/ui/skeleton";
 import { AgencyPeopleDepartments } from "./agency-people-departments";
 import { AgencyPeopleDirectory } from "./agency-people-directory";
 import { AgencyPeopleGuidedMember } from "./agency-people-guided-member";
+import { AgencySettingsAlertPolicy } from "./agency-settings-alert-policy";
 import { AgencySettingsTenurePolicy } from "./agency-settings-tenure-policy";
 import { type AgencySettingsTenurePaneViewModel } from "./hooks/use-agency-settings-tenure-pane";
 
@@ -96,11 +97,11 @@ export function AgencySettingsTenurePaneView({
       )}
 
       <Dialog open={viewModel.defaultsOpen} onOpenChange={viewModel.setDefaultsOpen}>
-        <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-xl">
           <DialogHeader className="border-border border-b px-6 py-4">
             <DialogTitle>Team defaults</DialogTitle>
             <DialogDescription>
-              Work schedule, tenure policy, and department catalog for the team.
+              Work schedule, tenure policy, profile alerts, and department catalog for the team.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[min(70vh,36rem)] space-y-8 overflow-y-auto px-6 py-5">
@@ -120,6 +121,13 @@ export function AgencySettingsTenurePaneView({
               saving={viewModel.savingPolicy}
               onSave={() => void viewModel.savePolicy()}
               embedded
+            />
+            <AgencySettingsAlertPolicy
+              policyDraft={viewModel.alertPolicyDraft}
+              onPolicyDraftChange={viewModel.setAlertPolicyDraft}
+              isOwner={viewModel.isOwner}
+              saving={viewModel.savingAlertPolicy}
+              onSave={() => void viewModel.saveAlertPolicy()}
             />
           </div>
         </DialogContent>
