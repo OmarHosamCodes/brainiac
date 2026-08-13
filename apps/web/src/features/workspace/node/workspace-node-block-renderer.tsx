@@ -1,5 +1,5 @@
 import type { WorkspaceBlock } from "@orch/workspace";
-import { Loader2, Plus, Search, Store, Trash2 } from "lucide-react";
+import { Loader2, Search, Store, Trash2 } from "lucide-react";
 import { Suspense, useEffect, useRef } from "react";
 
 import { Badge } from "@/ui/badge";
@@ -17,9 +17,9 @@ type WorkspaceNodeBlockRendererProps = {
 
 function BlockEditorFallback() {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-dashed border-muted px-4 py-6 text-sm text-muted">
-      <Loader2 className="size-4 animate-spin" />
-      Loading block editor…
+    <div className="flex items-center gap-2 rounded-xl border border-dashed border-muted px-4 py-6 text-sm text-muted-foreground">
+      <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+      Loading editor
     </div>
   );
 }
@@ -70,11 +70,11 @@ export function WorkspaceNodeBlockRenderer({
     <div
       ref={rootRef}
       data-block-id={block.id}
-      className="group relative flex flex-col gap-5 rounded-[32px] border border-default bg-default p-6 transition-all duration-200 hover:border-primary/40 hover:bg-elevated focus-within:border-primary/40 focus-within:bg-elevated"
+      className="group relative flex flex-col gap-5 rounded-xl border border-border bg-default p-6 transition-colors duration-200 hover:border-muted-foreground/30"
     >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-muted bg-elevated text-toned transition-colors group-hover:border-primary/40 group-hover:text-primary">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-muted bg-elevated text-toned">
             <Icon className="size-5" />
           </div>
 
@@ -84,10 +84,10 @@ export function WorkspaceNodeBlockRenderer({
               value={block.title}
               placeholder="Untitled block"
               autoFocus={shouldFocusTitle}
-              className="h-auto border-0 bg-transparent px-0 text-xl font-bold tracking-tight text-highlighted shadow-none placeholder:text-muted focus-visible:ring-0"
+              className="h-auto border-0 bg-transparent px-0 text-xl font-semibold tracking-tight text-highlighted shadow-none placeholder:text-muted focus-visible:ring-0"
               onChange={(event) => updateBlockTitle(tabId, block.id, event.target.value)}
             />
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-toned">
+            <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
               {registryEntry.label}
             </p>
           </div>
@@ -96,7 +96,7 @@ export function WorkspaceNodeBlockRenderer({
         <div className="flex flex-wrap items-center justify-end gap-2">
           {operationState.pending ? (
             <Badge variant="secondary" className="rounded-full">
-              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+              <Loader2 className="mr-1.5 size-3.5 animate-spin motion-reduce:animate-none" />
               {operationState.label || "Working"}
             </Badge>
           ) : null}
@@ -105,10 +105,10 @@ export function WorkspaceNodeBlockRenderer({
             type="button"
             variant={isContextBlock ? "secondary" : "ghost"}
             size="sm"
-            className="rounded-xl"
+            className="rounded-full"
             onClick={() => toggleAgentContextBlock(tabId, block.id)}
           >
-            {isContextBlock ? "In AI context" : "Add to AI context"}
+            {isContextBlock ? "In Orch" : "Include in Orch"}
           </Button>
           <Button
             type="button"
@@ -134,10 +134,10 @@ export function WorkspaceNodeBlockRenderer({
       </div>
 
       {normalizedBlockSearch && searchMatches.length > 0 ? (
-        <div className="space-y-2 rounded-2xl border border-warning/40 bg-warning/5 p-4">
+        <div className="space-y-2 rounded-xl border border-warning/40 bg-warning/5 p-4">
           <div className="flex items-center gap-2 text-warning">
             <Search className="size-4" />
-            <p className="text-xs font-bold uppercase tracking-wider">Search matches</p>
+            <p className="text-xs font-semibold tracking-[0.14em] uppercase">Search matches</p>
           </div>
           <div className="space-y-1.5">
             {searchMatches.map((match, index) => (
@@ -156,21 +156,6 @@ export function WorkspaceNodeBlockRenderer({
           <EditorComponent block={block} tabId={tabId} />
         </Suspense>
       </div>
-
-      {!normalizedBlockSearch ? (
-        <div className="pointer-events-none absolute inset-x-6 bottom-6 opacity-0 transition-opacity group-hover:opacity-100">
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="pointer-events-auto rounded-full"
-            >
-              <Plus className="size-4" />
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

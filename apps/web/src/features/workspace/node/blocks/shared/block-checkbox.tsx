@@ -1,3 +1,4 @@
+import { Checkbox } from "@/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 type BlockCheckboxProps = {
@@ -16,17 +17,12 @@ export function BlockCheckbox({
   "aria-label": ariaLabel,
 }: BlockCheckboxProps) {
   return (
-    <input
-      type="checkbox"
+    <Checkbox
       checked={checked}
       disabled={disabled}
       aria-label={ariaLabel}
-      className={cn(
-        "size-5 shrink-0 cursor-pointer rounded border border-input accent-primary",
-        disabled && "cursor-not-allowed opacity-60",
-        className,
-      )}
-      onChange={(event) => onCheckedChange(event.target.checked)}
+      className={cn("size-5", className)}
+      onCheckedChange={(value) => onCheckedChange(value === true)}
     />
   );
 }

@@ -1,4 +1,7 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { cn } from "@/lib/utils";
+
+const EMPTY_SELECT_VALUE = "__empty";
 
 type BlockSelectOption = {
   label: string;
@@ -11,8 +14,17 @@ type BlockSelectProps = {
   onValueChange: (value: string) => void;
   className?: string;
   disabled?: boolean;
+  id?: string;
   "aria-label"?: string;
 };
+
+function toSelectValue(value: string) {
+  return value === "" ? EMPTY_SELECT_VALUE : value;
+}
+
+function fromSelectValue(value: string) {
+  return value === EMPTY_SELECT_VALUE ? "" : value;
+}
 
 export function BlockSelect({
   value,
@@ -20,25 +32,32 @@ export function BlockSelect({
   onValueChange,
   className,
   disabled,
+  id,
   "aria-label": ariaLabel,
 }: BlockSelectProps) {
   return (
-    <select
-      value={value}
-      aria-label={ariaLabel}
+    <Select
+      value={toSelectValue(value)}
       disabled={disabled}
-      className={cn(
-        "flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20",
-        disabled && "cursor-not-allowed opacity-60",
-        className,
-      )}
-      onChange={(event) => onValueChange(event.target.value)}
+      onValueChange={(next) => onValueChange(fromSelectValue(next))}
     >
-      {options.map((option) => (
-        <option key={option.value || "__empty"} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger
+        id={id}
+        aria-label={ariaLabel}
+        className={cn("h-10 w-full rounded-lg", className)}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent position="popper" align="start" className="w-(--radix-select-trigger-width)">
+        {options.map((option) => {
+          const optionValue = toSelectValue(option.value);
+          return (
+            <SelectItem key={optionValue} value={optionValue}>
+              {option.label}
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
   );
 }

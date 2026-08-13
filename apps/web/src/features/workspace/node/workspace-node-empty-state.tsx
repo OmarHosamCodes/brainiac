@@ -25,7 +25,7 @@ export function WorkspaceNodeEmptyState({
   if (!canEdit) {
     return (
       <div className="rounded-2xl border border-dashed border-muted/40 px-6 py-16 text-center text-sm text-muted-foreground">
-        This workspace has no blocks yet.
+        No blocks yet.
       </div>
     );
   }
