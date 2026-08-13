@@ -1,5 +1,6 @@
-import { Plus, Receipt, Trash2 } from "lucide-react";
+import { Plus, Receipt } from "lucide-react";
 
+import { ThreadList } from "@/components/elements/thread-list";
 import type { WorkspaceAgentConversationOption } from "@/features/workspace-agent/chat-panel-view";
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -113,48 +114,28 @@ export function WorkspaceAgentComposerHistoryBillView({
           ) : conversationOptions.length === 0 ? (
             <p className="px-2.5 py-2 text-sm text-muted-foreground">No saved chats yet</p>
           ) : (
-            conversationOptions.map((conversation) => {
-              const active = conversation.id === activeConversationId;
-              const stamp = formatConversationStamp(conversation.stamp);
-              return (
-                <div
-                  key={conversation.id}
-                  className={cn(
-                    "group flex items-start gap-1 rounded-xl px-1 py-0.5",
-                    active && "bg-accent/60",
-                  )}
-                >
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 rounded-lg px-1.5 py-1.5 text-left hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => {
-                      onSelectConversation(conversation.id);
-                      onOpenChange(false);
-                    }}
-                  >
-                    <span className="block truncate text-sm font-medium">
-                      {active ? "· " : ""}
-                      {conversation.label}
-                    </span>
-                    <span className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                      {stamp ? <span>{stamp}</span> : null}
-                      <span className="tabular-nums">{formatUsd(conversation.costUsd)}</span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="mt-1 shrink-0 rounded-md p-1 text-muted-foreground opacity-0 hover:bg-accent hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
-                    aria-label={`Delete ${conversation.label}`}
-                    disabled={deletingConversationId === conversation.id}
-                    onClick={() => {
-                      onDeleteConversation(conversation.id);
-                    }}
-                  >
-                    <Trash2 className="size-3.5" aria-hidden />
-                  </button>
-                </div>
-              );
-            })
+            <ThreadList
+              className="max-w-none"
+              threads={conversationOptions.map((conversation) => ({
+                title: conversation.label,
+                time:
+                  formatConversationStamp(conversation.stamp) ?? formatUsd(conversation.costUsd),
+              }))}
+              activeIndex={conversationOptions.findIndex(
+                (conversation) => conversation.id === activeConversationId,
+              )}
+              onActiveIndexChange={(index) => {
+                const conversation = conversationOptions[index];
+                if (!conversation) return;
+                onSelectConversation(conversation.id);
+                onOpenChange(false);
+              }}
+              onDelete={(index) => {
+                const conversation = conversationOptions[index];
+                if (!conversation || deletingConversationId === conversation.id) return;
+                onDeleteConversation(conversation.id);
+              }}
+            />
           )}
         </div>
       </PopoverContent>

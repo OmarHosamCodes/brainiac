@@ -149,6 +149,27 @@ describe("orch-ui-message", () => {
     ]);
   });
 
+  test("retry on the same conversation keeps the conversation id", () => {
+    const mapEvent = createOrchEventToChunkMapper();
+    const chunks = mapEvent({
+      type: "started",
+      conversationId: "c-existing",
+      createdConversation: false,
+      userMessageId: "u2",
+      assistantMessageId: "a2",
+      model: "test-model",
+    });
+    const meta = chunks.find((chunk) => chunk.type === "data-orchMeta");
+    expect(meta).toMatchObject({
+      type: "data-orchMeta",
+      id: "c-existing",
+      data: {
+        conversationId: "c-existing",
+        createdConversation: false,
+      },
+    });
+  });
+
   test("dashboardMessagesToUIMessages seeds text parts", () => {
     const messages = dashboardMessagesToUIMessages([
       {
