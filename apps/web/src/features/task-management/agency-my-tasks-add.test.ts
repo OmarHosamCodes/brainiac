@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  composerChooserTasks,
   composerStateFromExistingTask,
   composerSubmitCopy,
   composerSubmitKind,
@@ -24,29 +23,6 @@ describe("withActorMember", () => {
   test("keeps the roster when the actor is already present", () => {
     const members = [{ userId: "a", userName: "Me" }];
     expect(withActorMember(members, { userId: "a", userName: "Me" })).toEqual(members);
-  });
-});
-
-describe("composerChooserTasks", () => {
-  const tasks = [
-    { id: "t1", title: "One" },
-    { id: "t2", title: "Two" },
-  ];
-
-  test("returns a stable empty list until a task is chosen", () => {
-    const empty = composerChooserTasks("", tasks, null);
-    expect(empty).toEqual([]);
-    expect(composerChooserTasks("", tasks, tasks[0] ?? null)).toBe(empty);
-  });
-
-  test("passes only the chosen task so filter changes do not rebuild the catalog", () => {
-    expect(composerChooserTasks("t2", tasks, null)).toEqual([{ id: "t2", title: "Two" }]);
-  });
-
-  test("falls back to the cached chosen task when it is not in the rail list", () => {
-    expect(composerChooserTasks("t9", tasks, { id: "t9", title: "Cached" })).toEqual([
-      { id: "t9", title: "Cached" },
-    ]);
   });
 });
 

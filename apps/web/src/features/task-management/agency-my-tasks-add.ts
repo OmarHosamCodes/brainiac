@@ -1,7 +1,5 @@
 export type MyTasksAddPill = "open" | "done" | "delegated";
 
-const EMPTY_CHOOSER_TASKS: never[] = [];
-
 export function withActorMember<T extends { userId: string }>(
   members: readonly T[],
   actor: T | null,
@@ -9,16 +7,6 @@ export function withActorMember<T extends { userId: string }>(
   if (!actor?.userId) return [...members];
   if (members.some((member) => member.userId === actor.userId)) return [...members];
   return [actor, ...members];
-}
-
-export function composerChooserTasks<T extends { id: string }>(
-  composerTaskId: string,
-  tasks: readonly T[],
-  cached: T | null,
-): T[] {
-  if (!composerTaskId) return EMPTY_CHOOSER_TASKS;
-  const selected = tasks.find((task) => task.id === composerTaskId) ?? cached;
-  return selected ? [selected] : EMPTY_CHOOSER_TASKS;
 }
 
 export function nextPillsAfterAdd(

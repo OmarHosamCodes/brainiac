@@ -13,7 +13,6 @@ import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-optio
 import { toAgencyMemberOption } from "@/features/shared/agency-member-option";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 import {
-  composerChooserTasks,
   composerStateFromExistingTask,
   composerSubmitCopy,
   composerSubmitKind,
@@ -193,12 +192,6 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     doneQuery.data?.items,
     delegatedQuery.data?.items,
   ]);
-
-  const chooserTasks = useMemo(
-    () =>
-      composerChooserTasks(composerTaskId, tasks, findProjectTaskInCache(teamId, composerTaskId)),
-    [composerTaskId, tasks, teamId],
-  );
 
   const clientGroups = useMemo(() => groupTasksByClient(tasks, projects), [tasks, projects]);
 
@@ -495,7 +488,6 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     togglePill,
     composerTaskId,
     onComposerTaskChange,
-    chooserTasks,
     assigneeUserIds,
     setAssigneeUserIds,
     assignedToTeam,

@@ -19,7 +19,7 @@ import {
   agencyMyTasksRailComposerChooserClass,
   agencyMyTasksRailComposerFormClass,
   agencyMyTasksRailComposerRowClass,
-  agencyTaskChooserTriggerClass,
+  agencyTimeTrackerTaskChooserTriggerClass,
   agencyTaskRailClass,
   agencyTaskRailCollapsedClass,
   agencyTaskRailCollapsedWidthClass,
@@ -135,17 +135,16 @@ function RailPanel({
             value={view.composerTaskId}
             onValueChange={view.onComposerTaskChange}
             projects={view.projects}
-            tasks={view.chooserTasks}
+            tasks={view.tasks}
             placeholder="Choose task"
-            searchPlaceholder="Search tasks"
             triggerFormat="task-client"
             highlightSearch
             required
             contentAlign="start"
             disabled={view.isAddingTask}
             className={cn(
-              agencyTaskChooserTriggerClass,
-              "h-9 w-full max-w-none justify-start rounded-lg border border-default bg-default px-3 text-sm",
+              agencyTimeTrackerTaskChooserTriggerClass,
+              "w-full max-w-none justify-start",
             )}
           />
         </div>
