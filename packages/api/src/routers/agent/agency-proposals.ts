@@ -32,6 +32,10 @@ import {
   updateAgencyClient,
 } from "../agency-ops/clients/service";
 import {
+  exportMoneyDocuments,
+  listPeriodMoneyObligations,
+} from "../agency-ops/billing/money-export-service";
+import {
   createAgencyProject,
   deleteAgencyProject,
   listAgencyProjects,
@@ -178,6 +182,14 @@ export async function loadAgencyActionBefore(
       const clients = await listAgencyClients(actorUserId, { teamId });
       return clients.items.find((client) => client.id === action.clientId) ?? null;
     }
+    case "money.export_client": {
+      const listed = await listPeriodMoneyObligations(actorUserId, {
+        teamId,
+        periodStart: action.periodStart,
+        periodEnd: action.periodEnd,
+      });
+      return listed.clients.filter((row) => row.clientId === action.clientId);
+    }
     default: {
       const _exhaustive: never = action;
       return _exhaustive;
@@ -250,6 +262,12 @@ export function buildAgencyActionAfter(before: unknown, action: AgencyAction): u
       return {
         ...(typeof before === "object" && before ? before : {}),
         archived: true,
+      };
+    case "money.export_client":
+      return {
+        exported: true,
+        clientId: action.clientId,
+        mode: action.mode ?? "combine",
       };
     default: {
       const _exhaustive: never = action;
@@ -373,6 +391,31 @@ export async function executeAgencyAction(
       });
     case "client.archive":
       return archiveAgencyClient(actorUserId, { teamId, clientId: action.clientId });
+    case "money.export_client": {
+      const listed = await listPeriodMoneyObligations(actorUserId, {
+        teamId,
+        periodStart: action.periodStart,
+        periodEnd: action.periodEnd,
+      });
+      const rows = listed.clients.filter((row) => row.clientId === action.clientId);
+      if (rows.length === 0) {
+        throw new ORPCError("BAD_REQUEST", { message: "No client bill for that period." });
+      }
+      const selections = rows.map((row) => ({
+        obligationId: row.id,
+        periodStart: row.periodStart,
+        periodEnd: row.periodEnd,
+        kind: row.kind === "invoice" ? ("invoice" as const) : ("ready" as const),
+        amount: row.remainingAmount,
+      }));
+      return exportMoneyDocuments(actorUserId, {
+        teamId,
+        partyType: "client",
+        partyId: action.clientId,
+        mode: action.mode ?? "combine",
+        selections,
+      });
+    }
     default: {
       const _exhaustive: never = action;
       return _exhaustive;
