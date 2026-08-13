@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
 import { notificationTypeSchema } from "../../../schemas/notifications";
+import { memberProfileAlertPolicySchema } from "./schemas";
 import {
   abnormalDayThresholdHours,
+  DEFAULT_ALERT_POLICY,
   detectAbnormalDays,
   detectMonthPace,
   detectQuarterPace,
@@ -18,9 +20,10 @@ describe("member-profile-alerts detectors", () => {
     expect(notificationTypeSchema.safeParse("member.alert").success).toBe(true);
   });
 
-  test("abnormal day threshold is max(1.5x, +4)", () => {
+  test("abnormal day threshold is required plus extra hours", () => {
     expect(abnormalDayThresholdHours(8)).toBe(12);
     expect(abnormalDayThresholdHours(4)).toBe(8);
+    expect(abnormalDayThresholdHours(8, 6)).toBe(14);
   });
 
   test("detectAbnormalDays flags days over threshold", () => {
@@ -87,5 +90,94 @@ describe("member-profile-alerts detectors", () => {
       days: [{ dateKey: "2026-08-04", totalSeconds: 13 * 3600, wasteSeconds: 0 }],
     });
     expect(alerts.every((a) => a.fingerprint !== "abnormal_day:2026-08-04")).toBe(true);
+  });
+
+  test("default alert policy matches the API schema", () => {
+    expect(memberProfileAlertPolicySchema.parse(DEFAULT_ALERT_POLICY)).toEqual(
+      DEFAULT_ALERT_POLICY,
+    );
+  });
+
+  test("disabled abnormal day detector returns no alerts", () => {
+    const alerts = detectAbnormalDays({
+      todayKey: "2026-08-05",
+      requiredDailyHours: 8,
+      policy: { ...DEFAULT_ALERT_POLICY, abnormalDayEnabled: false },
+      days: [{ dateKey: "2026-08-04", totalSeconds: 13 * 3600, wasteSeconds: 0 }],
+    });
+    expect(alerts).toHaveLength(0);
+  });
+
+  test("disabled month pace returns null", () => {
+    const days = [
+      { dateKey: "2026-08-03", totalSeconds: 3600, wasteSeconds: 0 },
+      { dateKey: "2026-08-10", totalSeconds: 3600, wasteSeconds: 0 },
+    ];
+    const alert = detectMonthPace({
+      days,
+      schedule,
+      todayKey: "2026-08-20",
+      policy: { ...DEFAULT_ALERT_POLICY, monthPaceEnabled: false },
+    });
+    expect(alert).toBeNull();
+  });
+
+  test("disabled quarter pace returns null", () => {
+    const days = [{ dateKey: "2026-07-15", totalSeconds: 10 * 3600, wasteSeconds: 0 }];
+    const alert = detectQuarterPace({
+      days,
+      schedule,
+      calendar,
+      quarterlyMinHours: 525,
+      todayKey: "2026-08-20",
+      policy: { ...DEFAULT_ALERT_POLICY, quarterPaceEnabled: false },
+    });
+    expect(alert).toBeNull();
+  });
+
+  test("custom extra hours changes the abnormal day cutoff", () => {
+    const alerts = detectAbnormalDays({
+      todayKey: "2026-08-05",
+      requiredDailyHours: 8,
+      policy: { ...DEFAULT_ALERT_POLICY, abnormalDayExtraHours: 6 },
+      days: [
+        { dateKey: "2026-08-04", totalSeconds: 13 * 3600, wasteSeconds: 0 },
+        { dateKey: "2026-08-03", totalSeconds: 15 * 3600, wasteSeconds: 0 },
+      ],
+    });
+    expect(alerts.map((alert) => alert.fingerprint)).toEqual(["abnormal_day:2026-08-03"]);
+  });
+
+  test("custom waste percent skips a 30% spike", () => {
+    const alert = detectWasteSpike({
+      todayKey: "2026-08-20",
+      schedule,
+      policy: { ...DEFAULT_ALERT_POLICY, wasteSpikePercent: 50 },
+      days: [{ dateKey: "2026-08-10", totalSeconds: 10_000, wasteSeconds: 3_000 }],
+    });
+    expect(alert).toBeNull();
+  });
+
+  test("disabled waste spike returns null", () => {
+    const alert = detectWasteSpike({
+      todayKey: "2026-08-20",
+      schedule,
+      policy: { ...DEFAULT_ALERT_POLICY, wasteSpikeEnabled: false },
+      days: [{ dateKey: "2026-08-10", totalSeconds: 10_000, wasteSeconds: 3_000 }],
+    });
+    expect(alert).toBeNull();
+  });
+
+  test("detectSystemAlerts skips disabled kinds", () => {
+    const alerts = detectSystemAlerts({
+      todayKey: "2026-08-05",
+      schedule,
+      calendar,
+      quarterlyMinHours: 525,
+      suppressedFingerprints: new Set(),
+      policy: { ...DEFAULT_ALERT_POLICY, abnormalDayEnabled: false },
+      days: [{ dateKey: "2026-08-04", totalSeconds: 13 * 3600, wasteSeconds: 0 }],
+    });
+    expect(alerts).toHaveLength(0);
   });
 });

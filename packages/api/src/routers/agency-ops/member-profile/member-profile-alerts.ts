@@ -24,8 +24,36 @@ export type DaySeconds = {
   wasteSeconds: number;
 };
 
-export function abnormalDayThresholdHours(requiredDailyHours: number): number {
-  return Math.max(requiredDailyHours * 1.5, requiredDailyHours + 4);
+export type MemberProfileAlertPolicy = {
+  abnormalDayEnabled: boolean;
+  abnormalDayExtraHours: number;
+  monthPaceEnabled: boolean;
+  monthPacePercent: number;
+  quarterPaceEnabled: boolean;
+  quarterPacePercent: number;
+  wasteSpikeEnabled: boolean;
+  wasteSpikePercent: number;
+};
+
+export const DEFAULT_ALERT_POLICY: MemberProfileAlertPolicy = {
+  abnormalDayEnabled: true,
+  abnormalDayExtraHours: 4,
+  monthPaceEnabled: true,
+  monthPacePercent: 85,
+  quarterPaceEnabled: true,
+  quarterPacePercent: 85,
+  wasteSpikeEnabled: true,
+  wasteSpikePercent: 20,
+};
+
+const ABNORMAL_DAY_LOOKBACK_DAYS = 30;
+const PACE_ELAPSED_GATE = 0.5;
+
+export function abnormalDayThresholdHours(
+  requiredDailyHours: number,
+  extraHours: number = DEFAULT_ALERT_POLICY.abnormalDayExtraHours,
+): number {
+  return requiredDailyHours + extraHours;
 }
 
 function yearMonthFromDateKey(dateKey: string): { year: number; month: number } {
@@ -75,11 +103,17 @@ export function detectAbnormalDays(input: {
   requiredDailyHours: number;
   todayKey: string;
   now?: Date;
+  policy?: MemberProfileAlertPolicy;
 }): DetectedAlert[] {
-  const threshold = abnormalDayThresholdHours(input.requiredDailyHours);
+  const policy = input.policy ?? DEFAULT_ALERT_POLICY;
+  if (!policy.abnormalDayEnabled) return [];
+  const threshold = abnormalDayThresholdHours(
+    input.requiredDailyHours,
+    policy.abnormalDayExtraHours,
+  );
   const thresholdSeconds = threshold * 3600;
   const now = input.now ?? new Date();
-  const windowStart = addDaysToDateKey(input.todayKey, -30);
+  const windowStart = addDaysToDateKey(input.todayKey, -ABNORMAL_DAY_LOOKBACK_DAYS);
 
   const alerts: DetectedAlert[] = [];
   for (const day of input.days) {
@@ -107,21 +141,24 @@ export function detectMonthPace(input: {
   days: DaySeconds[];
   schedule: WorkSchedule;
   todayKey: string;
+  policy?: MemberProfileAlertPolicy;
 }): DetectedAlert | null {
+  const policy = input.policy ?? DEFAULT_ALERT_POLICY;
+  if (!policy.monthPaceEnabled) return null;
   const { year, month } = yearMonthFromDateKey(input.todayKey);
   const { start, end, key } = monthKeys(year, month);
   const elapsedEnd = input.todayKey < end ? input.todayKey : end;
 
   const monthWorking = workingDaysInRange(start, end, input.schedule);
   const elapsedWorking = workingDaysInRange(start, elapsedEnd, input.schedule);
-  if (monthWorking <= 0 || elapsedWorking / monthWorking < 0.5) return null;
+  if (monthWorking <= 0 || elapsedWorking / monthWorking < PACE_ELAPSED_GATE) return null;
 
   const monthMinHours = input.schedule.requiredDailyHours * monthWorking;
   const { total } = secondsInRange(input.days, start, elapsedEnd);
   const loggedHours = total / 3600;
   const pacePerDay = elapsedWorking > 0 ? loggedHours / elapsedWorking : 0;
   const projectedHours = pacePerDay * monthWorking;
-  if (projectedHours >= monthMinHours * 0.85) return null;
+  if (projectedHours >= monthMinHours * (policy.monthPacePercent / 100)) return null;
 
   const defaultSnoozeUntil = new Date(`${end}T23:59:59.999Z`);
   return {
@@ -146,7 +183,10 @@ export function detectQuarterPace(input: {
   calendar: FiscalCalendar;
   quarterlyMinHours: number;
   todayKey: string;
+  policy?: MemberProfileAlertPolicy;
 }): DetectedAlert | null {
+  const policy = input.policy ?? DEFAULT_ALERT_POLICY;
+  if (!policy.quarterPaceEnabled) return null;
   const refDate = new Date(`${input.todayKey}T12:00:00.000Z`);
   const ref = getFiscalQuarterForDate(refDate, input.calendar);
   const range = getFiscalQuarterRange(input.calendar, ref.fiscalYear, ref.fiscalQuarter);
@@ -156,13 +196,13 @@ export function detectQuarterPace(input: {
 
   const quarterWorking = workingDaysInRange(startKey, endKey, input.schedule);
   const elapsedWorking = workingDaysInRange(startKey, elapsedEnd, input.schedule);
-  if (quarterWorking <= 0 || elapsedWorking / quarterWorking < 0.5) return null;
+  if (quarterWorking <= 0 || elapsedWorking / quarterWorking < PACE_ELAPSED_GATE) return null;
 
   const { total } = secondsInRange(input.days, startKey, elapsedEnd);
   const loggedHours = total / 3600;
   const pacePerDay = elapsedWorking > 0 ? loggedHours / elapsedWorking : 0;
   const projectedHours = pacePerDay * quarterWorking;
-  if (projectedHours >= input.quarterlyMinHours * 0.85) return null;
+  if (projectedHours >= input.quarterlyMinHours * (policy.quarterPacePercent / 100)) return null;
 
   const periodKey = `${ref.fiscalYear}-Q${ref.fiscalQuarter}`;
   const defaultSnoozeUntil = new Date(range.end.getTime() - 1);
@@ -186,14 +226,17 @@ export function detectWasteSpike(input: {
   days: DaySeconds[];
   schedule: WorkSchedule;
   todayKey: string;
+  policy?: MemberProfileAlertPolicy;
 }): DetectedAlert | null {
+  const policy = input.policy ?? DEFAULT_ALERT_POLICY;
+  if (!policy.wasteSpikeEnabled) return null;
   const { year, month } = yearMonthFromDateKey(input.todayKey);
   const { start, end, key } = monthKeys(year, month);
   const elapsedEnd = input.todayKey < end ? input.todayKey : end;
   const { total, waste } = secondsInRange(input.days, start, elapsedEnd);
   if (total <= 0) return null;
   const wasteRatio = waste / total;
-  if (wasteRatio <= 0.2) return null;
+  if (wasteRatio <= policy.wasteSpikePercent / 100) return null;
 
   const defaultSnoozeUntil = new Date(`${end}T23:59:59.999Z`);
   return {
@@ -219,13 +262,16 @@ export function detectSystemAlerts(input: {
   suppressedFingerprints: ReadonlySet<string>;
   todayKey: string;
   now?: Date;
+  policy?: MemberProfileAlertPolicy;
 }): DetectedAlert[] {
+  const policy = input.policy ?? DEFAULT_ALERT_POLICY;
   const out: DetectedAlert[] = [];
   for (const alert of detectAbnormalDays({
     days: input.days,
     requiredDailyHours: input.schedule.requiredDailyHours,
     todayKey: input.todayKey,
     now: input.now,
+    policy,
   })) {
     if (!input.suppressedFingerprints.has(alert.fingerprint)) out.push(alert);
   }
@@ -233,6 +279,7 @@ export function detectSystemAlerts(input: {
     days: input.days,
     schedule: input.schedule,
     todayKey: input.todayKey,
+    policy,
   });
   if (month && !input.suppressedFingerprints.has(month.fingerprint)) out.push(month);
 
@@ -242,6 +289,7 @@ export function detectSystemAlerts(input: {
     calendar: input.calendar,
     quarterlyMinHours: input.quarterlyMinHours,
     todayKey: input.todayKey,
+    policy,
   });
   if (quarter && !input.suppressedFingerprints.has(quarter.fingerprint)) out.push(quarter);
 
@@ -249,6 +297,7 @@ export function detectSystemAlerts(input: {
     days: input.days,
     schedule: input.schedule,
     todayKey: input.todayKey,
+    policy,
   });
   if (waste && !input.suppressedFingerprints.has(waste.fingerprint)) out.push(waste);
 

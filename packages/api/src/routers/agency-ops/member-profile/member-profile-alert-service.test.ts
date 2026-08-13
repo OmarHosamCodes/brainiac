@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import { localDateKeyFromInstant } from "../time-tracking/local-week-bounds";
-import { memberProfileAlertContextSchema } from "./schemas";
+import { DEFAULT_ALERT_POLICY } from "./member-profile-alerts";
+import { memberProfileAlertContextSchema, memberProfileAlertPolicySchema } from "./schemas";
 
 describe("member profile alert contracts", () => {
   test("alert context schema accepts detector fields", () => {
@@ -12,6 +13,22 @@ describe("member profile alert contracts", () => {
       defaultSnoozeUntil: "2026-08-11T12:00:00.000Z",
     });
     expect(parsed.success).toBe(true);
+  });
+
+  test("alert policy schema rejects out-of-range thresholds", () => {
+    expect(memberProfileAlertPolicySchema.safeParse(DEFAULT_ALERT_POLICY).success).toBe(true);
+    expect(
+      memberProfileAlertPolicySchema.safeParse({
+        ...DEFAULT_ALERT_POLICY,
+        wasteSpikePercent: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      memberProfileAlertPolicySchema.safeParse({
+        ...DEFAULT_ALERT_POLICY,
+        abnormalDayExtraHours: 25,
+      }).success,
+    ).toBe(false);
   });
 
   test("local today key matches entry bucketing offset", () => {

@@ -1,6 +1,7 @@
 import { db } from "@orch/db";
 import {
   agencyOpsMemberProfileAlert,
+  agencyOpsMemberProfileAlertPolicy,
   agencyOpsTenurePolicy,
   agencyOpsTimeEntry,
   workspaceTeamMember,
@@ -15,10 +16,12 @@ import { resolveWorkSchedule } from "../resourcing/work-schedule";
 import { requireTeamMembership } from "../shared/membership";
 import { addDaysToDateKey, localDateKeyFromInstant } from "../time-tracking/local-week-bounds";
 import {
+  DEFAULT_ALERT_POLICY,
   detectSystemAlerts,
   toFiscalCalendar,
   type DaySeconds,
   type DetectedAlert,
+  type MemberProfileAlertPolicy,
 } from "./member-profile-alerts";
 
 export type MemberProfileAlertRecord = {
@@ -36,6 +39,31 @@ export type MemberProfileAlertRecord = {
   createdAt: string;
   ephemeral: boolean;
 };
+
+function mapAlertPolicy(
+  row: typeof agencyOpsMemberProfileAlertPolicy.$inferSelect | undefined,
+): MemberProfileAlertPolicy {
+  if (!row) return DEFAULT_ALERT_POLICY;
+  return {
+    abnormalDayEnabled: row.abnormalDayEnabled,
+    abnormalDayExtraHours: row.abnormalDayExtraHours,
+    monthPaceEnabled: row.monthPaceEnabled,
+    monthPacePercent: row.monthPacePercent,
+    quarterPaceEnabled: row.quarterPaceEnabled,
+    quarterPacePercent: row.quarterPacePercent,
+    wasteSpikeEnabled: row.wasteSpikeEnabled,
+    wasteSpikePercent: row.wasteSpikePercent,
+  };
+}
+
+async function loadAlertPolicy(teamId: string): Promise<MemberProfileAlertPolicy> {
+  const [row] = await db
+    .select()
+    .from(agencyOpsMemberProfileAlertPolicy)
+    .where(eq(agencyOpsMemberProfileAlertPolicy.teamId, teamId))
+    .limit(1);
+  return mapAlertPolicy(row);
+}
 
 function mapRow(row: typeof agencyOpsMemberProfileAlert.$inferSelect): MemberProfileAlertRecord {
   return {
@@ -241,6 +269,7 @@ export async function listMemberProfileAlerts(
     fiscalYearStartDay: policyRow?.fiscalYearStartDay ?? 1,
   });
   const quarterlyMinHours = policyRow?.quarterlyMinHours ?? 525;
+  const alertPolicy = await loadAlertPolicy(input.teamId);
   const fromKey = addDaysToDateKey(todayKey, -100);
   const days = await loadDaySeconds(
     input.teamId,
@@ -258,6 +287,7 @@ export async function listMemberProfileAlerts(
     suppressedFingerprints: suppressed,
     todayKey,
     now,
+    policy: alertPolicy,
   });
 
   for (const alert of detected) {
@@ -451,4 +481,53 @@ export async function snoozeMemberProfileAlert(
     .returning();
   if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
   return { alert: mapRow(updated) };
+}
+
+export async function getMemberProfileAlertPolicy(
+  actorUserId: string,
+  input: { teamId: string },
+): Promise<{ policy: MemberProfileAlertPolicy }> {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  return { policy: await loadAlertPolicy(input.teamId) };
+}
+
+export async function upsertMemberProfileAlertPolicy(
+  actorUserId: string,
+  input: { teamId: string } & MemberProfileAlertPolicy,
+): Promise<{ policy: MemberProfileAlertPolicy }> {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  const now = new Date();
+  const values = {
+    teamId: input.teamId,
+    abnormalDayEnabled: input.abnormalDayEnabled,
+    abnormalDayExtraHours: input.abnormalDayExtraHours,
+    monthPaceEnabled: input.monthPaceEnabled,
+    monthPacePercent: input.monthPacePercent,
+    quarterPaceEnabled: input.quarterPaceEnabled,
+    quarterPacePercent: input.quarterPacePercent,
+    wasteSpikeEnabled: input.wasteSpikeEnabled,
+    wasteSpikePercent: input.wasteSpikePercent,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const [row] = await db
+    .insert(agencyOpsMemberProfileAlertPolicy)
+    .values(values)
+    .onConflictDoUpdate({
+      target: agencyOpsMemberProfileAlertPolicy.teamId,
+      set: {
+        abnormalDayEnabled: values.abnormalDayEnabled,
+        abnormalDayExtraHours: values.abnormalDayExtraHours,
+        monthPaceEnabled: values.monthPaceEnabled,
+        monthPacePercent: values.monthPacePercent,
+        quarterPaceEnabled: values.quarterPaceEnabled,
+        quarterPacePercent: values.quarterPacePercent,
+        wasteSpikeEnabled: values.wasteSpikeEnabled,
+        wasteSpikePercent: values.wasteSpikePercent,
+        updatedAt: now,
+      },
+    })
+    .returning();
+  if (!row) throw new ORPCError("INTERNAL_SERVER_ERROR");
+  return { policy: mapAlertPolicy(row) };
 }

@@ -251,3 +251,16 @@ export const memberProfileAlertSchema = z.object({
   createdAt: z.string().datetime(),
   ephemeral: z.boolean(),
 });
+
+const percentSchema = z.number().int().min(1).max(100);
+
+export const memberProfileAlertPolicySchema = z.object({
+  abnormalDayEnabled: z.boolean(),
+  abnormalDayExtraHours: z.number().int().min(0).max(24),
+  monthPaceEnabled: z.boolean(),
+  monthPacePercent: percentSchema,
+  quarterPaceEnabled: z.boolean(),
+  quarterPacePercent: percentSchema,
+  wasteSpikeEnabled: z.boolean(),
+  wasteSpikePercent: percentSchema,
+});

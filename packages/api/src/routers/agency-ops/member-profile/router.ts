@@ -4,11 +4,13 @@ import { protectedProProcedure } from "../../../procedures";
 import { teamScopedInputSchema } from "../shared/schemas";
 import {
   createMemberProfileAlert,
+  getMemberProfileAlertPolicy,
   listMemberProfileAlerts,
   removeMemberProfileAlert,
   sendMemberProfileAlert,
   setMemberProfileAlertNote,
   snoozeMemberProfileAlert,
+  upsertMemberProfileAlertPolicy,
 } from "./member-profile-alert-service";
 import {
   createMemberLeave,
@@ -25,6 +27,7 @@ import {
   memberHrProfileSchema,
   memberLeaveSchema,
   memberLeaveTypeSchema,
+  memberProfileAlertPolicySchema,
   memberProfileAlertSchema,
   memberProfileSchema,
   memberReviewSchema,
@@ -222,6 +225,22 @@ export const memberProfileRouter = {
           return z
             .object({ alert: memberProfileAlertSchema })
             .parse(await snoozeMemberProfileAlert(context.session.user.id, input));
+        }),
+    },
+    alertPolicy: {
+      get: protectedProProcedure
+        .input(teamScopedInputSchema)
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ policy: memberProfileAlertPolicySchema })
+            .parse(await getMemberProfileAlertPolicy(context.session.user.id, input));
+        }),
+      upsert: protectedProProcedure
+        .input(teamScopedInputSchema.extend(memberProfileAlertPolicySchema.shape))
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ policy: memberProfileAlertPolicySchema })
+            .parse(await upsertMemberProfileAlertPolicy(context.session.user.id, input));
         }),
     },
   },
