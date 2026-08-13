@@ -14,15 +14,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
-import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
+import {
+  useAgencyActiveTimerQuery,
+  useAgencyProjectsQuery,
+  useAgencyProjectTasksQuery,
+} from "@/features/shared/agency-queries";
 import { useAgentCanvasOverlay } from "@/features/workspace-agent/hooks/use-agent-canvas-overlay";
 import { useAgentScopeModeListener } from "@/features/workspace-agent/hooks/use-agent-scope-mode-listener";
 import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agency-timer";
 import { useWorkspaceStore } from "@/features/workspace/workspace-local-state";
 import {
   getActiveWorkspaceAgentMention,
+  getActiveWorkspaceAgentTrigger,
   getWorkspaceAgentMentionSuggestions,
+  getWorkspaceAgentSlashSuggestions,
   stripActiveWorkspaceAgentMention,
+  stripActiveWorkspaceAgentTrigger,
+  type WorkspaceAgentSlashCandidate,
 } from "@/features/workspace-agent/workspace-agent-mentions";
 import { shouldOfferComposerDraftRestore } from "@/features/workspace-agent/composer-draft-display";
 import { useWorkspaceAgentData } from "@/features/workspace-agent/hooks/use-workspace-agent-data";
@@ -96,6 +104,12 @@ function composerUnlockedSurfaces(
 
 const COMPOSER_DRAFT_DEBOUNCE_MS = 500;
 
+export type WorkspaceAgentComposerTriggerSuggestion = {
+  kind: "at" | "project" | "task";
+  id: string;
+  label: string;
+};
+
 function buildOrchTurnSendContext(input: {
   conversationId: string | null;
   surface: AgentSurface;
@@ -147,6 +161,7 @@ export function useWorkspaceAgent() {
   const toggleScopeMode = useWorkspaceAgentStore((s) => s.toggleScopeMode);
   const setScopeModeActive = useWorkspaceAgentStore((s) => s.setScopeModeActive);
   const scopeHintSeen = useWorkspaceAgentStore((s) => s.scopeHintSeen);
+  const markScopeHintSeen = useWorkspaceAgentStore((s) => s.markScopeHintSeen);
   const draft = useWorkspaceAgentStore((s) => s.draft);
   const setDraft = useWorkspaceAgentStore((s) => s.setDraft);
   const scopeChips = useWorkspaceAgentStore((s) => s.scopeChips);
@@ -182,6 +197,7 @@ export function useWorkspaceAgent() {
   >({});
   const [queuedMessages, setQueuedMessages] = useState<QueuedAgentMessage[]>([]);
   const [composerSendInFlight, setComposerSendInFlight] = useState(false);
+  const [composerTriggerDismissed, setComposerTriggerDismissed] = useState(false);
   const drainLockRef = useRef(false);
   const draftUpsertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -377,16 +393,79 @@ export function useWorkspaceAgent() {
     modelOptions[0]?.id;
 
   const activeMention = getActiveWorkspaceAgentMention(draft);
+  const composerTrigger = getActiveWorkspaceAgentTrigger(draft);
+  const agencyTeamId = teamId ?? "";
+
+  const projectsQuery = useAgencyProjectsQuery(agencyTeamId);
+  const projectTasksQuery = useAgencyProjectTasksQuery(agencyTeamId, {
+    search: composerTrigger?.kind === "slash" ? composerTrigger.query || undefined : undefined,
+    pageSize: 50,
+    enabled: composerTrigger?.kind === "slash",
+  });
+
+  const slashCandidates = useMemo((): WorkspaceAgentSlashCandidate[] => {
+    if (!teamId || composerTrigger?.kind !== "slash") return [];
+    const projects = projectsQuery.data?.items ?? [];
+    const tasks = projectTasksQuery.data?.items ?? [];
+    return [
+      ...projects.map((project) => ({
+        kind: "project" as const,
+        id: project.id,
+        label: project.name,
+      })),
+      ...tasks.map((task) => ({
+        kind: "task" as const,
+        id: task.id,
+        label: task.title,
+      })),
+    ];
+  }, [composerTrigger?.kind, projectTasksQuery.data?.items, projectsQuery.data?.items, teamId]);
+
+  const selectedNodeIds = useMemo(
+    () => new Set(scopeChips.filter((chip) => chip.kind === "node").map((chip) => chip.id)),
+    [scopeChips],
+  );
+
+  const selectedSlashIds = useMemo(
+    () =>
+      new Set(
+        scopeChips
+          .filter((chip) => chip.kind === "project" || chip.kind === "task")
+          .map((chip) => chip.id),
+      ),
+    [scopeChips],
+  );
+
+  const composerTriggerSuggestions = useMemo((): WorkspaceAgentComposerTriggerSuggestion[] => {
+    if (!composerTrigger) return [];
+    if (composerTrigger.kind === "at") {
+      return getWorkspaceAgentMentionSuggestions(
+        workspaceNodes,
+        composerTrigger.query,
+        selectedNodeIds,
+      ).map((node) => ({ kind: "at", id: node.id, label: node.title }));
+    }
+    if (!teamId) return [];
+    return getWorkspaceAgentSlashSuggestions(
+      slashCandidates,
+      composerTrigger.query,
+      selectedSlashIds,
+    ).map((entry) => ({ kind: entry.kind, id: entry.id, label: entry.label }));
+  }, [composerTrigger, selectedNodeIds, selectedSlashIds, slashCandidates, teamId, workspaceNodes]);
+
+  const composerTriggerOpen =
+    Boolean(composerTrigger) && composerTriggerSuggestions.length > 0 && !composerTriggerDismissed;
+
+  useEffect(() => {
+    setComposerTriggerDismissed(false);
+  }, [composerTrigger?.kind, composerTrigger?.query, composerTrigger?.start]);
+
   const mentionSuggestions = useMemo(
     () =>
-      surface === "canvas" && activeMention
-        ? getWorkspaceAgentMentionSuggestions(
-            workspaceNodes,
-            activeMention.query,
-            new Set(scopeChips.filter((chip) => chip.kind === "node").map((chip) => chip.id)),
-          )
+      activeMention
+        ? getWorkspaceAgentMentionSuggestions(workspaceNodes, activeMention.query, selectedNodeIds)
         : [],
-    [activeMention, scopeChips, surface, workspaceNodes],
+    [activeMention, selectedNodeIds, workspaceNodes],
   );
 
   useEffect(() => {
@@ -503,9 +582,28 @@ export function useWorkspaceAgent() {
     (node: WorkspaceNode) => {
       addScopeChip({ kind: "node", id: node.id, label: node.title });
       setDraft(stripActiveWorkspaceAgentMention(draft));
+      markScopeHintSeen();
     },
-    [addScopeChip, draft, setDraft],
+    [addScopeChip, draft, markScopeHintSeen, setDraft],
   );
+
+  const onPickComposerTrigger = useCallback(
+    (candidate: WorkspaceAgentComposerTriggerSuggestion) => {
+      addScopeChip({
+        kind: candidate.kind === "at" ? "node" : candidate.kind,
+        id: candidate.id,
+        label: candidate.label,
+      });
+      setDraft(stripActiveWorkspaceAgentTrigger(draft));
+      markScopeHintSeen();
+      setComposerTriggerDismissed(false);
+    },
+    [addScopeChip, draft, markScopeHintSeen, setDraft],
+  );
+
+  const onDismissComposerTrigger = useCallback(() => {
+    setComposerTriggerDismissed(true);
+  }, []);
 
   const stopGeneration = useCallback(() => {
     void stop();
@@ -955,6 +1053,11 @@ export function useWorkspaceAgent() {
     addMentionedNode,
     mentionSuggestions,
     activeMention,
+    composerTrigger,
+    composerTriggerSuggestions,
+    composerTriggerOpen,
+    onPickComposerTrigger,
+    onDismissComposerTrigger,
     error: displayError,
     runtime,
     messages,
