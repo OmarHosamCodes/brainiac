@@ -12,6 +12,15 @@ export function composerDraftKey(conversationId: string | null | undefined) {
   return conversationId?.trim() || "";
 }
 
+export function isComposerDraftUniqueViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    if ("code" in current && current.code === "23505") return true;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}
+
 export const composerDraftConversationInputSchema = z.object({
   conversationId: z.string().trim().min(1).optional(),
 });

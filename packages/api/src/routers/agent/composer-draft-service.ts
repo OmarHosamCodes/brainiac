@@ -1,6 +1,7 @@
 import { db } from "@orch/db";
-import { dashboardComposerDraft } from "@orch/db/schema";
+import { dashboardComposerDraft, dashboardConversation } from "@orch/db/schema";
 import { createWorkspaceId } from "@orch/workspace";
+import { ORPCError } from "@orpc/server";
 import { and, eq, isNull } from "drizzle-orm";
 
 import type { AgentTextAttachment } from "@orch/agent/types";
@@ -8,6 +9,7 @@ import type { AgentTextAttachment } from "@orch/agent/types";
 import {
   composerDraftKey,
   composerDraftRecordSchema,
+  isComposerDraftUniqueViolation,
   normalizeComposerDraftText,
 } from "./composer-draft";
 
@@ -27,7 +29,31 @@ function conversationFilter(userId: string, conversationId: string | undefined) 
   );
 }
 
+async function assertConversationOwnership(actorUserId: string, conversationId: string | undefined) {
+  const key = composerDraftKey(conversationId);
+  if (!key) return;
+
+  const [conversation] = await db
+    .select()
+    .from(dashboardConversation)
+    .where(
+      and(
+        eq(dashboardConversation.id, key),
+        eq(dashboardConversation.userId, actorUserId),
+        isNull(dashboardConversation.archivedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!conversation) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Conversation not found.",
+    });
+  }
+}
+
 export async function getComposerDraft(actorUserId: string, input: DraftInput) {
+  await assertConversationOwnership(actorUserId, input.conversationId);
   const [row] = await db
     .select()
     .from(dashboardComposerDraft)
@@ -52,6 +78,8 @@ export async function upsertComposerDraft(
     attachments?: AgentTextAttachment[];
   },
 ) {
+  await assertConversationOwnership(actorUserId, input.conversationId);
+
   const text = normalizeComposerDraftText(input.text);
   const attachments = input.attachments ?? [];
   const conversationId = composerDraftKey(input.conversationId) || null;
@@ -63,19 +91,28 @@ export async function upsertComposerDraft(
       .set({ text, attachments, savedAt })
       .where(conversationFilter(actorUserId, input.conversationId));
   } else {
-    await db.insert(dashboardComposerDraft).values({
-      id: createWorkspaceId("draft"),
-      userId: actorUserId,
-      conversationId,
-      text,
-      attachments,
-      savedAt,
-    });
+    try {
+      await db.insert(dashboardComposerDraft).values({
+        id: createWorkspaceId("draft"),
+        userId: actorUserId,
+        conversationId,
+        text,
+        attachments,
+        savedAt,
+      });
+    } catch (error) {
+      if (!isComposerDraftUniqueViolation(error)) throw error;
+      await db
+        .update(dashboardComposerDraft)
+        .set({ text, attachments, savedAt })
+        .where(conversationFilter(actorUserId, input.conversationId));
+    }
   }
   return getComposerDraft(actorUserId, input);
 }
 
 export async function discardComposerDraft(actorUserId: string, input: DraftInput) {
+  await assertConversationOwnership(actorUserId, input.conversationId);
   await db
     .delete(dashboardComposerDraft)
     .where(conversationFilter(actorUserId, input.conversationId));
