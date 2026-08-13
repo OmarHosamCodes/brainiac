@@ -1,11 +1,13 @@
+import type { AgentScopeRef } from "@orch/agent/types";
 import { useEffect } from "react";
 
 import { agentScopeAttributeNames, parseAgentScopeTarget } from "@/features/shared/agent-scopeable";
 import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 
-export function useAgentScopeModeListener() {
+export function useAgentScopeModeListener(onPickChip?: (chip: AgentScopeRef) => void) {
   const scopeModeActive = useWorkspaceAgentStore((s) => s.scopeModeActive);
   const addScopeChip = useWorkspaceAgentStore((s) => s.addScopeChip);
+  const pickChip = onPickChip ?? addScopeChip;
   const setScopeModeActive = useWorkspaceAgentStore((s) => s.setScopeModeActive);
   const markScopeHintSeen = useWorkspaceAgentStore((s) => s.markScopeHintSeen);
 
@@ -37,7 +39,7 @@ export function useAgentScopeModeListener() {
 
       event.preventDefault();
       event.stopPropagation();
-      addScopeChip(chip);
+      pickChip(chip);
       markScopeHintSeen();
     }
 
@@ -55,7 +57,7 @@ export function useAgentScopeModeListener() {
 
       if (event.key === "Enter") {
         event.preventDefault();
-        addScopeChip(chip);
+        pickChip(chip);
         markScopeHintSeen();
       }
     }
@@ -73,5 +75,5 @@ export function useAgentScopeModeListener() {
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [addScopeChip, markScopeHintSeen, scopeModeActive, setScopeModeActive]);
+  }, [markScopeHintSeen, pickChip, scopeModeActive, setScopeModeActive]);
 }
