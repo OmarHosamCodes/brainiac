@@ -42,6 +42,35 @@ export const canvasActionSchema = z.discriminatedUnion("type", [
     nodeId: idSchema,
     node: z.unknown(),
   }),
+  z
+    .object({
+      type: z.literal("node.update"),
+      nodeId: idSchema,
+      title: z.string().trim().min(1).max(120).optional(),
+      visibility: z.enum(["private", "team"]).optional(),
+      teamId: idSchema.nullable().optional(),
+      agencyRef: z
+        .object({
+          teamId: idSchema,
+          projectId: idSchema.optional(),
+          taskId: idSchema.optional(),
+        })
+        .nullable()
+        .optional(),
+    })
+    .superRefine((value, ctx) => {
+      if (
+        value.title === undefined &&
+        value.visibility === undefined &&
+        value.teamId === undefined &&
+        value.agencyRef === undefined
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "node.update requires a field to change.",
+        });
+      }
+    }),
   z.object({
     type: z.literal("node.delete"),
     nodeId: idSchema,
@@ -112,6 +141,8 @@ export function bindCanvasPlanStepAction(
   if (nodes.some((node) => node.id === action.nodeId)) return action;
   if (!lastCreated) return action;
   switch (action.type) {
+    case "node.update":
+      return action;
     case "node.replace":
     case "node.delete":
     case "tab.create":
@@ -186,6 +217,8 @@ export function canvasActionLabel(action: CanvasAction): string {
       return `Create node “${action.title}”`;
     case "node.replace":
       return "Replace node";
+    case "node.update":
+      return action.agencyRef !== undefined ? "Update node Agency link" : "Update node";
     case "node.delete":
       return "Delete node";
     case "tab.create":
@@ -220,6 +253,7 @@ export function canvasActionBoardTarget(action: CanvasAction): {
     case "node.create":
       return {};
     case "node.replace":
+    case "node.update":
     case "node.delete":
       return { nodeId: action.nodeId };
     case "tab.create":
