@@ -38,6 +38,24 @@ describe("canvasActionSchema", () => {
       expect(action.agencyRef?.projectId).toBe("proj-1");
     }
   });
+
+  test("parses node.update with agencyRef", () => {
+    const action = canvasActionSchema.parse({
+      type: "node.update",
+      nodeId: "node-1",
+      agencyRef: { teamId: "team-1", projectId: "proj-1" },
+    });
+    expect(canvasActionLabel(action)).toBe("Update node Agency link");
+  });
+
+  test("rejects empty node.update", () => {
+    expect(() =>
+      canvasActionSchema.parse({
+        type: "node.update",
+        nodeId: "node-1",
+      }),
+    ).toThrow();
+  });
 });
 
 describe("applyCanvasAction", () => {
