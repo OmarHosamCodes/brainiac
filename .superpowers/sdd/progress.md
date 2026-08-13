@@ -8,3 +8,5 @@ Task 3: complete (commits bbcdd812..675696af, review Approved after Important up
 Task 4: complete (commits 0c0e318c..44616369, review Approved after in-flight restore-chip suppression). Minors: no hook timing tests; redundant isBusy gate.
 Task 5: complete (commits 65448d21..d3e931f6, review Ready). Minor: marker guard is if-not instead of exhaustive switch.
 Task 6: complete (commits feaed779..729d3fef, review Approved after ComposerDraftBridge lastEmittedRef fix). Minors: projects query always-on when teamId set; no browser E2E.
+Task 7: complete (commits 330f1616..4a463c9f, review Ready). Minors only.
+Task 8: complete (commits bffc24c2..487bede6, review Ready). Minors only.
