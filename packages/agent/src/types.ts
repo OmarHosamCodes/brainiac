@@ -556,6 +556,19 @@ export type AgencyAgentRuntime = {
       isTiming: boolean;
     }>;
   }>;
+  listTimeGaps: (input: { from: string; to: string }) => Promise<{
+    from: string;
+    to: string;
+    trackedSeconds: number;
+    gapSeconds: number;
+    gaps: Array<{
+      startAt: string;
+      endAt: string;
+      durationSeconds: number;
+      projectId: string | null;
+      taskId: string | null;
+    }>;
+  }>;
   getReportsSummary: (input: {
     from: string;
     to: string;

@@ -14,6 +14,7 @@ describe("listAgentToolCatalog", () => {
     expect(names).not.toContain("create_node");
     expect(names).not.toContain("propose_canvas_action");
     expect(names).not.toContain("list_agency_time_entries");
+    expect(names).not.toContain("list_agency_time_gaps");
   });
 
   test("returns canvas agent propose without direct mutators", () => {
@@ -40,6 +41,7 @@ describe("listAgentToolCatalog", () => {
     expect(names).toContain("ui_present");
     expect(names).toContain("ask_agency_question");
     expect(names).toContain("list_agency_time_entries");
+    expect(names).toContain("list_agency_time_gaps");
     expect(names).toContain("get_agency_reports_summary");
     expect(names).not.toContain("draft_agency_plan");
     expect(names).not.toContain("propose_agency_action");
@@ -52,6 +54,7 @@ describe("listAgentToolCatalog", () => {
     expect(names).toContain("list_agency_projects");
     expect(names).toContain("ask_agency_question");
     expect(names).toContain("draft_agency_plan");
+    expect(names).toContain("list_agency_time_gaps");
     expect(names).not.toContain("propose_agency_action");
   });
 
@@ -61,6 +64,7 @@ describe("listAgentToolCatalog", () => {
     expect(names).toContain("ask_agency_question");
     expect(names).toContain("propose_agency_action");
     expect(names).toContain("list_agency_time_entries");
+    expect(names).toContain("list_agency_time_gaps");
     expect(names).not.toContain("draft_agency_plan");
   });
 
