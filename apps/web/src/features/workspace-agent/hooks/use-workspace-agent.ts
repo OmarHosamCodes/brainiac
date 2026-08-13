@@ -58,6 +58,11 @@ import {
   buildWorkspaceAgentQuickStarts,
   type WorkspaceAgentQuickStart,
 } from "@/features/workspace-agent/workspace-agent-quick-starts";
+import {
+  findWorkspaceAgentMessageHits,
+  joinOrchMessageText,
+  stepSearchIndex,
+} from "@/features/workspace-agent/workspace-agent-message-search";
 import { applyBoundWorkspaceSnapshot } from "@/features/workspace/workspace-snapshot-handler";
 import {
   cancelQueuedAgentMessage,
@@ -181,6 +186,9 @@ export function useWorkspaceAgent() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
   const [historyQuery, setHistoryQuery] = useState("");
+  const [threadSearchOpen, setThreadSearchOpen] = useState(false);
+  const [threadSearchQuery, setThreadSearchQuery] = useState("");
+  const [threadSearchIndex, setThreadSearchIndex] = useState(0);
   /** How many artifacts the operator has already dismissed from the dock. */
   const [dismissedArtifactCount, setDismissedArtifactCount] = useState(0);
   /** When set, dock/overlay prefer this artifact (e.g. opened from a message card). */
@@ -306,6 +314,32 @@ export function useWorkspaceAgent() {
 
   const isStreaming = status === "streaming" || status === "submitted";
   const canSend = !isStreaming;
+
+  const threadSearchHits = useMemo(
+    () => findWorkspaceAgentMessageHits(joinOrchMessageText(messages), threadSearchQuery),
+    [messages, threadSearchQuery],
+  );
+
+  useEffect(() => {
+    setThreadSearchIndex(0);
+  }, [threadSearchQuery, threadSearchHits.length]);
+
+  const onThreadSearchQueryChange = useCallback((value: string) => {
+    setThreadSearchQuery(value);
+  }, []);
+
+  const onThreadSearchStep = useCallback(
+    (delta: number) => {
+      setThreadSearchIndex((index) =>
+        stepSearchIndex({ index, count: threadSearchHits.length, delta }),
+      );
+    },
+    [threadSearchHits.length],
+  );
+
+  const onToggleThreadSearch = useCallback(() => {
+    setThreadSearchOpen((open) => !open);
+  }, []);
 
   const invalidateComposerDraftQuery = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: composerDraftQueryOptions.queryKey });
@@ -517,7 +551,28 @@ export function useWorkspaceAgent() {
         toggleExpanded();
         return;
       }
+      if (
+        expanded &&
+        modifier &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === "f"
+      ) {
+        event.preventDefault();
+        setThreadSearchOpen(true);
+        queueMicrotask(() => {
+          const input = document.querySelector('[data-slot="conversation-search"] input');
+          if (input instanceof HTMLInputElement) {
+            input.focus();
+          }
+        });
+        return;
+      }
       if (event.key === "Escape") {
+        if (threadSearchOpen) {
+          setThreadSearchOpen(false);
+          return;
+        }
         if (canvasOpen) {
           setCanvasOpen(false);
           return;
@@ -552,7 +607,7 @@ export function useWorkspaceAgent() {
       window.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("pointerdown", onPointerDown, true);
     };
-  }, [canvasOpen, expanded, scopeModeActive, setExpanded, setScopeModeActive, toggleExpanded]);
+  }, [canvasOpen, expanded, scopeModeActive, setExpanded, setScopeModeActive, threadSearchOpen, toggleExpanded]);
 
   const switchConversation = useCallback(
     (conversationId: string | null) => {
@@ -569,6 +624,9 @@ export function useWorkspaceAgent() {
       setDismissedStickyKeys(new Set());
       setQuestionSubmittingId(null);
       setQuestionDrafts({});
+      setThreadSearchQuery("");
+      setThreadSearchIndex(0);
+      setThreadSearchOpen(false);
       if (!conversationId) {
         setMessages([]);
       }
@@ -1137,6 +1195,13 @@ export function useWorkspaceAgent() {
     })),
     historyQuery,
     setHistoryQuery,
+    threadSearchOpen,
+    onToggleThreadSearch,
+    threadSearchQuery,
+    onThreadSearchQueryChange,
+    threadSearchHits,
+    threadSearchIndex,
+    onThreadSearchStep,
     activeCostUsd: activeConversation?.usageSummary?.totals.costUsd ?? 0,
     conversationsLoading: conversationsQuery.isLoading,
     startNewConversation,

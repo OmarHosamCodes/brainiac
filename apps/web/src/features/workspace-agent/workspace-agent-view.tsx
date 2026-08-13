@@ -96,6 +96,13 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                   conversationsLoading={view.conversationsLoading}
                   historyQuery={view.historyQuery}
                   onHistoryQueryChange={view.setHistoryQuery}
+                  threadSearchOpen={view.threadSearchOpen}
+                  onToggleThreadSearch={view.onToggleThreadSearch}
+                  threadSearchQuery={view.threadSearchQuery}
+                  onThreadSearchQueryChange={view.onThreadSearchQueryChange}
+                  threadSearchHits={view.threadSearchHits}
+                  threadSearchIndex={view.threadSearchIndex}
+                  onThreadSearchStep={view.onThreadSearchStep}
                   activeConversationId={view.activeConversationId}
                   onSelectConversation={view.switchConversation}
                   onStartNewConversation={view.startNewConversation}

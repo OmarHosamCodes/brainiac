@@ -1,4 +1,4 @@
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, SearchIcon } from "lucide-react";
 
 import { ThreadList } from "@/components/elements/thread-list";
 import { ThreadSearch } from "@/components/elements/thread-search";
@@ -22,6 +22,8 @@ export function WorkspaceAgentThreadHistory({
   conversationsLoading,
   historyQuery,
   onHistoryQueryChange,
+  threadSearchOpen,
+  onToggleThreadSearch,
   activeConversationId,
   deletingConversationId,
   onSelectConversation,
@@ -33,6 +35,8 @@ export function WorkspaceAgentThreadHistory({
   conversationsLoading: boolean;
   historyQuery: string;
   onHistoryQueryChange: (value: string) => void;
+  threadSearchOpen: boolean;
+  onToggleThreadSearch: () => void;
   activeConversationId: string | null;
   deletingConversationId: string | null;
   onSelectConversation: (id: string) => void;
@@ -52,11 +56,22 @@ export function WorkspaceAgentThreadHistory({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-8 w-full justify-start gap-1.5 rounded-lg px-2 text-xs"
+          className="h-8 min-w-0 flex-1 justify-start gap-1.5 rounded-lg px-2 text-xs"
           onClick={onStartNewConversation}
         >
           <PlusIcon className="size-3.5" aria-hidden />
           New chat
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0 rounded-lg"
+          aria-label="Find in conversation"
+          aria-pressed={threadSearchOpen}
+          onClick={onToggleThreadSearch}
+        >
+          <SearchIcon className="size-3.5" aria-hidden />
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-2">

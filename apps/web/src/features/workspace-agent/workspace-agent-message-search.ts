@@ -37,3 +37,8 @@ export function joinOrchMessageText(messages: Array<{ parts?: Array<{ type: stri
     .map((part) => part.text ?? "")
     .join("\n");
 }
+
+export function stepSearchIndex(input: { index: number; count: number; delta: number }) {
+  if (input.count <= 0) return 0;
+  return (input.index + input.delta + input.count) % input.count;
+}
