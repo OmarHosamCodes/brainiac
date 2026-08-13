@@ -18,6 +18,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { ComposerPrimitive } from "@assistant-ui/react";
 
 import { MessageQueue } from "@/components/elements/message-queue";
+import { DraftRestore } from "@/components/elements/draft-restore";
 import { ThreadComposer } from "@/components/assistant-ui/thread";
 import {
   ComposerAttachButton,
@@ -27,6 +28,7 @@ import {
 import { WorkspaceAgentScopeChipView } from "@/features/workspace-agent/scope-chip-view";
 import { WorkspaceAgentThreadModelSelector } from "@/features/workspace-agent/workspace-agent-thread-model-selector";
 import { WorkspaceAgentToolMenuView } from "@/features/workspace-agent/tool-menu-view";
+import { formatComposerDraftSavedAt } from "@/features/workspace-agent/composer-draft-display";
 import type { QueuedAgentMessage } from "@/features/workspace-agent/workspace-agent-message-queue";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Separator } from "@/ui/separator";
@@ -163,6 +165,9 @@ export type WorkspaceAgentThreadComposerViewProps = {
   runningQueueLabel: string;
   onCancelQueuedMessage: (id: string) => void;
   onSend: (input: { text: string }) => boolean | Promise<boolean>;
+  serverDraftOffer: { text: string; savedAt: string } | null;
+  onRestoreServerDraft: () => void;
+  onDiscardServerDraft: () => void;
 };
 
 export function WorkspaceAgentThreadComposerView({
@@ -198,6 +203,9 @@ export function WorkspaceAgentThreadComposerView({
   runningQueueLabel,
   onCancelQueuedMessage,
   onSend,
+  serverDraftOffer,
+  onRestoreServerDraft,
+  onDiscardServerDraft,
 }: WorkspaceAgentThreadComposerViewProps) {
   const entityChips = scopeChips.filter((chip) => chip.kind !== "surface");
   const surfaceUnlockChip = scopeChips.find((chip) => chip.kind === "surface") ?? null;
@@ -223,6 +231,16 @@ export function WorkspaceAgentThreadComposerView({
             </motion.p>
           ) : null}
         </AnimatePresence>
+
+        {serverDraftOffer ? (
+          <DraftRestore
+            className="mb-2 max-w-none"
+            draft={serverDraftOffer.text}
+            savedAt={formatComposerDraftSavedAt(serverDraftOffer.savedAt)}
+            onRestore={onRestoreServerDraft}
+            onDiscard={onDiscardServerDraft}
+          />
+        ) : null}
 
         {isStreaming || queuedMessages.length > 0 ? (
           <MessageQueue

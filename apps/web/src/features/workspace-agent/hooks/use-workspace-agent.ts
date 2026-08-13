@@ -24,6 +24,7 @@ import {
   getWorkspaceAgentMentionSuggestions,
   stripActiveWorkspaceAgentMention,
 } from "@/features/workspace-agent/workspace-agent-mentions";
+import { shouldOfferComposerDraftRestore } from "@/features/workspace-agent/composer-draft-display";
 import { useWorkspaceAgentData } from "@/features/workspace-agent/hooks/use-workspace-agent-data";
 import { useWorkspaceAgentModelPreferences } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preferences";
 import { useWorkspaceAgentModelPreset } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preset";
@@ -92,6 +93,8 @@ function composerUnlockedSurfaces(
     ...(agencyUnlocked ? (["agency"] as const) : []),
   ];
 }
+
+const COMPOSER_DRAFT_DEBOUNCE_MS = 500;
 
 function buildOrchTurnSendContext(input: {
   conversationId: string | null;
@@ -179,6 +182,7 @@ export function useWorkspaceAgent() {
   >({});
   const [queuedMessages, setQueuedMessages] = useState<QueuedAgentMessage[]>([]);
   const drainLockRef = useRef(false);
+  const draftUpsertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const unlockedSurfaces = useMemo(
     () => composerUnlockedSurfaces(surface, scopeChips),
@@ -203,6 +207,9 @@ export function useWorkspaceAgent() {
     toolsCatalogQuery,
     renameConversationMutation,
     deleteConversationMutation,
+    composerDraftQuery,
+    upsertComposerDraftMutation,
+    discardComposerDraftMutation,
   } = data;
 
   const conversationList = conversationsQuery.data?.conversations ?? [];
@@ -279,6 +286,84 @@ export function useWorkspaceAgent() {
 
   const isStreaming = status === "streaming" || status === "submitted";
   const canSend = !isStreaming;
+
+  const invalidateComposerDraftQuery = useCallback(
+    (conversationId: string | null) => {
+      void queryClient.invalidateQueries({
+        queryKey: orpc.agent.conversations.draft.get.queryKey({
+          input: conversationId ? { conversationId } : {},
+        }),
+      });
+    },
+    [queryClient],
+  );
+
+  const serverDraft = composerDraftQuery.data?.draft ?? null;
+  const serverDraftOffer = useMemo(() => {
+    if (!serverDraft) return null;
+    return shouldOfferComposerDraftRestore({ liveDraft: draft, serverText: serverDraft.text })
+      ? serverDraft
+      : null;
+  }, [draft, serverDraft]);
+
+  useEffect(() => {
+    if (draftUpsertTimerRef.current) {
+      clearTimeout(draftUpsertTimerRef.current);
+      draftUpsertTimerRef.current = null;
+    }
+  }, [activeConversationId]);
+
+  useEffect(() => {
+    if (isStreaming) return;
+    if (draft.trim().length === 0) return;
+
+    if (draftUpsertTimerRef.current) {
+      clearTimeout(draftUpsertTimerRef.current);
+    }
+
+    draftUpsertTimerRef.current = setTimeout(() => {
+      void upsertComposerDraftMutation
+        .mutateAsync({
+          ...(activeConversationId ? { conversationId: activeConversationId } : {}),
+          text: draft,
+        })
+        .then(() => {
+          invalidateComposerDraftQuery(activeConversationId);
+        })
+        .catch(() => {
+          // Autosave failures are non-blocking; the user can still send.
+        });
+    }, COMPOSER_DRAFT_DEBOUNCE_MS);
+
+    return () => {
+      if (draftUpsertTimerRef.current) {
+        clearTimeout(draftUpsertTimerRef.current);
+        draftUpsertTimerRef.current = null;
+      }
+    };
+  }, [
+    activeConversationId,
+    draft,
+    invalidateComposerDraftQuery,
+    isStreaming,
+    upsertComposerDraftMutation,
+  ]);
+
+  const onRestoreServerDraft = useCallback(() => {
+    if (!serverDraft) return;
+    setDraft(serverDraft.text);
+  }, [serverDraft, setDraft]);
+
+  const onDiscardServerDraft = useCallback(async () => {
+    try {
+      await discardComposerDraftMutation.mutateAsync({
+        ...(activeConversationId ? { conversationId: activeConversationId } : {}),
+      });
+      invalidateComposerDraftQuery(activeConversationId);
+    } catch (mutationError) {
+      setError(getErrorMessage(mutationError, "Failed to discard draft."));
+    }
+  }, [activeConversationId, discardComposerDraftMutation, invalidateComposerDraftQuery]);
   const displayError =
     error ?? (chatError ? getErrorMessage(chatError, "Failed to reach the agent.") : null);
 
@@ -490,6 +575,16 @@ export function useWorkspaceAgent() {
             body: orchBody,
           },
         );
+        if (action === "send") {
+          try {
+            await discardComposerDraftMutation.mutateAsync({
+              ...(activeConversationId ? { conversationId: activeConversationId } : {}),
+            });
+            invalidateComposerDraftQuery(activeConversationId);
+          } catch {
+            // Draft discard failure should not block a successful send.
+          }
+        }
         return true;
       } catch (streamError) {
         setDraft(content);
@@ -500,7 +595,9 @@ export function useWorkspaceAgent() {
     [
       activeConversationId,
       chatSendMessage,
+      discardComposerDraftMutation,
       draft,
+      invalidateComposerDraftQuery,
       selectedToolPreset,
       isStreaming,
       queuedMessages.length,
@@ -972,6 +1069,9 @@ export function useWorkspaceAgent() {
     queuedMessages,
     runningQueueLabel,
     onCancelQueuedMessage,
+    serverDraftOffer,
+    onRestoreServerDraft,
+    onDiscardServerDraft,
   };
 }
 
