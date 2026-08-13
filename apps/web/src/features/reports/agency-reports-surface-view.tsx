@@ -83,6 +83,7 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
         onEditDetails={vm.onEditDetails}
         onDeleteRow={vm.onDeleteRow}
         onToggleWaste={vm.onToggleWaste}
+        onAskOrchWaste={vm.onAskOrchWaste}
       />
     </div>
   );

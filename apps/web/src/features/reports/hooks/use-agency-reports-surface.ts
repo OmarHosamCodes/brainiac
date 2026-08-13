@@ -4,6 +4,7 @@ import { useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
 import { computeReportHourMetrics } from "@/features/reports/agency-report-hour-metrics";
+import { buildWasteOrchPrompt } from "@/features/reports/agency-report-orch-waste";
 import { fetchAllReportEntries } from "@/features/reports/fetch-report-entries";
 import type { AgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
 import { orpcClient } from "@/lib/orpc";
@@ -25,7 +26,9 @@ import {
 } from "@/features/reports/agency-report-grouping";
 import { selectEntriesForDetailsRow } from "@/features/reports/hooks/use-agency-report-entry-details-dialog";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { formatDuration } from "@/lib/utils/format-duration";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
+import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 
 const SAVED_TICK_MS = 1200;
 
@@ -260,6 +263,20 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     [flashSavedRow, queryClient, teamId],
   );
 
+  const handleAskOrchWaste = useCallback((row: AggregatedReportRow) => {
+    if (row.entryCount !== 1 || row.entries.length !== 1) return;
+    const entry = row.entries[0];
+    if (!entry) return;
+    useWorkspaceAgentStore.getState().seedComposer({
+      text: buildWasteOrchPrompt({
+        entryId: entry.id,
+        description: row.description || row.taskTitle || "",
+        durationLabel: formatDuration(row.durationSeconds, "clock"),
+      }),
+      toolPreset: "agent",
+    });
+  }, []);
+
   const handleGoToTracker = useCallback(() => {
     navigate("/agency");
   }, [navigate]);
@@ -317,6 +334,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     onDetailsOpenChange: handleDetailsOpenChange,
     onDeleteRow: handleDeleteRow,
     onToggleWaste: handleToggleWaste,
+    onAskOrchWaste: handleAskOrchWaste,
     onGoToTracker: handleGoToTracker,
   };
 }
