@@ -64,7 +64,6 @@ export function AgencyTaskChooserProjectRow({
 
   return (
     <motion.div
-      layout
       className={cn(agencyTaskChooserRowClass, "pr-1", active && agencyTaskChooserRowActiveClass)}
       transition={chooserBaseTransition}
     >

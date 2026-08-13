@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { ChooserClientGroup, ChooserProjectGroup } from "./agency-task-chooser-groups";
 import {
   buildTaskChooserKeyboardItems,
+  clampTaskChooserActiveIndex,
   indexOfTaskChooserItem,
   taskChooserCreatePriority,
   taskChooserOptionDomId,
@@ -119,6 +120,18 @@ describe("indexOfTaskChooserItem", () => {
     expect(indexOfTaskChooserItem(items, { taskId: "t1" })).toBe(1);
     expect(indexOfTaskChooserItem(items, { projectId: "p1" })).toBe(0);
     expect(indexOfTaskChooserItem([], {})).toBe(-1);
+  });
+});
+
+describe("clampTaskChooserActiveIndex", () => {
+  test("does not jump a mouse highlight to the first row when the list grows", () => {
+    expect(clampTaskChooserActiveIndex(-1, 8)).toBe(-1);
+    expect(clampTaskChooserActiveIndex(3, 8)).toBe(3);
+  });
+
+  test("clamps past the end after collapse and clears an empty list", () => {
+    expect(clampTaskChooserActiveIndex(9, 4)).toBe(3);
+    expect(clampTaskChooserActiveIndex(2, 0)).toBe(-1);
   });
 });
 

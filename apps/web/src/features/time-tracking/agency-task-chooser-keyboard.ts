@@ -87,6 +87,13 @@ export function indexOfTaskChooserItem(
   return items.length > 0 ? 0 : -1;
 }
 
+/** Keep the highlight in place when expand/collapse changes the list length. */
+export function clampTaskChooserActiveIndex(current: number, length: number): number {
+  if (length === 0) return -1;
+  if (current < 0) return current;
+  return Math.min(current, length - 1);
+}
+
 export function taskChooserCreatePriority(input: {
   searchTerm: string;
   hasVisibleResults: boolean;

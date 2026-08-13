@@ -33,6 +33,7 @@ import {
 } from "@/features/time-tracking/agency-task-chooser-groups";
 import {
   buildTaskChooserKeyboardItems,
+  clampTaskChooserActiveIndex,
   indexOfTaskChooserItem,
   taskChooserCreatePriority,
   taskChooserOptionDomId,
@@ -318,10 +319,12 @@ export function useAgencyTaskChooser(
   );
 
   const [activeIndex, setActiveIndex] = useState(-1);
+  const followActiveOptionRef = useRef(false);
 
   useEffect(() => {
     if (!open) {
       setActiveIndex(-1);
+      followActiveOptionRef.current = false;
       return;
     }
     setActiveIndex(
@@ -330,27 +333,24 @@ export function useAgencyTaskChooser(
         projectId: selectedTask?.projectId ?? bestMatchTask?.projectId ?? null,
       }),
     );
-    // Re-seek when preferred task becomes visible (expand-on-open).
+    // Re-seek on open/search/value only. Expand/collapse must not reset to row 0.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid reset on every arrow move
-  }, [open, searchTerm, bestMatchTaskId, value, keyboardItems.length]);
+  }, [open, searchTerm, bestMatchTaskId, value]);
 
   useEffect(() => {
     if (!open) return;
-    setActiveIndex((current) => {
-      if (keyboardItems.length === 0) return -1;
-      if (current < 0) return 0;
-      return Math.min(current, keyboardItems.length - 1);
-    });
+    setActiveIndex((current) => clampTaskChooserActiveIndex(current, keyboardItems.length));
   }, [keyboardItems.length, open]);
 
   useEffect(() => {
-    if (!open || activeIndex < 0) return;
+    if (!open || activeIndex < 0 || !followActiveOptionRef.current) return;
     const item = keyboardItems[activeIndex];
     if (!item) return;
+    followActiveOptionRef.current = false;
     const frame = requestAnimationFrame(() => {
       listRef.current
         ?.querySelector<HTMLElement>(`#${CSS.escape(taskChooserOptionDomId(item.key))}`)
-        ?.scrollIntoView({ block: "nearest" });
+        ?.scrollIntoView({ block: "nearest", inline: "nearest" });
     });
     return () => cancelAnimationFrame(frame);
   }, [activeIndex, keyboardItems, open]);
@@ -412,6 +412,7 @@ export function useAgencyTaskChooser(
     if (event.key === "ArrowDown") {
       if (keyboardItems.length === 0) return;
       event.preventDefault();
+      followActiveOptionRef.current = true;
       setActiveIndex((current) => {
         if (current < 0) return 0;
         return Math.min(current + 1, keyboardItems.length - 1);
@@ -422,6 +423,7 @@ export function useAgencyTaskChooser(
     if (event.key === "ArrowUp") {
       if (keyboardItems.length === 0) return;
       event.preventDefault();
+      followActiveOptionRef.current = true;
       setActiveIndex((current) => {
         if (current < 0) return keyboardItems.length - 1;
         return Math.max(current - 1, 0);

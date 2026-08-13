@@ -88,7 +88,6 @@ export function AgencyTaskChooserTaskRow({
 
   return (
     <motion.div
-      layout
       animate={selecting ? { scale: 1.01 } : { scale: 1 }}
       transition={chooserSelectFlashTransition}
       className={cn(

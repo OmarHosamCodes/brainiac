@@ -236,6 +236,10 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                       createElevated && "text-sm",
                     )}
                     whileTap={chooserTapScale}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
                     onClick={() => onOpenCreateTask(entry.project.id)}
                   >
                     <Plus className="size-3.5" aria-hidden />
@@ -280,7 +284,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
             collisionPadding={12}
             onOpenAutoFocus={(event) => {
               event.preventDefault();
-              searchInputRef.current?.focus();
+              searchInputRef.current?.focus({ preventScroll: true });
             }}
             className={agencyTaskChooserPanelClass}
           >
@@ -310,7 +314,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                 ref={listRef}
                 role="listbox"
                 aria-label={pickProject ? "Projects" : "Tasks"}
-                className="max-h-[min(24rem,60vh)] overflow-y-auto px-1.5 py-2"
+                className="max-h-[min(24rem,60vh)] overflow-y-auto [overflow-anchor:none] px-1.5 py-2"
               >
                 {loading ? (
                   <div className="space-y-1.5 px-1 py-1">
