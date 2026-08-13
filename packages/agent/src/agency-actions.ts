@@ -104,6 +104,13 @@ export const agencyActionSchema = z.discriminatedUnion("type", [
     type: z.literal("client.archive"),
     clientId: idSchema,
   }),
+  z.object({
+    type: z.literal("money.export_client"),
+    clientId: idSchema,
+    periodStart: z.string().datetime(),
+    periodEnd: z.string().datetime(),
+    mode: z.enum(["combine", "split"]).default("combine"),
+  }),
 ]);
 
 export type AgencyAction = z.infer<typeof agencyActionSchema>;
@@ -172,6 +179,8 @@ export function agencyActionLabel(action: AgencyAction): string {
       return "Update client";
     case "client.archive":
       return "Archive client";
+    case "money.export_client":
+      return "Export client bill";
     default: {
       const _exhaustive: never = action;
       return _exhaustive;

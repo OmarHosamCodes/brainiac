@@ -22,6 +22,17 @@ describe("agencyActionSchema", () => {
       }),
     ).toThrow();
   });
+
+  test("parses money.export_client", () => {
+    const action = agencyActionSchema.parse({
+      type: "money.export_client",
+      clientId: "client-1",
+      periodStart: "2026-08-01T00:00:00.000Z",
+      periodEnd: "2026-08-31T23:59:59.000Z",
+      mode: "combine",
+    });
+    expect(agencyActionLabel(action)).toBe("Export client bill");
+  });
 });
 
 describe("agencyDraftPlanSchema", () => {
