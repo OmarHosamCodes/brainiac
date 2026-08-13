@@ -7,3 +7,4 @@ Task 2: complete (commits 756f185c..bbcdd812, review Approved after attachment-o
 Task 3: complete (commits bbcdd812..675696af, review Approved after Important upsert-race / ownership / error-wrap fixes). Minors: redundant ownership queries on upsert; empty upsert still persists a row; no live Postgres CRUD tests.
 Task 4: complete (commits 0c0e318c..44616369, review Approved after in-flight restore-chip suppression). Minors: no hook timing tests; redundant isBusy gate.
 Task 5: complete (commits 65448d21..d3e931f6, review Ready). Minor: marker guard is if-not instead of exhaustive switch.
+Task 6: complete (commits feaed779..729d3fef, review Approved after ComposerDraftBridge lastEmittedRef fix). Minors: projects query always-on when teamId set; no browser E2E.
