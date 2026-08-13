@@ -19,9 +19,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 742 |
+| golden-feature | 743 |
 | server-operation | 15 |
-| shared-infrastructure | 322 |
+| shared-infrastructure | 323 |
 | static-presentation | 22 |
 
 ## Counts by domain
@@ -38,7 +38,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | clients | 13 |
 | configuration | 3 |
 | dashboard | 8 |
-| database-platform | 35 |
+| database-platform | 36 |
 | deployment | 6 |
 | environment | 5 |
 | integrations | 2 |
@@ -49,7 +49,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | projects | 24 |
 | reports | 61 |
 | repository | 13 |
-| resourcing | 40 |
+| resourcing | 41 |
 | server-platform | 23 |
 | task-management | 64 |
 | team | 19 |
@@ -361,6 +361,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/resourcing/tenure/agency-people-directory.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/resourcing/tenure/agency-people-exemptions.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/resourcing/tenure/agency-people-guided-member.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/resourcing/tenure/agency-settings-alert-policy.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/resourcing/tenure/agency-settings-tenure-member-detail.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/resourcing/tenure/agency-settings-tenure-pane-view.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/resourcing/tenure/agency-settings-tenure-pane.tsx` | resourcing | presentational-view | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -1106,6 +1107,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/db/src/migrations/0047_agency_expense_starts_at.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0048_agent_proposal_domain.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0049_task_estimate_minutes.sql` | task-management | persistence-migration | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
+| `packages/db/src/migrations/0050_agency_member_profile_alert_policy.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/meta/0000_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0001_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0002_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
