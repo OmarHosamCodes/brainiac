@@ -33,6 +33,7 @@ import {
   type WorkspaceAgentSlashCandidate,
 } from "@/features/workspace-agent/workspace-agent-mentions";
 import { shouldOfferComposerDraftRestore } from "@/features/workspace-agent/composer-draft-display";
+import { CONTINUE_TURN_TEXT } from "@/features/workspace-agent/workspace-agent-continue";
 import { useWorkspaceAgentData } from "@/features/workspace-agent/hooks/use-workspace-agent-data";
 import { useWorkspaceAgentModelPreferences } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preferences";
 import { useWorkspaceAgentModelPreset } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preset";
@@ -712,6 +713,15 @@ export function useWorkspaceAgent() {
     ],
   );
 
+  const continueStoppedTurn = useCallback(() => {
+    setStreamStopped(false);
+    void sendMessage({ text: CONTINUE_TURN_TEXT });
+  }, [sendMessage]);
+
+  const dismissStoppedTurn = useCallback(() => {
+    setStreamStopped(false);
+  }, []);
+
   useEffect(() => {
     if (isStreaming || drainLockRef.current || queuedMessages.length === 0) return;
     const { next, rest } = dequeueAgentMessage(queuedMessages);
@@ -1070,6 +1080,8 @@ export function useWorkspaceAgent() {
     sendMessage,
     stopGeneration,
     retryLastTurn,
+    onContinueStoppedTurn: continueStoppedTurn,
+    onDismissStoppedTurn: dismissStoppedTurn,
     selectedToolPreset,
     setSelectedToolPreset,
     planModeEnabled: true,

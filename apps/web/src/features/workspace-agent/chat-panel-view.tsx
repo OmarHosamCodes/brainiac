@@ -18,6 +18,7 @@ import type { WorkspaceAgentQuickStart } from "@/features/workspace-agent/worksp
 import { WorkspaceAgentThreadDataUI } from "@/features/workspace-agent/workspace-agent-thread-data-ui";
 import { WorkspaceAgentThreadHistory } from "@/features/workspace-agent/workspace-agent-thread-history";
 import {
+  WorkspaceAgentStoppedRunSlot,
   WorkspaceAgentThreadMessageProvider,
   WorkspaceAgentThreadWelcome,
 } from "@/features/workspace-agent/workspace-agent-thread-slots";
@@ -88,6 +89,8 @@ type WorkspaceAgentChatPanelViewProps = {
   onSelectQuickStart: (start: WorkspaceAgentQuickStart) => void;
   emptyHint: string;
   onOpenBoard?: (href: string) => void;
+  onContinueStoppedTurn: () => void;
+  onDismissStoppedTurn: () => void;
   composer: ReactNode;
 };
 
@@ -137,6 +140,8 @@ export function WorkspaceAgentChatPanelView({
   quickStarts,
   onSelectQuickStart,
   emptyHint,
+  onContinueStoppedTurn,
+  onDismissStoppedTurn,
   composer,
 }: WorkspaceAgentChatPanelViewProps) {
   const showCanvas = activeArtifact !== null;
@@ -213,6 +218,7 @@ export function WorkspaceAgentChatPanelView({
           onDismissStickyDock(stickyDockItemKey(stickyItem));
         }}
       />
+      <WorkspaceAgentStoppedRunSlot />
       {composer}
     </>
   );
@@ -252,6 +258,8 @@ export function WorkspaceAgentChatPanelView({
           onQuestionFreeTextChange,
           onOpenArtifactCanvas,
           onOpenBoard,
+          onContinueStoppedTurn,
+          onDismissStoppedTurn,
           emptyHint,
           quickStarts,
           onSelectQuickStart,

@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { AiUiArtifact } from "@orch/agent/types";
 
+import { StoppedRun } from "@/components/elements/stopped-run";
 import {
   EmptyState,
   EmptyStateGreeting,
@@ -8,10 +9,12 @@ import {
   EmptyStateSuggestions,
 } from "@/components/elements/empty-state";
 import {
+  getMessageText,
   type OrchAgencyQuestionAnswer,
   type OrchUIDataParts,
   type OrchUIMessage,
 } from "@/features/workspace-agent/orch-ui-message";
+import { shouldShowStoppedRun } from "@/features/workspace-agent/workspace-agent-continue";
 import type { WorkspaceAgentQuickStart } from "@/features/workspace-agent/workspace-agent-quick-starts";
 import type { StickyDockItem } from "@/features/workspace-agent/sticky-dock";
 
@@ -36,6 +39,8 @@ export type WorkspaceAgentThreadMessageContextValue = {
   onQuestionFreeTextChange: (questionId: string, value: string) => void;
   onOpenArtifactCanvas: (artifact: AiUiArtifact) => void;
   onOpenBoard?: (href: string) => void;
+  onContinueStoppedTurn: () => void;
+  onDismissStoppedTurn: () => void;
   emptyHint: string;
   quickStarts: WorkspaceAgentQuickStart[];
   onSelectQuickStart: (start: WorkspaceAgentQuickStart) => void;
@@ -80,5 +85,24 @@ export function WorkspaceAgentThreadWelcome() {
         </EmptyStateSuggestions>
       ) : null}
     </EmptyState>
+  );
+}
+
+export function WorkspaceAgentStoppedRunSlot() {
+  const ctx = useContext(WorkspaceAgentThreadMessageContext);
+  if (!ctx) return null;
+  if (!shouldShowStoppedRun({ streamStopped: ctx.streamStopped, isStreaming: ctx.isStreaming })) {
+    return null;
+  }
+  const lastAssistant = [...ctx.messages].reverse().find((message) => message.role === "assistant");
+  const lastAssistantText = lastAssistant ? getMessageText(lastAssistant) : "";
+  return (
+    <StoppedRun
+      className="max-w-none px-4"
+      words={lastAssistantText.split(/\s+/).filter(Boolean).slice(-24)}
+      reason="Stopped"
+      onContinue={ctx.onContinueStoppedTurn}
+      onDiscard={ctx.onDismissStoppedTurn}
+    />
   );
 }
