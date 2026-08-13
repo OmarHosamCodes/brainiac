@@ -17,6 +17,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { ComposerPrimitive } from "@assistant-ui/react";
 
+import { MessageQueue } from "@/components/elements/message-queue";
 import { ThreadComposer } from "@/components/assistant-ui/thread";
 import {
   ComposerAttachButton,
@@ -26,6 +27,7 @@ import {
 import { WorkspaceAgentScopeChipView } from "@/features/workspace-agent/scope-chip-view";
 import { WorkspaceAgentThreadModelSelector } from "@/features/workspace-agent/workspace-agent-thread-model-selector";
 import { WorkspaceAgentToolMenuView } from "@/features/workspace-agent/tool-menu-view";
+import type { QueuedAgentMessage } from "@/features/workspace-agent/workspace-agent-message-queue";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Separator } from "@/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
@@ -156,6 +158,10 @@ export type WorkspaceAgentThreadComposerViewProps = {
   onToolsMenuOpenChange: (open: boolean) => void;
   tools: AgentToolCatalogEntry[];
   toolsLoading: boolean;
+  isStreaming: boolean;
+  queuedMessages: readonly QueuedAgentMessage[];
+  runningQueueLabel: string;
+  onCancelQueuedMessage: (id: string) => void;
 };
 
 export function WorkspaceAgentThreadComposerView({
@@ -186,6 +192,10 @@ export function WorkspaceAgentThreadComposerView({
   onToolsMenuOpenChange,
   tools,
   toolsLoading,
+  isStreaming,
+  queuedMessages,
+  runningQueueLabel,
+  onCancelQueuedMessage,
 }: WorkspaceAgentThreadComposerViewProps) {
   const entityChips = scopeChips.filter((chip) => chip.kind !== "surface");
   const surfaceUnlockChip = scopeChips.find((chip) => chip.kind === "surface") ?? null;
@@ -211,6 +221,15 @@ export function WorkspaceAgentThreadComposerView({
             </motion.p>
           ) : null}
         </AnimatePresence>
+
+        {isStreaming || queuedMessages.length > 0 ? (
+          <MessageQueue
+            className="mb-2 max-w-none"
+            running={runningQueueLabel}
+            queued={queuedMessages}
+            onCancel={onCancelQueuedMessage}
+          />
+        ) : null}
 
         <ThreadComposer
           placeholder={placeholder}

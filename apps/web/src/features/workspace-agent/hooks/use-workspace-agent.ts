@@ -38,6 +38,7 @@ import {
   collectArtifactsFromMessages,
   dashboardMessagesToUIMessages,
   formatAgencyQuestionAnswerMessage,
+  getMessageText,
   type OrchAgencyQuestionAnswer,
   type OrchUIDataParts,
   type OrchUIMessage,
@@ -48,6 +49,13 @@ import {
   type WorkspaceAgentQuickStart,
 } from "@/features/workspace-agent/workspace-agent-quick-starts";
 import { applyBoundWorkspaceSnapshot } from "@/features/workspace/workspace-snapshot-handler";
+import {
+  cancelQueuedAgentMessage,
+  dequeueAgentMessage,
+  enqueueAgentMessage,
+  nextSendAction,
+  type QueuedAgentMessage,
+} from "@/features/workspace-agent/workspace-agent-message-queue";
 import { orpc, orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
@@ -169,6 +177,8 @@ export function useWorkspaceAgent() {
   const [questionDrafts, setQuestionDrafts] = useState<
     Record<string, { selectedOptionIds: string[]; freeText: string }>
   >({});
+  const [queuedMessages, setQueuedMessages] = useState<QueuedAgentMessage[]>([]);
+  const drainLockRef = useRef(false);
 
   const unlockedSurfaces = useMemo(
     () => composerUnlockedSurfaces(surface, scopeChips),
@@ -432,7 +442,17 @@ export function useWorkspaceAgent() {
       const content = input.text.trim();
       const attachments = input.attachments ?? [];
       const model = modelPresetState.outboundModelId?.trim();
-      if ((!content && attachments.length === 0) || isStreaming) return false;
+      const action = nextSendAction({
+        isStreaming,
+        queueLength: queuedMessages.length,
+        text: content,
+      });
+      if (action === "ignore") return false;
+      if (action === "queue") {
+        setQueuedMessages((current) => enqueueAgentMessage(current, { text: content }));
+        setDraft("");
+        return true;
+      }
       if (surface === "agency" && !teamId) {
         setError("Select an Agency team before asking about time.");
         return false;
@@ -482,6 +502,7 @@ export function useWorkspaceAgent() {
       draft,
       selectedToolPreset,
       isStreaming,
+      queuedMessages.length,
       modelPresetState.modelPreset,
       modelPresetState.outboundModelId,
       scopeChips,
@@ -491,6 +512,27 @@ export function useWorkspaceAgent() {
       workspaceNodes,
     ],
   );
+
+  useEffect(() => {
+    if (isStreaming || drainLockRef.current || queuedMessages.length === 0) return;
+    const { next, rest } = dequeueAgentMessage(queuedMessages);
+    if (!next) return;
+    drainLockRef.current = true;
+    setQueuedMessages(rest);
+    void sendMessage({ text: next.text }).finally(() => {
+      drainLockRef.current = false;
+    });
+  }, [isStreaming, queuedMessages, sendMessage]);
+
+  const onCancelQueuedMessage = useCallback((id: string) => {
+    setQueuedMessages((queue) => cancelQueuedAgentMessage(queue, id));
+  }, []);
+
+  const runningQueueLabel = useMemo(() => {
+    const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+    const snippet = lastAssistant ? getMessageText(lastAssistant).trim() : "";
+    return snippet || "Working…";
+  }, [messages]);
 
   const submitRenameConversation = useCallback(async () => {
     const title = renameDraft.trim();
@@ -926,6 +968,9 @@ export function useWorkspaceAgent() {
     quickStarts,
     onSelectQuickStart,
     emptyHint,
+    queuedMessages,
+    runningQueueLabel,
+    onCancelQueuedMessage,
   };
 }
 
