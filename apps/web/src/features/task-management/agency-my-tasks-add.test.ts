@@ -1,0 +1,228 @@
+import { describe, expect, test } from "bun:test";
+
+import {
+  composerChooserTasks,
+  composerStateFromExistingTask,
+  composerSubmitCopy,
+  composerSubmitKind,
+  isRedundantMyTasksAdd,
+  nextAssigneesForComposerSubmit,
+  nextPillsAfterAdd,
+  withActorMember,
+} from "./agency-my-tasks-add";
+
+describe("withActorMember", () => {
+  test("prepends the actor when the roster has not loaded them", () => {
+    expect(
+      withActorMember([{ userId: "b", userName: "Bee" }], { userId: "a", userName: "Me" }),
+    ).toEqual([
+      { userId: "a", userName: "Me" },
+      { userId: "b", userName: "Bee" },
+    ]);
+  });
+
+  test("keeps the roster when the actor is already present", () => {
+    const members = [{ userId: "a", userName: "Me" }];
+    expect(withActorMember(members, { userId: "a", userName: "Me" })).toEqual(members);
+  });
+});
+
+describe("composerChooserTasks", () => {
+  const tasks = [
+    { id: "t1", title: "One" },
+    { id: "t2", title: "Two" },
+  ];
+
+  test("returns a stable empty list until a task is chosen", () => {
+    const empty = composerChooserTasks("", tasks, null);
+    expect(empty).toEqual([]);
+    expect(composerChooserTasks("", tasks, tasks[0] ?? null)).toBe(empty);
+  });
+
+  test("passes only the chosen task so filter changes do not rebuild the catalog", () => {
+    expect(composerChooserTasks("t2", tasks, null)).toEqual([{ id: "t2", title: "Two" }]);
+  });
+
+  test("falls back to the cached chosen task when it is not in the rail list", () => {
+    expect(composerChooserTasks("t9", tasks, { id: "t9", title: "Cached" })).toEqual([
+      { id: "t9", title: "Cached" },
+    ]);
+  });
+});
+
+describe("nextPillsAfterAdd", () => {
+  test("turns on Open so a newly assigned task is visible", () => {
+    expect([...nextPillsAfterAdd(new Set(["done"]), "open")]).toEqual(["done", "open"]);
+  });
+
+  test("turns on Done when the added task is already done", () => {
+    expect([...nextPillsAfterAdd(new Set(["open"]), "done")]).toEqual(["open", "done"]);
+  });
+});
+
+describe("isRedundantMyTasksAdd", () => {
+  const existing = {
+    assignedToTeam: false,
+    assignees: [{ userId: "me" }, { userId: "sam" }],
+  };
+
+  test("skips the network when the actor is already on the task", () => {
+    expect(
+      isRedundantMyTasksAdd({
+        existing,
+        nextAssignedToTeam: false,
+        nextAssigneeUserIds: ["me", "sam"],
+        estimateMinutes: null,
+      }),
+    ).toBe(true);
+  });
+
+  test("updates when a new assignee or estimate is included", () => {
+    expect(
+      isRedundantMyTasksAdd({
+        existing,
+        nextAssignedToTeam: false,
+        nextAssigneeUserIds: ["me", "sam", "pat"],
+        estimateMinutes: null,
+      }),
+    ).toBe(false);
+    expect(
+      isRedundantMyTasksAdd({
+        existing,
+        nextAssignedToTeam: false,
+        nextAssigneeUserIds: ["me", "sam"],
+        estimateMinutes: 60,
+      }),
+    ).toBe(false);
+  });
+
+  test("does not skip an uncached task", () => {
+    expect(
+      isRedundantMyTasksAdd({
+        existing: null,
+        nextAssignedToTeam: false,
+        nextAssigneeUserIds: ["me"],
+        estimateMinutes: null,
+      }),
+    ).toBe(false);
+  });
+
+  test("update is redundant only when assignees and estimate match exactly", () => {
+    expect(
+      isRedundantMyTasksAdd({
+        existing: { ...existing, estimateMinutes: 60 },
+        nextAssignedToTeam: false,
+        nextAssigneeUserIds: ["me", "sam"],
+        estimateMinutes: 60,
+        kind: "update",
+      }),
+    ).toBe(true);
+    expect(
+      isRedundantMyTasksAdd({
+        existing: { ...existing, estimateMinutes: 60 },
+        nextAssignedToTeam: false,
+        nextAssigneeUserIds: ["me"],
+        estimateMinutes: 60,
+        kind: "update",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("composerSubmitKind", () => {
+  const existing = {
+    assignedToTeam: false,
+    assignees: [{ userId: "me" }],
+  };
+
+  test("is add until a task is chosen", () => {
+    expect(
+      composerSubmitKind({
+        composerTaskId: "",
+        actorUserId: "me",
+        railHasTask: false,
+        existing: null,
+      }),
+    ).toBe("add");
+  });
+
+  test("is update when the task is already on My Tasks", () => {
+    expect(
+      composerSubmitKind({
+        composerTaskId: "t1",
+        actorUserId: "me",
+        railHasTask: true,
+        existing,
+      }),
+    ).toBe("update");
+    expect(
+      composerSubmitKind({
+        composerTaskId: "t1",
+        actorUserId: "me",
+        railHasTask: false,
+        existing,
+      }),
+    ).toBe("update");
+  });
+
+  test("is add when picking someone else's task", () => {
+    expect(
+      composerSubmitKind({
+        composerTaskId: "t1",
+        actorUserId: "me",
+        railHasTask: false,
+        existing: { assignedToTeam: false, assignees: [{ userId: "sam" }] },
+      }),
+    ).toBe("add");
+  });
+
+  test("labels Update when the task is already on the list", () => {
+    expect(composerSubmitCopy("update").label).toBe("Update");
+    expect(composerSubmitCopy("add").label).toBe("Add");
+  });
+});
+
+describe("composerStateFromExistingTask", () => {
+  test("hydrates assignees and estimate for update", () => {
+    expect(
+      composerStateFromExistingTask(
+        {
+          assignedToTeam: false,
+          assignees: [{ userId: "sam" }, { userId: "me" }],
+          estimateMinutes: 90,
+        },
+        "me",
+      ),
+    ).toEqual({
+      assignedToTeam: false,
+      assigneeUserIds: ["sam", "me"],
+      estimateMinutes: 90,
+    });
+  });
+});
+
+describe("nextAssigneesForComposerSubmit", () => {
+  test("add merges onto existing assignees", () => {
+    expect(
+      nextAssigneesForComposerSubmit({
+        kind: "add",
+        existing: { assignedToTeam: false, assignees: [{ userId: "sam" }] },
+        composerAssignedToTeam: false,
+        composerAssigneeIds: ["me"],
+        actorUserId: "me",
+      }),
+    ).toEqual({ assignedToTeam: false, assigneeUserIds: ["sam", "me"] });
+  });
+
+  test("update replaces assignees from the composer", () => {
+    expect(
+      nextAssigneesForComposerSubmit({
+        kind: "update",
+        existing: { assignedToTeam: false, assignees: [{ userId: "sam" }, { userId: "me" }] },
+        composerAssignedToTeam: false,
+        composerAssigneeIds: ["me"],
+        actorUserId: "me",
+      }),
+    ).toEqual({ assignedToTeam: false, assigneeUserIds: ["me"] });
+  });
+});

@@ -570,19 +570,21 @@ export const agencyMyTasksRailRowSelectedClass = "bg-muted";
 export const agencyMyTasksRailRowDoneClass = "opacity-70";
 
 export const agencyMyTasksRailComposerFormClass =
-  "relative z-10 flex min-w-0 shrink-0 flex-col gap-1 overflow-visible border-b border-default px-3 py-1.5 sm:px-4";
-
-export const agencyMyTasksRailComposerStripClass = "flex min-w-0 items-center gap-1";
+  "relative z-10 flex min-w-0 shrink-0 flex-col gap-1.5 overflow-visible border-b border-default px-3 py-2 sm:px-4";
 
 export const agencyMyTasksRailComposerChooserClass =
-  "flex min-w-0 flex-1 items-center [&>div]:flex [&>div]:w-full [&>div]:max-w-none";
+  "flex min-w-0 w-full items-center [&>div]:flex [&>div]:w-full [&>div]:max-w-none";
 
-export const agencyMyTasksRailComposerRowClass = "flex shrink-0 items-center gap-1";
+export const agencyMyTasksRailComposerRowClass = "flex min-w-0 w-full items-center gap-1.5";
 
 export const agencyMyTasksRailAddButtonClass = cn(
-  "inline-flex size-8 shrink-0 items-center justify-center rounded-full",
-  "bg-primary text-primary-foreground hover:bg-primary/90",
-  "disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex h-8 min-w-0 flex-1 shrink items-center justify-center gap-1 rounded-full px-3",
+  "text-sm font-semibold tracking-tight",
+  "transition-[color,background-color,box-shadow,border-color,transform] duration-[var(--motion-duration-base)] ease-[var(--motion-ease-out)]",
+  "disabled:opacity-100",
+  "data-[armed=false]:cursor-not-allowed data-[armed=false]:border-border data-[armed=false]:bg-muted data-[armed=false]:text-highlighted data-[armed=false]:shadow-none",
+  "data-[armed=true]:border-transparent data-[armed=true]:bg-primary data-[armed=true]:text-primary-foreground data-[armed=true]:hover:bg-primary/90 data-[armed=true]:hover:shadow-xs data-[armed=true]:active:scale-[0.98]",
+  "motion-reduce:transition-none motion-reduce:active:scale-100",
   agencyFocusRingClass,
 );
 

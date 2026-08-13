@@ -1,4 +1,4 @@
-import { ListTodo, Loader2, PanelRightClose, PanelRightOpen, Plus, X } from "lucide-react";
+import { ListTodo, Loader2, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { MotionConfig, motion } from "motion/react";
 import type { ReactNode } from "react";
 
@@ -19,9 +19,7 @@ import {
   agencyMyTasksRailComposerChooserClass,
   agencyMyTasksRailComposerFormClass,
   agencyMyTasksRailComposerRowClass,
-  agencyMyTasksRailComposerStripClass,
-  agencyTimeTrackerRailDividerClass,
-  agencyTimeTrackerTaskChooserTriggerClass,
+  agencyTaskChooserTriggerClass,
   agencyTaskRailClass,
   agencyTaskRailCollapsedClass,
   agencyTaskRailCollapsedWidthClass,
@@ -30,6 +28,7 @@ import {
 } from "@/features/shared/agency-ui";
 import { AgencyMyTasksEstimatePopover } from "@/features/task-management/my-tasks-rail/agency-my-tasks-estimate-popover";
 import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
+import { ASSIGNEE_STACK_MAX_WIDTH_PX } from "@/features/shared/choosers/agency-member-stack";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { Button } from "@/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/ui/sheet";
@@ -96,6 +95,7 @@ function RailPanel({
   showCollapseControl?: boolean;
 }) {
   const canSubmit = Boolean(view.composerTaskId) && !view.isAddingTask;
+  const addArmed = Boolean(view.composerTaskId) || view.isAddingTask;
 
   return (
     <div
@@ -120,75 +120,100 @@ function RailPanel({
 
       <form
         className={agencyMyTasksRailComposerFormClass}
+        aria-label={view.composerFormAriaLabel}
         onSubmit={(event) => {
           event.preventDefault();
           void view.onCreateTask();
         }}
       >
-        <div className={agencyMyTasksRailComposerStripClass}>
-          <div className={agencyMyTasksRailComposerChooserClass}>
-            <AgencyTaskChooser
-              teamId={view.teamId}
-              value={view.composerTaskId}
-              onValueChange={view.onComposerTaskChange}
-              projects={view.projects}
-              tasks={view.tasks}
-              placeholder="Choose task"
-              triggerFormat="task-client"
-              highlightSearch
-              required
-              contentAlign="start"
-              disabled={view.isAddingTask}
-              className={cn(
-                agencyTimeTrackerTaskChooserTriggerClass,
-                "w-full max-w-none justify-start",
+        <div
+          className={agencyMyTasksRailComposerChooserClass}
+          data-od-id="my-tasks-composer-chooser"
+        >
+          <AgencyTaskChooser
+            teamId={view.teamId}
+            value={view.composerTaskId}
+            onValueChange={view.onComposerTaskChange}
+            projects={view.projects}
+            tasks={view.chooserTasks}
+            placeholder="Choose task"
+            searchPlaceholder="Search tasks"
+            triggerFormat="task-client"
+            highlightSearch
+            required
+            contentAlign="start"
+            disabled={view.isAddingTask}
+            className={cn(
+              agencyTaskChooserTriggerClass,
+              "h-9 w-full max-w-none justify-start rounded-lg border border-default bg-default px-3 text-sm",
+            )}
+          />
+        </div>
+        <div className={agencyMyTasksRailComposerRowClass}>
+          <AgencyMemberChooser
+            mode="multiple"
+            assignedToTeam={view.assignedToTeam}
+            selectedUserIds={view.assigneeUserIds}
+            onAssignedToTeamChange={(nextAssignedToTeam) => {
+              view.setAssignedToTeam(nextAssignedToTeam);
+              if (nextAssignedToTeam) view.setAssigneeUserIds([]);
+            }}
+            onSelectedUserIdsChange={(nextIds) => {
+              view.setAssignedToTeam(false);
+              view.setAssigneeUserIds(nextIds);
+            }}
+            members={view.members}
+            placeholder="Assignees"
+            triggerVariant="stack"
+            stackMaxWidthPx={ASSIGNEE_STACK_MAX_WIDTH_PX}
+            contentAlign="start"
+            disabled={view.isAddingTask}
+            className="min-w-0 shrink"
+          />
+          <AgencyMyTasksEstimatePopover
+            value={view.estimateMinutes}
+            disabled={view.isAddingTask}
+            onChange={view.setEstimateMinutes}
+          />
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className={cn("min-w-0 flex-1", !addArmed && "cursor-not-allowed")}>
+                  <Button
+                    type="submit"
+                    variant={addArmed ? "default" : "outline"}
+                    className={cn(agencyMyTasksRailAddButtonClass, "w-full")}
+                    data-od-id="my-tasks-add"
+                    data-armed={addArmed ? "true" : "false"}
+                    aria-label={
+                      addArmed ? view.composerSubmitArmedAriaLabel : "Choose a task to add"
+                    }
+                    aria-busy={view.isAddingTask}
+                    disabled={!canSubmit}
+                  >
+                    <span>{view.composerSubmitLabel}</span>
+                    {view.isAddingTask ? (
+                      <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                    ) : null}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {addArmed ? null : (
+                <TooltipContent side="top" className="text-xs">
+                  Choose a task first
+                </TooltipContent>
               )}
-            />
-          </div>
-          <span className={agencyTimeTrackerRailDividerClass} aria-hidden />
-          <div className={agencyMyTasksRailComposerRowClass}>
-            <AgencyMemberChooser
-              mode="multiple"
-              assignedToTeam={view.assignedToTeam}
-              selectedUserIds={view.assigneeUserIds}
-              onAssignedToTeamChange={(nextAssignedToTeam) => {
-                view.setAssignedToTeam(nextAssignedToTeam);
-                if (nextAssignedToTeam) view.setAssigneeUserIds([]);
-              }}
-              onSelectedUserIdsChange={(nextIds) => {
-                view.setAssignedToTeam(false);
-                view.setAssigneeUserIds(nextIds);
-              }}
-              members={view.members}
-              placeholder="Assignees"
-              triggerVariant="stack"
-              contentAlign="start"
-              className="shrink-0"
-            />
-            <AgencyMyTasksEstimatePopover
-              value={view.estimateMinutes}
-              disabled={view.isAddingTask}
-              onChange={view.setEstimateMinutes}
-            />
-            <Button
-              type="submit"
-              size="icon"
-              className={agencyMyTasksRailAddButtonClass}
-              aria-label="Add task"
-              aria-busy={view.isAddingTask}
-              disabled={!canSubmit}
-            >
-              {view.isAddingTask ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              ) : (
-                <Plus className="size-4" aria-hidden />
-              )}
-            </Button>
-          </div>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         {view.createError ? (
           <p className="text-xs text-destructive" role="alert">
             {view.createError}
+          </p>
+        ) : null}
+        {view.composerStatus ? (
+          <p className="sr-only" aria-live="polite">
+            {view.composerStatus}
           </p>
         ) : null}
       </form>
@@ -276,7 +301,7 @@ export function AgencyMyTasksRailView({ view, renderList }: AgencyMyTasksRailVie
     <Button
       type="button"
       size="icon"
-      className="fixed right-4 bottom-4 z-40 size-12 rounded-full shadow-md lg:hidden"
+      className="fixed right-4 bottom-4 z-40 size-12 rounded-full shadow-md"
       aria-label="Open My Tasks"
       onClick={() => view.setSheetOpen(true)}
     >
@@ -295,54 +320,63 @@ export function AgencyMyTasksRailView({ view, renderList }: AgencyMyTasksRailVie
     </Button>
   );
 
+  const dockedRail = (
+    <aside
+      className={cn(
+        agencyTaskRailWidthTransitionClass,
+        view.collapsed
+          ? cn(agencyTaskRailCollapsedClass, agencyTaskRailCollapsedWidthClass)
+          : cn(agencyTaskRailClass, agencyTaskRailExpandedWidthClass),
+      )}
+      aria-label={view.collapsed ? "My Tasks collapsed" : undefined}
+    >
+      {view.collapsed ? (
+        <div className="flex h-full w-full min-w-0 flex-col items-center justify-start gap-2.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-full"
+            aria-label="Expand My Tasks"
+            onClick={() => view.setCollapsed(false)}
+          >
+            <PanelRightOpen />
+          </Button>
+          <div
+            className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
+            aria-label={`${view.openCount} open tasks`}
+          >
+            <span
+              key={view.countTickKey}
+              className={cn("tabular-nums", agencyMyTasksCountTickClass)}
+            >
+              {view.openCount > 99 ? "99+" : view.openCount}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="h-full w-full min-w-0">
+          <RailPanel
+            view={view}
+            list={renderList()}
+            className="h-full w-full min-w-0 rounded-none border-0 bg-transparent"
+            showCollapseControl
+          />
+        </div>
+      )}
+    </aside>
+  );
+
   return (
     <MotionConfig reducedMotion="user">
-      <aside
-        className={cn(
-          agencyTaskRailWidthTransitionClass,
-          view.collapsed
-            ? cn(agencyTaskRailCollapsedClass, agencyTaskRailCollapsedWidthClass)
-            : cn(agencyTaskRailClass, agencyTaskRailExpandedWidthClass),
-        )}
-        aria-label={view.collapsed ? "My Tasks collapsed" : undefined}
-      >
-        {view.collapsed ? (
-          <div className="flex h-full w-full min-w-0 flex-col items-center justify-start gap-2.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-full"
-              aria-label="Expand My Tasks"
-              onClick={() => view.setCollapsed(false)}
-            >
-              <PanelRightOpen />
-            </Button>
-            <div
-              className="flex size-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
-              aria-label={`${view.openCount} open tasks`}
-            >
-              <span
-                key={view.countTickKey}
-                className={cn("tabular-nums", agencyMyTasksCountTickClass)}
-              >
-                {view.openCount > 99 ? "99+" : view.openCount}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="h-full w-full min-w-0">
-            <RailPanel
-              view={view}
-              list={renderList()}
-              className="h-full w-full min-w-0 rounded-none border-0 bg-transparent"
-              showCollapseControl
-            />
-          </div>
-        )}
-      </aside>
-      {mobileFab}
-      {sheet}
+      {view.isDocked ? (
+        dockedRail
+      ) : (
+        <>
+          {mobileFab}
+          {sheet}
+        </>
+      )}
     </MotionConfig>
   );
 }

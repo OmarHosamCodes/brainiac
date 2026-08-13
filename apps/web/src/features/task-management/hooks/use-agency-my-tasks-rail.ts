@@ -12,6 +12,16 @@ import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";
 import { toAgencyMemberOption } from "@/features/shared/agency-member-option";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
+import {
+  composerChooserTasks,
+  composerStateFromExistingTask,
+  composerSubmitCopy,
+  composerSubmitKind,
+  isRedundantMyTasksAdd,
+  nextAssigneesForComposerSubmit,
+  nextPillsAfterAdd,
+  withActorMember,
+} from "@/features/task-management/agency-my-tasks-add";
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
 import { groupTasksByClient } from "@/features/task-management/agency-task-utils";
 import { useAgencyMyTasksRailStore } from "@/features/task-management/stores/agency-my-tasks-rail";
@@ -38,6 +48,18 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     hydrate();
   }, [hydrate]);
 
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    function onViewportChange() {
+      const nextDocked = media.matches;
+      setIsDocked(nextDocked);
+      if (nextDocked) setSheetOpen(false);
+    }
+    onViewportChange();
+    media.addEventListener("change", onViewportChange);
+    return () => media.removeEventListener("change", onViewportChange);
+  }, []);
+
   const [pills, setPills] = useState<Set<MyTasksFilterPill>>(() => new Set(["open"]));
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>(() =>
     actorUserId ? [actorUserId] : [],
@@ -48,7 +70,12 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [isDocked, setIsDocked] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.matchMedia("(min-width: 1024px)").matches;
+  });
   const [createError, setCreateError] = useState<string | null>(null);
+  const [composerStatus, setComposerStatus] = useState<string | null>(null);
   const [justCompletedTaskId, setJustCompletedTaskId] = useState<string | null>(null);
   const [justCreatedTaskId, setJustCreatedTaskId] = useState<string | null>(null);
   const [justPlayedTaskId, setJustPlayedTaskId] = useState<string | null>(null);
@@ -132,8 +159,18 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   );
 
   const members = useMemo(
-    () => (membersQuery.data?.items ?? []).map(toAgencyMemberOption),
-    [membersQuery.data?.items],
+    () =>
+      withActorMember(
+        (membersQuery.data?.items ?? []).map(toAgencyMemberOption),
+        actorUserId && user
+          ? {
+              userId: actorUserId,
+              userName: user.name,
+              userAvatar: user.image ?? null,
+            }
+          : null,
+      ),
+    [actorUserId, membersQuery.data?.items, user],
   );
 
   const tasks = useMemo(() => {
@@ -156,6 +193,12 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     doneQuery.data?.items,
     delegatedQuery.data?.items,
   ]);
+
+  const chooserTasks = useMemo(
+    () =>
+      composerChooserTasks(composerTaskId, tasks, findProjectTaskInCache(teamId, composerTaskId)),
+    [composerTaskId, tasks, teamId],
+  );
 
   const clientGroups = useMemo(() => groupTasksByClient(tasks, projects), [tasks, projects]);
 
@@ -193,6 +236,18 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   const isAddingTask =
     isCreatingTask || Boolean(composerTaskId && pendingTaskIds.includes(composerTaskId));
 
+  const composerExisting = composerTaskId
+    ? (tasks.find((task) => task.id === composerTaskId) ??
+      findProjectTaskInCache(teamId, composerTaskId))
+    : null;
+  const submitKind = composerSubmitKind({
+    composerTaskId,
+    actorUserId,
+    railHasTask: Boolean(composerTaskId) && tasks.some((task) => task.id === composerTaskId),
+    existing: composerExisting,
+  });
+  const submitCopy = composerSubmitCopy(submitKind);
+
   function togglePill(pill: MyTasksFilterPill) {
     setPills((prev) => {
       const next = new Set(prev);
@@ -209,31 +264,50 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
       return;
     }
     setCreateError(null);
-    const existing =
-      tasks.find((task) => task.id === composerTaskId) ??
-      findProjectTaskInCache(teamId, composerTaskId);
-    const nextAssignedToTeam = assignedToTeam || Boolean(existing?.assignedToTeam);
-    const nextAssigneeUserIds = nextAssignedToTeam
-      ? []
-      : [
-          ...new Set([
-            ...(existing?.assignees.map((assignee) => assignee.userId) ?? []),
-            ...(assigneeUserIds.length > 0 ? assigneeUserIds : actorUserId ? [actorUserId] : []),
-          ]),
-        ];
+    setComposerStatus(null);
+    const existing = composerExisting;
+    const nextAssignees = nextAssigneesForComposerSubmit({
+      kind: submitKind,
+      existing,
+      composerAssignedToTeam: assignedToTeam,
+      composerAssigneeIds: assigneeUserIds,
+      actorUserId,
+    });
+    const addedTaskId = composerTaskId;
+
+    function finishAdd() {
+      flashId(setJustCreatedTaskId, addedTaskId, RAIL_HOLD_MS.flash);
+      setSelectedTaskId(addedTaskId);
+      setPills((prev) => nextPillsAfterAdd(prev, existing?.status));
+      setComposerTaskId("");
+      setEstimateMinutes(null);
+      setComposerStatus(submitCopy.status);
+    }
+
+    if (
+      isRedundantMyTasksAdd({
+        existing,
+        nextAssignedToTeam: nextAssignees.assignedToTeam,
+        nextAssigneeUserIds: nextAssignees.assigneeUserIds,
+        estimateMinutes,
+        kind: submitKind,
+      })
+    ) {
+      finishAdd();
+      return;
+    }
+
     try {
       await updateProjectTask({
         teamId,
-        taskId: composerTaskId,
-        assignedToTeam: nextAssignedToTeam,
-        assigneeUserIds: nextAssigneeUserIds,
-        ...(estimateMinutes !== null ? { estimateMinutes } : {}),
+        taskId: addedTaskId,
+        assignedToTeam: nextAssignees.assignedToTeam,
+        assigneeUserIds: nextAssignees.assigneeUserIds,
+        ...(submitKind === "update" || estimateMinutes !== null ? { estimateMinutes } : {}),
       });
-      flashId(setJustCreatedTaskId, composerTaskId, RAIL_HOLD_MS.flash);
-      setComposerTaskId("");
-      setEstimateMinutes(null);
+      finishAdd();
     } catch (error) {
-      setCreateError(getErrorMessage(error, "Couldn't add task."));
+      setCreateError(getErrorMessage(error, submitCopy.errorFallback));
     }
   }
 
@@ -271,6 +345,34 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
   function onComposerTaskChange(taskId: string) {
     setComposerTaskId(taskId);
     setCreateError(null);
+    setComposerStatus(null);
+    const existing =
+      tasks.find((task) => task.id === taskId) ?? findProjectTaskInCache(teamId, taskId);
+    const kind = composerSubmitKind({
+      composerTaskId: taskId,
+      actorUserId,
+      railHasTask: tasks.some((task) => task.id === taskId),
+      existing,
+    });
+    switch (kind) {
+      case "update": {
+        const next = composerStateFromExistingTask(existing, actorUserId);
+        setAssignedToTeam(next.assignedToTeam);
+        setAssigneeUserIds(next.assigneeUserIds);
+        setEstimateMinutes(next.estimateMinutes);
+        return;
+      }
+      case "add": {
+        setAssignedToTeam(false);
+        setAssigneeUserIds(actorUserId ? [actorUserId] : []);
+        setEstimateMinutes(null);
+        return;
+      }
+      default: {
+        const _exhaustive: never = kind;
+        return _exhaustive;
+      }
+    }
   }
 
   function onKeyboardMove(delta: 1 | -1) {
@@ -348,6 +450,31 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     row?.scrollIntoView({ block: "nearest" });
   }, [selectedTaskId]);
 
+  const prevComposerTaskIdRef = useRef(composerTaskId);
+
+  useEffect(() => {
+    const previousId = prevComposerTaskIdRef.current;
+    prevComposerTaskIdRef.current = composerTaskId;
+
+    function focusInVisibleRail(selector: string) {
+      for (const rail of document.querySelectorAll<HTMLElement>("[data-od-id='my-tasks-rail']")) {
+        if (rail.getClientRects().length === 0) continue;
+        const target = rail.querySelector<HTMLElement>(selector);
+        if (!target || target.getClientRects().length === 0) continue;
+        target.focus();
+        return;
+      }
+    }
+
+    if (!previousId && composerTaskId) {
+      focusInVisibleRail("[data-od-id='my-tasks-add']");
+      return;
+    }
+    if (previousId && !composerTaskId && !isAddingTask) {
+      focusInVisibleRail("[data-od-id='my-tasks-composer-chooser'] button");
+    }
+  }, [composerTaskId, isAddingTask]);
+
   function onRetry() {
     void openQuery.refetch();
     void doneQuery.refetch();
@@ -363,10 +490,12 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     toggleCollapsed,
     sheetOpen,
     setSheetOpen,
+    isDocked,
     pills,
     togglePill,
     composerTaskId,
     onComposerTaskChange,
+    chooserTasks,
     assigneeUserIds,
     setAssigneeUserIds,
     assignedToTeam,
@@ -391,6 +520,11 @@ export function useAgencyMyTasksRail({ teamId }: UseAgencyMyTasksRailOptions) {
     isLoading,
     errorMessage,
     createError,
+    composerStatus,
+    composerSubmitKind: submitKind,
+    composerSubmitLabel: submitCopy.label,
+    composerSubmitArmedAriaLabel: submitCopy.armedAriaLabel,
+    composerFormAriaLabel: submitCopy.formAriaLabel,
     isAddingTask,
     pendingTaskIds,
     deletingTaskIds,

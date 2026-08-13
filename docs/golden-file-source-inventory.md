@@ -19,16 +19,16 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 740 |
+| golden-feature | 742 |
 | server-operation | 15 |
-| shared-infrastructure | 320 |
+| shared-infrastructure | 322 |
 | static-presentation | 22 |
 
 ## Counts by domain
 
 | Domain | Artifacts |
 | --- | ---: |
-| agency-shared | 130 |
+| agency-shared | 132 |
 | agent | 90 |
 | api-platform | 13 |
 | architecture | 4 |
@@ -51,7 +51,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | repository | 13 |
 | resourcing | 40 |
 | server-platform | 23 |
-| task-management | 62 |
+| task-management | 64 |
 | team | 19 |
 | time-tracking | 100 |
 | web-platform | 119 |
@@ -419,6 +419,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/shared/choosers/agency-member-chooser-container.tsx` | agency-shared | container | shared-infrastructure | agency-platform | Cross-cutting agency-shared container support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/shared/choosers/agency-member-chooser-view.tsx` | agency-shared | presentational-view | shared-infrastructure | agency-platform | Cross-cutting agency-shared presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/shared/choosers/agency-member-chooser.tsx` | agency-shared | presentational-view | shared-infrastructure | agency-platform | Cross-cutting agency-shared presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/shared/choosers/agency-member-stack.test.ts` | agency-shared | test | shared-infrastructure | agency-platform | Cross-cutting agency-shared test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/shared/choosers/agency-member-stack.ts` | agency-shared | domain-logic | shared-infrastructure | agency-platform | Cross-cutting agency-shared domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/shared/choosers/use-agency-member-chooser.ts` | agency-shared | feature-hook | shared-infrastructure | agency-platform | Cross-cutting agency-shared feature-hook support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/shared/command-bar/agency-command-bar-ui.tsx` | agency-shared | presentational-view | shared-infrastructure | agency-platform | Cross-cutting agency-shared presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/shared/command-bar/agency-list-filter-command-bar.tsx` | agency-shared | presentational-view | shared-infrastructure | agency-platform | Cross-cutting agency-shared presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -448,6 +450,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/shared/use-agency-segment-shortcuts.ts` | agency-shared | feature-hook | shared-infrastructure | agency-platform | Cross-cutting agency-shared feature-hook support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/shared/use-agency-time-range-filters.ts` | agency-shared | feature-hook | shared-infrastructure | agency-platform | Cross-cutting agency-shared feature-hook support rather than a feature-owned business workflow. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/shared/use-team-work-schedule.ts` | agency-shared | feature-hook | shared-infrastructure | agency-platform | Cross-cutting agency-shared feature-hook support rather than a feature-owned business workflow. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
+| `apps/web/src/features/task-management/agency-my-tasks-add.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/task-management/agency-my-tasks-add.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/task-management/agency-my-tasks-edit-draft.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/task-management/agency-my-tasks-edit-draft.ts` | task-management | domain-logic | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/task-management/agency-my-tasks-row-meta.test.ts` | task-management | test | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
