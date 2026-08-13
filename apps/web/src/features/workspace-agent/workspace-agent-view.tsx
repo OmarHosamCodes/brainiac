@@ -136,6 +136,8 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                   quickStarts={view.quickStarts}
                   onSelectQuickStart={view.onSelectQuickStart}
                   emptyHint={view.emptyHint}
+                  onContinueStoppedTurn={view.onContinueStoppedTurn}
+                  onDismissStoppedTurn={view.onDismissStoppedTurn}
                   composer={
                     <WorkspaceAgentThreadComposerView
                       placeholder={view.placeholder}
