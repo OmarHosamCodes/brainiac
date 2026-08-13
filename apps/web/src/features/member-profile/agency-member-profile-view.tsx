@@ -37,6 +37,7 @@ import { agencyCommandBarShellClass } from "@/features/shared/command-bar/agency
 import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
+import { Collapsible, CollapsibleContent } from "@/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -385,57 +386,63 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                   heatMap={profile.heatMap}
                   layout={profile.heatLayout}
                   onFocusDay={viewModel.focusDay}
+                  selectedDate={profile.selectedHeatDate}
                   weekStartsOn={period.weekStartsOn}
                 />
               </div>
+              <Collapsible open={profile.weekHours.length > 0}>
+                <CollapsibleContent className="overflow-hidden motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:slide-in-from-top-1 motion-safe:data-[state=open]:duration-180">
+                  <div className="mt-4 border-t border-border pt-4">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <h3 className={agencyWorkTitleClass}>Hours logged</h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {profile.weekHoursCaption}
+                        </p>
+                      </div>
+                      <p
+                        key={profile.weekHoursTotalLabel}
+                        className={cn(agencyMetricClass, "text-lg", shellConfirmInClass)}
+                      >
+                        {profile.weekHoursTotalLabel}
+                      </p>
+                    </div>
+                    <div className="mt-4 flex items-end justify-between gap-2">
+                      {profile.weekHours.map((day) => (
+                        <button
+                          key={day.date}
+                          type="button"
+                          className={cn(
+                            "flex min-w-0 flex-1 flex-col items-center rounded-lg px-0.5 py-1 transition-colors hover:bg-muted/50",
+                            agencyFocusRingClass,
+                            day.date === profile.selectedHeatDate && "bg-muted/60",
+                          )}
+                          onClick={() => viewModel.focusDay(day.date)}
+                        >
+                          <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+                            {day.hoursLabel}
+                          </span>
+                          <span
+                            className="mt-1.5 flex h-16 w-6 items-end overflow-hidden rounded-t-md rounded-b-sm bg-muted"
+                            aria-hidden
+                          >
+                            <span
+                              className="w-full rounded-t-[5px] rounded-b-sm bg-foreground transition-[height] duration-200 ease-out motion-reduce:transition-none"
+                              style={{ height: `${day.heightPct}%` }}
+                            />
+                          </span>
+                          <span className="mt-1.5 text-[11px] text-muted-foreground">
+                            {day.weekdayLabel}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </section>
 
-            <section className={cn(profilePanelClass, "p-4 sm:p-5")}>
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <h2 className={agencyWorkTitleClass}>Hours logged</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">Week containing period end</p>
-                </div>
-                <p
-                  key={profile.weekHoursTotalLabel}
-                  className={cn(agencyMetricClass, "text-lg", shellConfirmInClass)}
-                >
-                  {profile.weekHoursTotalLabel}
-                </p>
-              </div>
-              <div className="mt-4 flex items-end justify-between gap-2">
-                {profile.weekHours.map((day) => (
-                  <button
-                    key={day.date}
-                    type="button"
-                    className={cn(
-                      "flex min-w-0 flex-1 flex-col items-center rounded-lg px-0.5 py-1 transition-colors hover:bg-muted/50",
-                      agencyFocusRingClass,
-                    )}
-                    onClick={() => viewModel.focusDay(day.date)}
-                  >
-                    <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-                      {day.hoursLabel}
-                    </span>
-                    <span
-                      className="mt-1.5 flex h-16 w-6 items-end overflow-hidden rounded-t-md rounded-b-sm bg-muted"
-                      aria-hidden
-                    >
-                      <span
-                        className="w-full rounded-t-[5px] rounded-b-sm bg-foreground transition-[height] duration-200 ease-out motion-reduce:transition-none"
-                        style={{ height: `${day.heightPct}%` }}
-                      />
-                    </span>
-                    <span className="mt-1.5 text-[11px] text-muted-foreground">
-                      {day.weekdayLabel}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Period total · {profile.periodHoursLabel}
-              </p>
-            </section>
+            <MemberProfileAlertsPanel alerts={viewModel.alerts} />
 
             {profile.timeline.length === 0 ? (
               <section className={cn(profilePanelClass, "p-4 sm:p-5")}>
@@ -561,8 +568,6 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                 ))}
               </div>
             </section>
-
-            <MemberProfileAlertsPanel alerts={viewModel.alerts} />
 
             <section
               className={cn(profilePanelClass, "p-4")}

@@ -132,11 +132,13 @@ function HeatCell({
   day,
   sizeClass,
   showDayNumber,
+  selected,
   onFocus,
 }: {
   day: MemberProfileHeatDay;
   sizeClass: string;
   showDayNumber: boolean;
+  selected: boolean;
   onFocus: () => void;
 }) {
   const title = day.off
@@ -169,6 +171,7 @@ function HeatCell({
                   offBandRadius(day.offBand),
                 )
               : "rounded-[3px]",
+            selected && "z-10 ring-2 ring-foreground ring-offset-1 ring-offset-card",
           )}
           aria-label={title}
           onClick={onFocus}
@@ -185,12 +188,14 @@ export function MemberProfileHeatMap({
   heatMap,
   layout,
   onFocusDay,
+  selectedDate = null,
   fillToWidth = true,
   weekStartsOn = DEFAULT_WORK_SCHEDULE.weekStartsOn,
 }: {
   heatMap: MemberProfileHeatMapData;
   layout: "compact" | "strip";
   onFocusDay: (date: string) => void;
+  selectedDate?: string | null;
   /** When false, skip empty week padding (avoids width feedback loops in nested layouts). */
   fillToWidth?: boolean;
   weekStartsOn?: number;
@@ -255,6 +260,7 @@ export function MemberProfileHeatMap({
                     day={day}
                     sizeClass="size-8"
                     showDayNumber
+                    selected={day.date === selectedDate}
                     onFocus={() => onFocusDay(day.date)}
                   />
                 ),
@@ -318,6 +324,7 @@ export function MemberProfileHeatMap({
                         day={day}
                         sizeClass="size-3"
                         showDayNumber={false}
+                        selected={day.date === selectedDate}
                         onFocus={() => onFocusDay(day.date)}
                       />
                     ),

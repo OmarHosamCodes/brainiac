@@ -1,3 +1,4 @@
+import { buildWeekHours } from "@orch/api/routers/agency-ops/member-profile/member-profile-hr";
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -92,6 +93,8 @@ export type AgencyMemberProfileViewModel = {
     canEditHr: boolean;
     periodHoursLabel: string;
     weekHoursTotalLabel: string;
+    weekHoursCaption: string;
+    selectedHeatDate: string | null;
     heatLayout: MemberProfileHeatLayout;
     heatMap: {
       startDate: string;
@@ -314,6 +317,15 @@ function shortHours(totalSeconds: number) {
   return `${hours}h ${minutes}m`;
 }
 
+function weekContainingCaption(dateKey: string): string {
+  const date = new Date(`${dateKey}T12:00:00.000Z`);
+  return `Week of ${date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  })}`;
+}
+
 function roleLabel(role: string) {
   switch (role) {
     case "owner":
@@ -529,13 +541,15 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const [calendarMonthOverride, setCalendarMonthOverride] = useState<string | null>(null);
   const pendingFocusDateRef = useRef<string | null>(null);
   const [highlightedActivityDate, setHighlightedActivityDate] = useState<string | null>(null);
+  const [selectedHeatDate, setSelectedHeatDate] = useState<string | null>(null);
 
   const defaultCalendarMonth = range.to.slice(0, 7);
   const calendarMonth = calendarMonthOverride ?? defaultCalendarMonth;
 
   useEffect(() => {
     setCalendarMonthOverride(null);
-  }, [range.from, range.to]);
+    setSelectedHeatDate(null);
+  }, [range.from, range.to, subjectUserId]);
 
   const profileQueryInput = useMemo(
     () => ({
@@ -701,8 +715,15 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       data.heatMap.endDate,
     );
 
-    const maxWeekSeconds = Math.max(1, ...data.weekHours.map((day) => day.totalSeconds));
-    const weekHoursTotalSeconds = data.weekHours.reduce((sum, day) => sum + day.totalSeconds, 0);
+    const weekHoursSource = selectedHeatDate
+      ? buildWeekHours(
+          selectedHeatDate,
+          new Map(data.heatMap.days.map((day) => [day.date, day.totalSeconds])),
+          weekStartsOn,
+        )
+      : [];
+    const maxWeekSeconds = Math.max(1, ...weekHoursSource.map((day) => day.totalSeconds));
+    const weekHoursTotalSeconds = weekHoursSource.reduce((sum, day) => sum + day.totalSeconds, 0);
 
     const calendarLegendCounts = { present: 0, leave: 0, empty: 0 };
     let daysInMonth = 0;
@@ -771,6 +792,8 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       canEditHr: data.canEditHr,
       periodHoursLabel: shortHours(data.periodTotalSeconds),
       weekHoursTotalLabel: shortHours(weekHoursTotalSeconds),
+      weekHoursCaption: selectedHeatDate ? weekContainingCaption(selectedHeatDate) : "",
+      selectedHeatDate,
       heatLayout,
       heatMap: {
         startDate: data.heatMap.startDate,
@@ -826,7 +849,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         name: item.name,
       })),
       leaveGauges,
-      weekHours: data.weekHours.map((day) => ({
+      weekHours: weekHoursSource.map((day) => ({
         date: day.date,
         weekdayLabel: day.weekdayLabel,
         totalSeconds: day.totalSeconds,
@@ -926,8 +949,10 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     expandedDays,
     periodLabel,
     profileQuery.data,
+    selectedHeatDate,
     serverUrl,
     today,
+    weekStartsOn,
   ]);
 
   // Keep leave/review drafts inside the selected period when the range changes.
@@ -1094,6 +1119,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       setExpandedDays((prev) => ({ ...prev, [date]: !(prev[date] ?? date === today) }));
     },
     focusDay(date) {
+      setSelectedHeatDate(date);
       scrollToActivityDay(date);
     },
     highlightedActivityDate,
