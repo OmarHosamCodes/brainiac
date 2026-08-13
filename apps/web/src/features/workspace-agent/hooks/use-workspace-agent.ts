@@ -170,6 +170,8 @@ export function useWorkspaceAgent() {
   const markScopeHintSeen = useWorkspaceAgentStore((s) => s.markScopeHintSeen);
   const draft = useWorkspaceAgentStore((s) => s.draft);
   const setDraft = useWorkspaceAgentStore((s) => s.setDraft);
+  const pendingComposerSeed = useWorkspaceAgentStore((s) => s.pendingComposerSeed);
+  const clearComposerSeed = useWorkspaceAgentStore((s) => s.clearComposerSeed);
   const scopeChips = useWorkspaceAgentStore((s) => s.scopeChips);
   const addScopeChip = useWorkspaceAgentStore((s) => s.addScopeChip);
   const removeScopeChip = useWorkspaceAgentStore((s) => s.removeScopeChip);
@@ -506,6 +508,14 @@ export function useWorkspaceAgent() {
   );
 
   useEffect(() => {
+    if (!pendingComposerSeed) return;
+    setDraft(pendingComposerSeed.text);
+    setSelectedToolPreset(pendingComposerSeed.toolPreset);
+    setExpanded(true);
+    clearComposerSeed();
+  }, [clearComposerSeed, pendingComposerSeed, setDraft, setExpanded]);
+
+  useEffect(() => {
     if (activeConversation?.toolPreset) {
       setSelectedToolPreset(activeConversation.toolPreset);
     }
@@ -608,7 +618,15 @@ export function useWorkspaceAgent() {
       window.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("pointerdown", onPointerDown, true);
     };
-  }, [canvasOpen, expanded, scopeModeActive, setExpanded, setScopeModeActive, threadSearchOpen, toggleExpanded]);
+  }, [
+    canvasOpen,
+    expanded,
+    scopeModeActive,
+    setExpanded,
+    setScopeModeActive,
+    threadSearchOpen,
+    toggleExpanded,
+  ]);
 
   const switchConversation = useCallback(
     (conversationId: string | null) => {
@@ -808,8 +826,7 @@ export function useWorkspaceAgent() {
     return lastAssistant ? getMessageText(lastAssistant).trim() : "";
   }, [messages]);
 
-  const readAloudSupported =
-    typeof window !== "undefined" && Boolean(window.speechSynthesis);
+  const readAloudSupported = typeof window !== "undefined" && Boolean(window.speechSynthesis);
 
   const stopReadAloud = useCallback(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;

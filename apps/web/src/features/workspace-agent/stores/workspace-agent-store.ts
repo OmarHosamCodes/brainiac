@@ -7,12 +7,15 @@ type WorkspaceAgentUiState = {
   scopeHintSeen: boolean;
   draft: string;
   scopeChips: AgentScopeRef[];
+  pendingComposerSeed: { text: string; toolPreset: "plan" | "agent" } | null;
   setExpanded: (expanded: boolean) => void;
   toggleExpanded: () => void;
   setScopeModeActive: (active: boolean) => void;
   toggleScopeMode: () => void;
   markScopeHintSeen: () => void;
   setDraft: (draft: string) => void;
+  seedComposer: (input: { text: string; toolPreset: "plan" | "agent" }) => void;
+  clearComposerSeed: () => void;
   addScopeChip: (chip: AgentScopeRef) => void;
   removeScopeChip: (id: string) => void;
   clearScopeChips: () => void;
@@ -31,6 +34,7 @@ export const useWorkspaceAgentStore = create<WorkspaceAgentUiState>((set, get) =
   scopeHintSeen: readScopeHintSeen(),
   draft: "",
   scopeChips: [],
+  pendingComposerSeed: null,
   setExpanded: (expanded) =>
     set({
       expanded,
@@ -52,6 +56,8 @@ export const useWorkspaceAgentStore = create<WorkspaceAgentUiState>((set, get) =
     set({ scopeHintSeen: true });
   },
   setDraft: (draft) => set({ draft }),
+  seedComposer: (input) => set({ pendingComposerSeed: input, expanded: true }),
+  clearComposerSeed: () => set({ pendingComposerSeed: null }),
   addScopeChip: (chip) =>
     set((state) =>
       state.scopeChips.some((entry) => entry.kind === chip.kind && entry.id === chip.id)

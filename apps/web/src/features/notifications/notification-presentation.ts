@@ -116,7 +116,7 @@ export function notificationPreferenceLabel(type: NotificationRecord["type"]) {
 }
 
 export type FeaturedNotificationCta = {
-  kind: "start-timer" | "open";
+  kind: "start-timer" | "open" | "ask-orch";
   label: string;
 };
 
@@ -191,7 +191,7 @@ export function featuredNotificationCta(notification: NotificationRecord): Featu
     return { kind: "open", label: "Open task" };
   }
   if (notification.type === "member.alert") {
-    return { kind: "open", label: "Review alert" };
+    return { kind: "ask-orch", label: "Ask Orch" };
   }
   return { kind: "open", label: "Open" };
 }
@@ -246,4 +246,13 @@ export function notificationQuickAction(
     return "reply";
   }
   return null;
+}
+
+export function buildMemberAlertOrchPrompt(input: {
+  title: string;
+  body: string;
+  dateKey?: string;
+}) {
+  const dateLine = input.dateKey ? ` Period: ${input.dateKey}.` : "";
+  return `Plan a confirmable response to this profile alert: ${input.title}. ${input.body}.${dateLine} Use Agency tools. Suggest only targeted time_entry updates (never a whole day or group). I will Confirm, then Approve.`;
 }
