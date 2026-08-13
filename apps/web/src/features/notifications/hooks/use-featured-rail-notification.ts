@@ -9,6 +9,7 @@ import {
   useMarkNotificationReadMutation,
 } from "@/features/notifications/notifications-queries";
 import {
+  buildMemberAlertOrchPrompt,
   featuredNotificationBody,
   featuredNotificationCta,
   featuredNotificationTitle,
@@ -19,6 +20,7 @@ import {
 import { useNotificationsInboxUiStore } from "@/features/notifications/stores/notifications-inbox-ui";
 import { useTeamStore } from "@/features/team/team-store";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
+import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 
 export type FeaturedRailNotificationInput = {
   /** Mobile drawer is always wide enough for the card. */
@@ -102,6 +104,17 @@ export function useFeaturedRailNotification(input: FeaturedRailNotificationInput
         });
         await markRead(featured);
         navigate("/agency");
+        return;
+      }
+      if (cta.kind === "ask-orch") {
+        const payload = featured.payload;
+        const prompt = buildMemberAlertOrchPrompt({
+          title: payload.alertTitle ?? featuredNotificationTitle(featured),
+          body: featuredNotificationBody(featured),
+          dateKey: payload.dateKey,
+        });
+        useWorkspaceAgentStore.getState().seedComposer({ text: prompt, toolPreset: "plan" });
+        await markRead(featured);
         return;
       }
       await openNotification(featured);

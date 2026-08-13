@@ -569,11 +569,7 @@ export type AgencyAgentRuntime = {
       taskId: string | null;
     }>;
   }>;
-  getClientBill: (input: {
-    clientId: string;
-    periodStart: string;
-    periodEnd: string;
-  }) => Promise<{
+  getClientBill: (input: { clientId: string; periodStart: string; periodEnd: string }) => Promise<{
     clientId: string;
     clientName: string | null;
     amount: number;
@@ -619,6 +615,16 @@ export type AgencyAgentRuntime = {
       wasteSeconds: number;
       nonWasteSeconds: number;
     }>;
+  }>;
+  listMemberAlerts: (input: { userId?: string }) => Promise<{
+    alerts: Array<{
+      id: string;
+      kind: string;
+      title: string;
+      dateKey: string | null;
+      entryIds: string[];
+    }>;
+    canManageAlerts: boolean;
   }>;
   /** Persist a pending proposal; never executes the write. */
   createProposal: (input: {

@@ -97,6 +97,12 @@ const TOOL_CATALOG: ToolCatalogDefinition[] = [
     modes: ALL_MODES,
   },
   {
+    name: "list_member_profile_alerts",
+    usage: "Lists member profile alerts (Needs-action) for a user on the active team.",
+    surface: ["agency"],
+    modes: ALL_MODES,
+  },
+  {
     name: "list_agency_projects",
     usage: "Lists Agency projects and their clients for the active team.",
     surface: ["agency"],

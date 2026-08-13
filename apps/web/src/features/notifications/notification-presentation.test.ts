@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
 
 import {
+  buildMemberAlertOrchPrompt,
   featuredNotificationCta,
   featuredNotificationTitle,
   groupNotificationSections,
@@ -153,9 +154,28 @@ describe("notification presentation", () => {
       ),
     ).toEqual({ kind: "open", label: "Open task" });
     expect(featuredNotificationCta(notification({ id: "al", type: "member.alert" }))).toEqual({
-      kind: "open",
-      label: "Review alert",
+      kind: "ask-orch",
+      label: "Ask Orch",
     });
+  });
+
+  test("member.alert featured CTA is Ask Orch", () => {
+    expect(
+      featuredNotificationCta(
+        notification({ type: "member.alert", payload: { alertTitle: "Waste spike" } }),
+      ),
+    ).toEqual({ kind: "ask-orch", label: "Ask Orch" });
+  });
+
+  test("seeds a plan prompt that forbids whole-day waste", () => {
+    const prompt = buildMemberAlertOrchPrompt({
+      title: "Waste spike",
+      body: "Three entries look unfocused",
+      dateKey: "2026-08-14",
+    });
+    expect(prompt).toContain("Waste spike");
+    expect(prompt).toContain("2026-08-14");
+    expect(prompt.toLowerCase()).toContain("targeted");
   });
 
   test("notificationHref uses canonical Agency paths", () => {

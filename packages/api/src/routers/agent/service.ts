@@ -36,6 +36,7 @@ import {
   type DashboardConversationUsageSummary,
 } from "@orch/agent";
 import { db } from "@orch/db";
+import type { AgencyOpsMemberProfileAlertContext } from "@orch/db/schema";
 import {
   dashboardConversation,
   dashboardConversationMessage,
@@ -56,6 +57,7 @@ import { listAgencyProjects } from "../agency-ops/projects/service";
 import { getAgencyReportsSummary } from "../agency-ops/reports/service";
 import { listAgencyTags } from "../agency-ops/tags/service";
 import { listAgencyProjectTasks } from "../agency-ops/tasks/service";
+import { listMemberProfileAlerts } from "../agency-ops/member-profile/member-profile-alert-service";
 import {
   getAgencyActiveTimer,
   getAgencyTimeSummary,
@@ -76,6 +78,12 @@ import {
   buildDashboardMessagePreview,
   normalizeDashboardConversationTitle,
 } from "./conversation-contracts";
+
+function entryIdsFromMemberAlertContext(context: AgencyOpsMemberProfileAlertContext): string[] {
+  const raw = context as AgencyOpsMemberProfileAlertContext & { entryIds?: string[] };
+  if (!Array.isArray(raw.entryIds)) return [];
+  return raw.entryIds.filter((id) => typeof id === "string" && id.trim().length > 0);
+}
 
 function attachmentsFromRow(
   value: DashboardConversationMessageAttachmentRecord[] | null | undefined,
@@ -306,6 +314,25 @@ function createAgencyAgentRuntime(
           amount: row.amount,
           remainingAmount: row.remainingAmount,
         })),
+      };
+    },
+    listMemberAlerts: async ({ userId }) => {
+      const targetUserId = userId ?? actorUserId;
+      const result = await listMemberProfileAlerts(actorUserId, {
+        teamId,
+        userId: targetUserId,
+      });
+      return {
+        alerts: result.items
+          .filter((alert) => alert.status !== "removed")
+          .map((alert) => ({
+            id: alert.id,
+            kind: alert.kind,
+            title: alert.title,
+            dateKey: alert.context.dateKey ?? null,
+            entryIds: entryIdsFromMemberAlertContext(alert.context),
+          })),
+        canManageAlerts: result.canManageAlerts,
       };
     },
     getReportsSummary: async (input) => {

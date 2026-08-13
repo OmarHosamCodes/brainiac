@@ -149,6 +149,32 @@ function buildAgencyReadTools(runtime: AgencyAgentRuntime) {
       execute: async (input) => runtime.getClientBill(input),
     }),
     tool({
+      name: "list_member_profile_alerts",
+      description:
+        "List member profile alerts (Needs-action) for a user on the active team. Defaults to the current user.",
+      inputSchema: z.object({
+        userId: z
+          .string()
+          .trim()
+          .min(1)
+          .optional()
+          .describe("Member user id; defaults to the current user."),
+      }),
+      outputSchema: z.object({
+        alerts: z.array(
+          z.object({
+            id: z.string(),
+            kind: z.string(),
+            title: z.string(),
+            dateKey: z.string().nullable(),
+            entryIds: z.array(z.string()),
+          }),
+        ),
+        canManageAlerts: z.boolean(),
+      }),
+      execute: async (input) => runtime.listMemberAlerts(input),
+    }),
+    tool({
       name: "get_agency_time_entry",
       description: "Read one Agency time entry by id for the current user.",
       inputSchema: z.object({

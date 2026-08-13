@@ -14,7 +14,10 @@ import {
   type NotificationPreferenceItem,
 } from "@/features/notifications/notifications-queries";
 import {
+  buildMemberAlertOrchPrompt,
   featuredNotificationCta,
+  featuredNotificationBody,
+  featuredNotificationTitle,
   formatDigestHours,
   formatRelativeTime,
   groupNotificationSections,
@@ -23,6 +26,7 @@ import {
 } from "@/features/notifications/notification-presentation";
 import { useNotificationsInboxUiStore } from "@/features/notifications/stores/notifications-inbox-ui";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
+import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 import {
   canUsePushNotifications,
   dismissPushPrompt,
@@ -190,6 +194,18 @@ export function useAgencyNotifications(input: AgencyNotificationsInput) {
       const cta = featuredNotificationCta(notification);
       if (cta.kind === "start-timer") {
         await handleStartTimer(notification);
+        return;
+      }
+      if (cta.kind === "ask-orch") {
+        const payload = notification.payload;
+        const prompt = buildMemberAlertOrchPrompt({
+          title: payload.alertTitle ?? featuredNotificationTitle(notification),
+          body: featuredNotificationBody(notification),
+          dateKey: payload.dateKey,
+        });
+        useWorkspaceAgentStore.getState().seedComposer({ text: prompt, toolPreset: "plan" });
+        await markReadMutation.mutateAsync(notification.id);
+        setOpen(false);
         return;
       }
       await openNotification(notification);
