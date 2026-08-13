@@ -22,6 +22,16 @@ import {
   listOpenRouterFreeModels,
 } from "./schemas";
 import {
+  composerDraftConversationInputSchema,
+  composerDraftRecordSchema,
+  composerDraftUpsertInputSchema,
+} from "./composer-draft";
+import {
+  discardComposerDraft,
+  getComposerDraft,
+  upsertComposerDraft,
+} from "./composer-draft-service";
+import {
   appendDashboardConversationTurn,
   assertCanCreateDashboardConversation,
   deleteDashboardConversation,
@@ -269,5 +279,28 @@ export const agentRouter = {
           });
         }
       }),
+    draft: {
+      get: protectedProcedure
+        .input(composerDraftConversationInputSchema)
+        .handler(async ({ input, context }) => {
+          return z
+            .object({ draft: composerDraftRecordSchema.nullable() })
+            .parse(await getComposerDraft(context.session.user.id, input));
+        }),
+      upsert: protectedProcedure
+        .input(composerDraftUpsertInputSchema)
+        .handler(async ({ input, context }) => {
+          return z
+            .object({ draft: composerDraftRecordSchema.nullable() })
+            .parse(await upsertComposerDraft(context.session.user.id, input));
+        }),
+      discard: protectedProcedure
+        .input(composerDraftConversationInputSchema)
+        .handler(async ({ input, context }) => {
+          return z
+            .object({ discarded: z.literal(true) })
+            .parse(await discardComposerDraft(context.session.user.id, input));
+        }),
+    },
   },
 };
