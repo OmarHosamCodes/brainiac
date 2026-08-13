@@ -390,7 +390,7 @@ export function ComposerAttachButton({
       type="button"
       aria-label="Add attachment"
       data-slot="composer-attach"
-      disabled={!props.onClick}
+      disabled={props.disabled}
       className={cn(
         ghostButton,
         "size-8 disabled:pointer-events-none disabled:opacity-30",

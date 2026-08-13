@@ -124,6 +124,26 @@ export function getLastUserText(messages: UIMessage[]): string {
   return "";
 }
 
+export function getLastUserFileParts(
+  messages: UIMessage[],
+): Array<{ url: string; filename?: string; mediaType?: string }> {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message?.role !== "user") continue;
+    return message.parts.flatMap((part) => {
+      if (part.type !== "file" || typeof part.url !== "string") return [];
+      return [
+        {
+          url: part.url,
+          ...(typeof part.filename === "string" ? { filename: part.filename } : {}),
+          ...(typeof part.mediaType === "string" ? { mediaType: part.mediaType } : {}),
+        },
+      ];
+    });
+  }
+  return [];
+}
+
 export function dashboardMessagesToUIMessages(
   messages: DashboardConversationMessage[],
 ): OrchUIMessage[] {

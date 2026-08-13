@@ -13,6 +13,7 @@ import {
   Wrench,
 } from "lucide-react";
 
+import { ComposerMenuItem } from "@/components/elements/composer";
 import { Skeleton } from "@/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 
@@ -131,13 +132,10 @@ export function WorkspaceAgentToolMenuView({ tools, loading }: WorkspaceAgentToo
               return (
                 <Tooltip key={tool.name}>
                   <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex min-h-7 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm text-foreground motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                    <ComposerMenuItem>
+                      <Icon className="text-foreground/35 size-3.5 shrink-0" aria-hidden />
                       <span className="truncate">{formatToolTitle(tool.name)}</span>
-                    </button>
+                    </ComposerMenuItem>
                   </TooltipTrigger>
                   <TooltipContent
                     side="right"

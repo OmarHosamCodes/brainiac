@@ -1,9 +1,11 @@
 import type { AgentChatTurnInput, AgentTextAttachment } from "@orch/agent/types";
 import type { ChatTransport } from "ai";
 
+import { filePartsToAgentAttachments } from "@/features/workspace-agent/agent-attachments";
 import { streamAgentChatTurn } from "@/features/workspace-agent/agent-turn-stream";
 import {
   createOrchEventToChunkMapper,
+  getLastUserFileParts,
   getLastUserText,
   type OrchUIMessage,
   type OrchUIMessageChunk,
@@ -14,7 +16,11 @@ export type OrchTurnTransportBody = Omit<AgentChatTurnInput, "content" | "attach
   attachments?: AgentTextAttachment[];
 };
 
+export type OrchTurnSendContext = Partial<Omit<AgentChatTurnInput, "content" | "attachments">>;
+
 export class OrchTurnStreamTransport implements ChatTransport<OrchUIMessage> {
+  constructor(private readonly getContext: () => OrchTurnSendContext = () => ({})) {}
+
   async sendMessages({
     messages,
     abortSignal,
@@ -22,19 +28,28 @@ export class OrchTurnStreamTransport implements ChatTransport<OrchUIMessage> {
   }: Parameters<ChatTransport<OrchUIMessage>["sendMessages"]>[0]): Promise<
     ReadableStream<OrchUIMessageChunk>
   > {
-    const orchBody = (body ?? {}) as OrchTurnTransportBody;
+    const orchBody = {
+      ...this.getContext(),
+      ...(body as OrchTurnTransportBody | undefined),
+    };
     const content =
       typeof orchBody.content === "string" ? orchBody.content : getLastUserText(messages);
-    const attachments = orchBody.attachments ?? [];
+    const attachments =
+      orchBody.attachments ?? filePartsToAgentAttachments(getLastUserFileParts(messages));
 
     if (!content.trim() && attachments.length === 0) {
       throw new Error("Message is empty.");
+    }
+
+    if ((orchBody.surface ?? "canvas") === "agency" && !orchBody.teamId) {
+      throw new Error("Select an Agency team before asking about time.");
     }
 
     const input: AgentChatTurnInput = {
       ...orchBody,
       content,
       attachments,
+      surface: orchBody.surface ?? "canvas",
       toolPreset: orchBody.toolPreset ?? "ask",
     };
 

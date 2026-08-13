@@ -7,6 +7,7 @@ import {
   createOrchEventToChunkMapper,
   dashboardMessagesToUIMessages,
   formatAgencyQuestionAnswerMessage,
+  getLastUserFileParts,
   getLastUserText,
 } from "./orch-ui-message";
 
@@ -18,6 +19,29 @@ describe("orch-ui-message", () => {
         { id: "2", role: "user", parts: [{ type: "text", text: "Hello world" }] },
       ]),
     ).toBe("Hello world");
+  });
+
+  test("getLastUserFileParts reads trailing user file parts", () => {
+    expect(
+      getLastUserFileParts([
+        { id: "1", role: "assistant", parts: [{ type: "text", text: "Hi" }] },
+        {
+          id: "2",
+          role: "user",
+          parts: [
+            { type: "text", text: "See file" },
+            {
+              type: "file",
+              url: "data:text/plain;base64,aGk=",
+              filename: "notes.txt",
+              mediaType: "text/plain",
+            },
+          ],
+        },
+      ]),
+    ).toEqual([
+      { url: "data:text/plain;base64,aGk=", filename: "notes.txt", mediaType: "text/plain" },
+    ]);
   });
 
   test("maps Orch stream events into UI message chunks", () => {

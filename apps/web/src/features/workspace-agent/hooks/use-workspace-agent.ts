@@ -1,4 +1,5 @@
 import type {
+  AgentModelPreset,
   AgentScopeRef,
   AgentSurface,
   AgentTextAttachment,
@@ -9,7 +10,7 @@ import type { WorkspaceNode } from "@orch/workspace";
 import { useChat } from "@ai-sdk/react";
 import { useAISDKRuntime } from "@assistant-ui/react-ai-sdk";
 import { useMutation } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
@@ -26,7 +27,10 @@ import {
 import { useWorkspaceAgentData } from "@/features/workspace-agent/hooks/use-workspace-agent-data";
 import { useWorkspaceAgentModelPreferences } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preferences";
 import { useWorkspaceAgentModelPreset } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preset";
-import { OrchTurnStreamTransport } from "@/features/workspace-agent/orch-turn-stream-transport";
+import {
+  OrchTurnStreamTransport,
+  type OrchTurnSendContext,
+} from "@/features/workspace-agent/orch-turn-stream-transport";
 import {
   appendConfirmedProposalsToMessages,
   collectAnsweredQuestionIds,
@@ -81,6 +85,41 @@ function composerUnlockedSurfaces(
   ];
 }
 
+function buildOrchTurnSendContext(input: {
+  conversationId: string | null;
+  surface: AgentSurface;
+  teamId: string | null;
+  scopeChips: AgentScopeRef[];
+  workspaceNodes: WorkspaceNode[];
+  toolPreset: DashboardAgentToolPreset;
+  modelPreset: AgentModelPreset;
+  model?: string;
+}): OrchTurnSendContext {
+  const unlocked = composerUnlockedSurfaces(input.surface, input.scopeChips);
+  const canvasUnlocked = unlocked.includes("canvas");
+  const agencyUnlocked = unlocked.includes("agency");
+  const scopedNodes = input.workspaceNodes.filter((node) =>
+    input.scopeChips.some((chip) => chip.kind === "node" && chip.id === node.id),
+  );
+  return {
+    conversationId: input.conversationId ?? undefined,
+    surface: input.surface,
+    unlockedSurfaces: unlocked,
+    toolPreset: input.toolPreset,
+    modelPreset: input.modelPreset,
+    scopeRefs: input.scopeChips,
+    contextNodeTitles: input.scopeChips.map((chip) => chip.label),
+    ...(agencyUnlocked && input.teamId ? { teamId: input.teamId } : {}),
+    ...(canvasUnlocked
+      ? {
+          nodes: input.workspaceNodes,
+          scopeNodes: scopedNodes.length > 0 ? scopedNodes : input.workspaceNodes,
+        }
+      : {}),
+    ...(input.model ? { model: input.model } : {}),
+  };
+}
+
 export function useWorkspaceAgent() {
   useAgentScopeModeListener();
 
@@ -111,8 +150,6 @@ export function useWorkspaceAgent() {
   const [modelLibraryOpen, setModelLibraryOpen] = useState(false);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
-  const [threadMenuOpen, setThreadMenuOpen] = useState(false);
-  const [historyBillOpen, setHistoryBillOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
@@ -161,7 +198,8 @@ export function useWorkspaceAgent() {
   const conversationList = conversationsQuery.data?.conversations ?? [];
   const activeConversation = activeConversationQuery.data ?? null;
 
-  const transport = useMemo(() => new OrchTurnStreamTransport(), []);
+  const sendContextRef = useRef<OrchTurnSendContext>({});
+  const transport = useMemo(() => new OrchTurnStreamTransport(() => sendContextRef.current), []);
 
   const modelOptions = useMemo(() => {
     const rawModels = modelCatalogQuery.data?.models ?? [];
@@ -225,6 +263,7 @@ export function useWorkspaceAgent() {
     stop,
     setMessages,
     error: chatError,
+    regenerate,
   } = chat;
   const runtime = useAISDKRuntime(chat);
 
@@ -377,6 +416,11 @@ export function useWorkspaceAgent() {
     void stop();
   }, [stop]);
 
+  const retryLastTurn = useCallback(() => {
+    setError(null);
+    void regenerate();
+  }, [regenerate]);
+
   const sendMessage = useCallback(
     async (
       input: {
@@ -399,12 +443,20 @@ export function useWorkspaceAgent() {
         setSelectedToolPreset(input.toolPreset);
       }
 
-      const unlocked = composerUnlockedSurfaces(surface, scopeChips);
-      const canvasUnlocked = unlocked.includes("canvas");
-      const agencyUnlocked = unlocked.includes("agency");
-      const scopedNodes = workspaceNodes.filter((node) =>
-        scopeChips.some((chip) => chip.kind === "node" && chip.id === node.id),
-      );
+      const orchBody = {
+        ...buildOrchTurnSendContext({
+          conversationId: activeConversationId,
+          surface,
+          teamId,
+          scopeChips,
+          workspaceNodes,
+          toolPreset,
+          modelPreset: modelPresetState.modelPreset,
+          ...(model ? { model } : {}),
+        }),
+        content,
+        attachments,
+      };
 
       setDraft("");
       setError(null);
@@ -414,25 +466,7 @@ export function useWorkspaceAgent() {
         await chatSendMessage(
           { text: content },
           {
-            body: {
-              content,
-              attachments,
-              conversationId: activeConversationId ?? undefined,
-              surface,
-              unlockedSurfaces: unlocked,
-              toolPreset,
-              modelPreset: modelPresetState.modelPreset,
-              scopeRefs: scopeChips,
-              contextNodeTitles: scopeChips.map((chip) => chip.label),
-              ...(agencyUnlocked && teamId ? { teamId } : {}),
-              ...(canvasUnlocked
-                ? {
-                    nodes: workspaceNodes,
-                    scopeNodes: scopedNodes.length > 0 ? scopedNodes : workspaceNodes,
-                  }
-                : {}),
-              ...(model ? { model } : {}),
-            },
+            body: orchBody,
           },
         );
         return true;
@@ -749,6 +783,18 @@ export function useWorkspaceAgent() {
       ? (messages[messages.length - 1]?.id ?? null)
       : null;
 
+  const outboundModel = modelPresetState.outboundModelId?.trim();
+  sendContextRef.current = buildOrchTurnSendContext({
+    conversationId: activeConversationId,
+    surface,
+    teamId,
+    scopeChips,
+    workspaceNodes,
+    toolPreset: selectedToolPreset,
+    modelPreset: modelPresetState.modelPreset,
+    ...(outboundModel ? { model: outboundModel } : {}),
+  });
+
   return {
     surface,
     teamId,
@@ -777,6 +823,7 @@ export function useWorkspaceAgent() {
     chatStatus: status,
     sendMessage,
     stopGeneration,
+    retryLastTurn,
     selectedToolPreset,
     setSelectedToolPreset,
     planModeEnabled: true,
@@ -804,8 +851,6 @@ export function useWorkspaceAgent() {
     setModelMenuOpen,
     toolsMenuOpen,
     setToolsMenuOpen,
-    threadMenuOpen,
-    setThreadMenuOpen,
     tools: toolsCatalogQuery.data?.tools ?? [],
     toolsLoading:
       toolsCatalogQuery.isLoading ||
@@ -829,21 +874,6 @@ export function useWorkspaceAgent() {
       costUsd: conversation.usageSummary?.totals.costUsd ?? 0,
     })),
     activeCostUsd: activeConversation?.usageSummary?.totals.costUsd ?? 0,
-    quotaBanner: (() => {
-      const status = accountStatusQuery.data;
-      if (!status) return null;
-      const limit = status.limit ?? status.totalCredits;
-      if (!limit || limit <= 0) return null;
-      return {
-        used: status.totalUsage,
-        limit,
-        unit: "credits",
-        resetsIn: "this month",
-        upgradeLabel: status.isFreeTier ? "Upgrade" : "Manage plan",
-      };
-    })(),
-    historyBillOpen,
-    setHistoryBillOpen,
     conversationsLoading: conversationsQuery.isLoading,
     startNewConversation,
     switchConversation,
@@ -855,6 +885,12 @@ export function useWorkspaceAgent() {
     setRenameDraft,
     openRenameDialog: () => {
       setRenameDraft(activeConversation?.title ?? "");
+      setIsRenameDialogOpen(true);
+    },
+    openRenameConversation: (conversationId: string) => {
+      const conversation = conversationList.find((entry) => entry.id === conversationId);
+      setActiveConversationId(conversationId);
+      setRenameDraft(conversation?.title ?? "");
       setIsRenameDialogOpen(true);
     },
     closeRenameDialog: () => setIsRenameDialogOpen(false),

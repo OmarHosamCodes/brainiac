@@ -1,0 +1,154 @@
+import { useAssistantDataUI } from "@assistant-ui/react";
+import { useContext } from "react";
+
+import { AgencyPlanCardView } from "@/features/workspace-agent/agency-plan-card-view";
+import { AgencyProposalCardView } from "@/features/workspace-agent/agency-proposal-card-view";
+import { AgencyQuestionCardView } from "@/features/workspace-agent/agency-question-card-view";
+import { AgentMessageArtifactCardView } from "@/features/workspace-agent/agent-message-artifact-card-view";
+import { AgentStickyArchiveReceiptView } from "@/features/workspace-agent/agent-sticky-dock-view";
+import type {
+  OrchAgencyQuestionAnswer,
+  OrchUIDataParts,
+} from "@/features/workspace-agent/orch-ui-message";
+import { isPartStickyDocked } from "@/features/workspace-agent/sticky-dock";
+import { WorkspaceAgentThreadMessageContext } from "@/features/workspace-agent/workspace-agent-thread-slots";
+
+function asPlan(data: unknown): OrchUIDataParts["orchPlan"] {
+  return data as OrchUIDataParts["orchPlan"];
+}
+
+function asProposal(data: unknown): OrchUIDataParts["orchProposal"] {
+  return data as OrchUIDataParts["orchProposal"];
+}
+
+function asQuestion(data: unknown): OrchUIDataParts["orchQuestion"] {
+  return data as OrchUIDataParts["orchQuestion"];
+}
+
+function asArtifact(data: unknown): OrchUIDataParts["orchArtifact"] {
+  return data as OrchUIDataParts["orchArtifact"];
+}
+
+function OrchPlanDataPart({ data }: { name: string; data: unknown }) {
+  const ctx = useContext(WorkspaceAgentThreadMessageContext);
+  if (!ctx) return null;
+  const plan = asPlan(data);
+  if (isPartStickyDocked(ctx.stickyItem, "plan", plan.planId)) return null;
+  if (ctx.resolvedPlanIds.has(plan.planId)) {
+    return <AgentStickyArchiveReceiptView label="Plan confirmed" detail={plan.title} />;
+  }
+  return (
+    <AgencyPlanCardView
+      plan={plan}
+      confirming={ctx.planConfirmingId === plan.planId}
+      onConfirm={() => ctx.onConfirmPlan(plan)}
+    />
+  );
+}
+
+function OrchProposalDataPart({ data }: { name: string; data: unknown }) {
+  const ctx = useContext(WorkspaceAgentThreadMessageContext);
+  if (!ctx) return null;
+  const proposal = asProposal(data);
+  if (isPartStickyDocked(ctx.stickyItem, "proposal", proposal.proposalId)) return null;
+  if (ctx.resolvedProposalIds.has(proposal.proposalId)) {
+    return (
+      <AgentStickyArchiveReceiptView
+        label="Proposal resolved"
+        detail={proposal.label}
+        actionLabel={proposal.boardHref ? "Open on board" : undefined}
+        onAction={
+          proposal.boardHref && ctx.onOpenBoard
+            ? () => ctx.onOpenBoard?.(proposal.boardHref!)
+            : undefined
+        }
+      />
+    );
+  }
+  return (
+    <AgencyProposalCardView
+      proposal={proposal}
+      busy={ctx.proposalBusyId === proposal.proposalId}
+      onApprove={() => ctx.onApproveProposal(proposal.proposalId)}
+      onReject={() => ctx.onRejectProposal(proposal.proposalId)}
+    />
+  );
+}
+
+function questionCanSubmit(
+  question: OrchUIDataParts["orchQuestion"],
+  draft: { selectedOptionIds: string[]; freeText: string },
+  answered: boolean,
+  submitting: boolean,
+): boolean {
+  if (answered || submitting) return false;
+  const freeText = draft.freeText;
+  const selectedOptionIds = draft.selectedOptionIds;
+  if (question.kind === "text") return freeText.trim().length > 0;
+  if (question.kind === "single") {
+    return selectedOptionIds.length === 1 || (question.allowFreeText && freeText.trim().length > 0);
+  }
+  return selectedOptionIds.length > 0 || (question.allowFreeText && freeText.trim().length > 0);
+}
+
+function OrchQuestionDataPart({ data }: { name: string; data: unknown }) {
+  const ctx = useContext(WorkspaceAgentThreadMessageContext);
+  if (!ctx) return null;
+  const question = asQuestion(data);
+  if (isPartStickyDocked(ctx.stickyItem, "question", question.questionId)) return null;
+  const answered = ctx.answeredQuestionIds.has(question.questionId);
+  if (answered) {
+    return <AgentStickyArchiveReceiptView label="Question answered" detail="In history" />;
+  }
+  const draft = ctx.questionDrafts[question.questionId] ?? {
+    selectedOptionIds: [] as string[],
+    freeText: "",
+  };
+  const submitting = ctx.questionSubmittingId === question.questionId;
+  const selectedLabels = question.options
+    .filter((option) => draft.selectedOptionIds.includes(option.id))
+    .map((option) => option.label);
+  const answer: OrchAgencyQuestionAnswer = {
+    questionId: question.questionId,
+    selectedOptionIds: draft.selectedOptionIds,
+    selectedLabels,
+    freeText: draft.freeText.trim(),
+  };
+  return (
+    <AgencyQuestionCardView
+      question={question}
+      selectedOptionIds={draft.selectedOptionIds}
+      freeText={draft.freeText}
+      answered={answered}
+      submitting={submitting}
+      canSubmit={questionCanSubmit(question, draft, answered, submitting)}
+      onSelectedOptionIdsChange={(ids) =>
+        ctx.onQuestionSelectedOptionIdsChange(question.questionId, ids)
+      }
+      onFreeTextChange={(value) => ctx.onQuestionFreeTextChange(question.questionId, value)}
+      onSubmit={() => ctx.onAnswerQuestion(answer)}
+    />
+  );
+}
+
+function OrchArtifactDataPart({ data }: { name: string; data: unknown }) {
+  const ctx = useContext(WorkspaceAgentThreadMessageContext);
+  if (!ctx) return null;
+  const artifact = asArtifact(data);
+  if (isPartStickyDocked(ctx.stickyItem, "artifact", artifact.id)) return null;
+  return (
+    <AgentMessageArtifactCardView
+      artifact={artifact}
+      onOpen={() => ctx.onOpenArtifactCanvas(artifact)}
+    />
+  );
+}
+
+/** Registers Orch HITL data parts on the assistant-ui Thread (not a golden view). */
+export function WorkspaceAgentThreadDataUI() {
+  useAssistantDataUI({ name: "orchPlan", render: OrchPlanDataPart });
+  useAssistantDataUI({ name: "orchProposal", render: OrchProposalDataPart });
+  useAssistantDataUI({ name: "orchQuestion", render: OrchQuestionDataPart });
+  useAssistantDataUI({ name: "orchArtifact", render: OrchArtifactDataPart });
+  return null;
+}

@@ -1,7 +1,12 @@
 import type { AiUiArtifact } from "@orch/agent/types";
-import { History, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Thread } from "@/components/assistant-ui/thread";
+import {
+  CanvasSplit,
+  CanvasSplitDocument,
+  CanvasSplitThread,
+} from "@/components/elements/canvas-split";
 import { AgentArtifactPaneView } from "@/features/workspace-agent/agent-artifact-pane-view";
 import { AgentStickyDockView } from "@/features/workspace-agent/agent-sticky-dock-view";
 import {
@@ -10,8 +15,9 @@ import {
   type OrchUIMessage,
 } from "@/features/workspace-agent/orch-ui-message";
 import type { WorkspaceAgentQuickStart } from "@/features/workspace-agent/workspace-agent-quick-starts";
+import { WorkspaceAgentThreadDataUI } from "@/features/workspace-agent/workspace-agent-thread-data-ui";
+import { WorkspaceAgentThreadHistory } from "@/features/workspace-agent/workspace-agent-thread-history";
 import {
-  WorkspaceAgentThreadAssistantMessage,
   WorkspaceAgentThreadMessageProvider,
   WorkspaceAgentThreadWelcome,
 } from "@/features/workspace-agent/workspace-agent-thread-slots";
@@ -25,18 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
-import { cn } from "@/lib/utils";
 
 export type WorkspaceAgentConversationOption = {
   id: string;
@@ -47,26 +42,21 @@ export type WorkspaceAgentConversationOption = {
 };
 
 type WorkspaceAgentChatPanelViewProps = {
-  title: string;
   messages: OrchUIMessage[];
   conversationOptions: WorkspaceAgentConversationOption[];
   conversationsLoading: boolean;
   activeConversationId: string | null;
-  threadMenuOpen: boolean;
-  onThreadMenuOpenChange: (open: boolean) => void;
   onSelectConversation: (id: string) => void;
   onStartNewConversation: () => void;
   onDeleteConversation: (id: string) => void;
+  onRenameConversation: (id: string) => void;
   deletingConversationId: string | null;
-  canManageConversation: boolean;
   isRenameDialogOpen: boolean;
   isDeleteDialogOpen: boolean;
   renameDraft: string;
   onRenameDraftChange: (value: string) => void;
-  onOpenRename: () => void;
   onCloseRename: () => void;
   onSubmitRename: () => void;
-  onOpenDelete: () => void;
   onCloseDelete: () => void;
   onConfirmDelete: () => void;
   isRenaming: boolean;
@@ -98,40 +88,25 @@ type WorkspaceAgentChatPanelViewProps = {
   onSelectQuickStart: (start: WorkspaceAgentQuickStart) => void;
   emptyHint: string;
   onOpenBoard?: (href: string) => void;
+  composer: ReactNode;
 };
 
-function formatConversationStamp(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 export function WorkspaceAgentChatPanelView({
-  title,
   messages,
   conversationOptions,
   conversationsLoading,
   activeConversationId,
-  threadMenuOpen,
-  onThreadMenuOpenChange,
   onSelectConversation,
   onStartNewConversation,
   onDeleteConversation,
+  onRenameConversation,
   deletingConversationId,
-  canManageConversation,
   isRenameDialogOpen,
   isDeleteDialogOpen,
   renameDraft,
   onRenameDraftChange,
-  onOpenRename,
   onCloseRename,
   onSubmitRename,
-  onOpenDelete,
   onCloseDelete,
   onConfirmDelete,
   isRenaming,
@@ -162,6 +137,7 @@ export function WorkspaceAgentChatPanelView({
   quickStarts,
   onSelectQuickStart,
   emptyHint,
+  composer,
 }: WorkspaceAgentChatPanelViewProps) {
   const showCanvas = activeArtifact !== null;
   const stickyItem = resolveStickyDockItem({
@@ -195,219 +171,124 @@ export function WorkspaceAgentChatPanelView({
     return selectedOptionIds.length > 0 || (q.allowFreeText && freeText.trim().length > 0);
   })();
 
+  const threadComposer = (
+    <>
+      <AgentStickyDockView
+        item={stickyItem}
+        questionDraft={stickyQuestionDraft}
+        questionAnswered={
+          stickyItem?.kind === "question"
+            ? answeredQuestionIds.has(stickyItem.question.questionId)
+            : false
+        }
+        questionSubmitting={
+          stickyItem?.kind === "question"
+            ? questionSubmittingId === stickyItem.question.questionId
+            : false
+        }
+        questionCanSubmit={stickyQuestionCanSubmit}
+        planConfirming={
+          stickyItem?.kind === "plan" ? planConfirmingId === stickyItem.plan.planId : false
+        }
+        proposalBusy={
+          stickyItem?.kind === "proposal"
+            ? proposalBusyId === stickyItem.proposal.proposalId
+            : false
+        }
+        onQuestionSelectedOptionIdsChange={(ids) => {
+          if (stickyItem?.kind !== "question") return;
+          onQuestionSelectedOptionIdsChange(stickyItem.question.questionId, ids);
+        }}
+        onQuestionFreeTextChange={(value) => {
+          if (stickyItem?.kind !== "question") return;
+          onQuestionFreeTextChange(stickyItem.question.questionId, value);
+        }}
+        onAnswerQuestion={onAnswerQuestion}
+        onConfirmPlan={onConfirmPlan}
+        onApproveProposal={onApproveProposal}
+        onRejectProposal={onRejectProposal}
+        onOpenArtifact={onOpenArtifactCanvas}
+        onDismiss={() => {
+          if (!stickyItem) return;
+          onDismissStickyDock(stickyDockItemKey(stickyItem));
+        }}
+      />
+      {composer}
+    </>
+  );
+
   return (
-    <div
-      className={cn(
-        "flex max-h-[min(60vh,520px)] min-h-0 flex-col",
-        stickyItem ? "border-b-0" : "border-b border-border",
-      )}
-    >
-      <div className="flex min-h-12 items-center gap-2 border-b border-border bg-muted/20 px-3">
-        <TooltipProvider>
-          <DropdownMenu open={threadMenuOpen} onOpenChange={onThreadMenuOpenChange}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon-sm" aria-label="Chat history">
-                    <History />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">History</TooltipContent>
-            </Tooltip>
-            <DropdownMenuContent align="start" data-workspace-agent-overlay className="w-72">
-              <DropdownMenuLabel>Recent chats</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={() => {
-                  onStartNewConversation();
-                }}
-              >
-                <Plus className="size-3.5" aria-hidden />
-                New conversation
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {conversationsLoading ? (
-                <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
-              ) : conversationOptions.length === 0 ? (
-                <DropdownMenuItem disabled>No saved chats yet</DropdownMenuItem>
-              ) : (
-                conversationOptions.map((conversation) => {
-                  const active = conversation.id === activeConversationId;
-                  const stamp = formatConversationStamp(conversation.stamp);
-                  return (
-                    <DropdownMenuItem
-                      key={conversation.id}
-                      className="items-start gap-2"
-                      onSelect={() => {
-                        onSelectConversation(conversation.id);
-                      }}
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">
-                          {active ? "· " : ""}
-                          {conversation.label}
-                        </span>
-                        {stamp ? (
-                          <span className="block text-xs text-muted-foreground">{stamp}</span>
-                        ) : null}
-                      </span>
-                      <button
-                        type="button"
-                        className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
-                        aria-label={`Delete ${conversation.label}`}
-                        disabled={deletingConversationId === conversation.id}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          onDeleteConversation(conversation.id);
-                        }}
-                      >
-                        <Trash2 className="size-3.5" aria-hidden />
-                      </button>
-                    </DropdownMenuItem>
-                  );
-                })
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TooltipProvider>
+    <div className="flex h-[min(70vh,640px)] min-h-0">
+      <WorkspaceAgentThreadHistory
+        conversationOptions={conversationOptions}
+        conversationsLoading={conversationsLoading}
+        activeConversationId={activeConversationId}
+        deletingConversationId={deletingConversationId}
+        onSelectConversation={onSelectConversation}
+        onStartNewConversation={onStartNewConversation}
+        onDeleteConversation={onDeleteConversation}
+        onRenameConversation={onRenameConversation}
+      />
 
-        <p className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight text-foreground">
-          {title}
-        </p>
-
-        {canManageConversation ? (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Conversation actions"
-              >
-                <MoreHorizontal />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" data-workspace-agent-overlay className="w-44 gap-0 p-1">
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={onOpenRename}
-              >
-                Rename
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full justify-start text-destructive"
-                onClick={onOpenDelete}
-              >
-                <Trash2 data-icon="inline-start" />
-                Delete
-              </Button>
-            </PopoverContent>
-          </Popover>
-        ) : null}
-      </div>
-
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <div
-          className={cn(
-            "flex min-h-0 flex-col overflow-hidden",
-            showCanvas ? "w-2/5 shrink-0" : "flex-1",
-          )}
-        >
-          <WorkspaceAgentThreadMessageProvider
-            value={{
-              messages,
-              isStreaming,
-              streamingMessageId,
-              streamStopped,
-              proposalBusyId,
-              planConfirmingId,
-              answeredQuestionIds,
-              resolvedPlanIds,
-              resolvedProposalIds,
-              stickyItem,
-              questionSubmittingId,
-              questionDrafts,
-              onConfirmPlan,
-              onApproveProposal,
-              onRejectProposal,
-              onAnswerQuestion,
-              onQuestionSelectedOptionIdsChange,
-              onQuestionFreeTextChange,
-              onOpenArtifactCanvas,
-              onOpenBoard,
-              emptyHint,
-              quickStarts,
-              onSelectQuickStart,
-            }}
-          >
-            <div className="min-h-0 flex-1 overflow-hidden">
+      <WorkspaceAgentThreadMessageProvider
+        value={{
+          messages,
+          isStreaming,
+          streamingMessageId,
+          streamStopped,
+          proposalBusyId,
+          planConfirmingId,
+          answeredQuestionIds,
+          resolvedPlanIds,
+          resolvedProposalIds,
+          stickyItem,
+          questionSubmittingId,
+          questionDrafts,
+          onConfirmPlan,
+          onApproveProposal,
+          onRejectProposal,
+          onAnswerQuestion,
+          onQuestionSelectedOptionIdsChange,
+          onQuestionFreeTextChange,
+          onOpenArtifactCanvas,
+          onOpenBoard,
+          emptyHint,
+          quickStarts,
+          onSelectQuickStart,
+        }}
+      >
+        {showCanvas && activeArtifact ? (
+          <CanvasSplit className="h-full max-h-full min-h-0 max-w-none min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none md:h-full">
+            <CanvasSplitThread className="flex h-full min-h-0 flex-1 flex-col overflow-hidden border-0 p-0 md:w-2/5 md:overflow-hidden">
+              <WorkspaceAgentThreadDataUI />
               <Thread
-                composer={null}
+                composer={threadComposer}
                 components={{
                   Welcome: WorkspaceAgentThreadWelcome,
-                  AssistantMessage: WorkspaceAgentThreadAssistantMessage,
                 }}
               />
-            </div>
-          </WorkspaceAgentThreadMessageProvider>
-
-          <AgentStickyDockView
-            item={stickyItem}
-            questionDraft={stickyQuestionDraft}
-            questionAnswered={
-              stickyItem?.kind === "question"
-                ? answeredQuestionIds.has(stickyItem.question.questionId)
-                : false
-            }
-            questionSubmitting={
-              stickyItem?.kind === "question"
-                ? questionSubmittingId === stickyItem.question.questionId
-                : false
-            }
-            questionCanSubmit={stickyQuestionCanSubmit}
-            planConfirming={
-              stickyItem?.kind === "plan" ? planConfirmingId === stickyItem.plan.planId : false
-            }
-            proposalBusy={
-              stickyItem?.kind === "proposal"
-                ? proposalBusyId === stickyItem.proposal.proposalId
-                : false
-            }
-            onQuestionSelectedOptionIdsChange={(ids) => {
-              if (stickyItem?.kind !== "question") return;
-              onQuestionSelectedOptionIdsChange(stickyItem.question.questionId, ids);
-            }}
-            onQuestionFreeTextChange={(value) => {
-              if (stickyItem?.kind !== "question") return;
-              onQuestionFreeTextChange(stickyItem.question.questionId, value);
-            }}
-            onAnswerQuestion={onAnswerQuestion}
-            onConfirmPlan={onConfirmPlan}
-            onApproveProposal={onApproveProposal}
-            onRejectProposal={onRejectProposal}
-            onOpenArtifact={onOpenArtifactCanvas}
-            onDismiss={() => {
-              if (!stickyItem) return;
-              onDismissStickyDock(stickyDockItemKey(stickyItem));
-            }}
-          />
-        </div>
-
-        {showCanvas && activeArtifact ? (
-          <AgentArtifactPaneView
-            artifact={activeArtifact}
-            onExpand={onExpandArtifact}
-            onDismiss={onDismissArtifact}
-            className="min-w-0 flex-1 border-s border-border"
-          />
-        ) : null}
-      </div>
+            </CanvasSplitThread>
+            <CanvasSplitDocument className="min-h-0 min-w-0 flex-1 border-s border-border">
+              <AgentArtifactPaneView
+                artifact={activeArtifact}
+                onExpand={onExpandArtifact}
+                onDismiss={onDismissArtifact}
+                className="h-full"
+              />
+            </CanvasSplitDocument>
+          </CanvasSplit>
+        ) : (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <WorkspaceAgentThreadDataUI />
+            <Thread
+              composer={threadComposer}
+              components={{
+                Welcome: WorkspaceAgentThreadWelcome,
+              }}
+            />
+          </div>
+        )}
+      </WorkspaceAgentThreadMessageProvider>
 
       <Dialog open={isRenameDialogOpen} onOpenChange={(open) => !open && onCloseRename()}>
         <DialogContent data-workspace-agent-overlay>

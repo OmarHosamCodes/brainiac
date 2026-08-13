@@ -16,16 +16,18 @@ export function ThreadList({
   activeIndex,
   onActiveIndexChange,
   onDelete,
+  onRename,
   className,
   ...props
 }: Omit<
   ComponentProps<"div">,
-  "children" | "threads" | "activeIndex" | "onActiveIndexChange" | "onDelete"
+  "children" | "threads" | "activeIndex" | "onActiveIndexChange" | "onDelete" | "onRename"
 > & {
   threads: readonly ThreadItem[];
   activeIndex: number;
   onActiveIndexChange?: (index: number) => void;
   onDelete?: (index: number) => void;
+  onRename?: (index: number) => void;
 }) {
   return (
     <div
@@ -66,7 +68,23 @@ export function ThreadList({
               {thread.time}
             </span>
             <span className="hidden items-center gap-0.5 group-hover:flex">
-              <span className="text-foreground/45 hover:bg-foreground/[0.06] hover:text-foreground/90 rounded-full p-1">
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label={`Rename ${thread.title}`}
+                className="text-foreground/45 hover:bg-foreground/[0.06] hover:text-foreground/90 rounded-full p-1"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onRename?.(i);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onRename?.(i);
+                }}
+              >
                 <PencilIcon className="size-3" />
               </span>
               <span
