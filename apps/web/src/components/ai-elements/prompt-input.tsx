@@ -966,54 +966,60 @@ export const PromptInputSubmit = ({
   );
 };
 
-interface SpeechRecognition extends EventTarget {
+interface PromptInputSpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
   start(): void;
   stop(): void;
-  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => any) | null;
-  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => any) | null;
+  onstart: ((this: PromptInputSpeechRecognition, ev: Event) => unknown) | null;
+  onend: ((this: PromptInputSpeechRecognition, ev: Event) => unknown) | null;
+  onresult:
+    | ((this: PromptInputSpeechRecognition, ev: PromptInputSpeechRecognitionEvent) => unknown)
+    | null;
+  onerror:
+    | ((this: PromptInputSpeechRecognition, ev: PromptInputSpeechRecognitionErrorEvent) => unknown)
+    | null;
 }
 
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
+interface PromptInputSpeechRecognitionEvent extends Event {
+  results: PromptInputSpeechRecognitionResultList;
   resultIndex: number;
 }
 
-type SpeechRecognitionResultList = {
+type PromptInputSpeechRecognitionResultList = {
   readonly length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
+  item(index: number): PromptInputSpeechRecognitionResult;
+  [index: number]: PromptInputSpeechRecognitionResult;
 };
 
-type SpeechRecognitionResult = {
+type PromptInputSpeechRecognitionResult = {
   readonly length: number;
-  item(index: number): SpeechRecognitionAlternative;
-  [index: number]: SpeechRecognitionAlternative;
+  item(index: number): PromptInputSpeechRecognitionAlternative;
+  [index: number]: PromptInputSpeechRecognitionAlternative;
   isFinal: boolean;
 };
 
-type SpeechRecognitionAlternative = {
+type PromptInputSpeechRecognitionAlternative = {
   transcript: string;
   confidence: number;
 };
 
-interface SpeechRecognitionErrorEvent extends Event {
+interface PromptInputSpeechRecognitionErrorEvent extends Event {
   error: string;
 }
 
-declare global {
-  interface Window {
-    SpeechRecognition: {
-      new (): SpeechRecognition;
-    };
-    webkitSpeechRecognition: {
-      new (): SpeechRecognition;
-    };
-  }
+type PromptInputSpeechRecognitionCtor = {
+  new (): PromptInputSpeechRecognition;
+};
+
+function getPromptInputSpeechRecognitionCtor(): PromptInputSpeechRecognitionCtor | undefined {
+  if (typeof window === "undefined") return undefined;
+  const speechWindow = window as Window & {
+    SpeechRecognition?: PromptInputSpeechRecognitionCtor;
+    webkitSpeechRecognition?: PromptInputSpeechRecognitionCtor;
+  };
+  return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
 }
 
 export type PromptInputSpeechButtonProps = ComponentProps<typeof PromptInputButton> & {
@@ -1028,16 +1034,13 @@ export const PromptInputSpeechButton = ({
   ...props
 }: PromptInputSpeechButtonProps) => {
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [recognition, setRecognition] = useState<PromptInputSpeechRecognition | null>(null);
+  const recognitionRef = useRef<PromptInputSpeechRecognition | null>(null);
 
   useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
-    ) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const speechRecognition = new SpeechRecognition();
+    const SpeechRecognitionCtor = getPromptInputSpeechRecognitionCtor();
+    if (SpeechRecognitionCtor) {
+      const speechRecognition = new SpeechRecognitionCtor();
 
       speechRecognition.continuous = true;
       speechRecognition.interimResults = true;

@@ -1,7 +1,7 @@
 # Assistant-ui Composer Revamp
 
 Date: 2026-08-13
-Status: Draft — awaiting user review
+Status: Approved — implementation complete
 
 ## Feature summary
 
@@ -93,16 +93,16 @@ global entry. It binds to the assistant-ui runtime instead of `useChat`.
 
 `WorkspaceAgentChatPanelView` is replaced by assistant-ui `Thread`:
 
-| Role | Registry items |
-| ---- | -------------- |
-| Shell | `thread`, `scroll-anchor`, `empty-state`, `onboarding` |
-| History bill | `thread-list`, `thread-search`, `conversation-search` |
-| Composer | `elements-composer`, `mobile-composer`, `composer-trigger-popover`, `attachment`, `draft-restore`, `message-queue` |
-| Messages | streaming/markdown/reasoning/actions/branches/edit/quote/regenerate/timing/error/stopped/guardrail/day-separator/speaker |
-| Tools | `tool-call`, `tool-group`, `tool-timeline`, `tool-fallback`, `tool-error`, terminal, diffs, file-tree |
-| HITL | `approval-card`, `recommendation-card`, `elicitation-form`, `feedback-dialog`, `permission-grant` |
-| Artifacts | `artifact-card`, `canvas-split`, `web-preview`, `generative-ui`, sources, image, file, charts, tables, mermaid, maps, math |
-| Extras | `model-selector` / `model-picker` / `reasoning-effort` under Fast/Balanced/Pro; cost/context/quota; suggestions; prompt library; command palette; settings; voice + read-aloud; MCP panel; code-runner empty state |
+| Role         | Registry items                                                                                                                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Shell        | `thread`, `scroll-anchor`, `empty-state`, `onboarding`                                                                                                                                                             |
+| History bill | `thread-list`, `thread-search`, `conversation-search`                                                                                                                                                              |
+| Composer     | `elements-composer`, `mobile-composer`, `composer-trigger-popover`, `attachment`, `draft-restore`, `message-queue`                                                                                                 |
+| Messages     | streaming/markdown/reasoning/actions/branches/edit/quote/regenerate/timing/error/stopped/guardrail/day-separator/speaker                                                                                           |
+| Tools        | `tool-call`, `tool-group`, `tool-timeline`, `tool-fallback`, `tool-error`, terminal, diffs, file-tree                                                                                                              |
+| HITL         | `approval-card`, `recommendation-card`, `elicitation-form`, `feedback-dialog`, `permission-grant`                                                                                                                  |
+| Artifacts    | `artifact-card`, `canvas-split`, `web-preview`, `generative-ui`, sources, image, file, charts, tables, mermaid, maps, math                                                                                         |
+| Extras       | `model-selector` / `model-picker` / `reasoning-effort` under Fast/Balanced/Pro; cost/context/quota; suggestions; prompt library; command palette; settings; voice + read-aloud; MCP panel; code-runner empty state |
 
 Sticky question/plan/canvas dock remains a Thread overlay, not a second scroller.
 `ui_present` (including `workspaceBlock` / `workspaceNode`) renders through
@@ -197,15 +197,15 @@ Manual browser pass: pill → expand → send → stop → proposal card → sti
 
 ## File map (expected)
 
-| Area | Location |
-| ---- | -------- |
-| Registry source | `apps/web/src/components/assistant-ui/` |
-| Feature wrappers / views | `apps/web/src/features/workspace-agent/` |
-| Runtime hook | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts` |
-| Custom transport | `apps/web/src/features/workspace-agent/orch-turn-stream-transport.ts` (rewrite as assistant-ui runtime transport) |
-| Stream + persistence | `packages/api/src/routers/agent/` + `packages/agent/` |
-| Styles | `apps/web/src/index.css` |
-| Registry config | `apps/web/components.json` |
+| Area                     | Location                                                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Registry source          | `apps/web/src/components/assistant-ui/`                                                                           |
+| Feature wrappers / views | `apps/web/src/features/workspace-agent/`                                                                          |
+| Runtime hook             | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts`                                              |
+| Custom transport         | `apps/web/src/features/workspace-agent/orch-turn-stream-transport.ts` (rewrite as assistant-ui runtime transport) |
+| Stream + persistence     | `packages/api/src/routers/agent/` + `packages/agent/`                                                             |
+| Styles                   | `apps/web/src/index.css`                                                                                          |
+| Registry config          | `apps/web/components.json`                                                                                        |
 
 `chat-panel-view` becomes the Thread host (rename allowed; do not keep a second
 message list). Keep collapsed pill chrome in `workspace-agent-view` /

@@ -7,6 +7,7 @@ import type {
 } from "@orch/agent/types";
 import type { WorkspaceNode } from "@orch/workspace";
 import { useChat } from "@ai-sdk/react";
+import { useAISDKRuntime } from "@assistant-ui/react-ai-sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "@/lib/navigation";
@@ -187,14 +188,7 @@ export function useWorkspaceAgent() {
     modelOptions,
   });
 
-  const {
-    messages,
-    sendMessage: chatSendMessage,
-    status,
-    stop,
-    setMessages,
-    error: chatError,
-  } = useChat<OrchUIMessage>({
+  const chat = useChat<OrchUIMessage>({
     id: "workspace-agent-chat",
     transport,
     onData: (dataPart) => {
@@ -224,6 +218,15 @@ export function useWorkspaceAgent() {
       setError(getErrorMessage(streamError, "Failed to reach the agent."));
     },
   });
+  const {
+    messages,
+    sendMessage: chatSendMessage,
+    status,
+    stop,
+    setMessages,
+    error: chatError,
+  } = chat;
+  const runtime = useAISDKRuntime(chat);
 
   const isStreaming = status === "streaming" || status === "submitted";
   const canSend = !isStreaming;
@@ -764,6 +767,7 @@ export function useWorkspaceAgent() {
     mentionSuggestions,
     activeMention,
     error: displayError,
+    runtime,
     messages,
     canSend,
     isPending: isStreaming,
@@ -825,6 +829,19 @@ export function useWorkspaceAgent() {
       costUsd: conversation.usageSummary?.totals.costUsd ?? 0,
     })),
     activeCostUsd: activeConversation?.usageSummary?.totals.costUsd ?? 0,
+    quotaBanner: (() => {
+      const status = accountStatusQuery.data;
+      if (!status) return null;
+      const limit = status.limit ?? status.totalCredits;
+      if (!limit || limit <= 0) return null;
+      return {
+        used: status.totalUsage,
+        limit,
+        unit: "credits",
+        resetsIn: "this month",
+        upgradeLabel: status.isFreeTier ? "Upgrade" : "Manage plan",
+      };
+    })(),
     historyBillOpen,
     setHistoryBillOpen,
     conversationsLoading: conversationsQuery.isLoading,
