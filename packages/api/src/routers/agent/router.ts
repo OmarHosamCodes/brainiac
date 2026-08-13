@@ -283,23 +283,41 @@ export const agentRouter = {
       get: protectedProcedure
         .input(composerDraftConversationInputSchema)
         .handler(async ({ input, context }) => {
-          return z
-            .object({ draft: composerDraftRecordSchema.nullable() })
-            .parse(await getComposerDraft(context.session.user.id, input));
+          try {
+            return z
+              .object({ draft: composerDraftRecordSchema.nullable() })
+              .parse(await getComposerDraft(context.session.user.id, input));
+          } catch (error) {
+            throw toInternalServerError("agent.conversations.draft.get", error, {
+              conversationId: input.conversationId,
+            });
+          }
         }),
       upsert: protectedProcedure
         .input(composerDraftUpsertInputSchema)
         .handler(async ({ input, context }) => {
-          return z
-            .object({ draft: composerDraftRecordSchema.nullable() })
-            .parse(await upsertComposerDraft(context.session.user.id, input));
+          try {
+            return z
+              .object({ draft: composerDraftRecordSchema.nullable() })
+              .parse(await upsertComposerDraft(context.session.user.id, input));
+          } catch (error) {
+            throw toInternalServerError("agent.conversations.draft.upsert", error, {
+              conversationId: input.conversationId,
+            });
+          }
         }),
       discard: protectedProcedure
         .input(composerDraftConversationInputSchema)
         .handler(async ({ input, context }) => {
-          return z
-            .object({ discarded: z.literal(true) })
-            .parse(await discardComposerDraft(context.session.user.id, input));
+          try {
+            return z
+              .object({ discarded: z.literal(true) })
+              .parse(await discardComposerDraft(context.session.user.id, input));
+          } catch (error) {
+            throw toInternalServerError("agent.conversations.draft.discard", error, {
+              conversationId: input.conversationId,
+            });
+          }
         }),
     },
   },
