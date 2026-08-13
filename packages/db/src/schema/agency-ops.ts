@@ -1246,6 +1246,25 @@ export const agencyOpsMemberProfileAlert = pgTable(
   ],
 );
 
+export const agencyOpsMemberProfileAlertPolicy = pgTable("agency_ops_member_profile_alert_policy", {
+  teamId: text("team_id")
+    .primaryKey()
+    .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+  abnormalDayEnabled: boolean("abnormal_day_enabled").notNull().default(true),
+  abnormalDayExtraHours: integer("abnormal_day_extra_hours").notNull().default(4),
+  monthPaceEnabled: boolean("month_pace_enabled").notNull().default(true),
+  monthPacePercent: integer("month_pace_percent").notNull().default(85),
+  quarterPaceEnabled: boolean("quarter_pace_enabled").notNull().default(true),
+  quarterPacePercent: integer("quarter_pace_percent").notNull().default(85),
+  wasteSpikeEnabled: boolean("waste_spike_enabled").notNull().default(true),
+  wasteSpikePercent: integer("waste_spike_percent").notNull().default(20),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
 export type AgencyOpsMemberEmploymentType = "full_time" | "part_time" | "contractor" | "intern";
 export type AgencyOpsMemberWorkModel = "onsite" | "hybrid" | "remote";
 export type AgencyOpsMemberEmploymentStatus = "active" | "inactive";
