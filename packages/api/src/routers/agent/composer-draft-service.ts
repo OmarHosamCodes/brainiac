@@ -29,7 +29,10 @@ function conversationFilter(userId: string, conversationId: string | undefined) 
   );
 }
 
-async function assertConversationOwnership(actorUserId: string, conversationId: string | undefined) {
+async function assertConversationOwnership(
+  actorUserId: string,
+  conversationId: string | undefined,
+) {
   const key = composerDraftKey(conversationId);
   if (!key) return;
 

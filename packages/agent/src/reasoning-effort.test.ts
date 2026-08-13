@@ -10,8 +10,6 @@ describe("resolveOpenRouterReasoning", () => {
     expect(
       resolveOpenRouterReasoning({ tier: "balanced", auto: true, free: false, effort: "high" }),
     ).toBeUndefined();
-    expect(
-      resolveOpenRouterReasoning({ tier: "pro", auto: true, free: false }),
-    ).toBeUndefined();
+    expect(resolveOpenRouterReasoning({ tier: "pro", auto: true, free: false })).toBeUndefined();
   });
 });
