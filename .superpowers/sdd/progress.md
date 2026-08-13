@@ -6,3 +6,4 @@ Task 1: complete (commits 17688e06..756f185c, review clean). Minors: enqueue-at-
 Task 2: complete (commits 756f185c..bbcdd812, review Approved after attachment-only + send-while-running fixes). Minors/plan-mandated: queue-at-cap silent ignore; DoD checks in Task 10; Enter-to-send while streaming may still be runtime-gated.
 Task 3: complete (commits bbcdd812..675696af, review Approved after Important upsert-race / ownership / error-wrap fixes). Minors: redundant ownership queries on upsert; empty upsert still persists a row; no live Postgres CRUD tests.
 Task 4: complete (commits 0c0e318c..44616369, review Approved after in-flight restore-chip suppression). Minors: no hook timing tests; redundant isBusy gate.
+Task 5: complete (commits 65448d21..d3e931f6, review Ready). Minor: marker guard is if-not instead of exhaustive switch.
