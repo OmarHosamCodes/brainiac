@@ -1,4 +1,4 @@
-import { Check, Loader2, MoreVertical, Pencil, Trash2, TrashIcon } from "lucide-react";
+import { Check, Loader2, MoreVertical, Pencil, Sparkles, Trash2, TrashIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/ui/button";
@@ -27,6 +27,7 @@ type AgencyReportRowActionsProps = {
   onEditDetails?: () => void;
   onDelete: () => void;
   onToggleWaste?: () => void;
+  onAskOrchWaste?: () => void;
 };
 
 export function AgencyReportRowActions({
@@ -41,10 +42,12 @@ export function AgencyReportRowActions({
   onEditDetails,
   onDelete,
   onToggleWaste,
+  onAskOrchWaste,
 }: AgencyReportRowActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const canToggleWaste = Boolean(onToggleWaste);
+  const canAskOrchWaste = entryCount === 1 && Boolean(onAskOrchWaste);
   const isWaste = taskIsWaste === true;
   const pending = deleting || wastePending || saving;
   const entryLabel = entryCount === 1 ? "1 time entry" : `${entryCount} time entries`;
@@ -107,6 +110,20 @@ export function AgencyReportRowActions({
             >
               <TrashIcon className="size-3.5" />
               {isWaste ? "Unmark as waste" : "Mark as waste"}
+            </Button>
+          ) : null}
+          {canAskOrchWaste ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start"
+              onClick={() => {
+                setMenuOpen(false);
+                onAskOrchWaste?.();
+              }}
+            >
+              <Sparkles className="size-3.5" />
+              Ask Orch
             </Button>
           ) : null}
           <Button

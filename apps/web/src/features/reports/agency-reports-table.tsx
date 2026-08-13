@@ -70,6 +70,7 @@ type AgencyReportsTableProps = {
   onEditDetails?: (row: AggregatedReportRow) => void;
   onDeleteRow?: (row: AggregatedReportRow) => void;
   onToggleWaste?: (row: AggregatedReportRow) => void;
+  onAskOrchWaste?: (row: AggregatedReportRow) => void;
 };
 
 export function AgencyReportsTable({
@@ -91,6 +92,7 @@ export function AgencyReportsTable({
   onEditDetails,
   onDeleteRow,
   onToggleWaste,
+  onAskOrchWaste,
 }: AgencyReportsTableProps) {
   const clientGroups = useMemo(
     () => clientGroupsProp ?? groupEntriesForDisplay(entries),
@@ -108,7 +110,7 @@ export function AgencyReportsTable({
   const showDescription = isReportFieldVisible(visibleFields, "description");
   const showDuration = isReportFieldVisible(visibleFields, "duration");
   const showAssignee = isReportFieldVisible(visibleFields, "assignee");
-  const showActions = Boolean(onEditDetails || onDeleteRow || onToggleWaste);
+  const showActions = Boolean(onEditDetails || onDeleteRow || onToggleWaste || onAskOrchWaste);
   const deletingEntryIdSet = new Set(deletingEntryIds);
 
   return (
@@ -312,6 +314,11 @@ export function AgencyReportsTable({
                               }
                               onDelete={() => onDeleteRow?.(row)}
                               onToggleWaste={onToggleWaste ? () => onToggleWaste(row) : undefined}
+                              onAskOrchWaste={
+                                onAskOrchWaste && row.entryCount === 1
+                                  ? () => onAskOrchWaste(row)
+                                  : undefined
+                              }
                             />
                           </TableCell>
                         ) : null}
