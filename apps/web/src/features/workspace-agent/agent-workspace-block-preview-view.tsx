@@ -8,19 +8,22 @@ import {
 } from "@/features/workspace/node/context";
 import { getWorkspaceBlockRegistryEntry } from "@/features/workspace/utils/workspace-block-registry";
 
-const previewEditorContext = new Proxy({} as WorkspaceNodeEditorContextValue, {
-  get(_target, prop) {
-    if (prop === "currentNode") return null;
-    if (prop === "blockSearch" || prop === "normalizedBlockSearch") return "";
-    if (prop === "priorityOptions" || prop === "domainOptions") return [];
-    if (prop === "tabEditor") return { open: false, mode: "create", title: "" };
-    if (prop === "isAgentContextBlock") return () => false;
-    if (prop === "getBlockOperationState") return () => ({ pending: false, label: null });
-    if (prop === "getBlockSearchMatches") return () => [];
-    if (prop === "getTimeOrchestratorSummaryForBlock") return () => null;
-    return () => undefined;
-  },
-});
+function createPreviewEditorContext(node: WorkspaceNode | null): WorkspaceNodeEditorContextValue {
+  return new Proxy({} as WorkspaceNodeEditorContextValue, {
+    get(_target, prop) {
+      if (prop === "currentNode") return node;
+      if (prop === "allNodes") return node ? [node] : [];
+      if (prop === "blockSearch" || prop === "normalizedBlockSearch") return "";
+      if (prop === "priorityOptions" || prop === "domainOptions") return [];
+      if (prop === "tabEditor") return { open: false, mode: "create", title: "" };
+      if (prop === "isAgentContextBlock") return () => false;
+      if (prop === "getBlockOperationState") return () => ({ pending: false, label: null });
+      if (prop === "getBlockSearchMatches") return () => [];
+      if (prop === "getTimeOrchestratorSummaryForBlock") return () => null;
+      return () => undefined;
+    },
+  });
+}
 
 function WorkspaceBlockPreviewBody({ block, tabId }: { block: WorkspaceBlock; tabId: string }) {
   try {
@@ -32,9 +35,7 @@ function WorkspaceBlockPreviewBody({ block, tabId }: { block: WorkspaceBlock; ta
           <entry.icon className="size-3.5" aria-hidden />
           {entry.label}
         </div>
-        <Suspense
-          fallback={<p className="text-sm text-muted-foreground">Loading block preview…</p>}
-        >
+        <Suspense fallback={<p className="text-sm text-muted-foreground">Loading preview</p>}>
           <Editor block={block} tabId={tabId} />
         </Suspense>
       </div>
@@ -73,8 +74,10 @@ export function AgentWorkspaceArtifactPreviewView({ artifact }: { artifact: AiUi
 
   if (!preview) return null;
 
+  const editorContext = createPreviewEditorContext(preview.node);
+
   return (
-    <WorkspaceNodeEditorProvider value={previewEditorContext}>
+    <WorkspaceNodeEditorProvider value={editorContext}>
       {preview.node ? (
         <div className="mb-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
           <p className="text-sm font-semibold tracking-tight">{preview.node.title}</p>
