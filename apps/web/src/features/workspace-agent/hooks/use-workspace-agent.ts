@@ -181,6 +181,7 @@ export function useWorkspaceAgent() {
     Record<string, { selectedOptionIds: string[]; freeText: string }>
   >({});
   const [queuedMessages, setQueuedMessages] = useState<QueuedAgentMessage[]>([]);
+  const [composerSendInFlight, setComposerSendInFlight] = useState(false);
   const drainLockRef = useRef(false);
   const draftUpsertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -207,6 +208,7 @@ export function useWorkspaceAgent() {
     toolsCatalogQuery,
     renameConversationMutation,
     deleteConversationMutation,
+    composerDraftQueryOptions,
     composerDraftQuery,
     upsertComposerDraftMutation,
     discardComposerDraftMutation,
@@ -287,24 +289,22 @@ export function useWorkspaceAgent() {
   const isStreaming = status === "streaming" || status === "submitted";
   const canSend = !isStreaming;
 
-  const invalidateComposerDraftQuery = useCallback(
-    (conversationId: string | null) => {
-      void queryClient.invalidateQueries({
-        queryKey: orpc.agent.conversations.draft.get.queryKey({
-          input: conversationId ? { conversationId } : {},
-        }),
-      });
-    },
-    [queryClient],
-  );
+  const invalidateComposerDraftQuery = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: composerDraftQueryOptions.queryKey });
+  }, [composerDraftQueryOptions.queryKey, queryClient]);
 
   const serverDraft = composerDraftQuery.data?.draft ?? null;
-  const serverDraftOffer = useMemo(() => {
-    if (!serverDraft) return null;
-    return shouldOfferComposerDraftRestore({ liveDraft: draft, serverText: serverDraft.text })
+  const serverDraftOffer =
+    !composerSendInFlight &&
+    !isStreaming &&
+    serverDraft &&
+    shouldOfferComposerDraftRestore({
+      liveDraft: draft,
+      serverText: serverDraft.text,
+      isBusy: composerSendInFlight || isStreaming,
+    })
       ? serverDraft
       : null;
-  }, [draft, serverDraft]);
 
   useEffect(() => {
     if (draftUpsertTimerRef.current) {
@@ -328,7 +328,7 @@ export function useWorkspaceAgent() {
           text: draft,
         })
         .then(() => {
-          invalidateComposerDraftQuery(activeConversationId);
+          invalidateComposerDraftQuery();
         })
         .catch(() => {
           // Autosave failures are non-blocking; the user can still send.
@@ -359,7 +359,7 @@ export function useWorkspaceAgent() {
       await discardComposerDraftMutation.mutateAsync({
         ...(activeConversationId ? { conversationId: activeConversationId } : {}),
       });
-      invalidateComposerDraftQuery(activeConversationId);
+      invalidateComposerDraftQuery();
     } catch (mutationError) {
       setError(getErrorMessage(mutationError, "Failed to discard draft."));
     }
@@ -564,6 +564,7 @@ export function useWorkspaceAgent() {
         attachments,
       };
 
+      setComposerSendInFlight(true);
       setDraft("");
       setError(null);
       setStreamStopped(false);
@@ -580,7 +581,7 @@ export function useWorkspaceAgent() {
             await discardComposerDraftMutation.mutateAsync({
               ...(activeConversationId ? { conversationId: activeConversationId } : {}),
             });
-            invalidateComposerDraftQuery(activeConversationId);
+            invalidateComposerDraftQuery();
           } catch {
             // Draft discard failure should not block a successful send.
           }
@@ -590,6 +591,8 @@ export function useWorkspaceAgent() {
         setDraft(content);
         setError(getErrorMessage(streamError, "Failed to reach the agent."));
         return false;
+      } finally {
+        setComposerSendInFlight(false);
       }
     },
     [

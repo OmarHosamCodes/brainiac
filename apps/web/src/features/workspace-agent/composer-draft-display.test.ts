@@ -10,6 +10,9 @@ describe("shouldOfferComposerDraftRestore", () => {
     expect(shouldOfferComposerDraftRestore({ liveDraft: "", serverText: "hello" })).toBe(true);
     expect(shouldOfferComposerDraftRestore({ liveDraft: "x", serverText: "hello" })).toBe(false);
     expect(shouldOfferComposerDraftRestore({ liveDraft: "", serverText: "" })).toBe(false);
+    expect(
+      shouldOfferComposerDraftRestore({ liveDraft: "", serverText: "hello", isBusy: true }),
+    ).toBe(false);
   });
 });
 
