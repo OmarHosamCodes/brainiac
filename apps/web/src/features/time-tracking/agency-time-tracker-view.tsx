@@ -68,6 +68,18 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             onKeyDown={view.onDescriptionKeyDown}
             disabled={view.isTimerMutationPending || view.isManualCreatePending || !view.teamId}
           />
+          {view.existingTaskSuggestion ? (
+            <button
+              type="button"
+              className="mt-1 text-xs text-muted-foreground hover:text-foreground"
+              disabled={
+                view.isTimerMutationPending || view.isManualCreatePending || !view.teamId
+              }
+              onClick={view.onApplyExistingTaskSuggestion}
+            >
+              Use existing task {view.existingTaskSuggestion.taskTitle}
+            </button>
+          ) : null}
         </div>
 
         <div className={agencyTimeTrackerRailClass}>
