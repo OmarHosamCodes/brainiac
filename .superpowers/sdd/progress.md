@@ -12,3 +12,9 @@ Task 7: complete (commits 330f1616..4a463c9f, review Ready). Minors only.
 Task 8: complete (commits bffc24c2..487bede6, review Ready). Minors only.
 Task 9: complete (commits 8728469e..c13907a6, review Ready). Minors only.
 Task 10: complete (verify slice: 26 unit tests pass; check / check-types / conventions / golden pass after inventory update). Browser smoke skipped (no authenticated session).
+
+---
+
+Plan: docs/superpowers/plans/2026-08-14-orch-thread-search-and-read-aloud.md
+
+Search Task 1: in progress.
