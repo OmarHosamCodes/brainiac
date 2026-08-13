@@ -1,4 +1,5 @@
 import type {
+  AgentModelPreset,
   AgentModelTier,
   AgentScopeRef,
   AgentToolCatalogEntry,
@@ -153,9 +154,11 @@ export type WorkspaceAgentThreadComposerViewProps = {
   modelTier: AgentModelTier;
   modelAuto: boolean;
   modelFree: boolean;
+  modelEffort: AgentModelPreset["effort"];
   onModelTierChange: (tier: AgentModelTier) => void;
   onModelAutoChange: (auto: boolean) => void;
   onModelFreeChange: (free: boolean) => void;
+  onModelEffortChange: (effort: AgentModelPreset["effort"]) => void;
   modelMenuOpen: boolean;
   onModelMenuOpenChange: (open: boolean) => void;
   onOpenModelLibrary: () => void;
@@ -197,9 +200,11 @@ export function WorkspaceAgentThreadComposerView({
   modelTier,
   modelAuto,
   modelFree,
+  modelEffort,
   onModelTierChange,
   onModelAutoChange,
   onModelFreeChange,
+  onModelEffortChange,
   modelMenuOpen,
   onModelMenuOpenChange,
   onOpenModelLibrary,
@@ -423,6 +428,7 @@ export function WorkspaceAgentThreadComposerView({
                       modelTier={modelTier}
                       modelAuto={modelAuto}
                       modelFree={modelFree}
+                      modelEffort={modelEffort}
                       selectedModelLabel={selectedModelLabel}
                       selectedModelButtonLabel={selectedModelButtonLabel}
                       resolvedModelLabel={resolvedModelLabel}
@@ -430,6 +436,7 @@ export function WorkspaceAgentThreadComposerView({
                       onModelTierChange={onModelTierChange}
                       onModelAutoChange={onModelAutoChange}
                       onModelFreeChange={onModelFreeChange}
+                      onModelEffortChange={onModelEffortChange}
                       onModelMenuOpenChange={onModelMenuOpenChange}
                       onOpenModelLibrary={onOpenModelLibrary}
                     />
