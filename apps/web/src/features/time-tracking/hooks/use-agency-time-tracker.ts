@@ -13,6 +13,7 @@ import {
   bestTaskIdFromRankedSuggestions,
   buildDescriptionDatalistOptions,
   draftFromDescriptionSuggestion,
+  existingTaskSuggestionFromRanked,
   rankDescriptionDatalistOptions,
   type DescriptionDatalistOption,
 } from "@/features/time-tracking/description-suggestions";
@@ -126,9 +127,11 @@ export type AgencyTimeTrackerViewModel = {
   manualError: string | null;
   descriptionDatalistOptions: DescriptionDatalistOption[];
   suggestionBestTaskId: string | null;
+  existingTaskSuggestion: { taskId: string; taskTitle: string; projectId: string } | null;
   trackerStatusLine: string;
   onDescriptionChange: (value: string) => void;
   onDescriptionSuggestionSelect: (option: DescriptionDatalistOption) => void;
+  onApplyExistingTaskSuggestion: () => void;
   onDescriptionFocus: () => void;
   onDescriptionBlur: () => void;
   onDescriptionKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
@@ -437,13 +440,24 @@ export function useAgencyTimeTracker({
     [recentEntriesQuery.data?.items],
   );
 
-  const suggestionBestTaskId = useMemo(() => {
-    const ranked = rankDescriptionDatalistOptions(descriptionDatalistOptions, {
-      query: timerDescription,
-      affinityProjectId: selectedProjectId || undefined,
-    });
-    return bestTaskIdFromRankedSuggestions(ranked);
-  }, [descriptionDatalistOptions, selectedProjectId, timerDescription]);
+  const rankedDescriptionOptions = useMemo(
+    () =>
+      rankDescriptionDatalistOptions(descriptionDatalistOptions, {
+        query: timerDescription,
+        affinityProjectId: selectedProjectId || undefined,
+      }),
+    [descriptionDatalistOptions, selectedProjectId, timerDescription],
+  );
+
+  const suggestionBestTaskId = useMemo(
+    () => bestTaskIdFromRankedSuggestions(rankedDescriptionOptions),
+    [rankedDescriptionOptions],
+  );
+
+  const existingTaskSuggestion = useMemo(
+    () => existingTaskSuggestionFromRanked(rankedDescriptionOptions, selectedTaskId || null),
+    [rankedDescriptionOptions, selectedTaskId],
+  );
 
   async function startTimer() {
     if (!teamId || !canStartTimer || activeTimer) return;
@@ -497,6 +511,13 @@ export function useAgencyTimeTracker({
     // Project before task: setTrackerProjectId clears taskId when project changes.
     setTrackerProjectId(teamId, draft.projectId);
     setTrackerTaskId(teamId, draft.taskId);
+  }
+
+  function handleApplyExistingTaskSuggestion() {
+    if (!existingTaskSuggestion) return;
+    // Project before task: setTrackerProjectId clears taskId when project changes.
+    setTrackerProjectId(teamId, existingTaskSuggestion.projectId);
+    setTrackerTaskId(teamId, existingTaskSuggestion.taskId);
   }
 
   function handleDescriptionKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -756,9 +777,11 @@ export function useAgencyTimeTracker({
     manualError,
     descriptionDatalistOptions,
     suggestionBestTaskId,
+    existingTaskSuggestion,
     trackerStatusLine,
     onDescriptionChange: handleDescriptionChange,
     onDescriptionSuggestionSelect: handleDescriptionSuggestionSelect,
+    onApplyExistingTaskSuggestion: handleApplyExistingTaskSuggestion,
     onDescriptionFocus: () => setDescriptionFocused(true),
     onDescriptionBlur: handleDescriptionBlur,
     onDescriptionKeyDown: handleDescriptionKeyDown,

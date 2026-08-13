@@ -203,3 +203,15 @@ export function bestTaskIdFromRankedSuggestions(
   }
   return null;
 }
+
+export function existingTaskSuggestionFromRanked(
+  options: DescriptionDatalistOption[],
+  currentTaskId: string | null,
+): { taskId: string; taskTitle: string; projectId: string } | null {
+  for (const option of options) {
+    if (!option.taskId || !option.taskTitle) continue;
+    if (option.taskId === currentTaskId) continue;
+    return { taskId: option.taskId, taskTitle: option.taskTitle, projectId: option.projectId };
+  }
+  return null;
+}
