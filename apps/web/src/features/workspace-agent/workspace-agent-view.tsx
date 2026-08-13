@@ -170,6 +170,9 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                       runningQueueLabel={view.runningQueueLabel}
                       onCancelQueuedMessage={view.onCancelQueuedMessage}
                       onSend={view.sendMessage}
+                      serverDraftOffer={view.serverDraftOffer}
+                      onRestoreServerDraft={view.onRestoreServerDraft}
+                      onDiscardServerDraft={() => void view.onDiscardServerDraft()}
                     />
                   }
                 />

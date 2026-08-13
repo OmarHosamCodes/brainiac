@@ -43,6 +43,13 @@ export function useWorkspaceAgentData(args: {
     enabled: Boolean(authEnabled && args.toolsMenuOpen),
     staleTime: 5 * 60 * 1000,
   });
+  const composerDraftQueryOptions = orpc.agent.conversations.draft.get.queryOptions({
+    input: args.activeConversationId ? { conversationId: args.activeConversationId } : {},
+  });
+  const composerDraftQuery = useQuery({
+    ...composerDraftQueryOptions,
+    enabled: authEnabled,
+  });
 
   return {
     queryClient,
@@ -52,7 +59,15 @@ export function useWorkspaceAgentData(args: {
     accountStatusQuery,
     activeConversationQuery,
     toolsCatalogQuery,
+    composerDraftQueryOptions,
+    composerDraftQuery,
     renameConversationMutation: useMutation(orpc.agent.conversations.rename.mutationOptions()),
     deleteConversationMutation: useMutation(orpc.agent.conversations.delete.mutationOptions()),
+    upsertComposerDraftMutation: useMutation(
+      orpc.agent.conversations.draft.upsert.mutationOptions(),
+    ),
+    discardComposerDraftMutation: useMutation(
+      orpc.agent.conversations.draft.discard.mutationOptions(),
+    ),
   };
 }
