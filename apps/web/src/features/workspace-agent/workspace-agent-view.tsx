@@ -169,6 +169,12 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                       queuedMessages={view.queuedMessages}
                       runningQueueLabel={view.runningQueueLabel}
                       onCancelQueuedMessage={view.onCancelQueuedMessage}
+                      draft={view.draft}
+                      onDraftChange={view.setDraft}
+                      composerTriggerOpen={view.composerTriggerOpen}
+                      composerTriggerSuggestions={view.composerTriggerSuggestions}
+                      onPickComposerTrigger={view.onPickComposerTrigger}
+                      onDismissComposerTrigger={view.onDismissComposerTrigger}
                       onSend={view.sendMessage}
                       serverDraftOffer={view.serverDraftOffer}
                       onRestoreServerDraft={view.onRestoreServerDraft}

@@ -29,8 +29,14 @@ import { WorkspaceAgentScopeChipView } from "@/features/workspace-agent/scope-ch
 import { WorkspaceAgentThreadModelSelector } from "@/features/workspace-agent/workspace-agent-thread-model-selector";
 import { WorkspaceAgentToolMenuView } from "@/features/workspace-agent/tool-menu-view";
 import { formatComposerDraftSavedAt } from "@/features/workspace-agent/composer-draft-display";
+import type { WorkspaceAgentComposerTriggerSuggestion } from "@/features/workspace-agent/hooks/use-workspace-agent";
+import {
+  ComposerDraftBridge,
+  ComposerTriggerKeyboard,
+  suggestionRowLabel,
+} from "@/features/workspace-agent/workspace-agent-composer-trigger-controls";
 import type { QueuedAgentMessage } from "@/features/workspace-agent/workspace-agent-message-queue";
-import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Separator } from "@/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 
@@ -165,6 +171,12 @@ export type WorkspaceAgentThreadComposerViewProps = {
   runningQueueLabel: string;
   onCancelQueuedMessage: (id: string) => void;
   onSend: (input: { text: string }) => boolean | Promise<boolean>;
+  draft: string;
+  onDraftChange: (value: string) => void;
+  composerTriggerOpen: boolean;
+  composerTriggerSuggestions: readonly WorkspaceAgentComposerTriggerSuggestion[];
+  onPickComposerTrigger: (suggestion: WorkspaceAgentComposerTriggerSuggestion) => void;
+  onDismissComposerTrigger: () => void;
   serverDraftOffer: { text: string; savedAt: string } | null;
   onRestoreServerDraft: () => void;
   onDiscardServerDraft: () => void;
@@ -203,6 +215,12 @@ export function WorkspaceAgentThreadComposerView({
   runningQueueLabel,
   onCancelQueuedMessage,
   onSend,
+  draft,
+  onDraftChange,
+  composerTriggerOpen,
+  composerTriggerSuggestions,
+  onPickComposerTrigger,
+  onDismissComposerTrigger,
   serverDraftOffer,
   onRestoreServerDraft,
   onDiscardServerDraft,
@@ -214,6 +232,14 @@ export function WorkspaceAgentThreadComposerView({
     (mode) => mode.preset !== "plan" || planModeEnabled,
   );
   const UnlockSurfaceIcon = crossSurfaceUnlockLabel === "Agency" ? Clock : LayoutGrid;
+
+  const handleSendWhileRunning = (text: string) => {
+    if (composerTriggerOpen && composerTriggerSuggestions[0]) {
+      onPickComposerTrigger(composerTriggerSuggestions[0]);
+      return false;
+    }
+    return onSend({ text });
+  };
 
   return (
     <TooltipProvider>
@@ -251,146 +277,191 @@ export function WorkspaceAgentThreadComposerView({
           />
         ) : null}
 
-        <ThreadComposer
-          placeholder={placeholder}
-          onSendWhileRunning={(text) => onSend({ text })}
-          header={<WorkspaceAgentScopeChipView chips={entityChips} onRemove={onRemoveChip} />}
-          leading={
-            <>
-              <Popover open={toolsMenuOpen} onOpenChange={onToolsMenuOpenChange}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <PopoverTrigger asChild>
-                      <ComposerAttachButton aria-label="Modes, context, and tools" />
-                    </PopoverTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Modes, context, and tools</TooltipContent>
-                </Tooltip>
+        <Popover open={composerTriggerOpen}>
+          <PopoverAnchor asChild>
+            <div className="relative w-full">
+              <ThreadComposer
+                placeholder={placeholder}
+                onSendWhileRunning={handleSendWhileRunning}
+                header={<WorkspaceAgentScopeChipView chips={entityChips} onRemove={onRemoveChip} />}
+                leading={
+                  <>
+                    <ComposerDraftBridge draft={draft} onDraftChange={onDraftChange} />
+                    <ComposerTriggerKeyboard
+                      composerTriggerOpen={composerTriggerOpen}
+                      composerTriggerSuggestions={composerTriggerSuggestions}
+                      onPickComposerTrigger={onPickComposerTrigger}
+                      onDismissComposerTrigger={onDismissComposerTrigger}
+                    />
+                    <Popover open={toolsMenuOpen} onOpenChange={onToolsMenuOpenChange}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <PopoverTrigger asChild>
+                            <ComposerAttachButton aria-label="Modes, context, and tools" />
+                          </PopoverTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Modes, context, and tools</TooltipContent>
+                      </Tooltip>
+                      <PopoverContent
+                        align="start"
+                        side="top"
+                        sideOffset={8}
+                        className="w-auto border-0 bg-transparent p-0 shadow-none"
+                        data-workspace-agent-overlay
+                      >
+                        <ComposerMenu open className="relative inset-auto mb-0 w-72">
+                          <ComposerPrimitive.AddAttachment asChild>
+                            <ComposerMenuItem onClick={() => onToolsMenuOpenChange(false)}>
+                              <FileText
+                                className="text-foreground/35 size-3.5 shrink-0"
+                                aria-hidden
+                              />
+                              Attach file
+                            </ComposerMenuItem>
+                          </ComposerPrimitive.AddAttachment>
+                          {crossSurfaceUnlockLabel ? (
+                            <ComposerMenuItem
+                              onClick={() => {
+                                onUnlockCrossSurface();
+                                onToolsMenuOpenChange(false);
+                              }}
+                            >
+                              <UnlockSurfaceIcon
+                                className="text-foreground/35 size-3.5 shrink-0"
+                                aria-hidden
+                              />
+                              Include {crossSurfaceUnlockLabel} tools
+                            </ComposerMenuItem>
+                          ) : null}
+                          <ComposerMenuItem
+                            active={scopeModeActive}
+                            aria-pressed={scopeModeActive}
+                            onClick={() => {
+                              onToggleScopeMode();
+                              onToolsMenuOpenChange(false);
+                            }}
+                          >
+                            <Crosshair
+                              className="text-foreground/35 size-3.5 shrink-0"
+                              aria-hidden
+                            />
+                            {scopeModeActive ? "Exit sniper mode" : "Sniper mode"}
+                          </ComposerMenuItem>
+
+                          <Separator className="my-1" />
+
+                          {visibleModeOptions.map((mode) => {
+                            const selected = selectedToolPreset === mode.preset;
+                            const ModeIcon = modeIcon(mode.preset);
+                            return (
+                              <ComposerMenuItem
+                                key={mode.preset}
+                                active={selected}
+                                onClick={() => {
+                                  onSelectToolPreset(mode.preset);
+                                  onToolsMenuOpenChange(false);
+                                }}
+                              >
+                                <ModeIcon
+                                  className="text-foreground/35 size-3.5 shrink-0"
+                                  aria-hidden
+                                />
+                                <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+                                  <span>{mode.label}</span>
+                                  <span className="text-foreground/45 text-xs font-normal">
+                                    {mode.helper}
+                                  </span>
+                                </span>
+                              </ComposerMenuItem>
+                            );
+                          })}
+
+                          <Separator className="my-1" />
+
+                          <WorkspaceAgentToolMenuView tools={tools} loading={toolsLoading} />
+                        </ComposerMenu>
+                      </PopoverContent>
+                    </Popover>
+
+                    <AnimatePresence initial={false}>
+                      {selectedToolPreset !== "agent" ? (
+                        <ComposerPillTag
+                          icon={modeIcon(selectedToolPreset)}
+                          label={selectedModeLabel}
+                          activateLabel={`Mode: ${selectedModeLabel}. Change mode`}
+                          dismissLabel={`Remove ${selectedModeLabel} mode and return to Agent`}
+                          tooltip={`${selectedModeLabel} mode. Click to change`}
+                          onActivate={() => onToolsMenuOpenChange(true)}
+                          onDismiss={() => onSelectToolPreset("agent")}
+                        />
+                      ) : null}
+                      {scopeModeActive ? (
+                        <ComposerPillTag
+                          icon={Crosshair}
+                          label="Scope"
+                          activateLabel="Scope mode active. Open tools menu"
+                          dismissLabel="Exit scope mode"
+                          tooltip="Click page items to add them to scope"
+                          onActivate={() => onToolsMenuOpenChange(true)}
+                          onDismiss={onToggleScopeMode}
+                        />
+                      ) : null}
+                      {surfaceUnlockChip ? (
+                        <ComposerPillTag
+                          icon={surfaceUnlockChip.id === "agency" ? Clock : LayoutGrid}
+                          label={surfaceUnlockChip.label}
+                          activateLabel={`${surfaceUnlockChip.label} tools included. Open tools menu`}
+                          dismissLabel={`Stop including ${surfaceUnlockChip.label} tools`}
+                          tooltip={`${surfaceUnlockChip.label} tools are included in this chat`}
+                          onActivate={() => onToolsMenuOpenChange(true)}
+                          onDismiss={() => onRemoveChip(surfaceUnlockChip.id)}
+                        />
+                      ) : null}
+                    </AnimatePresence>
+
+                    <WorkspaceAgentThreadModelSelector
+                      modelTier={modelTier}
+                      modelAuto={modelAuto}
+                      modelFree={modelFree}
+                      selectedModelLabel={selectedModelLabel}
+                      selectedModelButtonLabel={selectedModelButtonLabel}
+                      resolvedModelLabel={resolvedModelLabel}
+                      modelMenuOpen={modelMenuOpen}
+                      onModelTierChange={onModelTierChange}
+                      onModelAutoChange={onModelAutoChange}
+                      onModelFreeChange={onModelFreeChange}
+                      onModelMenuOpenChange={onModelMenuOpenChange}
+                      onOpenModelLibrary={onOpenModelLibrary}
+                    />
+                  </>
+                }
+              />
+
+              {composerTriggerOpen ? (
                 <PopoverContent
                   align="start"
                   side="top"
                   sideOffset={8}
                   className="w-auto border-0 bg-transparent p-0 shadow-none"
                   data-workspace-agent-overlay
+                  onOpenAutoFocus={(event) => event.preventDefault()}
                 >
                   <ComposerMenu open className="relative inset-auto mb-0 w-72">
-                    <ComposerPrimitive.AddAttachment asChild>
-                      <ComposerMenuItem onClick={() => onToolsMenuOpenChange(false)}>
-                        <FileText className="text-foreground/35 size-3.5 shrink-0" aria-hidden />
-                        Attach file
-                      </ComposerMenuItem>
-                    </ComposerPrimitive.AddAttachment>
-                    {crossSurfaceUnlockLabel ? (
+                    {composerTriggerSuggestions.map((suggestion) => (
                       <ComposerMenuItem
-                        onClick={() => {
-                          onUnlockCrossSurface();
-                          onToolsMenuOpenChange(false);
-                        }}
+                        key={`${suggestion.kind}-${suggestion.id}`}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => onPickComposerTrigger(suggestion)}
                       >
-                        <UnlockSurfaceIcon
-                          className="text-foreground/35 size-3.5 shrink-0"
-                          aria-hidden
-                        />
-                        Include {crossSurfaceUnlockLabel} tools
+                        {suggestionRowLabel(suggestion)}
                       </ComposerMenuItem>
-                    ) : null}
-                    <ComposerMenuItem
-                      active={scopeModeActive}
-                      aria-pressed={scopeModeActive}
-                      onClick={() => {
-                        onToggleScopeMode();
-                        onToolsMenuOpenChange(false);
-                      }}
-                    >
-                      <Crosshair className="text-foreground/35 size-3.5 shrink-0" aria-hidden />
-                      {scopeModeActive ? "Exit sniper mode" : "Sniper mode"}
-                    </ComposerMenuItem>
-
-                    <Separator className="my-1" />
-
-                    {visibleModeOptions.map((mode) => {
-                      const selected = selectedToolPreset === mode.preset;
-                      const ModeIcon = modeIcon(mode.preset);
-                      return (
-                        <ComposerMenuItem
-                          key={mode.preset}
-                          active={selected}
-                          onClick={() => {
-                            onSelectToolPreset(mode.preset);
-                            onToolsMenuOpenChange(false);
-                          }}
-                        >
-                          <ModeIcon className="text-foreground/35 size-3.5 shrink-0" aria-hidden />
-                          <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
-                            <span>{mode.label}</span>
-                            <span className="text-foreground/45 text-xs font-normal">
-                              {mode.helper}
-                            </span>
-                          </span>
-                        </ComposerMenuItem>
-                      );
-                    })}
-
-                    <Separator className="my-1" />
-
-                    <WorkspaceAgentToolMenuView tools={tools} loading={toolsLoading} />
+                    ))}
                   </ComposerMenu>
                 </PopoverContent>
-              </Popover>
-
-              <AnimatePresence initial={false}>
-                {selectedToolPreset !== "agent" ? (
-                  <ComposerPillTag
-                    icon={modeIcon(selectedToolPreset)}
-                    label={selectedModeLabel}
-                    activateLabel={`Mode: ${selectedModeLabel}. Change mode`}
-                    dismissLabel={`Remove ${selectedModeLabel} mode and return to Agent`}
-                    tooltip={`${selectedModeLabel} mode. Click to change`}
-                    onActivate={() => onToolsMenuOpenChange(true)}
-                    onDismiss={() => onSelectToolPreset("agent")}
-                  />
-                ) : null}
-                {scopeModeActive ? (
-                  <ComposerPillTag
-                    icon={Crosshair}
-                    label="Scope"
-                    activateLabel="Scope mode active. Open tools menu"
-                    dismissLabel="Exit scope mode"
-                    tooltip="Click page items to add them to scope"
-                    onActivate={() => onToolsMenuOpenChange(true)}
-                    onDismiss={onToggleScopeMode}
-                  />
-                ) : null}
-                {surfaceUnlockChip ? (
-                  <ComposerPillTag
-                    icon={surfaceUnlockChip.id === "agency" ? Clock : LayoutGrid}
-                    label={surfaceUnlockChip.label}
-                    activateLabel={`${surfaceUnlockChip.label} tools included. Open tools menu`}
-                    dismissLabel={`Stop including ${surfaceUnlockChip.label} tools`}
-                    tooltip={`${surfaceUnlockChip.label} tools are included in this chat`}
-                    onActivate={() => onToolsMenuOpenChange(true)}
-                    onDismiss={() => onRemoveChip(surfaceUnlockChip.id)}
-                  />
-                ) : null}
-              </AnimatePresence>
-
-              <WorkspaceAgentThreadModelSelector
-                modelTier={modelTier}
-                modelAuto={modelAuto}
-                modelFree={modelFree}
-                selectedModelLabel={selectedModelLabel}
-                selectedModelButtonLabel={selectedModelButtonLabel}
-                resolvedModelLabel={resolvedModelLabel}
-                modelMenuOpen={modelMenuOpen}
-                onModelTierChange={onModelTierChange}
-                onModelAutoChange={onModelAutoChange}
-                onModelFreeChange={onModelFreeChange}
-                onModelMenuOpenChange={onModelMenuOpenChange}
-                onOpenModelLibrary={onOpenModelLibrary}
-              />
-            </>
-          }
-        />
+              ) : null}
+            </div>
+          </PopoverAnchor>
+        </Popover>
       </div>
     </TooltipProvider>
   );
