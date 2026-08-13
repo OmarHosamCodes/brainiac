@@ -118,7 +118,8 @@ export function WorkspaceAgentComposerHistoryBillView({
               className="max-w-none"
               threads={conversationOptions.map((conversation) => ({
                 title: conversation.label,
-                time: formatConversationStamp(conversation.stamp) ?? formatUsd(conversation.costUsd),
+                time:
+                  formatConversationStamp(conversation.stamp) ?? formatUsd(conversation.costUsd),
               }))}
               activeIndex={conversationOptions.findIndex(
                 (conversation) => conversation.id === activeConversationId,
