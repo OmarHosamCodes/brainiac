@@ -94,6 +94,8 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                   messages={view.messages}
                   conversationOptions={view.conversationOptions}
                   conversationsLoading={view.conversationsLoading}
+                  historyQuery={view.historyQuery}
+                  onHistoryQueryChange={view.setHistoryQuery}
                   activeConversationId={view.activeConversationId}
                   onSelectConversation={view.switchConversation}
                   onStartNewConversation={view.startNewConversation}

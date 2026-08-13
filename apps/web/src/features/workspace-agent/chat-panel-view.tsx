@@ -37,6 +37,7 @@ import { Input } from "@/ui/input";
 export type WorkspaceAgentConversationOption = {
   id: string;
   label: string;
+  preview: string;
   stamp: string;
   /** Cumulative model spend for the thread (USD). */
   costUsd: number;
@@ -46,6 +47,8 @@ type WorkspaceAgentChatPanelViewProps = {
   messages: OrchUIMessage[];
   conversationOptions: WorkspaceAgentConversationOption[];
   conversationsLoading: boolean;
+  historyQuery: string;
+  onHistoryQueryChange: (value: string) => void;
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
   onStartNewConversation: () => void;
@@ -98,6 +101,8 @@ export function WorkspaceAgentChatPanelView({
   messages,
   conversationOptions,
   conversationsLoading,
+  historyQuery,
+  onHistoryQueryChange,
   activeConversationId,
   onSelectConversation,
   onStartNewConversation,
@@ -228,6 +233,8 @@ export function WorkspaceAgentChatPanelView({
       <WorkspaceAgentThreadHistory
         conversationOptions={conversationOptions}
         conversationsLoading={conversationsLoading}
+        historyQuery={historyQuery}
+        onHistoryQueryChange={onHistoryQueryChange}
         activeConversationId={activeConversationId}
         deletingConversationId={deletingConversationId}
         onSelectConversation={onSelectConversation}

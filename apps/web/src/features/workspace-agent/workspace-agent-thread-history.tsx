@@ -1,7 +1,9 @@
 import { PlusIcon } from "lucide-react";
 
 import { ThreadList } from "@/components/elements/thread-list";
+import { ThreadSearch } from "@/components/elements/thread-search";
 import type { WorkspaceAgentConversationOption } from "@/features/workspace-agent/chat-panel-view";
+import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
 
 function formatConversationStamp(value: string): string {
@@ -18,6 +20,8 @@ function formatConversationStamp(value: string): string {
 export function WorkspaceAgentThreadHistory({
   conversationOptions,
   conversationsLoading,
+  historyQuery,
+  onHistoryQueryChange,
   activeConversationId,
   deletingConversationId,
   onSelectConversation,
@@ -27,6 +31,8 @@ export function WorkspaceAgentThreadHistory({
 }: {
   conversationOptions: WorkspaceAgentConversationOption[];
   conversationsLoading: boolean;
+  historyQuery: string;
+  onHistoryQueryChange: (value: string) => void;
   activeConversationId: string | null;
   deletingConversationId: string | null;
   onSelectConversation: (id: string) => void;
@@ -37,6 +43,7 @@ export function WorkspaceAgentThreadHistory({
   const activeIndex = conversationOptions.findIndex(
     (conversation) => conversation.id === activeConversationId,
   );
+  const isHistorySearchActive = historyQuery.trim().length > 0;
 
   return (
     <aside className="flex h-full min-h-0 w-[13.5rem] shrink-0 flex-col border-e border-border bg-muted/10">
@@ -53,11 +60,31 @@ export function WorkspaceAgentThreadHistory({
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-2">
+        <ThreadSearch
+          className={cn(
+            "max-w-none px-2 pt-2",
+            !isHistorySearchActive && "[&>span]:hidden [&_button]:hidden",
+          )}
+          query={historyQuery}
+          activeId={activeConversationId ?? ""}
+          threads={
+            isHistorySearchActive
+              ? conversationOptions.map((conversation) => ({
+                  id: conversation.id,
+                  title: conversation.label,
+                  group: "",
+                  preview: conversation.preview,
+                }))
+              : []
+          }
+          onQueryChange={onHistoryQueryChange}
+          onSelect={onSelectConversation}
+        />
         {conversationsLoading ? (
           <p className="px-3 py-2 text-xs text-muted-foreground">Loading…</p>
         ) : conversationOptions.length === 0 ? (
           <p className="px-3 py-2 text-xs text-muted-foreground">No saved chats yet</p>
-        ) : (
+        ) : isHistorySearchActive ? null : (
           <ThreadList
             className="max-w-none"
             threads={conversationOptions.map((conversation) => ({

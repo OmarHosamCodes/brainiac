@@ -180,6 +180,7 @@ export function useWorkspaceAgent() {
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
+  const [historyQuery, setHistoryQuery] = useState("");
   /** How many artifacts the operator has already dismissed from the dock. */
   const [dismissedArtifactCount, setDismissedArtifactCount] = useState(0);
   /** When set, dock/overlay prefer this artifact (e.g. opened from a message card). */
@@ -1130,9 +1131,12 @@ export function useWorkspaceAgent() {
     conversationOptions: conversationList.map((conversation) => ({
       id: conversation.id,
       label: conversation.title,
+      preview: conversation.lastMessagePreview ?? "",
       stamp: conversation.lastMessageAt || conversation.updatedAt,
       costUsd: conversation.usageSummary?.totals.costUsd ?? 0,
     })),
+    historyQuery,
+    setHistoryQuery,
     activeCostUsd: activeConversation?.usageSummary?.totals.costUsd ?? 0,
     conversationsLoading: conversationsQuery.isLoading,
     startNewConversation,
