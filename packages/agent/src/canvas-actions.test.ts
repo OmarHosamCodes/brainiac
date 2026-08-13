@@ -122,6 +122,42 @@ describe("applyCanvasAction", () => {
     expect(approved.nextNodes[0]?.id).toBe(preview.nextNodes[0]?.id);
   });
 
+  test("updates agencyRef on a team-shared node", async () => {
+    const created = await applyCanvasAction([], {
+      type: "node.create",
+      title: "Launch",
+      visibility: "team",
+      teamId: "team-1",
+    });
+    const nodeId = created.nextNodes[0]?.id;
+    expect(nodeId).toBeTruthy();
+    const updated = await applyCanvasAction(created.nextNodes, {
+      type: "node.update",
+      nodeId,
+      agencyRef: { teamId: "team-1", projectId: "proj-1", taskId: "task-1" },
+    });
+    expect(updated.nextNodes[0]?.agencyRef).toEqual({
+      teamId: "team-1",
+      projectId: "proj-1",
+      taskId: "task-1",
+    });
+  });
+
+  test("rejects agencyRef on a private node", async () => {
+    const created = await applyCanvasAction([], {
+      type: "node.create",
+      title: "Private",
+    });
+    const nodeId = created.nextNodes[0]?.id ?? "";
+    await expect(
+      applyCanvasAction(created.nextNodes, {
+        type: "node.update",
+        nodeId,
+        agencyRef: { teamId: "team-1", projectId: "proj-1" },
+      }),
+    ).rejects.toThrow();
+  });
+
   test("bindCanvasPlanStepAction remaps invented ids onto the last created node", () => {
     const created = createWorkspaceNode({ title: "Brief" });
     const bound = bindCanvasPlanStepAction(

@@ -2551,6 +2551,7 @@ function snapshotCanvasTarget(nodes: WorkspaceNode[], action: CanvasAction): unk
     case "node.create":
       return null;
     case "node.replace":
+    case "node.update":
     case "node.delete":
       return findNode(nodes, action.nodeId);
     case "tab.create":
@@ -2638,6 +2639,16 @@ export async function applyCanvasAction(
         assertNodeUsesKnownCustomTemplates(nextNode);
         draft[currentIndex] = nextNode;
         return { nodeId: nextNode.id };
+      }
+      case "node.update": {
+        const node = requireNode(draft, action.nodeId);
+        if (action.title !== undefined) node.title = action.title;
+        if (action.visibility !== undefined) node.visibility = action.visibility;
+        if (action.teamId !== undefined) node.teamId = action.teamId;
+        if (action.agencyRef !== undefined) node.agencyRef = action.agencyRef;
+        node.updatedAt = timestamp;
+        workspaceNodeSchema.parse(node);
+        return { nodeId: node.id };
       }
       case "node.delete": {
         const node = requireNode(draft, action.nodeId);
