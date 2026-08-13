@@ -7,6 +7,8 @@ import {
   CanvasSplitDocument,
   CanvasSplitThread,
 } from "@/components/elements/canvas-split";
+import { ConversationSearch } from "@/components/elements/conversation-search";
+import type { SearchHit } from "@/components/elements/conversation-search";
 import { AgentArtifactPaneView } from "@/features/workspace-agent/agent-artifact-pane-view";
 import { AgentStickyDockView } from "@/features/workspace-agent/agent-sticky-dock-view";
 import {
@@ -49,6 +51,13 @@ type WorkspaceAgentChatPanelViewProps = {
   conversationsLoading: boolean;
   historyQuery: string;
   onHistoryQueryChange: (value: string) => void;
+  threadSearchOpen: boolean;
+  onToggleThreadSearch: () => void;
+  threadSearchQuery: string;
+  onThreadSearchQueryChange: (value: string) => void;
+  threadSearchHits: readonly SearchHit[];
+  threadSearchIndex: number;
+  onThreadSearchStep: (delta: number) => void;
   activeConversationId: string | null;
   onSelectConversation: (id: string) => void;
   onStartNewConversation: () => void;
@@ -103,6 +112,13 @@ export function WorkspaceAgentChatPanelView({
   conversationsLoading,
   historyQuery,
   onHistoryQueryChange,
+  threadSearchOpen,
+  onToggleThreadSearch,
+  threadSearchQuery,
+  onThreadSearchQueryChange,
+  threadSearchHits,
+  threadSearchIndex,
+  onThreadSearchStep,
   activeConversationId,
   onSelectConversation,
   onStartNewConversation,
@@ -228,6 +244,17 @@ export function WorkspaceAgentChatPanelView({
     </>
   );
 
+  const threadSearchBar = threadSearchOpen ? (
+    <ConversationSearch
+      className="max-w-none px-3 py-2"
+      query={threadSearchQuery}
+      hits={threadSearchHits}
+      activeIndex={threadSearchIndex}
+      onQueryChange={onThreadSearchQueryChange}
+      onStep={onThreadSearchStep}
+    />
+  ) : null;
+
   return (
     <div className="flex h-[min(70vh,640px)] min-h-0">
       <WorkspaceAgentThreadHistory
@@ -235,6 +262,8 @@ export function WorkspaceAgentChatPanelView({
         conversationsLoading={conversationsLoading}
         historyQuery={historyQuery}
         onHistoryQueryChange={onHistoryQueryChange}
+        threadSearchOpen={threadSearchOpen}
+        onToggleThreadSearch={onToggleThreadSearch}
         activeConversationId={activeConversationId}
         deletingConversationId={deletingConversationId}
         onSelectConversation={onSelectConversation}
@@ -275,6 +304,7 @@ export function WorkspaceAgentChatPanelView({
         {showCanvas && activeArtifact ? (
           <CanvasSplit className="h-full max-h-full min-h-0 max-w-none min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none md:h-full">
             <CanvasSplitThread className="flex h-full min-h-0 flex-1 flex-col overflow-hidden border-0 p-0 md:w-2/5 md:overflow-hidden">
+              {threadSearchBar}
               <WorkspaceAgentThreadDataUI />
               <Thread
                 composer={threadComposer}
@@ -294,6 +324,7 @@ export function WorkspaceAgentChatPanelView({
           </CanvasSplit>
         ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            {threadSearchBar}
             <WorkspaceAgentThreadDataUI />
             <Thread
               composer={threadComposer}
