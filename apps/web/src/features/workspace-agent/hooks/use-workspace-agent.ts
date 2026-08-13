@@ -206,6 +206,7 @@ export function useWorkspaceAgent() {
     Record<string, { selectedOptionIds: string[]; freeText: string }>
   >({});
   const [queuedMessages, setQueuedMessages] = useState<QueuedAgentMessage[]>([]);
+  const [readAloudPlaying, setReadAloudPlaying] = useState(false);
   const [composerSendInFlight, setComposerSendInFlight] = useState(false);
   const [composerTriggerDismissed, setComposerTriggerDismissed] = useState(false);
   const drainLockRef = useRef(false);
@@ -802,6 +803,45 @@ export function useWorkspaceAgent() {
     return snippet || "Working…";
   }, [messages]);
 
+  const lastAssistantText = useMemo(() => {
+    const lastAssistant = [...messages].reverse().find((message) => message.role === "assistant");
+    return lastAssistant ? getMessageText(lastAssistant).trim() : "";
+  }, [messages]);
+
+  const readAloudSupported =
+    typeof window !== "undefined" && Boolean(window.speechSynthesis);
+
+  const stopReadAloud = useCallback(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    setReadAloudPlaying(false);
+  }, []);
+
+  const toggleReadAloud = useCallback(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (readAloudPlaying) {
+      stopReadAloud();
+      return;
+    }
+    if (!lastAssistantText) return;
+    const utterance = new SpeechSynthesisUtterance(lastAssistantText);
+    utterance.onend = () => setReadAloudPlaying(false);
+    utterance.onerror = () => setReadAloudPlaying(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setReadAloudPlaying(true);
+  }, [lastAssistantText, readAloudPlaying, stopReadAloud]);
+
+  useEffect(() => {
+    stopReadAloud();
+  }, [activeConversationId, stopReadAloud]);
+
+  useEffect(() => {
+    if (!expanded) {
+      stopReadAloud();
+    }
+  }, [expanded, stopReadAloud]);
+
   const submitRenameConversation = useCallback(async () => {
     const title = renameDraft.trim();
     if (!activeConversationId || !title) return;
@@ -1261,6 +1301,9 @@ export function useWorkspaceAgent() {
     serverDraftOffer,
     onRestoreServerDraft,
     onDiscardServerDraft,
+    readAloudPlaying,
+    readAloudSupported,
+    onToggleReadAloud: toggleReadAloud,
   };
 }
 

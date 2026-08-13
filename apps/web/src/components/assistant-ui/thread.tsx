@@ -82,6 +82,7 @@ export type ThreadComponents = {
   ToolFallback?: ToolCallMessagePartComponent | undefined;
   ToolGroup?: ComponentType<PropsWithChildren<{ group: ThreadGroupPart }>> | undefined;
   ReasoningGroup?: ComponentType<PropsWithChildren<{ group: ThreadGroupPart }>> | undefined;
+  AssistantActionExtra?: ComponentType | undefined;
 };
 
 export type ThreadProps = {
@@ -499,6 +500,8 @@ const AssistantMessage: FC = () => {
 };
 
 const AssistantActionBar: FC = () => {
+  const { AssistantActionExtra } = useContext(ThreadComponentsContext);
+
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
@@ -515,6 +518,7 @@ const AssistantActionBar: FC = () => {
           </AuiIf>
         </TooltipIconButton>
       </ActionBarPrimitive.Copy>
+      {AssistantActionExtra ? <AssistantActionExtra /> : null}
       <ActionBarPrimitive.Reload asChild>
         <TooltipIconButton tooltip="Refresh">
           <RefreshCwIcon />

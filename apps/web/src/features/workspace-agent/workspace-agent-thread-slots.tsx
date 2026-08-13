@@ -1,6 +1,8 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { AiUiArtifact } from "@orch/agent/types";
+import { Volume2, VolumeX } from "lucide-react";
 
+import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 import { StoppedRun } from "@/components/elements/stopped-run";
 import {
   EmptyState,
@@ -44,6 +46,9 @@ export type WorkspaceAgentThreadMessageContextValue = {
   emptyHint: string;
   quickStarts: WorkspaceAgentQuickStart[];
   onSelectQuickStart: (start: WorkspaceAgentQuickStart) => void;
+  readAloudPlaying: boolean;
+  readAloudSupported: boolean;
+  onToggleReadAloud: () => void;
 };
 
 export const WorkspaceAgentThreadMessageContext =
@@ -85,6 +90,20 @@ export function WorkspaceAgentThreadWelcome() {
         </EmptyStateSuggestions>
       ) : null}
     </EmptyState>
+  );
+}
+
+export function WorkspaceAgentReadAloudSlot() {
+  const ctx = useContext(WorkspaceAgentThreadMessageContext);
+  if (!ctx || !ctx.readAloudSupported) return null;
+  return (
+    <TooltipIconButton
+      tooltip="Read aloud"
+      aria-label={ctx.readAloudPlaying ? "Stop reading" : "Read aloud"}
+      onClick={ctx.onToggleReadAloud}
+    >
+      {ctx.readAloudPlaying ? <VolumeX /> : <Volume2 />}
+    </TooltipIconButton>
   );
 }
 
