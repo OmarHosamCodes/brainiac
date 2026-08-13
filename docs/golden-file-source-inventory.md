@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 776 |
+| golden-feature | 780 |
 | server-operation | 15 |
 | shared-infrastructure | 454 |
 | static-presentation | 22 |
@@ -47,13 +47,13 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | notifications | 35 |
 | performance | 8 |
 | projects | 24 |
-| reports | 61 |
+| reports | 63 |
 | repository | 13 |
 | resourcing | 41 |
 | server-platform | 23 |
 | task-management | 64 |
 | team | 19 |
-| time-tracking | 100 |
+| time-tracking | 102 |
 | web-platform | 249 |
 | workspace | 110 |
 
@@ -437,6 +437,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/reports/agency-report-merge-tasks.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/reports/agency-report-naming.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/reports/agency-report-naming.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/reports/agency-report-orch-waste.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/reports/agency-report-orch-waste.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/reports/agency-report-row-actions.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/reports/agency-report-show-waste.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/reports/agency-report-show-waste.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
@@ -1164,6 +1166,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agency-ops/time-tracking/resolve-agency-timer-stop-binding.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/time-tracking/router.ts` | time-tracking | api-router | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical api-router layer. | content: Zod contracts, oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
 | `packages/api/src/routers/agency-ops/time-tracking/service.ts` | time-tracking | api-service | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
+| `packages/api/src/routers/agency-ops/time-tracking/time-gaps.test.ts` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/time-tracking/time-gaps.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agent/agency-proposals.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agent/agency-proposals.ts` | agent | api-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agent/append.integration.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations, database access, environment contract; structure: test filename |
