@@ -63,6 +63,7 @@ import {
   joinOrchMessageText,
   stepSearchIndex,
 } from "@/features/workspace-agent/workspace-agent-message-search";
+import { nodeChipPlanSeed } from "@/features/workspace-agent/workspace-agent-scope-plan";
 import { applyBoundWorkspaceSnapshot } from "@/features/workspace/workspace-snapshot-handler";
 import {
   cancelQueuedAgentMessage,
@@ -152,8 +153,6 @@ function buildOrchTurnSendContext(input: {
 }
 
 export function useWorkspaceAgent() {
-  useAgentScopeModeListener();
-
   const location = useLocation();
   const navigate = useNavigate();
   const surface = resolveAgentSurface(location.pathname);
@@ -213,6 +212,18 @@ export function useWorkspaceAgent() {
   const [composerTriggerDismissed, setComposerTriggerDismissed] = useState(false);
   const drainLockRef = useRef(false);
   const draftUpsertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const addScopeChipAndMaybeSeed = useCallback(
+    (chip: AgentScopeRef, draftForSeed: string = draft) => {
+      addScopeChip(chip);
+      const seed = nodeChipPlanSeed({ toolPreset: selectedToolPreset, draft: draftForSeed, chip });
+      if (seed) setDraft(seed);
+      return seed !== null;
+    },
+    [addScopeChip, draft, selectedToolPreset, setDraft],
+  );
+
+  useAgentScopeModeListener(addScopeChipAndMaybeSeed);
 
   const unlockedSurfaces = useMemo(
     () => composerUnlockedSurfaces(surface, scopeChips),
@@ -659,25 +670,31 @@ export function useWorkspaceAgent() {
 
   const addMentionedNode = useCallback(
     (node: WorkspaceNode) => {
-      addScopeChip({ kind: "node", id: node.id, label: node.title });
-      setDraft(stripActiveWorkspaceAgentMention(draft));
+      const chip = { kind: "node" as const, id: node.id, label: node.title };
+      const strippedDraft = stripActiveWorkspaceAgentMention(draft);
+      if (!addScopeChipAndMaybeSeed(chip, strippedDraft)) {
+        setDraft(strippedDraft);
+      }
       markScopeHintSeen();
     },
-    [addScopeChip, draft, markScopeHintSeen, setDraft],
+    [addScopeChipAndMaybeSeed, draft, markScopeHintSeen, setDraft],
   );
 
   const onPickComposerTrigger = useCallback(
     (candidate: WorkspaceAgentComposerTriggerSuggestion) => {
-      addScopeChip({
-        kind: candidate.kind === "at" ? "node" : candidate.kind,
+      const chip = {
+        kind: candidate.kind === "at" ? ("node" as const) : candidate.kind,
         id: candidate.id,
         label: candidate.label,
-      });
-      setDraft(stripActiveWorkspaceAgentTrigger(draft));
+      };
+      const strippedDraft = stripActiveWorkspaceAgentTrigger(draft);
+      if (!addScopeChipAndMaybeSeed(chip, strippedDraft)) {
+        setDraft(strippedDraft);
+      }
       markScopeHintSeen();
       setComposerTriggerDismissed(false);
     },
-    [addScopeChip, draft, markScopeHintSeen, setDraft],
+    [addScopeChipAndMaybeSeed, draft, markScopeHintSeen, setDraft],
   );
 
   const onDismissComposerTrigger = useCallback(() => {
