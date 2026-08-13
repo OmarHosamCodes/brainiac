@@ -58,4 +58,22 @@ describe("nextSendAction", () => {
   test("drops empty idle sends", () => {
     expect(nextSendAction({ isStreaming: false, queueLength: 0, text: "  " })).toBe("ignore");
   });
+
+  test("sends attachment-only when idle", () => {
+    expect(
+      nextSendAction({ isStreaming: false, queueLength: 0, text: "  ", attachmentsLength: 1 }),
+    ).toBe("send");
+  });
+
+  test("ignores attachment-only while streaming", () => {
+    expect(
+      nextSendAction({ isStreaming: true, queueLength: 0, text: "  ", attachmentsLength: 1 }),
+    ).toBe("ignore");
+  });
+
+  test("queues text with attachments while streaming", () => {
+    expect(
+      nextSendAction({ isStreaming: true, queueLength: 0, text: "hi", attachmentsLength: 1 }),
+    ).toBe("queue");
+  });
 });
