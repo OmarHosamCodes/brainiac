@@ -13,6 +13,7 @@ import {
 } from "./agency-question";
 import { buildAgencyAgentTools } from "./agency-tools";
 import { canvasDraftPlanSchema, canvasProposalSnapshotSchema } from "./canvas-actions";
+import { buildCanvasScopedPatchNote } from "./canvas-scope-instructions";
 import { buildCanvasWriteTools } from "./canvas-tools";
 import { resolveUnlockedSurfaces } from "./tool-catalog";
 import {
@@ -273,6 +274,9 @@ function buildAgencyAgentModeInstructions(workspace: DashboardAgentWorkspaceCont
 }
 
 function buildCanvasPlanInstructions(workspace: DashboardAgentWorkspaceContext) {
+  const scopedPatchNote = buildCanvasScopedPatchNote({
+    scopeNodes: (workspace.scopeNodes ?? []).map((node) => ({ id: node.id, title: node.title })),
+  });
   return [
     buildAgentInstructions({ ...workspace, surface: "canvas" }),
     "Plan mode workflow: (1) research with read tools, (2) must call ask_agency_question at least once to clarify assumptions (never ask only in prose), (3) after the user answers in a later turn, call draft_canvas_plan, (4) prefer ui_present for a schema or workspaceBlock plan overview.",
@@ -280,10 +284,14 @@ function buildCanvasPlanInstructions(workspace: DashboardAgentWorkspaceContext) 
     "After draft_canvas_plan, call ui_present with an overview of the plan. Then tell the user to Confirm in the UI.",
     "Never invent ids — use tool results. Do not call propose_canvas_action in Plan mode.",
     "When drafting a new node, node.create.blocks must list every planned block type (task-list, table, notes, …). A title-only node.create only creates default empty Notes.",
+    ...(scopedPatchNote ? [scopedPatchNote] : []),
   ].join("\n");
 }
 
 function buildCanvasAgentModeInstructions(workspace: DashboardAgentWorkspaceContext) {
+  const scopedPatchNote = buildCanvasScopedPatchNote({
+    scopeNodes: (workspace.scopeNodes ?? []).map((node) => ({ id: node.id, title: node.title })),
+  });
   return [
     buildAgentInstructions({ ...workspace, surface: "canvas" }),
     "Agent mode: never write Canvas data directly. Call propose_canvas_action for each intended write (node/tab/block create, patch, replace, or delete).",
@@ -291,6 +299,7 @@ function buildCanvasAgentModeInstructions(workspace: DashboardAgentWorkspaceCont
     "Required: after each propose_canvas_action, call ui_present with kind workspaceBlock or workspaceNode, then tell the user to Approve or Reject.",
     "Never claim a write succeeded until the user Approves. Prefer one proposal at a time unless the user asks for a batch.",
     "If the workspace is scoped, use the scoped nodeId/tabId/blockId in propose_canvas_action. Do not propose create_node unless the user explicitly asks for a new node.",
+    ...(scopedPatchNote ? [scopedPatchNote] : []),
   ].join("\n");
 }
 
@@ -317,6 +326,12 @@ function appendCrossSurfaceInstructions(
     extra.push(
       "Draft with draft_agency_plan and/or draft_canvas_plan depending on the requested domain.",
     );
+  }
+  const scopedPatchNote = buildCanvasScopedPatchNote({
+    scopeNodes: (workspace.scopeNodes ?? []).map((node) => ({ id: node.id, title: node.title })),
+  });
+  if (scopedPatchNote) {
+    extra.push(scopedPatchNote);
   }
   return [base, ...extra].join("\n");
 }
