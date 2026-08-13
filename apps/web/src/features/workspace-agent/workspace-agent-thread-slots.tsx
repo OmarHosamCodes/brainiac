@@ -185,9 +185,20 @@ function WorkspaceAgentMessagePartsView({
   const text = getMessageText(message);
   const attachments = getMessageAttachments(message);
   const messageArtifacts = getMessageArtifacts(message);
-  const toolParts = message.parts.filter(
-    (part): part is OrchToolPart => part.type === "dynamic-tool",
-  );
+  const toolParts = message.parts.flatMap((part) => {
+    if (part.type !== "dynamic-tool") return [];
+    return [
+      {
+        type: "dynamic-tool" as const,
+        toolCallId: part.toolCallId,
+        toolName: part.toolName,
+        state: part.state,
+        input: "input" in part ? part.input : undefined,
+        output: "output" in part ? part.output : undefined,
+        errorText: "errorText" in part ? part.errorText : undefined,
+      } satisfies OrchToolPart,
+    ];
+  });
   const mapPins = extractMapPinsFromToolParts(toolParts);
   const planParts = message.parts.filter(
     (part): part is { type: "data-orchPlan"; id?: string; data: OrchUIDataParts["orchPlan"] } =>
@@ -226,12 +237,9 @@ function WorkspaceAgentMessagePartsView({
             id: `${attachment.filename}-${index}`,
             name: attachment.filename,
             size: attachment.mediaType,
-            kind: attachment.previewUrl || attachment.mediaType.startsWith("image/")
-              ? "image"
-              : "file",
-            ...(attachment.previewUrl
-              ? { swatch: `url("${attachment.previewUrl}")` }
-              : {}),
+            kind:
+              attachment.previewUrl || attachment.mediaType.startsWith("image/") ? "image" : "file",
+            ...(attachment.previewUrl ? { swatch: `url("${attachment.previewUrl}")` } : {}),
           }))}
         />
       ) : null}

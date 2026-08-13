@@ -23,7 +23,7 @@
 - [x] `chat-panel-view` becomes Thread host: thread, scroll-anchor, empty-state, history bill ThreadList, sticky dock overlay.
 - [x] Register website-capable elements as Thread/composer parts (HITL → approval/elicitation; artifacts → generative-ui; tools → tool-\*).
 - [x] Keep collapsed pill chrome; bind send/stop/draft to the same runtime.
-- [ ] `bun run check` · `check-types` · `check:conventions` · `check:golden` · mapper tests.
+- [x] `bun run check` · `check-types` · `check:conventions` · `check:golden` · mapper tests.
 
 ## Done when
 
