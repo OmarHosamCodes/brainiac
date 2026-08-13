@@ -16,4 +16,13 @@ describe("filterWorkspaceAgentThreads", () => {
     expect(filterWorkspaceAgentThreads(threads, "waste").map((t) => t.id)).toEqual(["1"]);
     expect(filterWorkspaceAgentThreads(threads, "CANVAS").map((t) => t.id)).toEqual(["2"]);
   });
+
+  test("still matches title when preview is empty", () => {
+    expect(
+      filterWorkspaceAgentThreads(
+        [{ id: "3", label: "Gap fill", preview: "", stamp: "" }],
+        "gap",
+      ).map((t) => t.id),
+    ).toEqual(["3"]);
+  });
 });
