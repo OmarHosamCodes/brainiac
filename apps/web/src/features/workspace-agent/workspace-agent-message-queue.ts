@@ -38,9 +38,12 @@ export function nextSendAction(input: {
   isStreaming: boolean;
   queueLength: number;
   text: string;
+  attachmentsLength?: number;
 }): "send" | "queue" | "ignore" {
-  if (!input.text.trim()) return "ignore";
+  const hasContent = input.text.trim().length > 0 || (input.attachmentsLength ?? 0) > 0;
+  if (!hasContent) return "ignore";
   if (input.isStreaming) {
+    if (!input.text.trim()) return "ignore";
     return canEnqueueAgentMessage(input) ? "queue" : "ignore";
   }
   return "send";

@@ -446,6 +446,7 @@ export function useWorkspaceAgent() {
         isStreaming,
         queueLength: queuedMessages.length,
         text: content,
+        attachmentsLength: attachments.length,
       });
       if (action === "ignore") return false;
       if (action === "queue") {
