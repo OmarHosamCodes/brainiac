@@ -1,7 +1,17 @@
+import {
+  knowledgeObjectSchema,
+  knowledgeObjectViewSchema,
+  knowledgeRelationSchema,
+} from "@orch/workspace";
+import { z } from "zod";
+
 import { protectedProcedure, protectedProProcedure } from "../../procedures";
+import { getKnowledgeObject, queryKnowledgeObjects } from "./knowledge-service";
 import {
   workspaceDeleteNodeInputSchema,
   workspaceDeleteNodeOutputSchema,
+  workspaceKnowledgeGetInputSchema,
+  workspaceKnowledgeQueryInputSchema,
   workspaceMarketplaceItemSchema,
   workspaceMarketplaceListInputSchema,
   workspaceMarketplaceListOutputSchema,
@@ -56,6 +66,27 @@ export const workspaceRouter = {
         await deleteWorkspaceNode(context.session.user.id, input),
       ),
     ),
+  knowledge: {
+    query: protectedProcedure
+      .input(workspaceKnowledgeQueryInputSchema)
+      .handler(async ({ context, input }) =>
+        z
+          .object({ items: z.array(knowledgeObjectViewSchema) })
+          .parse(await queryKnowledgeObjects(context.session.user.id, input)),
+      ),
+    get: protectedProcedure
+      .input(workspaceKnowledgeGetInputSchema)
+      .handler(async ({ context, input }) =>
+        z
+          .object({
+            view: knowledgeObjectViewSchema,
+            object: knowledgeObjectSchema.nullable(),
+            relations: z.array(knowledgeRelationSchema),
+            revisions: z.array(z.unknown()),
+          })
+          .parse(await getKnowledgeObject(context.session.user.id, input)),
+      ),
+  },
   marketplace: {
     list: protectedProcedure
       .input(workspaceMarketplaceListInputSchema)

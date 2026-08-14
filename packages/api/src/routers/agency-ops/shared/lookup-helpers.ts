@@ -1,5 +1,10 @@
 import { db } from "@orch/db";
-import { agencyOpsClient, agencyOpsProject, workspaceTeamMember } from "@orch/db/schema";
+import {
+  agencyOpsClient,
+  agencyOpsProject,
+  agencyOpsProjectTask,
+  workspaceTeamMember,
+} from "@orch/db/schema";
 import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 
@@ -11,6 +16,7 @@ export async function getProjectByIdForTeam(
   const [project] = await db
     .select({
       id: agencyOpsProject.id,
+      name: agencyOpsProject.name,
       clientId: agencyOpsProject.clientId,
       deletedAt: agencyOpsProject.deletedAt,
     })
@@ -30,7 +36,12 @@ export async function getProjectByIdForTeam(
     });
   }
 
-  return { id: project.id, clientId: project.clientId, deletedAt: project.deletedAt };
+  return {
+    id: project.id,
+    name: project.name,
+    clientId: project.clientId,
+    deletedAt: project.deletedAt,
+  };
 }
 
 export async function getClientByIdForTeam(teamId: string, clientId: string) {
@@ -61,4 +72,22 @@ export async function requireTeamMember(teamId: string, userId: string) {
       message: "Selected user is not a member of this team.",
     });
   }
+}
+
+export async function getProjectTaskByIdForTeam(teamId: string, taskId: string) {
+  const [task] = await db
+    .select({
+      id: agencyOpsProjectTask.id,
+      title: agencyOpsProjectTask.title,
+      projectId: agencyOpsProjectTask.projectId,
+      status: agencyOpsProjectTask.status,
+    })
+    .from(agencyOpsProjectTask)
+    .where(and(eq(agencyOpsProjectTask.id, taskId), eq(agencyOpsProjectTask.teamId, teamId)))
+    .limit(1);
+
+  if (!task) {
+    throw new ORPCError("NOT_FOUND", { message: "Task was not found." });
+  }
+  return task;
 }

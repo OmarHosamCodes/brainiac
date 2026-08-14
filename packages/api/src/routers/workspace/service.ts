@@ -17,6 +17,7 @@ import { and, desc, eq, ilike, inArray, lt, or } from "drizzle-orm";
 
 import { requireTeamMembership } from "../../lib/team-membership";
 import { getBillingStateForUser } from "../../billing-guard";
+import { deleteKnowledgeForNode, syncKnowledgeFromNodes } from "./knowledge-service";
 
 export async function assertCanSaveWorkspaceNodes(
   actorUserId: string,
@@ -114,6 +115,7 @@ async function upsertWorkspaceNodes(userId: string, nodes: WorkspaceNode[], now:
         updatedAt: now,
       },
     });
+  await syncKnowledgeFromNodes(userId, { nodes });
 }
 
 async function getWorkspaceRowsByUserIds(userIds: string[]) {
@@ -479,6 +481,7 @@ export async function deleteWorkspaceNode(
       ownerNodes.filter((node) => node.id !== input.nodeId),
       now,
     );
+    await deleteKnowledgeForNode(userId, { objectId: input.nodeId });
 
     return {
       nodeId: input.nodeId,
@@ -507,6 +510,7 @@ export async function deleteWorkspaceNode(
     nodes.filter((node) => node.id !== input.nodeId),
     now,
   );
+  await deleteKnowledgeForNode(userId, { objectId: input.nodeId });
 
   return {
     nodeId: input.nodeId,

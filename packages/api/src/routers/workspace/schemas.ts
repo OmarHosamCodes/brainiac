@@ -1,4 +1,6 @@
 import {
+  knowledgeObjectTypeSchema,
+  knowledgeTargetSchema,
   workspaceMarketplaceItemSchema,
   workspaceMarketplaceListInputSchema,
   workspaceMarketplaceListOutputSchema,
@@ -49,6 +51,22 @@ export const workspaceDeleteNodeOutputSchema = z.object({
   nodeId: z.string().min(1),
   ownerUserId: z.string().min(1),
   deleted: z.boolean(),
+});
+
+export const workspaceKnowledgeQueryInputSchema = z.object({
+  teamId: z.string().min(1).optional(),
+  objectType: knowledgeObjectTypeSchema.optional(),
+  query: z.string().trim().min(1).optional(),
+  about: knowledgeTargetSchema.optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+  includePlaced: z.boolean().optional(),
+  includeAgency: z.boolean().optional(),
+});
+
+export const workspaceKnowledgeGetInputSchema = z.object({
+  id: z.string().min(1),
+  objectType: workspaceKnowledgeQueryInputSchema.shape.objectType,
+  teamId: z.string().min(1).optional(),
 });
 
 export {
