@@ -513,6 +513,7 @@ function inferDomain(path, contents) {
     if (/clockify/.test(path)) return "time-tracking";
     if (/notification|web-push/.test(path)) return "notifications";
     if (/task-attachments/.test(path)) return "task-management";
+    if (/knowledge-sources/.test(path)) return "workspace";
     return "server-platform";
   }
   if (path.startsWith("apps/server/src/")) return "server-platform";

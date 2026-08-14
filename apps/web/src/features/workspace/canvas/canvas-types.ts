@@ -1,4 +1,6 @@
 import type {
+  KnowledgeBoardCardKind,
+  KnowledgeObjectType,
   WorkspaceNodeConnection,
   WorkspaceNodeTint,
   WorkspaceNodeType,
@@ -13,6 +15,15 @@ export interface CanvasRect {
 
 export interface CanvasNodeModel extends CanvasRect {
   id: string;
+  kind?: KnowledgeBoardCardKind;
+  objectType?: KnowledgeObjectType;
+  parentId?: string | null;
+  href?: string;
+  agencyHref?: string | null;
+  chip?: string;
+  bodyPreview?: string;
+  readOnly?: boolean;
+  unplaced?: boolean;
   label?: string;
   title?: string;
   content?: string;

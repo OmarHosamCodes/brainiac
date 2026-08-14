@@ -20,6 +20,13 @@ import { dashboardErrorAlertClass } from "@/features/dashboard/dashboard-ui";
 import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
 import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
 import type { CanvasNodeModel } from "@/features/workspace/canvas/canvas-types";
+import { CanvasKnowledgeQuickAdd } from "@/features/workspace-knowledge/workspace-knowledge";
+import { useCanvasKnowledgeBoard } from "@/features/workspace-knowledge/hooks/use-canvas-knowledge-board";
+import { KnowledgeBoardCardView } from "@/features/workspace-knowledge/knowledge-board-card-view";
+import {
+  isDocumentBoardCard,
+  knowledgeOpenHref,
+} from "@/features/workspace-knowledge/board-cards";
 import { cn } from "@/lib/utils";
 
 function renderWorkspaceCard(
@@ -27,7 +34,17 @@ function renderWorkspaceCard(
   selected: boolean,
   allNodes: CanvasNodeModel[],
 ) {
-  return <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />;
+  if (isDocumentBoardCard(node)) {
+    return <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />;
+  }
+  return (
+    <KnowledgeBoardCardView
+      kind={node.kind ?? "knowledge"}
+      chip={node.chip ?? "Note"}
+      bodyPreview={node.bodyPreview}
+      agencyHref={node.agencyHref}
+    />
+  );
 }
 
 export function CanvasPage() {
@@ -38,8 +55,13 @@ export function CanvasPage() {
   const authEnabled = Boolean(session.data?.user);
 
   const syncSelectedTeam = useTeamStore((s) => s.syncSelectedTeam);
+  const selectedTeamId = useTeamStore((s) => s.selectedTeamId);
 
   const board = useWorkspaceQuery();
+  const knowledge = useCanvasKnowledgeBoard({
+    documents: board.nodes,
+    teamId: selectedTeamId || null,
+  });
 
   useEffect(() => {
     if (board.selectedNodeIds.length > 0) {
@@ -64,16 +86,44 @@ export function CanvasPage() {
           };
         });
       });
+      knowledge.syncGeometry(nextNodes);
     },
-    [board.updateNodes],
+    [board.updateNodes, knowledge.syncGeometry],
   );
 
   const handleOpenNode = useCallback(
     (payload: { nodeId: string }) => {
+      const node = knowledge.cards.find((card) => card.id === payload.nodeId);
+      const href = node ? knowledgeOpenHref(node, selectedTeamId) : `/node/${payload.nodeId}`;
+      if (!href) return;
       board.setSelectedNodeIds([]);
-      void navigate(`/node/${payload.nodeId}`);
+      void navigate(href);
     },
-    [board.setSelectedNodeIds, navigate],
+    [board.setSelectedNodeIds, knowledge.cards, navigate, selectedTeamId],
+  );
+
+  const handleEditNode = useCallback(
+    (payload: { nodeId: string }) => {
+      const node = knowledge.cards.find((card) => card.id === payload.nodeId);
+      if (node && !isDocumentBoardCard(node)) {
+        handleOpenNode(payload);
+        return;
+      }
+      board.openEditNode(payload);
+    },
+    [board.openEditNode, handleOpenNode, knowledge.cards],
+  );
+
+  const handleRemoveNode = useCallback(
+    (payload: { nodeId: string }) => {
+      const node = knowledge.cards.find((card) => card.id === payload.nodeId);
+      if (node && !isDocumentBoardCard(node)) {
+        void knowledge.removeCard(payload.nodeId);
+        return;
+      }
+      board.removeNode(payload);
+    },
+    [board.removeNode, knowledge],
   );
 
   const teamListQuery = useQuery({
@@ -91,7 +141,8 @@ export function CanvasPage() {
     void board.preloadWorkspace();
   }, [board.preloadWorkspace]);
 
-  const dataReady = !board.isWorkspaceInitialLoading && !teamListQuery.isPending;
+  const dataReady =
+    !board.isWorkspaceInitialLoading && !teamListQuery.isPending && !knowledge.isLoading;
   const { isBooting } = useShellBootGate(dataReady);
 
   return (
@@ -101,20 +152,26 @@ export function CanvasPage() {
           <main className="h-full w-full">
             <LazyInfiniteCanvas
               ref={canvasRef}
-              nodes={board.nodes}
+              nodes={knowledge.cards}
               selectedNodeIds={selectionArmed ? board.selectedNodeIds : []}
-              loading={board.isWorkspaceInitialLoading}
+              loading={board.isWorkspaceInitialLoading || knowledge.isLoading}
               onNodesChange={handleFlowNodesChange}
               onSelectedNodeIdsChange={board.setSelectedNodeIds}
               onCreateNode={board.openCreateNode}
-              onEditNode={board.openEditNode}
+              onEditNode={handleEditNode}
               onConnectNodePair={board.connectNodePair}
               onDisconnectNodePair={board.disconnectNodePair}
-              onRemoveNode={board.removeNode}
+              onRemoveNode={handleRemoveNode}
               onOpenNode={handleOpenNode}
               renderNode={renderWorkspaceCard}
             />
           </main>
+
+          <div className="pointer-events-none absolute left-4 top-4 z-30 md:left-6 md:top-6">
+            <div className="pointer-events-auto">
+              <CanvasKnowledgeQuickAdd teamId={selectedTeamId || null} />
+            </div>
+          </div>
 
           <div className="pointer-events-none absolute bottom-[11.5rem] left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-[12rem] md:left-6">
             {board.isWorkspaceRefreshing ? (
@@ -140,6 +197,19 @@ export function CanvasPage() {
                 )}
               >
                 {board.saveError}
+              </div>
+            ) : null}
+
+            {knowledge.captureError ? (
+              <div
+                key={knowledge.captureError}
+                className={cn(
+                  dashboardErrorAlertClass,
+                  shellContentInClass,
+                  "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
+                )}
+              >
+                {knowledge.captureError}
               </div>
             ) : null}
 
