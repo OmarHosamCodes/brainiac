@@ -9,14 +9,26 @@ import {
 } from "@orch/db/schema";
 import {
   createWorkspaceId,
+  defaultKnowledgePlacementSize,
+  inboxClusterFrame,
+  inboxClusterPlacement,
   isAgencyObjectType,
   isCanvasNativeObjectType,
+  knowledgeBoardCardSchema,
+  knowledgeChipLabel,
+  knowledgeFolderPropertiesSchema,
+  knowledgeObjectHref,
   knowledgeObjectSchema,
   knowledgeObjectTypeSchema,
   knowledgeRelationSchema,
+  knowledgeSourcePropertiesSchema,
   knowledgeToWorkspaceNode,
+  KNOWLEDGE_INBOX_CLUSTER_ID,
+  parseKnowledgeSourceProperties,
+  shouldProjectIntoWorkspaceBlob,
   WORKSPACE_NODE_LIMIT,
   workspaceNodeToKnowledge,
+  type KnowledgeBoardCard,
   type KnowledgeObject,
   type KnowledgeObjectType,
   type KnowledgeObjectView,
@@ -25,7 +37,7 @@ import {
   type WorkspaceNode,
 } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 
 import { requireTeamMembership } from "../../lib/team-membership";
 import {
@@ -83,6 +95,10 @@ function rowToPlacement(row: typeof workspacePlacement.$inferSelect): KnowledgeP
   return {
     id: row.id,
     objectId: row.objectId,
+    objectType: row.objectType
+      ? knowledgeObjectTypeSchema.parse(row.objectType)
+      : undefined,
+    teamId: row.teamId,
     viewId: row.viewId,
     x: row.x,
     y: row.y,
@@ -153,6 +169,8 @@ export async function syncKnowledgeFromNodes(
         .values({
           id: placement.id,
           objectId: placement.objectId,
+          objectType: placement.objectType ?? object.objectType,
+          teamId: placement.teamId ?? object.teamId ?? null,
           viewId: placement.viewId,
           x: placement.x,
           y: placement.y,
@@ -169,6 +187,8 @@ export async function syncKnowledgeFromNodes(
             workspacePlacement.ownerUserId,
           ],
           set: {
+            objectType: placement.objectType ?? object.objectType,
+            teamId: placement.teamId ?? object.teamId ?? null,
             x: placement.x,
             y: placement.y,
             width: placement.width,
@@ -342,10 +362,7 @@ export async function queryKnowledgeObjects(
           .where(
             or(
               inArray(workspaceRelation.fromObjectId, objectIds),
-              and(
-                inArray(workspaceRelation.toObjectId, objectIds),
-                eq(workspaceRelation.toObjectType, "document"),
-              ),
+              inArray(workspaceRelation.toObjectId, objectIds),
             ),
           );
   const counts = new Map<string, { in: number; out: number }>();
@@ -356,7 +373,7 @@ export async function queryKnowledgeObjects(
     const out = counts.get(row.fromObjectId);
     if (out) out.out += 1;
     const inbound = counts.get(row.toObjectId);
-    if (inbound && row.toObjectType === "document") inbound.in += 1;
+    if (inbound) inbound.in += 1;
   }
 
   const canvasItems: KnowledgeObjectView[] = rows.map((row) => ({
@@ -480,6 +497,7 @@ export async function getKnowledgeObject(
       teamId: object.teamId ?? null,
       properties: object.properties,
       placement: placement ? rowToPlacement(placement) : null,
+      href: knowledgeObjectHref(object.objectType, object.id),
       missing: false,
     } satisfies KnowledgeObjectView,
     object,
@@ -503,7 +521,7 @@ async function loadObject(id: string) {
 
 async function projectObjectIntoWorkspace(actorUserId: string, objectId: string) {
   const object = await loadObject(objectId);
-  if (!object) return;
+  if (!object || !shouldProjectIntoWorkspaceBlob(object.objectType)) return;
   const relations = (
     await db.select().from(workspaceRelation).where(eq(workspaceRelation.fromObjectId, objectId))
   ).map(rowToRelation);
@@ -601,6 +619,15 @@ export async function applyKnowledgeAction(
           id: action.about.id,
         });
       }
+      const properties =
+        action.objectType === "folder"
+          ? knowledgeFolderPropertiesSchema.parse({
+              title: action.title,
+              ...(action.properties ?? {}),
+            })
+          : action.objectType === "source"
+            ? knowledgeSourcePropertiesSchema.parse(action.properties ?? {})
+            : (action.properties ?? {});
       const now = new Date();
       const id = action.id ?? createWorkspaceId("kobj");
       const object = knowledgeObjectSchema.parse({
@@ -610,7 +637,7 @@ export async function applyKnowledgeAction(
         ownerUserId: actorUserId,
         visibility,
         teamId: objectTeamId,
-        properties: action.properties ?? {},
+        properties,
         content: null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
@@ -628,14 +655,17 @@ export async function applyKnowledgeAction(
         updatedAt: now,
       });
       if (action.placement) {
+        const size = defaultKnowledgePlacementSize(object.objectType);
         await db.insert(workspacePlacement).values({
           id: createWorkspaceId("kplc"),
           objectId: object.id,
+          objectType: object.objectType,
+          teamId: object.teamId ?? null,
           viewId: "board",
           x: action.placement.x,
           y: action.placement.y,
-          width: action.placement.width ?? 320,
-          height: action.placement.height ?? 220,
+          width: action.placement.width ?? size.width,
+          height: action.placement.height ?? size.height,
           ownerUserId: actorUserId,
           createdAt: now,
           updatedAt: now,
@@ -745,6 +775,16 @@ export async function applyKnowledgeAction(
       if (!from) throw new ORPCError("NOT_FOUND");
       await assertCanWriteObject(actorUserId, from);
       const relationTeamId = from.teamId ?? teamId;
+      if (action.relationType === "in") {
+        if (action.to.objectType !== "folder") {
+          throw new ORPCError("BAD_REQUEST", { message: "in relations must target a folder." });
+        }
+        const folder = await loadObject(action.to.id);
+        if (!folder || folder.objectType !== "folder") {
+          throw new ORPCError("BAD_REQUEST", { message: "in relations must target a folder." });
+        }
+        await assertCanReadObject(actorUserId, folder);
+      }
       if (isAgencyObjectType(action.to.objectType)) {
         if (!relationTeamId) {
           throw new ORPCError("BAD_REQUEST", { message: "Agency links require teamId." });
@@ -805,24 +845,85 @@ export async function applyKnowledgeAction(
     }
     case "placement.upsert": {
       if (action.objectType && isAgencyObjectType(action.objectType)) {
-        throw new ORPCError("BAD_REQUEST", {
-          message: "Cannot place Agency records on the board in this plan.",
+        const pinTeamId = action.teamId ?? teamId;
+        if (!pinTeamId) {
+          throw new ORPCError("BAD_REQUEST", { message: "Agency pins require teamId." });
+        }
+        await requireTeamMembership(actorUserId, pinTeamId, "editor");
+        await assertAgencyTargetExists(actorUserId, {
+          teamId: pinTeamId,
+          objectType: action.objectType,
+          id: action.objectId,
         });
+        const canvasObject = await loadObject(action.objectId);
+        if (canvasObject) {
+          throw new ORPCError("BAD_REQUEST", {
+            message: "Agency pins cannot reuse a canvas object id.",
+          });
+        }
+        const size = defaultKnowledgePlacementSize(action.objectType);
+        const now = new Date();
+        await db
+          .insert(workspacePlacement)
+          .values({
+            id: createWorkspaceId("kplc"),
+            objectId: action.objectId,
+            objectType: action.objectType,
+            teamId: pinTeamId,
+            viewId: "board",
+            x: action.x,
+            y: action.y,
+            width: action.width ?? size.width,
+            height: action.height ?? size.height,
+            ownerUserId: actorUserId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [
+              workspacePlacement.objectId,
+              workspacePlacement.viewId,
+              workspacePlacement.ownerUserId,
+            ],
+            set: {
+              objectType: action.objectType,
+              teamId: pinTeamId,
+              x: action.x,
+              y: action.y,
+              width: action.width ?? size.width,
+              height: action.height ?? size.height,
+              updatedAt: now,
+            },
+          });
+        return {
+          before: null,
+          after: {
+            objectId: action.objectId,
+            objectType: action.objectType,
+            teamId: pinTeamId,
+            x: action.x,
+            y: action.y,
+          },
+          objectId: action.objectId,
+        };
       }
       const existing = await loadObject(action.objectId);
       if (!existing) throw new ORPCError("NOT_FOUND");
       await assertCanWriteObject(actorUserId, existing);
+      const size = defaultKnowledgePlacementSize(existing.objectType);
       const now = new Date();
       await db
         .insert(workspacePlacement)
         .values({
           id: createWorkspaceId("kplc"),
           objectId: action.objectId,
+          objectType: existing.objectType,
+          teamId: existing.teamId ?? teamId,
           viewId: "board",
           x: action.x,
           y: action.y,
-          width: action.width ?? 320,
-          height: action.height ?? 220,
+          width: action.width ?? size.width,
+          height: action.height ?? size.height,
           ownerUserId: actorUserId,
           createdAt: now,
           updatedAt: now,
@@ -834,10 +935,12 @@ export async function applyKnowledgeAction(
             workspacePlacement.ownerUserId,
           ],
           set: {
+            objectType: existing.objectType,
+            teamId: existing.teamId ?? teamId,
             x: action.x,
             y: action.y,
-            width: action.width ?? 320,
-            height: action.height ?? 220,
+            width: action.width ?? size.width,
+            height: action.height ?? size.height,
             updatedAt: now,
           },
         });
@@ -849,4 +952,222 @@ export async function applyKnowledgeAction(
       return _exhaustive;
     }
   }
+}
+
+function knowledgeBodyPreview(object: KnowledgeObject): string | undefined {
+  const body = object.properties.body;
+  if (typeof body === "string" && body.trim()) return body.trim().slice(0, 160);
+  if (object.objectType === "source") {
+    const source = parseKnowledgeSourceProperties(object.properties);
+    if (source?.filename) return source.filename;
+    if (source?.url) return source.url;
+    if (source?.uploadId) return source.uploadId;
+  }
+  const recommendation = object.properties.recommendation;
+  if (typeof recommendation === "string" && recommendation.trim()) {
+    return recommendation.trim().slice(0, 160);
+  }
+  return undefined;
+}
+
+function toBoardCard(input: {
+  id: string;
+  objectType: KnowledgeObjectType;
+  title: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  parentId?: string | null;
+  origin: "canvas" | "agency" | "inbox";
+  teamId?: string | null;
+  agencyHref?: string | null;
+  bodyPreview?: string;
+  unplaced?: boolean;
+  readOnly?: boolean;
+}): KnowledgeBoardCard {
+  const kind = isAgencyObjectType(input.objectType)
+    ? "agency"
+    : input.objectType === "folder"
+      ? "folder"
+      : input.objectType === "document"
+        ? "document"
+        : "knowledge";
+  return knowledgeBoardCardSchema.parse({
+    id: input.id,
+    kind,
+    objectType: input.objectType,
+    title: input.title,
+    x: input.x,
+    y: input.y,
+    width: input.width,
+    height: input.height,
+    parentId: input.parentId ?? null,
+    href: knowledgeObjectHref(input.objectType, input.id),
+    agencyHref: input.agencyHref ?? null,
+    chip: knowledgeChipLabel(input.objectType),
+    bodyPreview: input.bodyPreview,
+    readOnly: input.readOnly ?? kind === "agency",
+    unplaced: input.unplaced ?? false,
+    origin: input.origin,
+    teamId: input.teamId ?? null,
+  });
+}
+
+export async function listKnowledgeBoard(
+  actorUserId: string,
+  input: { teamId?: string | null },
+): Promise<{ items: KnowledgeBoardCard[] }> {
+  const teamId = input.teamId ?? null;
+  if (teamId) {
+    await requireTeamMembership(actorUserId, teamId, "viewer");
+  }
+  const visibilityFilter = teamId
+    ? or(
+        eq(workspaceObject.ownerUserId, actorUserId),
+        and(eq(workspaceObject.visibility, "team"), eq(workspaceObject.teamId, teamId)),
+      )
+    : eq(workspaceObject.ownerUserId, actorUserId);
+
+  const rows = await db
+    .select()
+    .from(workspaceObject)
+    .where(and(visibilityFilter, ne(workspaceObject.objectType, "document")))
+    .orderBy(desc(workspaceObject.updatedAt))
+    .limit(WORKSPACE_NODE_LIMIT);
+
+  const objectIds = rows.map((row) => row.id);
+  const placements = await db
+    .select()
+    .from(workspacePlacement)
+    .where(
+      and(eq(workspacePlacement.ownerUserId, actorUserId), eq(workspacePlacement.viewId, "board")),
+    );
+  const placementByObject = new Map(placements.map((row) => [row.objectId, rowToPlacement(row)]));
+
+  const folderLinks =
+    objectIds.length === 0
+      ? []
+      : await db
+          .select()
+          .from(workspaceRelation)
+          .where(
+            and(
+              inArray(workspaceRelation.fromObjectId, objectIds),
+              eq(workspaceRelation.relationType, "in"),
+              eq(workspaceRelation.toObjectType, "folder"),
+            ),
+          );
+  const folderByChild = new Map(folderLinks.map((row) => [row.fromObjectId, row.toObjectId]));
+
+  const items: KnowledgeBoardCard[] = [];
+  const unplaced: KnowledgeObject[] = [];
+  for (const row of rows) {
+    const object = rowToObject(row);
+    const placement = placementByObject.get(object.id);
+    if (!placement) {
+      unplaced.push(object);
+      continue;
+    }
+    items.push(
+      toBoardCard({
+        id: object.id,
+        objectType: object.objectType,
+        title: object.title,
+        x: placement.x,
+        y: placement.y,
+        width: placement.width,
+        height: placement.height,
+        parentId: folderByChild.get(object.id) ?? null,
+        origin: "canvas",
+        teamId: object.teamId,
+        bodyPreview: knowledgeBodyPreview(object),
+      }),
+    );
+  }
+
+  if (unplaced.length > 0) {
+    const frame = inboxClusterFrame(unplaced.length);
+    items.push(
+      knowledgeBoardCardSchema.parse({
+        id: KNOWLEDGE_INBOX_CLUSTER_ID,
+        kind: "inbox",
+        objectType: "folder",
+        title: "Inbox",
+        x: frame.x,
+        y: frame.y,
+        width: frame.width,
+        height: frame.height,
+        parentId: null,
+        href: "/canvas",
+        agencyHref: null,
+        chip: "Inbox",
+        readOnly: true,
+        unplaced: false,
+        origin: "inbox",
+        teamId,
+      }),
+    );
+    unplaced.forEach((object, index) => {
+      const slot = inboxClusterPlacement(index);
+      items.push(
+        toBoardCard({
+          id: object.id,
+          objectType: object.objectType,
+          title: object.title,
+          x: slot.x,
+          y: slot.y,
+          width: slot.width,
+          height: slot.height,
+          parentId: KNOWLEDGE_INBOX_CLUSTER_ID,
+          origin: "inbox",
+          teamId: object.teamId,
+          bodyPreview: knowledgeBodyPreview(object),
+          unplaced: true,
+        }),
+      );
+    });
+  }
+
+  const canvasIds = new Set(rows.map((row) => row.id));
+  const pinPlacements = placements.filter((row) => {
+    const objectType = row.objectType;
+    return objectType && isAgencyObjectType(objectType) && !canvasIds.has(row.objectId);
+  });
+  const pinViews = await Promise.all(
+    pinPlacements.map(async (row) => {
+      const objectType = knowledgeObjectTypeSchema.parse(row.objectType);
+      if (!isAgencyObjectType(objectType) || !row.teamId) return null;
+      if (teamId && row.teamId !== teamId) return null;
+      try {
+        await requireTeamMembership(actorUserId, row.teamId, "viewer");
+      } catch {
+        return null;
+      }
+      const view = await getAgencyKnowledgeView(actorUserId, {
+        teamId: row.teamId,
+        objectType,
+        id: row.objectId,
+      });
+      const placement = rowToPlacement(row);
+      return toBoardCard({
+        id: row.objectId,
+        objectType,
+        title: view.title,
+        x: placement.x,
+        y: placement.y,
+        width: placement.width,
+        height: placement.height,
+        origin: "agency",
+        teamId: row.teamId,
+        agencyHref: view.href ?? null,
+        readOnly: true,
+      });
+    }),
+  );
+  for (const card of pinViews) {
+    if (card) items.push(card);
+  }
+
+  return { items };
 }

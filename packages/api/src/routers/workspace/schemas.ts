@@ -1,3 +1,4 @@
+import { knowledgeActionSchema } from "@orch/agent/knowledge-actions";
 import {
   knowledgeObjectTypeSchema,
   knowledgeTargetSchema,
@@ -67,6 +68,16 @@ export const workspaceKnowledgeGetInputSchema = z.object({
   id: z.string().min(1),
   objectType: workspaceKnowledgeQueryInputSchema.shape.objectType,
   teamId: z.string().min(1).optional(),
+});
+
+export const workspaceKnowledgeBoardInputSchema = z.object({
+  teamId: z.string().min(1).optional(),
+});
+
+export const workspaceKnowledgeCaptureInputSchema = z.object({
+  action: knowledgeActionSchema,
+  teamId: z.string().min(1).nullable().optional(),
+  label: z.string().trim().min(1).max(200).optional(),
 });
 
 export {

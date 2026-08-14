@@ -10,6 +10,7 @@ const [
   teamService,
   workspaceService,
   knowledgeService,
+  knowledgeCapture,
   { createAgencyClient },
   { createAgencyProject },
 ] = await Promise.all([
@@ -19,6 +20,7 @@ const [
   import("../team/service"),
   import("./service"),
   import("./knowledge-service"),
+  import("./knowledge-capture"),
   import("../agency-ops/clients/service"),
   import("../agency-ops/projects/service"),
 ]);
@@ -179,8 +181,8 @@ describe("workspace knowledge dual-write", () => {
 
     const snapshot = await workspaceService.getWorkspaceSnapshot(ownerUserId, {});
     const card = snapshot.nodes.find((node) => node.id === created.objectId);
-    expect(card?.agencyRef?.projectId).toBe(project.id);
-    expect(card?.connections).toEqual([]);
+    expect(card).toBeUndefined();
+    expect(detail.relations.some((relation) => relation.relationType === "about")).toBe(true);
   });
 
   test("query hides private objects from outsiders", async () => {
@@ -197,5 +199,140 @@ describe("workspace knowledge dual-write", () => {
       query: "Secret",
     });
     expect(outsiderQuery.items).toHaveLength(0);
+  });
+
+  test("stores source upload id without projecting into the document blob", async () => {
+    const ownerUserId = await createFixtureUser();
+    const created = await knowledgeService.applyKnowledgeAction(ownerUserId, {
+      action: {
+        type: "object.create",
+        objectType: "source",
+        title: "Brief",
+        properties: {
+          kind: "upload",
+          uploadId: "ksrc-1",
+          filename: "brief.pdf",
+          mediaType: "application/pdf",
+        },
+        placement: { x: 8, y: 16 },
+      },
+    });
+    const detail = await knowledgeService.getKnowledgeObject(ownerUserId, { id: created.objectId });
+    expect(detail.object?.properties.uploadId).toBe("ksrc-1");
+    const snapshot = await workspaceService.getWorkspaceSnapshot(ownerUserId, {});
+    expect(snapshot.nodes.some((node) => node.id === created.objectId)).toBe(false);
+  });
+
+  test("folder in round-trip stays off board noodles and appears as parentId", async () => {
+    const ownerUserId = await createFixtureUser();
+    const folder = await knowledgeService.applyKnowledgeAction(ownerUserId, {
+      action: {
+        type: "object.create",
+        objectType: "folder",
+        title: "Research",
+        placement: { x: 40, y: 80, width: 640, height: 420 },
+      },
+    });
+    const note = await knowledgeService.applyKnowledgeAction(ownerUserId, {
+      action: {
+        type: "object.create",
+        objectType: "note",
+        title: "Clip",
+        properties: { body: "keep" },
+        placement: { x: 60, y: 120 },
+      },
+    });
+    await knowledgeService.applyKnowledgeAction(ownerUserId, {
+      action: {
+        type: "relation.create",
+        fromObjectId: note.objectId,
+        to: { objectType: "folder", id: folder.objectId },
+        relationType: "in",
+      },
+    });
+    await expect(
+      knowledgeService.applyKnowledgeAction(ownerUserId, {
+        action: {
+          type: "relation.create",
+          fromObjectId: note.objectId,
+          to: { objectType: "note", id: note.objectId },
+          relationType: "in",
+        },
+      }),
+    ).rejects.toThrow(/folder/);
+
+    const board = await knowledgeService.listKnowledgeBoard(ownerUserId, {});
+    const child = board.items.find((item) => item.id === note.objectId);
+    expect(child?.parentId).toBe(folder.objectId);
+    expect(child?.kind).toBe("knowledge");
+    const snapshot = await workspaceService.getWorkspaceSnapshot(ownerUserId, {});
+    expect(snapshot.nodes.some((node) => node.connections.length > 0)).toBe(false);
+  });
+
+  test("agency pin has placement and no workspace_object row", async () => {
+    const ownerUserId = await createFixtureUser();
+    const team = await teamService.createTeam(ownerUserId, { name: "Pin Team" });
+    const client = await createAgencyClient(ownerUserId, { teamId: team.id, name: "Acme" });
+    const project = await createAgencyProject(ownerUserId, {
+      teamId: team.id,
+      clientId: client.id,
+      name: "Launch",
+    });
+    await knowledgeService.applyKnowledgeAction(ownerUserId, {
+      action: {
+        type: "placement.upsert",
+        objectId: project.id,
+        objectType: "agency.project",
+        teamId: team.id,
+        x: 12,
+        y: 24,
+      },
+      teamId: team.id,
+    });
+    const objects = await db
+      .select()
+      .from(workspaceObject)
+      .where(eq(workspaceObject.id, project.id));
+    expect(objects).toHaveLength(0);
+    const pins = await db
+      .select()
+      .from(workspacePlacement)
+      .where(eq(workspacePlacement.objectId, project.id));
+    expect(pins).toHaveLength(1);
+    expect(pins[0]?.objectType).toBe("agency.project");
+    const board = await knowledgeService.listKnowledgeBoard(ownerUserId, { teamId: team.id });
+    expect(board.items.some((item) => item.id === project.id && item.kind === "agency")).toBe(true);
+  });
+
+  test("private note capture applies immediately and team create stays pending", async () => {
+    const ownerUserId = await createFixtureUser();
+    const team = await teamService.createTeam(ownerUserId, { name: "Capture Team" });
+    const privateNote = await knowledgeCapture.captureKnowledgeAction(ownerUserId, {
+      action: { type: "object.create", objectType: "note", title: "Private thought" },
+    });
+    expect(privateNote.status).toBe("applied");
+    expect(privateNote.proposalId).toBeNull();
+    const stored = await knowledgeService.getKnowledgeObject(ownerUserId, {
+      id: privateNote.objectId ?? "",
+    });
+    expect(stored.object?.title).toBe("Private thought");
+
+    const teamNote = await knowledgeCapture.captureKnowledgeAction(ownerUserId, {
+      action: {
+        type: "object.create",
+        objectType: "note",
+        title: "Team thought",
+        visibility: "team",
+        teamId: team.id,
+      },
+      teamId: team.id,
+    });
+    expect(teamNote.status).toBe("pending");
+    expect(teamNote.proposalId).toBeTruthy();
+    const pendingRows = await db
+      .select()
+      .from(workspaceObject)
+      .where(eq(workspaceObject.ownerUserId, ownerUserId));
+    expect(pendingRows.some((row) => row.title === "Team thought")).toBe(false);
   });
 });
