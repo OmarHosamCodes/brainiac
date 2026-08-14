@@ -86,16 +86,18 @@ export const knowledgeActionSchema = z.discriminatedUnion("type", [
       type: z.literal("placement.upsert"),
       objectId: idSchema,
       objectType: knowledgeObjectTypeSchema.optional(),
+      teamId: idSchema.nullable().optional(),
       x: z.number().finite(),
       y: z.number().finite(),
       width: z.number().positive().optional(),
       height: z.number().positive().optional(),
     })
     .superRefine((value, ctx) => {
-      if (value.objectType && isAgencyObjectType(value.objectType)) {
+      if (value.objectType && isAgencyObjectType(value.objectType) && !value.teamId) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Cannot place Agency records on the board in this plan.",
+          path: ["teamId"],
+          message: "Agency pins require teamId.",
         });
       }
     }),

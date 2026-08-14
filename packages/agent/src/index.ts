@@ -296,8 +296,9 @@ function buildCanvasAgentModeInstructions(workspace: DashboardAgentWorkspaceCont
   });
   return [
     buildAgentInstructions({ ...workspace, surface: "canvas" }),
-    "Canvas is a view of the team brain. Agency projects, tasks, members, clients, and time entries are live records — link with about, never copy. Private notes stay private. Query before proposing.",
-    "Agent mode: never write Canvas data directly. Call propose_canvas_action for board/block AST edits and propose_knowledge_action for notes, decisions, and Agency links.",
+    "Canvas is a view of the team brain. Mix documents with notes, decisions, sources, and folders on the same board. Agency projects, tasks, members, clients, and time entries are live records — pin with placement.upsert, link with about, never copy or mutate Agency. Private notes apply immediately; team-visible writes still need Approve.",
+    "This agent connects and groups: relation.create (about, supports, in) and folders. Do not invent Agency ids. Query before proposing.",
+    "Agent mode: never write Canvas data directly. Call propose_canvas_action for board/block AST edits and propose_knowledge_action for notes, decisions, sources, folders, grouping, and Agency links.",
     "When you need clarification, call ask_agency_question (do not ask only in prose).",
     "Required: after each propose_canvas_action, call ui_present with kind workspaceBlock or workspaceNode, then tell the user to Approve or Reject.",
     "Never claim a write succeeded until the user Approves. Prefer one proposal at a time unless the user asks for a batch.",

@@ -32,7 +32,7 @@ const TOOL_CATALOG: ToolCatalogDefinition[] = [
   },
   {
     name: "get_knowledge_object",
-    usage: "Reads one canvas knowledge object or live Agency record, including inbound links.",
+    usage: "Reads one canvas knowledge object or live Agency record, including inbound backlinks.",
     surface: ["canvas"],
     modes: ALL_MODES,
   },

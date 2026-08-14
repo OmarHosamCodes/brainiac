@@ -55,4 +55,48 @@ describe("knowledgeActionSchema", () => {
       }),
     ).toThrow(/Agency/);
   });
+
+  test("parses folder create and in relation", () => {
+    expect(
+      knowledgeActionSchema.parse({
+        type: "object.create",
+        objectType: "folder",
+        title: "Research",
+      }).type,
+    ).toBe("object.create");
+    const relation = knowledgeActionSchema.parse({
+      type: "relation.create",
+      fromObjectId: "kobj-note",
+      to: { objectType: "folder", id: "kobj-folder" },
+      relationType: "in",
+    });
+    expect(relation.type).toBe("relation.create");
+    if (relation.type === "relation.create") {
+      expect(relation.relationType).toBe("in");
+    }
+  });
+
+  test("parses agency pin placement with teamId", () => {
+    const action = knowledgeActionSchema.parse({
+      type: "placement.upsert",
+      objectId: "proj-1",
+      objectType: "agency.project",
+      teamId: "team-1",
+      x: 12,
+      y: 24,
+    });
+    expect(action.type).toBe("placement.upsert");
+  });
+
+  test("rejects agency pin placement without teamId", () => {
+    expect(() =>
+      knowledgeActionSchema.parse({
+        type: "placement.upsert",
+        objectId: "proj-1",
+        objectType: "agency.project",
+        x: 12,
+        y: 24,
+      }),
+    ).toThrow(/teamId/);
+  });
 });
