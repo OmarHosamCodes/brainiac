@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   agencyProjectHref,
+  agencyRefFromKnowledgeTargets,
   agencyRefHref,
   canvasNodeHref,
   findCanvasNodeForAgencyProject,
@@ -30,5 +31,16 @@ describe("workspace-agency-links", () => {
       "/agency/projects/p1?taskId=task-9",
     );
     expect(agencyRefHref({ teamId: "t1" })).toBeNull();
+  });
+
+  test("agencyRefFromKnowledgeTargets requires a project id", () => {
+    expect(agencyRefFromKnowledgeTargets({ teamId: "t1" })).toBeNull();
+    expect(
+      agencyRefFromKnowledgeTargets({ teamId: "t1", projectId: "p1", taskId: "task-9" }),
+    ).toEqual({
+      teamId: "t1",
+      projectId: "p1",
+      taskId: "task-9",
+    });
   });
 });

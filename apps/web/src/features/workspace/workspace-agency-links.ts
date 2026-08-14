@@ -28,3 +28,16 @@ export function agencyRefHref(ref: NonNullable<WorkspaceNode["agencyRef"]>) {
   if (ref.projectId) return agencyProjectHref(ref.projectId);
   return null;
 }
+
+export function agencyRefFromKnowledgeTargets(input: {
+  teamId: string;
+  projectId?: string;
+  taskId?: string;
+}) {
+  if (!input.projectId) return null;
+  return {
+    teamId: input.teamId,
+    projectId: input.projectId,
+    ...(input.taskId ? { taskId: input.taskId } : {}),
+  };
+}
