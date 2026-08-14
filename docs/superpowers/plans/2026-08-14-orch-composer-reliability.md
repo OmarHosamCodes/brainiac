@@ -24,36 +24,38 @@
 
 ## File map
 
-| File | Responsibility |
-| ---- | -------------- |
-| `apps/web/src/features/workspace-agent/workspace-agent-message-queue.ts` | FIFO enqueue/dequeue/cancel; max 5 |
-| `apps/web/src/features/workspace-agent/workspace-agent-message-queue.test.ts` | Queue unit tests |
-| `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts` | Enqueue while streaming; drain on idle; Continue; draft debounce |
-| `apps/web/src/features/workspace-agent/workspace-agent-thread-composer-view.tsx` | Mount `MessageQueue`; `@`/`/` popover |
-| `apps/web/src/features/workspace-agent/workspace-agent-thread-slots.tsx` | Mount `StoppedRun` when `streamStopped` |
-| `packages/db/src/schema/workspace.ts` | `dashboardComposerDraft` table |
-| `packages/db/src/migrations/0051_dashboard_composer_draft.sql` | Migration |
-| `packages/api/src/routers/agent/composer-draft-service.ts` | get/upsert/discard drafts |
-| `packages/api/src/routers/agent/composer-draft-service.test.ts` | Draft contract tests (pure helpers) |
-| `packages/api/src/routers/agent/router.ts` | `conversations.draft.get/upsert/discard` |
-| `apps/web/src/features/workspace-agent/workspace-agent-mentions.ts` | `@` and `/` triggers |
-| `apps/web/src/features/workspace-agent/workspace-agent-mentions.test.ts` | Trigger parser tests |
-| `packages/agent/src/types.ts` | `effort` on `agentModelPresetSchema` |
-| `packages/agent/src/index.ts` | Pass `reasoning: { effort }` into `callModel` |
-| `apps/web/src/features/workspace-agent/workspace-agent-thread-model-selector.tsx` | Effort control when tier is Pro |
-| `apps/web/src/components/elements/message-queue.tsx` | Installed presentational queue (do not restyle) |
-| `apps/web/src/components/elements/draft-restore.tsx` | Installed restore chip |
-| `apps/web/src/components/elements/stopped-run.tsx` | Installed Continue/Discard |
+| File                                                                              | Responsibility                                                   |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `apps/web/src/features/workspace-agent/workspace-agent-message-queue.ts`          | FIFO enqueue/dequeue/cancel; max 5                               |
+| `apps/web/src/features/workspace-agent/workspace-agent-message-queue.test.ts`     | Queue unit tests                                                 |
+| `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts`              | Enqueue while streaming; drain on idle; Continue; draft debounce |
+| `apps/web/src/features/workspace-agent/workspace-agent-thread-composer-view.tsx`  | Mount `MessageQueue`; `@`/`/` popover                            |
+| `apps/web/src/features/workspace-agent/workspace-agent-thread-slots.tsx`          | Mount `StoppedRun` when `streamStopped`                          |
+| `packages/db/src/schema/workspace.ts`                                             | `dashboardComposerDraft` table                                   |
+| `packages/db/src/migrations/0051_dashboard_composer_draft.sql`                    | Migration                                                        |
+| `packages/api/src/routers/agent/composer-draft-service.ts`                        | get/upsert/discard drafts                                        |
+| `packages/api/src/routers/agent/composer-draft-service.test.ts`                   | Draft contract tests (pure helpers)                              |
+| `packages/api/src/routers/agent/router.ts`                                        | `conversations.draft.get/upsert/discard`                         |
+| `apps/web/src/features/workspace-agent/workspace-agent-mentions.ts`               | `@` and `/` triggers                                             |
+| `apps/web/src/features/workspace-agent/workspace-agent-mentions.test.ts`          | Trigger parser tests                                             |
+| `packages/agent/src/types.ts`                                                     | `effort` on `agentModelPresetSchema`                             |
+| `packages/agent/src/index.ts`                                                     | Pass `reasoning: { effort }` into `callModel`                    |
+| `apps/web/src/features/workspace-agent/workspace-agent-thread-model-selector.tsx` | Effort control when tier is Pro                                  |
+| `apps/web/src/components/elements/message-queue.tsx`                              | Installed presentational queue (do not restyle)                  |
+| `apps/web/src/components/elements/draft-restore.tsx`                              | Installed restore chip                                           |
+| `apps/web/src/components/elements/stopped-run.tsx`                                | Installed Continue/Discard                                       |
 
 ---
 
 ### Task 1: Message queue domain helper
 
 **Files:**
+
 - Create: `apps/web/src/features/workspace-agent/workspace-agent-message-queue.ts`
 - Test: `apps/web/src/features/workspace-agent/workspace-agent-message-queue.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing
 - Produces: `QueuedAgentMessage`, `MAX_QUEUED_AGENT_MESSAGES`, `canEnqueueAgentMessage`, `enqueueAgentMessage`, `cancelQueuedAgentMessage`, `dequeueAgentMessage`
 
@@ -175,12 +177,14 @@ EOF
 ### Task 2: Wire queue into send and mount MessageQueue
 
 **Files:**
+
 - Modify: `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts`
 - Modify: `apps/web/src/features/workspace-agent/workspace-agent-thread-composer-view.tsx`
 - Modify: `apps/web/src/features/workspace-agent/workspace-agent-view.tsx` (pass queue props)
 - Modify: `apps/web/src/features/workspace-agent/chat-panel-view.tsx` only if composer is reached through it — prefer composer-view props from the existing composer slot in `workspace-agent-view.tsx`
 
 **Interfaces:**
+
 - Consumes: `canEnqueueAgentMessage`, `enqueueAgentMessage`, `cancelQueuedAgentMessage`, `dequeueAgentMessage` from Task 1
 - Produces: hook fields `queuedMessages`, `runningQueueLabel`, `onCancelQueuedMessage`; `sendMessage` enqueues when `isStreaming` instead of returning `false`
 
@@ -286,14 +290,16 @@ In `workspace-agent-thread-composer-view.tsx`, above the composer toolbar, when 
 ```tsx
 import { MessageQueue } from "@/components/elements/message-queue";
 
-{isStreaming || queuedMessages.length > 0 ? (
-  <MessageQueue
-    className="mb-2 max-w-none"
-    running={runningQueueLabel}
-    queued={queuedMessages}
-    onCancel={onCancelQueuedMessage}
-  />
-) : null}
+{
+  isStreaming || queuedMessages.length > 0 ? (
+    <MessageQueue
+      className="mb-2 max-w-none"
+      running={runningQueueLabel}
+      queued={queuedMessages}
+      onCancel={onCancelQueuedMessage}
+    />
+  ) : null;
+}
 ```
 
 Pass the new props from `workspace-agent-view.tsx` / composer slot. Do not change Stop: Stop still calls `stopGeneration()`; queued items stay until cancelled or drained.
@@ -320,6 +326,7 @@ EOF
 ### Task 3: Server-side composer draft persistence
 
 **Files:**
+
 - Modify: `packages/db/src/schema/workspace.ts`
 - Create: `packages/db/src/migrations/0051_dashboard_composer_draft.sql`
 - Create: `packages/db/src/migrations/meta/0051_snapshot.json` via `bun run db:generate` (do not hand-write snapshot)
@@ -329,6 +336,7 @@ EOF
 - Modify: `packages/api/src/routers/agent/router.ts`
 
 **Interfaces:**
+
 - Consumes: `DashboardConversationMessageAttachmentRecord` shape already in `packages/db/src/schema/workspace.ts`
 - Produces: `getComposerDraft(actorUserId, { conversationId })`, `upsertComposerDraft(actorUserId, input)`, `discardComposerDraft(actorUserId, { conversationId })`
 
@@ -341,10 +349,7 @@ EOF
 ```typescript
 import { describe, expect, test } from "bun:test";
 
-import {
-  composerDraftKey,
-  normalizeComposerDraftText,
-} from "./composer-draft";
+import { composerDraftKey, normalizeComposerDraftText } from "./composer-draft";
 
 describe("normalizeComposerDraftText", () => {
   test("trims and caps at 20000 characters", () => {
@@ -422,9 +427,7 @@ export const dashboardComposerDraft = pgTable(
       .default([]),
     savedAt: timestamp("saved_at").defaultNow().notNull(),
   },
-  (table) => [
-    index("dashboard_composer_draft_user_idx").on(table.userId),
-  ],
+  (table) => [index("dashboard_composer_draft_user_idx").on(table.userId)],
 );
 ```
 
@@ -469,7 +472,10 @@ type DraftInput = { conversationId?: string };
 function conversationFilter(userId: string, conversationId: string | undefined) {
   const key = composerDraftKey(conversationId);
   if (!key) {
-    return and(eq(dashboardComposerDraft.userId, userId), isNull(dashboardComposerDraft.conversationId));
+    return and(
+      eq(dashboardComposerDraft.userId, userId),
+      isNull(dashboardComposerDraft.conversationId),
+    );
   }
   return and(
     eq(dashboardComposerDraft.userId, userId),
@@ -496,7 +502,11 @@ export async function getComposerDraft(actorUserId: string, input: DraftInput) {
 
 export async function upsertComposerDraft(
   actorUserId: string,
-  input: { conversationId?: string; text: string; attachments?: Array<{ filename: string; mediaType: string; text: string }> },
+  input: {
+    conversationId?: string;
+    text: string;
+    attachments?: Array<{ filename: string; mediaType: string; text: string }>;
+  },
 ) {
   const text = normalizeComposerDraftText(input.text);
   const attachments = input.attachments ?? [];
@@ -522,7 +532,9 @@ export async function upsertComposerDraft(
 }
 
 export async function discardComposerDraft(actorUserId: string, input: DraftInput) {
-  await db.delete(dashboardComposerDraft).where(conversationFilter(actorUserId, input.conversationId));
+  await db
+    .delete(dashboardComposerDraft)
+    .where(conversationFilter(actorUserId, input.conversationId));
   return { discarded: true as const };
 }
 ```
@@ -581,10 +593,12 @@ EOF
 ### Task 4: DraftRestore chip in the composer
 
 **Files:**
+
 - Modify: `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts`
 - Modify: `apps/web/src/features/workspace-agent/workspace-agent-thread-composer-view.tsx`
 
 **Interfaces:**
+
 - Consumes: `orpc.agent.conversations.draft.get/upsert/discard` from Task 3
 - Produces: `serverDraft`, `onRestoreServerDraft`, `onDiscardServerDraft`
 
@@ -595,19 +609,16 @@ Add `apps/web/src/features/workspace-agent/composer-draft-display.ts` via TDD:
 ```typescript
 import { describe, expect, test } from "bun:test";
 
-import { formatComposerDraftSavedAt, shouldOfferComposerDraftRestore } from "./composer-draft-display";
+import {
+  formatComposerDraftSavedAt,
+  shouldOfferComposerDraftRestore,
+} from "./composer-draft-display";
 
 describe("shouldOfferComposerDraftRestore", () => {
   test("offers restore only when the live composer is empty and the server draft is not", () => {
-    expect(
-      shouldOfferComposerDraftRestore({ liveDraft: "", serverText: "hello" }),
-    ).toBe(true);
-    expect(
-      shouldOfferComposerDraftRestore({ liveDraft: "x", serverText: "hello" }),
-    ).toBe(false);
-    expect(
-      shouldOfferComposerDraftRestore({ liveDraft: "", serverText: "" }),
-    ).toBe(false);
+    expect(shouldOfferComposerDraftRestore({ liveDraft: "", serverText: "hello" })).toBe(true);
+    expect(shouldOfferComposerDraftRestore({ liveDraft: "x", serverText: "hello" })).toBe(false);
+    expect(shouldOfferComposerDraftRestore({ liveDraft: "", serverText: "" })).toBe(false);
   });
 });
 
@@ -634,7 +645,12 @@ export function shouldOfferComposerDraftRestore(input: { liveDraft: string; serv
 export function formatComposerDraftSavedAt(iso: string) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 ```
 
@@ -651,15 +667,17 @@ View — above the composer, when `shouldOfferComposerDraftRestore`:
 ```tsx
 import { DraftRestore } from "@/components/elements/draft-restore";
 
-{serverDraftOffer ? (
-  <DraftRestore
-    className="mb-2 max-w-none"
-    draft={serverDraft.text}
-    savedAt={formatComposerDraftSavedAt(serverDraft.savedAt)}
-    onRestore={onRestoreServerDraft}
-    onDiscard={onDiscardServerDraft}
-  />
-) : null}
+{
+  serverDraftOffer ? (
+    <DraftRestore
+      className="mb-2 max-w-none"
+      draft={serverDraft.text}
+      savedAt={formatComposerDraftSavedAt(serverDraft.savedAt)}
+      onRestore={onRestoreServerDraft}
+      onDiscard={onDiscardServerDraft}
+    />
+  ) : null;
+}
 ```
 
 Never write drafts to `localStorage`. The existing Zustand `draft` is in-memory only for the current session; server is source of restore.
@@ -686,10 +704,12 @@ EOF
 ### Task 5: `@` and `/` trigger parser
 
 **Files:**
+
 - Modify: `apps/web/src/features/workspace-agent/workspace-agent-mentions.ts`
 - Create: `apps/web/src/features/workspace-agent/workspace-agent-mentions.test.ts`
 
 **Interfaces:**
+
 - Consumes: existing `getActiveWorkspaceAgentMention` `@` pattern
 - Produces: `WorkspaceAgentComposerTrigger` with `kind: "at" | "slash"`, `getActiveWorkspaceAgentTrigger`, `stripActiveWorkspaceAgentTrigger`
 
@@ -757,7 +777,9 @@ export type WorkspaceAgentComposerTrigger = {
 
 const ACTIVE_TRIGGER_PATTERN = /(^|[\s([{:;,])([@/])([^\s@/]*)$/;
 
-export function getActiveWorkspaceAgentTrigger(draft: string): WorkspaceAgentComposerTrigger | null {
+export function getActiveWorkspaceAgentTrigger(
+  draft: string,
+): WorkspaceAgentComposerTrigger | null {
   const match = ACTIVE_TRIGGER_PATTERN.exec(draft);
   if (!match) return null;
   const prefix = match[1] ?? "";
@@ -838,10 +860,12 @@ EOF
 ### Task 6: Composer trigger popover
 
 **Files:**
+
 - Modify: `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts`
 - Modify: `apps/web/src/features/workspace-agent/workspace-agent-thread-composer-view.tsx`
 
 **Interfaces:**
+
 - Consumes: Task 5 trigger helpers; existing `addScopeChip`; Agency project/task lists already loaded for the tracker/team (reuse `useAgencyProjectsQuery` / task query already used by the feature, or pass `slashCandidates` from the hook via existing shared agency queries in `apps/web/src/features/shared/`)
 - Produces: `composerTrigger`, `composerTriggerSuggestions`, `onPickComposerTrigger`
 
@@ -910,12 +934,14 @@ EOF
 ### Task 7: Continue after Stop
 
 **Files:**
+
 - Modify: `apps/web/src/features/workspace-agent/workspace-agent-thread-slots.tsx`
 - Modify: `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts`
 - Create: `apps/web/src/features/workspace-agent/workspace-agent-continue.ts`
 - Create: `apps/web/src/features/workspace-agent/workspace-agent-continue.test.ts`
 
 **Interfaces:**
+
 - Consumes: existing `streamStopped` (set from `data-orchCompleted.stopped`)
 - Produces: `CONTINUE_TURN_TEXT`, `continueStoppedTurn()`, `dismissStoppedTurn()`
 
@@ -975,15 +1001,17 @@ In `WorkspaceAgentThreadMessageProvider` / thread slots, when `shouldShowStopped
 ```tsx
 import { StoppedRun } from "@/components/elements/stopped-run";
 
-{shouldShowStoppedRun({ streamStopped, isStreaming }) ? (
-  <StoppedRun
-    className="max-w-none px-4"
-    words={lastAssistantText.split(/\s+/).filter(Boolean).slice(-24)}
-    reason="Stopped"
-    onContinue={onContinueStoppedTurn}
-    onDiscard={onDismissStoppedTurn}
-  />
-) : null}
+{
+  shouldShowStoppedRun({ streamStopped, isStreaming }) ? (
+    <StoppedRun
+      className="max-w-none px-4"
+      words={lastAssistantText.split(/\s+/).filter(Boolean).slice(-24)}
+      reason="Stopped"
+      onContinue={onContinueStoppedTurn}
+      onDiscard={onDismissStoppedTurn}
+    />
+  ) : null;
+}
 ```
 
 `lastAssistantText` comes from the last assistant `OrchUIMessage` text parts. Do not delete that message on Discard.
@@ -1010,12 +1038,14 @@ EOF
 ### Task 8: Reasoning effort on the wire
 
 **Files:**
+
 - Modify: `packages/agent/src/types.ts` (`agentModelPresetSchema`, `DEFAULT_AGENT_MODEL_PRESET`)
 - Create: `packages/agent/src/reasoning-effort.ts`
 - Create: `packages/agent/src/reasoning-effort.test.ts`
 - Modify: `packages/agent/src/index.ts` (`callModel` in both tool and text-only passes)
 
 **Interfaces:**
+
 - Consumes: `AgentModelPreset` already on `agentChatTurnInputSchema.modelPreset`
 - Produces: `resolveOpenRouterReasoning(preset): { effort: "low" | "medium" | "high" } | undefined`
 
@@ -1036,9 +1066,7 @@ describe("resolveOpenRouterReasoning", () => {
     expect(
       resolveOpenRouterReasoning({ tier: "balanced", auto: true, free: false, effort: "high" }),
     ).toBeUndefined();
-    expect(
-      resolveOpenRouterReasoning({ tier: "pro", auto: true, free: false }),
-    ).toBeUndefined();
+    expect(resolveOpenRouterReasoning({ tier: "pro", auto: true, free: false })).toBeUndefined();
   });
 });
 ```
@@ -1115,11 +1143,13 @@ EOF
 ### Task 9: Pro effort control in ModelSelector
 
 **Files:**
+
 - Modify: `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-model-preset.ts`
 - Modify: `apps/web/src/features/workspace-agent/workspace-agent-thread-model-selector.tsx`
 - Modify: `apps/web/src/components/assistant-ui/model-selector.tsx` only if `ModelSelector` needs an `effort` / `onEffortChange` passthrough — it already has `efforts` on `ModelOption` and `resolveModelEffort`
 
 **Interfaces:**
+
 - Consumes: `agentReasoningEffortSchema`; `DEFAULT_EFFORT_OPTIONS` in model-selector
 - Produces: `modelPreset.effort` included in `buildOrchTurnSendContext`
 

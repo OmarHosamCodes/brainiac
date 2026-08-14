@@ -26,35 +26,37 @@
 
 ## File map
 
-| File | Responsibility |
-| ---- | -------------- |
-| `packages/api/src/routers/agency-ops/time-tracking/time-gaps.ts` | Pure gap carving (≥60s) + neighbor inheritance |
-| `packages/api/src/routers/agency-ops/time-tracking/time-gaps.test.ts` | Gap tests |
-| `packages/api/src/routers/agency-ops/time-tracking/service.ts` | `listMyAgencyTimeEntriesInRange` |
-| `packages/agent/src/types.ts` | Runtime methods: gaps, alerts, money obligations |
-| `packages/agent/src/agency-tools.ts` | `list_agency_time_gaps`, `list_member_profile_alerts`, `get_agency_client_bill` |
-| `packages/agent/src/tool-catalog.ts` | Catalog entries |
-| `packages/agent/src/tool-catalog.test.ts` | Catalog assertions |
-| `packages/agent/src/agency-actions.ts` | `money.export_client` |
-| `packages/agent/src/agency-actions.test.ts` | Parse/label tests |
-| `packages/agent/src/index.ts` | Agency Plan/Agent instructions for gaps, bills, waste, alerts |
-| `packages/api/src/routers/agent/service.ts` | Wire runtime methods |
-| `packages/api/src/routers/agent/agency-proposals.ts` | Before/after/execute for `money.export_client` |
-| `apps/web/src/features/notifications/notification-presentation.ts` | `member.alert` CTA → Ask Orch |
-| `apps/web/src/features/notifications/hooks/use-featured-rail-notification.ts` | Expand composer + seed Plan |
-| `apps/web/src/features/time-tracking/description-suggestions.ts` | `existingTaskSuggestionFromRanked` |
-| `apps/web/src/features/time-tracking/description-suggestions.test.ts` | Chip tests |
-| `apps/web/src/features/reports/*` | Optional "Ask Orch" on a single waste cell |
+| File                                                                          | Responsibility                                                                  |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `packages/api/src/routers/agency-ops/time-tracking/time-gaps.ts`              | Pure gap carving (≥60s) + neighbor inheritance                                  |
+| `packages/api/src/routers/agency-ops/time-tracking/time-gaps.test.ts`         | Gap tests                                                                       |
+| `packages/api/src/routers/agency-ops/time-tracking/service.ts`                | `listMyAgencyTimeEntriesInRange`                                                |
+| `packages/agent/src/types.ts`                                                 | Runtime methods: gaps, alerts, money obligations                                |
+| `packages/agent/src/agency-tools.ts`                                          | `list_agency_time_gaps`, `list_member_profile_alerts`, `get_agency_client_bill` |
+| `packages/agent/src/tool-catalog.ts`                                          | Catalog entries                                                                 |
+| `packages/agent/src/tool-catalog.test.ts`                                     | Catalog assertions                                                              |
+| `packages/agent/src/agency-actions.ts`                                        | `money.export_client`                                                           |
+| `packages/agent/src/agency-actions.test.ts`                                   | Parse/label tests                                                               |
+| `packages/agent/src/index.ts`                                                 | Agency Plan/Agent instructions for gaps, bills, waste, alerts                   |
+| `packages/api/src/routers/agent/service.ts`                                   | Wire runtime methods                                                            |
+| `packages/api/src/routers/agent/agency-proposals.ts`                          | Before/after/execute for `money.export_client`                                  |
+| `apps/web/src/features/notifications/notification-presentation.ts`            | `member.alert` CTA → Ask Orch                                                   |
+| `apps/web/src/features/notifications/hooks/use-featured-rail-notification.ts` | Expand composer + seed Plan                                                     |
+| `apps/web/src/features/time-tracking/description-suggestions.ts`              | `existingTaskSuggestionFromRanked`                                              |
+| `apps/web/src/features/time-tracking/description-suggestions.test.ts`         | Chip tests                                                                      |
+| `apps/web/src/features/reports/*`                                             | Optional "Ask Orch" on a single waste cell                                      |
 
 ---
 
 ### Task 1: Time-gap carving helper
 
 **Files:**
+
 - Create: `packages/api/src/routers/agency-ops/time-tracking/time-gaps.ts`
 - Test: `packages/api/src/routers/agency-ops/time-tracking/time-gaps.test.ts`
 
 **Interfaces:**
+
 - Consumes: `{ startedAt, endedAt, projectId, taskId }[]` plus window `{ fromMs, toMs }`
 - Produces: `AgencyTimeGap[]` with `startAt`, `endAt`, `durationSeconds`, inherited `projectId`/`taskId`
 
@@ -231,6 +233,7 @@ EOF
 ### Task 2: `list_agency_time_gaps` tool
 
 **Files:**
+
 - Modify: `packages/api/src/routers/agency-ops/time-tracking/service.ts` — add `listMyAgencyTimeEntriesInRange(actorUserId, { teamId, from, to })` reusing the same select as `listMyAgencyTimeEntries` with `gte(startedAt)` / `lte(endedAt)` on the window. Cap 500 rows.
 - Modify: `packages/agent/src/types.ts` — `listTimeGaps` on `AgencyAgentRuntime`
 - Modify: `packages/api/src/routers/agent/service.ts` — implement runtime method with `carveAgencyTimeGaps`
@@ -240,6 +243,7 @@ EOF
 - Modify: `packages/agent/src/index.ts` — Ask/Plan/Agent copy: check then propose; never insert during check
 
 **Interfaces:**
+
 - Consumes: `carveAgencyTimeGaps`, `agencyDateRangeInputSchema`
 - Produces: tool `list_agency_time_gaps` on Agency Ask/Plan/Agent
 
@@ -263,19 +267,20 @@ Expected: FAIL `list_agency_time_gaps`
 `AgencyAgentRuntime` addition:
 
 ```typescript
-listTimeGaps: (input: { from: string; to: string }) => Promise<{
-  from: string;
-  to: string;
-  trackedSeconds: number;
-  gapSeconds: number;
-  gaps: Array<{
-    startAt: string;
-    endAt: string;
-    durationSeconds: number;
-    projectId: string | null;
-    taskId: string | null;
+listTimeGaps: (input: { from: string; to: string }) =>
+  Promise<{
+    from: string;
+    to: string;
+    trackedSeconds: number;
+    gapSeconds: number;
+    gaps: Array<{
+      startAt: string;
+      endAt: string;
+      durationSeconds: number;
+      projectId: string | null;
+      taskId: string | null;
+    }>;
   }>;
-}>;
 ```
 
 Tool (Ask/Plan/Agent, Agency surface):
@@ -337,12 +342,14 @@ EOF
 ### Task 3: `money.export_client` action
 
 **Files:**
+
 - Modify: `packages/agent/src/agency-actions.ts`
 - Modify: `packages/agent/src/agency-actions.test.ts`
 - Modify: `packages/api/src/routers/agent/agency-proposals.ts` (`loadAgencyActionBefore`, after-map, `executeAgencyAction`)
 - Modify: `packages/api/src/routers/agency-ops/billing/money-export-service.ts` only if `ExportSelection` must be exported — prefer calling `exportMoneyDocuments` from execute with selections built from listed obligations
 
 **Interfaces:**
+
 - Consumes: `exportMoneyDocuments(actorUserId, { teamId, partyType: "client", partyId, mode, selections })`
 - Produces: `AgencyAction` variant `money.export_client`
 
@@ -466,6 +473,7 @@ EOF
 ### Task 4: Money read tool + instructions
 
 **Files:**
+
 - Modify: `packages/agent/src/types.ts` — `getClientBill`
 - Modify: `packages/api/src/routers/agent/service.ts`
 - Modify: `packages/agent/src/agency-tools.ts`
@@ -474,6 +482,7 @@ EOF
 - Modify: `packages/agent/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `listPeriodMoneyObligations`
 - Produces: `get_agency_client_bill`
 
@@ -494,26 +503,23 @@ Run: `bun test packages/agent/src/tool-catalog.test.ts`
 Runtime:
 
 ```typescript
-getClientBill: (input: {
-  clientId: string;
-  periodStart: string;
-  periodEnd: string;
-}) => Promise<{
-  clientId: string;
-  clientName: string | null;
-  amount: number;
-  remainingAmount: number;
-  wasteAmount: number;
-  lines: Array<{
-    id: string;
-    kind: "invoice" | "ready";
-    isCarry: boolean;
-    periodStart: string;
-    periodEnd: string;
+getClientBill: (input: { clientId: string; periodStart: string; periodEnd: string }) =>
+  Promise<{
+    clientId: string;
+    clientName: string | null;
     amount: number;
     remainingAmount: number;
+    wasteAmount: number;
+    lines: Array<{
+      id: string;
+      kind: "invoice" | "ready";
+      isCarry: boolean;
+      periodStart: string;
+      periodEnd: string;
+      amount: number;
+      remainingAmount: number;
+    }>;
   }>;
-}>;
 ```
 
 Tool description: "Read one client's composed bill for a period (current + carry). Amounts are integer minor units. Does not export or send."
@@ -546,6 +552,7 @@ EOF
 ### Task 5: Needs-action Ask Orch
 
 **Files:**
+
 - Modify: `apps/web/src/features/notifications/notification-presentation.ts`
 - Modify: `apps/web/src/features/notifications/notification-presentation.test.ts` (or `copy.test.ts` on web if that is where CTA tests live — grep `featuredNotificationCta`)
 - Modify: `apps/web/src/features/notifications/hooks/use-featured-rail-notification.ts`
@@ -556,6 +563,7 @@ EOF
 - Modify: `packages/agent/src/index.ts` — alert copy
 
 **Interfaces:**
+
 - Consumes: `member.alert` payload (`alertTitle`, `notePreview`, `dateKey`, `alertId`, `subjectUserId`)
 - Produces: featured CTA `kind: "ask-orch"`; composer opens in **Plan** with a seeded prompt
 
@@ -669,12 +677,14 @@ EOF
 ### Task 6: Tracker existing-task chip
 
 **Files:**
+
 - Modify: `apps/web/src/features/time-tracking/description-suggestions.ts`
 - Modify: `apps/web/src/features/time-tracking/description-suggestions.test.ts`
 - Modify: `apps/web/src/features/time-tracking/hooks/use-agency-time-tracker.ts`
 - Modify: the tracker description view that already renders the datalist (grep `handleDescriptionSuggestionSelect` / `AgencyDescriptionDatalistField`)
 
 **Interfaces:**
+
 - Consumes: `rankDescriptionDatalistOptions`, current `taskId`
 - Produces: `existingTaskSuggestionFromRanked` — `{ taskId, taskTitle, projectId } | null`
 
@@ -796,12 +806,14 @@ EOF
 ### Task 7: Waste copilot on a targeted live-report entry
 
 **Files:**
+
 - Modify: `packages/agent/src/index.ts` (waste rule — already partly in Task 2; tighten)
 - Create: `apps/web/src/features/reports/agency-report-orch-waste.ts`
 - Create: `apps/web/src/features/reports/agency-report-orch-waste.test.ts`
 - Modify: live report row actions (`apps/web/src/features/reports/agency-report-row-actions.tsx` is a view — pass `onAskOrchWaste` from the live report container/hook)
 
 **Interfaces:**
+
 - Consumes: one `entryId` + short label
 - Produces: `buildWasteOrchPrompt(entry)` that seeds Agent mode with that entry only
 

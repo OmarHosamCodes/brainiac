@@ -22,26 +22,28 @@
 
 ## File map
 
-| File | Responsibility |
-| ---- | -------------- |
-| `packages/agent/src/canvas-actions.ts` | `node.update` Zod, label, board target, bind/stamp switches |
-| `packages/agent/src/canvas-actions.test.ts` | Parse + apply tests |
-| `packages/agent/src/tools.ts` | `applyCanvasAction` case `node.update` |
-| `packages/agent/src/index.ts` | Scoped Plan/Agent instructions; agencyRef stitch |
-| `packages/workspace/src/index.ts` | Optional helper `patchWorkspaceNodeAgencyRef` if apply needs it — prefer inline in `applyCanvasAction` |
-| `apps/web/src/features/workspace-agent/workspace-agent-scope-plan.ts` | Seed Plan prompt when a node chip is added |
-| `apps/web/src/features/workspace-agent/workspace-agent-scope-plan.test.ts` | Seed copy tests |
-| `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts` | Optional Plan seed after sniper add (do not coerce Ask) |
+| File                                                                       | Responsibility                                                                                         |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `packages/agent/src/canvas-actions.ts`                                     | `node.update` Zod, label, board target, bind/stamp switches                                            |
+| `packages/agent/src/canvas-actions.test.ts`                                | Parse + apply tests                                                                                    |
+| `packages/agent/src/tools.ts`                                              | `applyCanvasAction` case `node.update`                                                                 |
+| `packages/agent/src/index.ts`                                              | Scoped Plan/Agent instructions; agencyRef stitch                                                       |
+| `packages/workspace/src/index.ts`                                          | Optional helper `patchWorkspaceNodeAgencyRef` if apply needs it — prefer inline in `applyCanvasAction` |
+| `apps/web/src/features/workspace-agent/workspace-agent-scope-plan.ts`      | Seed Plan prompt when a node chip is added                                                             |
+| `apps/web/src/features/workspace-agent/workspace-agent-scope-plan.test.ts` | Seed copy tests                                                                                        |
+| `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts`       | Optional Plan seed after sniper add (do not coerce Ask)                                                |
 
 ---
 
 ### Task 1: `node.update` schema and labels
 
 **Files:**
+
 - Modify: `packages/agent/src/canvas-actions.ts`
 - Modify: `packages/agent/src/canvas-actions.test.ts`
 
 **Interfaces:**
+
 - Consumes: existing `canvasActionSchema` discriminated union; `agencyRef` object already on `node.create`
 - Produces: `node.update` with `nodeId` plus optional `title`, `visibility`, `teamId`, `agencyRef`
 
@@ -153,11 +155,13 @@ EOF
 ### Task 2: Apply `node.update`
 
 **Files:**
+
 - Modify: `packages/agent/src/tools.ts` (`applyCanvasAction` switch)
 - Modify: `packages/agent/src/canvas-actions.test.ts` (apply tests)
 - Grep `switch (action.type)` / `CanvasAction` in `packages/agent` and `packages/api/src/routers/agent/agency-proposals.ts` for canvas execute — add the case wherever `never` breaks
 
 **Interfaces:**
+
 - Consumes: `workspaceNodeSchema` validation after patch
 - Produces: mutated node in `nextNodes`; `before`/`after` snapshots
 
@@ -263,10 +267,12 @@ EOF
 ### Task 3: Instructions for scoped node Plan and agencyRef stitch
 
 **Files:**
+
 - Modify: `packages/agent/src/index.ts` (`buildCanvasPlanInstructions`, `buildCanvasAgentModeInstructions`, merged Agency+Canvas instructions)
 - Create: `packages/agent/src/canvas-scope-instructions.test.ts` if instructions are extracted; otherwise assert via a tiny exported helper
 
 **Interfaces:**
+
 - Consumes: `workspace.scopeRefs` / `scopeNodes`
 - Produces: `buildCanvasScopedPatchNote(workspace)` string
 
@@ -358,11 +364,13 @@ EOF
 ### Task 4: Sniper / `@` node chip → Plan seed (do not coerce Ask)
 
 **Files:**
+
 - Create: `apps/web/src/features/workspace-agent/workspace-agent-scope-plan.ts`
 - Create: `apps/web/src/features/workspace-agent/workspace-agent-scope-plan.test.ts`
 - Modify: `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts` (`addMentionedNode` and sniper `addScopeChip` path)
 
 **Interfaces:**
+
 - Consumes: added `AgentScopeRef` with `kind: "node"`
 - Produces: optional composer seed when current preset is **Plan** (leave Ask and Agent alone)
 

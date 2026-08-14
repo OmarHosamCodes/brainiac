@@ -20,30 +20,32 @@
 
 ## File map
 
-| File | Responsibility |
-| ---- | -------------- |
-| `apps/web/src/features/workspace-agent/workspace-agent-thread-filter.ts` | Filter history threads by title/preview |
-| `apps/web/src/features/workspace-agent/workspace-agent-thread-filter.test.ts` | Filter tests |
-| `apps/web/src/features/workspace-agent/workspace-agent-message-search.ts` | Find hits in current messages |
-| `apps/web/src/features/workspace-agent/workspace-agent-message-search.test.ts` | Hit tests |
-| `apps/web/src/features/workspace-agent/workspace-agent-read-aloud.ts` | Split words + wrap speechSynthesis |
-| `apps/web/src/features/workspace-agent/workspace-agent-read-aloud.test.ts` | Word split tests |
-| `apps/web/src/features/workspace-agent/workspace-agent-thread-history.tsx` | Mount `ThreadSearch` |
-| `apps/web/src/features/workspace-agent/chat-panel-view.tsx` | Mount in-thread `ConversationSearch`; pass preview |
-| `apps/web/src/features/workspace-agent/workspace-agent-thread-slots.tsx` | Read-aloud icon on assistant messages |
-| `apps/web/src/components/elements/thread-search.tsx` | Installed (do not restyle) |
-| `apps/web/src/components/elements/conversation-search.tsx` | Installed (do not restyle) |
-| `apps/web/src/components/elements/read-aloud.tsx` | Do not mount as persistent chrome |
+| File                                                                           | Responsibility                                     |
+| ------------------------------------------------------------------------------ | -------------------------------------------------- |
+| `apps/web/src/features/workspace-agent/workspace-agent-thread-filter.ts`       | Filter history threads by title/preview            |
+| `apps/web/src/features/workspace-agent/workspace-agent-thread-filter.test.ts`  | Filter tests                                       |
+| `apps/web/src/features/workspace-agent/workspace-agent-message-search.ts`      | Find hits in current messages                      |
+| `apps/web/src/features/workspace-agent/workspace-agent-message-search.test.ts` | Hit tests                                          |
+| `apps/web/src/features/workspace-agent/workspace-agent-read-aloud.ts`          | Split words + wrap speechSynthesis                 |
+| `apps/web/src/features/workspace-agent/workspace-agent-read-aloud.test.ts`     | Word split tests                                   |
+| `apps/web/src/features/workspace-agent/workspace-agent-thread-history.tsx`     | Mount `ThreadSearch`                               |
+| `apps/web/src/features/workspace-agent/chat-panel-view.tsx`                    | Mount in-thread `ConversationSearch`; pass preview |
+| `apps/web/src/features/workspace-agent/workspace-agent-thread-slots.tsx`       | Read-aloud icon on assistant messages              |
+| `apps/web/src/components/elements/thread-search.tsx`                           | Installed (do not restyle)                         |
+| `apps/web/src/components/elements/conversation-search.tsx`                     | Installed (do not restyle)                         |
+| `apps/web/src/components/elements/read-aloud.tsx`                              | Do not mount as persistent chrome                  |
 
 ---
 
 ### Task 1: History thread filter helper
 
 **Files:**
+
 - Create: `apps/web/src/features/workspace-agent/workspace-agent-thread-filter.ts`
 - Test: `apps/web/src/features/workspace-agent/workspace-agent-thread-filter.test.ts`
 
 **Interfaces:**
+
 - Consumes: `{ id, label, preview, stamp }` conversation options
 - Produces: `filterWorkspaceAgentThreads(threads, query)`
 
@@ -120,11 +122,13 @@ EOF
 ### Task 2: Mount ThreadSearch in the history rail
 
 **Files:**
+
 - Modify: `apps/web/src/features/workspace-agent/chat-panel-view.tsx` (`WorkspaceAgentConversationOption` add `preview: string`)
 - Modify: `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts` (map list API preview onto options)
 - Modify: `apps/web/src/features/workspace-agent/workspace-agent-thread-history.tsx`
 
 **Interfaces:**
+
 - Consumes: `filterWorkspaceAgentThreads`; installed `ThreadSearch`
 - Produces: history rail search box; selecting a row still calls `onSelectConversation`
 
@@ -224,10 +228,12 @@ EOF
 ### Task 3: In-conversation hit extraction
 
 **Files:**
+
 - Create: `apps/web/src/features/workspace-agent/workspace-agent-message-search.ts`
 - Test: `apps/web/src/features/workspace-agent/workspace-agent-message-search.test.ts`
 
 **Interfaces:**
+
 - Consumes: `OrchUIMessage[]` text (join text parts)
 - Produces: `SearchHit[]` compatible with `ConversationSearch` (`id`, `before`, `match`, `after`, `position`)
 
@@ -269,7 +275,10 @@ export type WorkspaceAgentMessageSearchHit = {
 
 const CONTEXT = 24;
 
-export function findWorkspaceAgentMessageHits(haystack: string, query: string): WorkspaceAgentMessageSearchHit[] {
+export function findWorkspaceAgentMessageHits(
+  haystack: string,
+  query: string,
+): WorkspaceAgentMessageSearchHit[] {
   const needle = query.trim();
   if (!needle) return [];
   const lowerHay = haystack.toLowerCase();
@@ -291,7 +300,9 @@ export function findWorkspaceAgentMessageHits(haystack: string, query: string): 
   return hits;
 }
 
-export function joinOrchMessageText(messages: Array<{ parts?: Array<{ type: string; text?: string }> }>) {
+export function joinOrchMessageText(
+  messages: Array<{ parts?: Array<{ type: string; text?: string }> }>,
+) {
   return messages
     .flatMap((message) => message.parts ?? [])
     .filter((part) => part.type === "text" && typeof part.text === "string")
@@ -322,10 +333,12 @@ EOF
 ### Task 4: Mount ConversationSearch in the expanded thread
 
 **Files:**
+
 - Modify: `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts`
 - Modify: `apps/web/src/features/workspace-agent/chat-panel-view.tsx`
 
 **Interfaces:**
+
 - Consumes: `findWorkspaceAgentMessageHits`, `joinOrchMessageText`, `ConversationSearch`
 - Produces: `threadSearchQuery`, `threadSearchHits`, `threadSearchIndex`, `onThreadSearchQueryChange`, `onThreadSearchStep`
 
@@ -361,16 +374,18 @@ Hook owns query/index. `chat-panel-view.tsx` is presentational: render `Conversa
 ```tsx
 import { ConversationSearch } from "@/components/elements/conversation-search";
 
-{threadSearchOpen ? (
-  <ConversationSearch
-    className="max-w-none px-3 py-2"
-    query={threadSearchQuery}
-    hits={threadSearchHits}
-    activeIndex={threadSearchIndex}
-    onQueryChange={onThreadSearchQueryChange}
-    onStep={onThreadSearchStep}
-  />
-) : null}
+{
+  threadSearchOpen ? (
+    <ConversationSearch
+      className="max-w-none px-3 py-2"
+      query={threadSearchQuery}
+      hits={threadSearchHits}
+      activeIndex={threadSearchIndex}
+      onQueryChange={onThreadSearchQueryChange}
+      onStep={onThreadSearchStep}
+    />
+  ) : null;
+}
 ```
 
 Add a quiet search icon button next to New chat / history that toggles `threadSearchOpen`. Keyboard: when expanded, `Mod+F` focuses find-in-thread (do not steal browser find if you cannot preventDefault reliably — toggle our bar and focus its input).
@@ -399,12 +414,14 @@ EOF
 ### Task 5: Read-aloud for the latest assistant message
 
 **Files:**
+
 - Create: `apps/web/src/features/workspace-agent/workspace-agent-read-aloud.ts`
 - Test: `apps/web/src/features/workspace-agent/workspace-agent-read-aloud.test.ts`
 - Modify: `apps/web/src/features/workspace-agent/workspace-agent-thread-slots.tsx`
 - Modify: `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts`
 
 **Interfaces:**
+
 - Consumes: last assistant text; `window.speechSynthesis` in the hook only
 - Produces: `splitReadAloudWords`, `onToggleReadAloud`, `readAloudPlaying`
 
