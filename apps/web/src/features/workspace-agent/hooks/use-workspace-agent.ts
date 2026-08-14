@@ -25,6 +25,12 @@ import { useAgentCanvasOverlay } from "@/features/workspace-agent/hooks/use-agen
 import { useAgentScopeModeListener } from "@/features/workspace-agent/hooks/use-agent-scope-mode-listener";
 import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agency-timer";
 import { useWorkspaceStore } from "@/features/workspace/workspace-local-state";
+import { useWorkspaceKnowledgeStore } from "@/features/workspace-knowledge/stores/workspace-knowledge";
+import {
+  knowledgeCreateKinds,
+  knowledgeCreateLabel,
+  type KnowledgeCreateKind,
+} from "@/features/workspace-knowledge/knowledge-create";
 import {
   getActiveWorkspaceAgentMention,
   getActiveWorkspaceAgentTrigger,
@@ -1209,6 +1215,15 @@ export function useWorkspaceAgent() {
     });
   }, [addScopeChip, surface]);
 
+  const requestCreateKind = useWorkspaceKnowledgeStore((state) => state.requestCreateKind);
+  const onCreateKnowledgeKind = useCallback(
+    (kind: KnowledgeCreateKind) => {
+      setExpanded(true);
+      requestCreateKind(kind);
+    },
+    [requestCreateKind, setExpanded],
+  );
+
   const onOpenBoard = useCallback(
     (href: string) => {
       void navigate(href);
@@ -1283,6 +1298,11 @@ export function useWorkspaceAgent() {
         ? ("Canvas" as const)
         : ("Agency" as const),
     onUnlockCrossSurface,
+    onCreateKnowledgeKind,
+    knowledgeCreateItems:
+      surface === "canvas"
+        ? knowledgeCreateKinds.map((kind) => ({ kind, label: knowledgeCreateLabel(kind) }))
+        : [],
     onOpenBoard,
     selectedModelId,
     selectedModelLabel: modelPresetState.selectedModelLabel,

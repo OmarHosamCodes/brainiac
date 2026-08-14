@@ -143,6 +143,8 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                       planModeEnabled={view.planModeEnabled}
                       crossSurfaceUnlockLabel={view.crossSurfaceUnlockLabel}
                       onUnlockCrossSurface={view.onUnlockCrossSurface}
+                      knowledgeCreateItems={view.knowledgeCreateItems}
+                      onCreateKnowledgeKind={view.onCreateKnowledgeKind}
                       selectedModelLabel={view.selectedModelLabel}
                       selectedModelButtonLabel={view.selectedModelButtonLabel}
                       resolvedModelLabel={view.resolvedModelLabel}
