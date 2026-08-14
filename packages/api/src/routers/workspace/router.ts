@@ -94,7 +94,10 @@ export const workspaceRouter = {
       .input(workspaceKnowledgeBoardInputSchema)
       .handler(async ({ context, input }) =>
         z
-          .object({ items: z.array(knowledgeBoardCardSchema) })
+          .object({
+            items: z.array(knowledgeBoardCardSchema),
+            unplaced: z.array(knowledgeBoardCardSchema),
+          })
           .parse(await listKnowledgeBoard(context.session.user.id, input)),
       ),
     capture: protectedProcedure
