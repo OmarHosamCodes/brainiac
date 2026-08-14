@@ -214,7 +214,7 @@ export type AgentAgencyProposalStatus =
   | "failed"
   | "expired";
 
-export type AgentProposalDomain = "agency" | "canvas";
+export type AgentProposalDomain = "agency" | "canvas" | "knowledge";
 
 /** Pending agent writes awaiting human Approve/Reject (Agency + Canvas). */
 export const agentAgencyProposal = pgTable(
