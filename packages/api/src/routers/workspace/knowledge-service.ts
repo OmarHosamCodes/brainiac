@@ -10,8 +10,6 @@ import {
 import {
   createWorkspaceId,
   defaultKnowledgePlacementSize,
-  inboxClusterFrame,
-  inboxClusterPlacement,
   isAgencyObjectType,
   isCanvasNativeObjectType,
   knowledgeBoardCardSchema,
@@ -23,7 +21,6 @@ import {
   knowledgeRelationSchema,
   knowledgeSourcePropertiesSchema,
   knowledgeToWorkspaceNode,
-  KNOWLEDGE_INBOX_CLUSTER_ID,
   parseKnowledgeSourceProperties,
   shouldProjectIntoWorkspaceBlob,
   WORKSPACE_NODE_LIMIT,
@@ -1015,7 +1012,7 @@ function toBoardCard(input: {
 export async function listKnowledgeBoard(
   actorUserId: string,
   input: { teamId?: string | null },
-): Promise<{ items: KnowledgeBoardCard[] }> {
+): Promise<{ items: KnowledgeBoardCard[]; unplaced: KnowledgeBoardCard[] }> {
   const teamId = input.teamId ?? null;
   if (teamId) {
     await requireTeamMembership(actorUserId, teamId, "viewer");
@@ -1059,12 +1056,27 @@ export async function listKnowledgeBoard(
   const folderByChild = new Map(folderLinks.map((row) => [row.fromObjectId, row.toObjectId]));
 
   const items: KnowledgeBoardCard[] = [];
-  const unplaced: KnowledgeObject[] = [];
+  const unplaced: KnowledgeBoardCard[] = [];
   for (const row of rows) {
     const object = rowToObject(row);
     const placement = placementByObject.get(object.id);
     if (!placement) {
-      unplaced.push(object);
+      const size = defaultKnowledgePlacementSize(object.objectType);
+      unplaced.push(
+        toBoardCard({
+          id: object.id,
+          objectType: object.objectType,
+          title: object.title,
+          x: 0,
+          y: 0,
+          width: size.width,
+          height: size.height,
+          origin: "canvas",
+          teamId: object.teamId,
+          bodyPreview: knowledgeBodyPreview(object),
+          unplaced: true,
+        }),
+      );
       continue;
     }
     items.push(
@@ -1082,49 +1094,6 @@ export async function listKnowledgeBoard(
         bodyPreview: knowledgeBodyPreview(object),
       }),
     );
-  }
-
-  if (unplaced.length > 0) {
-    const frame = inboxClusterFrame(unplaced.length);
-    items.push(
-      knowledgeBoardCardSchema.parse({
-        id: KNOWLEDGE_INBOX_CLUSTER_ID,
-        kind: "inbox",
-        objectType: "folder",
-        title: "Inbox",
-        x: frame.x,
-        y: frame.y,
-        width: frame.width,
-        height: frame.height,
-        parentId: null,
-        href: "/canvas",
-        agencyHref: null,
-        chip: "Inbox",
-        readOnly: true,
-        unplaced: false,
-        origin: "inbox",
-        teamId,
-      }),
-    );
-    unplaced.forEach((object, index) => {
-      const slot = inboxClusterPlacement(index);
-      items.push(
-        toBoardCard({
-          id: object.id,
-          objectType: object.objectType,
-          title: object.title,
-          x: slot.x,
-          y: slot.y,
-          width: slot.width,
-          height: slot.height,
-          parentId: KNOWLEDGE_INBOX_CLUSTER_ID,
-          origin: "inbox",
-          teamId: object.teamId,
-          bodyPreview: knowledgeBodyPreview(object),
-          unplaced: true,
-        }),
-      );
-    });
   }
 
   const canvasIds = new Set(rows.map((row) => row.id));
@@ -1167,5 +1136,5 @@ export async function listKnowledgeBoard(
     if (card) items.push(card);
   }
 
-  return { items };
+  return { items, unplaced };
 }

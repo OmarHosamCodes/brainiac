@@ -316,6 +316,11 @@ describe("workspace knowledge dual-write", () => {
       id: privateNote.objectId ?? "",
     });
     expect(stored.object?.title).toBe("Private thought");
+    const board = await knowledgeService.listKnowledgeBoard(ownerUserId, {});
+    expect(board.items.some((item) => item.kind === "inbox")).toBe(false);
+    expect(board.unplaced.some((item) => item.id === privateNote.objectId && item.unplaced)).toBe(
+      true,
+    );
 
     const teamNote = await knowledgeCapture.captureKnowledgeAction(ownerUserId, {
       action: {
