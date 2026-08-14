@@ -264,3 +264,28 @@ export function getTeamAvatarPublicUrl(args: {
   const version = args.storageKey.split("/").pop()?.split(".")[0];
   return version ? `${base}?v=${version}` : base;
 }
+
+export async function getKnowledgeSourceReadUrl(storageKey: string) {
+  const command = new GetObjectCommand({
+    Bucket: env.S3_BUCKET,
+    Key: storageKey,
+  });
+  return getSignedUrl(s3Client, command, { expiresIn: 60 * 60 });
+}
+
+export async function uploadKnowledgeSourceBuffer(args: {
+  storageKey: string;
+  buffer: Buffer;
+  mimeType: string;
+}) {
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: args.storageKey,
+      Body: args.buffer,
+      ContentType: args.mimeType,
+      ContentLength: args.buffer.byteLength,
+    }),
+  );
+  return { publicUrl: await getKnowledgeSourceReadUrl(args.storageKey) };
+}

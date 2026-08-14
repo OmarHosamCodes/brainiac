@@ -23,6 +23,7 @@ import { logger } from "hono/logger";
 
 import { handleAppRouterRequest } from "./lib/handlers";
 import { logStartup } from "./lib/startup";
+import { registerKnowledgeSourceUploadRoute } from "./lib/knowledge-sources";
 import { registerTaskAttachmentUploadRoute } from "./lib/task-attachments";
 import { registerTeamAvatarRoutes } from "./lib/team-avatar";
 import { registerUserAvatarRoutes } from "./lib/user-avatar";
@@ -138,6 +139,7 @@ function createApp() {
   });
 
   registerTaskAttachmentUploadRoute(app);
+  registerKnowledgeSourceUploadRoute(app);
   registerUserAvatarRoutes(app);
   registerTeamAvatarRoutes(app);
 
