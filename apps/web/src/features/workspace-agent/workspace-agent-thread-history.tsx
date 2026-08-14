@@ -1,4 +1,4 @@
-import { PlusIcon, SearchIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 
 import { ThreadList } from "@/components/elements/thread-list";
 import { ThreadSearch } from "@/components/elements/thread-search";
@@ -22,27 +22,25 @@ export function WorkspaceAgentThreadHistory({
   conversationsLoading,
   historyQuery,
   onHistoryQueryChange,
-  threadSearchOpen,
-  onToggleThreadSearch,
   activeConversationId,
   deletingConversationId,
   onSelectConversation,
   onStartNewConversation,
   onDeleteConversation,
   onRenameConversation,
+  className,
 }: {
   conversationOptions: WorkspaceAgentConversationOption[];
   conversationsLoading: boolean;
   historyQuery: string;
   onHistoryQueryChange: (value: string) => void;
-  threadSearchOpen: boolean;
-  onToggleThreadSearch: () => void;
   activeConversationId: string | null;
   deletingConversationId: string | null;
   onSelectConversation: (id: string) => void;
   onStartNewConversation: () => void;
   onDeleteConversation: (id: string) => void;
   onRenameConversation: (id: string) => void;
+  className?: string;
 }) {
   const activeIndex = conversationOptions.findIndex(
     (conversation) => conversation.id === activeConversationId,
@@ -50,7 +48,13 @@ export function WorkspaceAgentThreadHistory({
   const isHistorySearchActive = historyQuery.trim().length > 0;
 
   return (
-    <aside className="flex h-full min-h-0 w-[13.5rem] shrink-0 flex-col border-e border-border bg-muted/10">
+    <aside
+      id="workspace-agent-thread-history"
+      className={cn(
+        "flex h-full min-h-0 w-[13.5rem] shrink-0 flex-col border-e border-border bg-muted/10",
+        className,
+      )}
+    >
       <div className="flex items-center gap-1 border-b border-border px-2 py-2">
         <Button
           type="button"
@@ -61,17 +65,6 @@ export function WorkspaceAgentThreadHistory({
         >
           <PlusIcon className="size-3.5" aria-hidden />
           New chat
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 shrink-0 rounded-lg"
-          aria-label="Find in conversation"
-          aria-pressed={threadSearchOpen}
-          onClick={onToggleThreadSearch}
-        >
-          <SearchIcon className="size-3.5" aria-hidden />
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-2">

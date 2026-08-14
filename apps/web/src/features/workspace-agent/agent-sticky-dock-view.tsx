@@ -1,6 +1,6 @@
 import type { AiUiArtifact } from "@orch/agent/types";
 import { AnimatePresence, motion } from "motion/react";
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 import { AgencyPlanCardView } from "@/features/workspace-agent/agency-plan-card-view";
 import { AgencyProposalCardView } from "@/features/workspace-agent/agency-proposal-card-view";
@@ -16,16 +16,16 @@ import { cn } from "@/lib/utils";
 
 const DOCK_SPRING = { type: "spring" as const, stiffness: 380, damping: 36, mass: 0.9 };
 
-function dockKindLabel(kind: StickyDockItem["kind"]): string {
+function dockActLabel(kind: StickyDockItem["kind"]): string {
   switch (kind) {
     case "question":
-      return "Question";
+      return "Answer this question";
     case "plan":
-      return "Plan";
+      return "Confirm this plan";
     case "proposal":
-      return "Proposal";
+      return "Approve this change";
     case "artifact":
-      return "Canvas";
+      return "Open this canvas";
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -77,7 +77,7 @@ export function AgentStickyDockView({
         <motion.aside
           key={stickyDockItemKey(item)}
           role="region"
-          aria-label="Needs your input"
+          aria-label={dockActLabel(item.kind)}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 6, transition: { duration: 0.12 } }}
@@ -89,16 +89,15 @@ export function AgentStickyDockView({
           data-workspace-agent-sticky-dock
         >
           <header className="flex min-h-10 items-center gap-2 border-b border-border bg-muted/30 ps-3.5 pe-1.5">
-            <p className="text-sm font-semibold tracking-tight text-foreground">Needs your input</p>
-            <span className="rounded-full bg-background px-2 py-0.5 text-[11px] text-muted-foreground ring-1 ring-border">
-              {dockKindLabel(item.kind)}
-            </span>
+            <p className="text-sm font-semibold tracking-tight text-foreground">
+              {dockActLabel(item.kind)}
+            </p>
             <Button
               type="button"
               size="icon-sm"
               variant="ghost"
               className="ms-auto size-8 rounded-full text-muted-foreground hover:text-foreground"
-              aria-label={`Dismiss ${dockKindLabel(item.kind).toLowerCase()}`}
+              aria-label="Dismiss"
               onClick={onDismiss}
             >
               <X className="size-3.5" aria-hidden />
@@ -189,9 +188,9 @@ export function AgentStickyArchiveReceiptView({
     >
       <span
         aria-hidden
-        className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground"
+        className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-secondary text-secondary-foreground"
       >
-        ✓
+        <Check className="size-3 stroke-[2.5]" />
       </span>
       <span className="min-w-0 font-medium text-foreground">{label}</span>
       <span className="min-w-0 truncate text-muted-foreground">{detail}</span>

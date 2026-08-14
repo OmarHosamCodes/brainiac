@@ -258,7 +258,7 @@ export function WorkspaceAgentThreadComposerView({
               exit={{ opacity: 0, transition: { duration: 0.12 } }}
               className="px-1 text-xs text-foreground/70"
             >
-              Sniper on. Click anything to add it to scope.
+              Click a page item to add it to scope.
             </motion.p>
           ) : null}
         </AnimatePresence>
@@ -302,10 +302,10 @@ export function WorkspaceAgentThreadComposerView({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <PopoverTrigger asChild>
-                            <ComposerAttachButton aria-label="Modes, context, and tools" />
+                            <ComposerAttachButton aria-label="Attach, mode, and tools" />
                           </PopoverTrigger>
                         </TooltipTrigger>
-                        <TooltipContent side="top">Modes, context, and tools</TooltipContent>
+                        <TooltipContent side="top">Attach, mode, and tools</TooltipContent>
                       </Tooltip>
                       <PopoverContent
                         align="start"
@@ -315,10 +315,13 @@ export function WorkspaceAgentThreadComposerView({
                         data-workspace-agent-overlay
                       >
                         <ComposerMenu open className="relative inset-auto mb-0 w-72">
+                          <p className="px-2.5 pt-1 pb-0.5 text-[11px] font-medium text-muted-foreground">
+                            Attach
+                          </p>
                           <ComposerPrimitive.AddAttachment asChild>
                             <ComposerMenuItem onClick={() => onToolsMenuOpenChange(false)}>
                               <FileText
-                                className="text-foreground/35 size-3.5 shrink-0"
+                                className="size-3.5 shrink-0 text-muted-foreground"
                                 aria-hidden
                               />
                               Attach file
@@ -332,7 +335,7 @@ export function WorkspaceAgentThreadComposerView({
                               }}
                             >
                               <UnlockSurfaceIcon
-                                className="text-foreground/35 size-3.5 shrink-0"
+                                className="size-3.5 shrink-0 text-muted-foreground"
                                 aria-hidden
                               />
                               Include {crossSurfaceUnlockLabel} tools
@@ -347,14 +350,17 @@ export function WorkspaceAgentThreadComposerView({
                             }}
                           >
                             <Crosshair
-                              className="text-foreground/35 size-3.5 shrink-0"
+                              className="size-3.5 shrink-0 text-muted-foreground"
                               aria-hidden
                             />
-                            {scopeModeActive ? "Exit sniper mode" : "Sniper mode"}
+                            {scopeModeActive ? "Stop adding to scope" : "Add to scope"}
                           </ComposerMenuItem>
 
                           <Separator className="my-1" />
 
+                          <p className="px-2.5 pt-1 pb-0.5 text-[11px] font-medium text-muted-foreground">
+                            Mode
+                          </p>
                           {visibleModeOptions.map((mode) => {
                             const selected = selectedToolPreset === mode.preset;
                             const ModeIcon = modeIcon(mode.preset);
@@ -368,12 +374,12 @@ export function WorkspaceAgentThreadComposerView({
                                 }}
                               >
                                 <ModeIcon
-                                  className="text-foreground/35 size-3.5 shrink-0"
+                                  className="size-3.5 shrink-0 text-muted-foreground"
                                   aria-hidden
                                 />
                                 <span className="flex min-w-0 flex-1 flex-col items-start gap-0.5">
                                   <span>{mode.label}</span>
-                                  <span className="text-foreground/45 text-xs font-normal">
+                                  <span className="text-xs font-normal text-muted-foreground">
                                     {mode.helper}
                                   </span>
                                 </span>
@@ -383,6 +389,9 @@ export function WorkspaceAgentThreadComposerView({
 
                           <Separator className="my-1" />
 
+                          <p className="px-2.5 pt-1 pb-0.5 text-[11px] font-medium text-muted-foreground">
+                            Tools
+                          </p>
                           <WorkspaceAgentToolMenuView tools={tools} loading={toolsLoading} />
                         </ComposerMenu>
                       </PopoverContent>
@@ -444,7 +453,7 @@ export function WorkspaceAgentThreadComposerView({
                 }
               />
 
-              {composerTriggerOpen ? (
+              {composerTriggerOpen && composerTriggerSuggestions.length > 0 ? (
                 <PopoverContent
                   align="start"
                   side="top"

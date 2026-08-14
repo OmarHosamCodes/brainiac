@@ -50,9 +50,7 @@ export function AgencyQuestionCardView({
     <div
       className={cn(
         "max-w-[min(100%,36rem)] text-card-foreground",
-        embedded
-          ? "rounded-none border-0 bg-transparent p-0"
-          : "rounded-xl border border-border bg-card p-4",
+        embedded ? "rounded-none border-0 bg-transparent p-0" : "rounded-xl bg-muted/40 p-4",
         className,
       )}
     >

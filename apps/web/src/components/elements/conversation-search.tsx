@@ -46,8 +46,8 @@ export function ConversationSearch({
           <input
             value={query}
             onChange={(event) => onQueryChange?.(event.target.value)}
-            placeholder="Find in conversation"
-            aria-label="Find in conversation"
+            placeholder="Find in this chat"
+            aria-label="Find in this chat"
             className="text-foreground/85 placeholder:text-foreground/30 min-w-0 flex-1 bg-transparent text-[13px] outline-none"
           />
           <span className={cn(mono, "text-foreground/30 shrink-0 tabular-nums")}>

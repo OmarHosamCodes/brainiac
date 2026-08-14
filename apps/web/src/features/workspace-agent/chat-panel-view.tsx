@@ -1,4 +1,5 @@
 import type { AiUiArtifact } from "@orch/agent/types";
+import { PanelLeftIcon, SearchIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Thread } from "@/components/assistant-ui/thread";
@@ -52,6 +53,9 @@ type WorkspaceAgentChatPanelViewProps = {
   conversationsLoading: boolean;
   historyQuery: string;
   onHistoryQueryChange: (value: string) => void;
+  historyRailOpen: boolean;
+  onToggleHistoryRail: () => void;
+  onCloseHistoryRail: () => void;
   threadSearchOpen: boolean;
   onToggleThreadSearch: () => void;
   threadSearchQuery: string;
@@ -116,6 +120,9 @@ export function WorkspaceAgentChatPanelView({
   conversationsLoading,
   historyQuery,
   onHistoryQueryChange,
+  historyRailOpen,
+  onToggleHistoryRail,
+  onCloseHistoryRail,
   threadSearchOpen,
   onToggleThreadSearch,
   threadSearchQuery,
@@ -262,15 +269,54 @@ export function WorkspaceAgentChatPanelView({
     />
   ) : null;
 
+  const threadToolbar = (
+    <div className="flex shrink-0 items-center gap-1 border-b border-border px-2 py-1.5">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-8 gap-1.5 rounded-lg px-2 text-xs md:hidden"
+        aria-expanded={historyRailOpen}
+        aria-controls="workspace-agent-thread-history"
+        onClick={onToggleHistoryRail}
+      >
+        <PanelLeftIcon className="size-3.5" aria-hidden />
+        Chats
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="ms-auto size-8 rounded-lg"
+        aria-label="Find in this chat"
+        aria-pressed={threadSearchOpen}
+        onClick={onToggleThreadSearch}
+      >
+        <SearchIcon className="size-3.5" aria-hidden />
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="flex h-[min(70vh,640px)] min-h-0">
+    <div className="relative flex h-[min(70vh,640px)] min-h-0">
+      {historyRailOpen ? (
+        <button
+          type="button"
+          className="absolute inset-0 z-[9] bg-background md:hidden"
+          aria-label="Close chat list"
+          onClick={onCloseHistoryRail}
+        />
+      ) : null}
       <WorkspaceAgentThreadHistory
+        className={
+          historyRailOpen
+            ? "absolute inset-y-0 start-0 z-10 flex bg-card md:static md:flex"
+            : "hidden md:flex"
+        }
         conversationOptions={conversationOptions}
         conversationsLoading={conversationsLoading}
         historyQuery={historyQuery}
         onHistoryQueryChange={onHistoryQueryChange}
-        threadSearchOpen={threadSearchOpen}
-        onToggleThreadSearch={onToggleThreadSearch}
         activeConversationId={activeConversationId}
         deletingConversationId={deletingConversationId}
         onSelectConversation={onSelectConversation}
@@ -314,6 +360,7 @@ export function WorkspaceAgentChatPanelView({
         {showCanvas && activeArtifact ? (
           <CanvasSplit className="h-full max-h-full min-h-0 max-w-none min-w-0 flex-1 rounded-none border-0 bg-transparent shadow-none md:h-full">
             <CanvasSplitThread className="flex h-full min-h-0 flex-1 flex-col overflow-hidden border-0 p-0 md:w-2/5 md:overflow-hidden">
+              {threadToolbar}
               {threadSearchBar}
               <WorkspaceAgentThreadDataUI />
               <Thread
@@ -335,6 +382,7 @@ export function WorkspaceAgentChatPanelView({
           </CanvasSplit>
         ) : (
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            {threadToolbar}
             {threadSearchBar}
             <WorkspaceAgentThreadDataUI />
             <Thread

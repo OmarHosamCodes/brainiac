@@ -8,6 +8,7 @@ import type {
 } from "@orch/agent/types";
 import type { WorkspaceNode } from "@orch/workspace";
 import { useChat } from "@ai-sdk/react";
+import { WebSpeechDictationAdapter } from "@assistant-ui/react";
 import { useAISDKRuntime } from "@assistant-ui/react-ai-sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -74,6 +75,40 @@ import {
 } from "@/features/workspace-agent/workspace-agent-message-queue";
 import { orpc, orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+
+function createComposerDictationAdapter() {
+  if (typeof window === "undefined" || !WebSpeechDictationAdapter.isSupported()) {
+    return undefined;
+  }
+  const inner = new WebSpeechDictationAdapter({
+    continuous: true,
+    interimResults: true,
+  });
+  return {
+    listen() {
+      try {
+        const session = inner.listen();
+        let status = session.status;
+        Object.defineProperty(session, "status", {
+          configurable: true,
+          get: () => status,
+          set: (next: typeof status) => {
+            status = next;
+            if (next.type === "ended" && next.reason === "error") {
+              toast.error(
+                "Couldn't use the microphone. Allow mic access, or try Chrome, Edge, or Safari.",
+              );
+            }
+          },
+        });
+        return session;
+      } catch {
+        toast.error("Couldn't start dictation. Try Chrome, Edge, or Safari.");
+        throw new Error("Dictation is not available.");
+      }
+    },
+  };
+}
 
 function resolveAgentSurface(pathname: string): AgentSurface {
   if (pathname.startsWith("/agency")) return "agency";
@@ -188,6 +223,7 @@ export function useWorkspaceAgent() {
   const [renameDraft, setRenameDraft] = useState("");
   const [historyQuery, setHistoryQuery] = useState("");
   const [threadSearchOpen, setThreadSearchOpen] = useState(false);
+  const [historyRailOpen, setHistoryRailOpen] = useState(false);
   const [threadSearchQuery, setThreadSearchQuery] = useState("");
   const [threadSearchIndex, setThreadSearchIndex] = useState(0);
   /** How many artifacts the operator has already dismissed from the dock. */
@@ -324,7 +360,10 @@ export function useWorkspaceAgent() {
     error: chatError,
     regenerate,
   } = chat;
-  const runtime = useAISDKRuntime(chat);
+  const dictationAdapter = useMemo(() => createComposerDictationAdapter(), []);
+  const runtime = useAISDKRuntime(chat, {
+    adapters: dictationAdapter ? { dictation: dictationAdapter } : undefined,
+  });
 
   const isStreaming = status === "streaming" || status === "submitted";
   const canSend = !isStreaming;
@@ -353,6 +392,14 @@ export function useWorkspaceAgent() {
 
   const onToggleThreadSearch = useCallback(() => {
     setThreadSearchOpen((open) => !open);
+  }, []);
+
+  const onToggleHistoryRail = useCallback(() => {
+    setHistoryRailOpen((open) => !open);
+  }, []);
+
+  const onCloseHistoryRail = useCallback(() => {
+    setHistoryRailOpen(false);
   }, []);
 
   const invalidateComposerDraftQuery = useCallback(() => {
@@ -595,6 +642,10 @@ export function useWorkspaceAgent() {
           setThreadSearchOpen(false);
           return;
         }
+        if (historyRailOpen) {
+          setHistoryRailOpen(false);
+          return;
+        }
         if (canvasOpen) {
           setCanvasOpen(false);
           return;
@@ -635,6 +686,7 @@ export function useWorkspaceAgent() {
     scopeModeActive,
     setExpanded,
     setScopeModeActive,
+    historyRailOpen,
     threadSearchOpen,
     toggleExpanded,
   ]);
@@ -657,6 +709,7 @@ export function useWorkspaceAgent() {
       setThreadSearchQuery("");
       setThreadSearchIndex(0);
       setThreadSearchOpen(false);
+      setHistoryRailOpen(false);
       if (!conversationId) {
         setMessages([]);
       }
@@ -1159,8 +1212,8 @@ export function useWorkspaceAgent() {
 
   const emptyHint =
     surface === "agency"
-      ? "Ask about your time, waste, or who's tracking."
-      : "Ask about this board.";
+      ? "See hours, waste, or who is tracking. Pick a starter or type below."
+      : "Explain this board, find a node, or propose a layout.";
   const bottomOffsetClass = surface === "agency" ? "bottom-8" : "bottom-4";
   const streamingMessageId =
     isStreaming && messages[messages.length - 1]?.role === "assistant"
@@ -1269,6 +1322,9 @@ export function useWorkspaceAgent() {
     })),
     historyQuery,
     setHistoryQuery,
+    historyRailOpen,
+    onToggleHistoryRail,
+    onCloseHistoryRail,
     threadSearchOpen,
     onToggleThreadSearch,
     threadSearchQuery,

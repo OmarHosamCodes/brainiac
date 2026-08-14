@@ -1,5 +1,9 @@
-import { ApprovalCard } from "@/components/elements/approval-card";
+import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  proposalPreviewEmptyLabel,
+  proposalPreviewLines,
+} from "@/features/workspace-agent/proposal-change-preview";
 
 export type AgencyProposalCardViewModel = {
   proposalId: string;
@@ -18,20 +22,28 @@ type AgencyProposalCardViewProps = {
   embedded?: boolean;
 };
 
-function previewJson(value: unknown) {
-  if (value == null) return "Nothing yet";
-  if (typeof value === "string" && value.trim() === "") return "Nothing yet";
-  try {
-    const text = JSON.stringify(value);
-    if (!text || text === "null") return "Nothing yet";
-    return text.length > 280 ? `${text.slice(0, 279)}…` : text;
-  } catch {
-    const text = String(value);
-    return text.length > 280 ? `${text.slice(0, 279)}…` : text;
-  }
+function PreviewColumn({ title, value }: { title: string; value: unknown }) {
+  const lines = proposalPreviewLines(value);
+  return (
+    <div className="min-w-0 rounded-xl bg-muted/40 px-3 py-2.5">
+      <p className="text-[11px] font-medium text-muted-foreground">{title}</p>
+      {lines.length === 0 ? (
+        <p className="mt-1 text-xs text-foreground">{proposalPreviewEmptyLabel(value)}</p>
+      ) : (
+        <dl className="mt-1.5 flex flex-col gap-1">
+          {lines.map((line) => (
+            <div key={`${title}-${line.label}`} className="min-w-0">
+              <dt className="text-[11px] text-muted-foreground">{line.label}</dt>
+              <dd className="truncate text-xs font-medium text-foreground">{line.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
 }
 
-/** Approve/Reject card — elements ApprovalCard (no Always allow). */
+/** Approve/Reject card with labeled before and after, not a JSON dump. */
 export function AgencyProposalCardView({
   proposal,
   busy,
@@ -41,14 +53,48 @@ export function AgencyProposalCardView({
   embedded = false,
 }: AgencyProposalCardViewProps) {
   return (
-    <ApprovalCard
-      state={busy ? "running" : "request"}
-      title={proposal.label}
-      subtitle="Review before and after, then approve or reject."
-      command={`before ${previewJson(proposal.before)} → after ${previewJson(proposal.after)}`}
-      onAllowOnce={onApprove}
-      onDeny={onReject}
-      className={cn(embedded ? "max-w-none" : "max-w-[min(100%,36rem)]", className)}
-    />
+    <div
+      className={cn(
+        "flex w-full flex-col gap-3 text-card-foreground",
+        embedded
+          ? "rounded-none border-0 bg-transparent p-0"
+          : "max-w-[min(100%,36rem)] rounded-xl bg-muted/40 p-4",
+        className,
+      )}
+    >
+      <div>
+        <p className="text-sm font-semibold tracking-tight text-foreground">{proposal.label}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Review the change, then approve or reject.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <PreviewColumn title="Before" value={proposal.before} />
+        <PreviewColumn title="After" value={proposal.after} />
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="h-8 rounded-full px-3.5"
+          disabled={busy}
+          onClick={onReject}
+        >
+          Reject
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          className="h-8 min-w-24 rounded-full px-4"
+          disabled={busy}
+          onClick={onApprove}
+        >
+          {busy ? "Saving…" : "Approve"}
+        </Button>
+      </div>
+    </div>
   );
 }

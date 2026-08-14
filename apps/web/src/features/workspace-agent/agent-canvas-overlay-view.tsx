@@ -26,7 +26,7 @@ export function AgentCanvasOverlayView({
       role="dialog"
       aria-modal="true"
       aria-label={`Canvas: ${artifact.title}`}
-      className="pointer-events-auto fixed inset-0 z-[60] flex flex-col bg-background/95"
+      className="pointer-events-auto fixed inset-0 z-[60] flex flex-col bg-background"
       initial={{ opacity: 0, scale: 0.985 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.985 }}

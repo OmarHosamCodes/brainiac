@@ -1,4 +1,4 @@
-import { RecommendationCard } from "@/components/elements/recommendation-card";
+import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";
 
 export type AgencyPlanCardViewModel = {
@@ -16,12 +16,7 @@ type AgencyPlanCardViewProps = {
   embedded?: boolean;
 };
 
-function planBody(plan: AgencyPlanCardViewModel) {
-  const steps = plan.steps.map((step, index) => `${index + 1}. ${step.label}`).join(" ");
-  return [plan.summary.trim(), steps].filter(Boolean).join(" ");
-}
-
-/** Confirm-plan card — elements RecommendationCard (no Alternatives). */
+/** Confirm-plan card with a real step list. */
 export function AgencyPlanCardView({
   plan,
   confirming,
@@ -30,15 +25,45 @@ export function AgencyPlanCardView({
   embedded = false,
 }: AgencyPlanCardViewProps) {
   return (
-    <RecommendationCard
-      state={confirming ? "accepted" : "idle"}
-      question={plan.title}
-      confidenceLabel={`${plan.steps.length} steps`}
-      acceptedLabel="Confirming…"
-      onAccept={onConfirm}
-      className={cn(embedded ? "max-w-none" : "max-w-[min(100%,36rem)]", className)}
+    <div
+      className={cn(
+        "flex w-full flex-col gap-3 text-card-foreground",
+        embedded
+          ? "rounded-none border-0 bg-transparent p-0"
+          : "max-w-[min(100%,36rem)] rounded-xl bg-muted/40 p-4",
+        className,
+      )}
     >
-      {planBody(plan)}
-    </RecommendationCard>
+      <div>
+        <p className="text-sm font-semibold tracking-tight text-foreground">{plan.title}</p>
+        {plan.summary.trim() ? (
+          <p className="mt-1 max-w-[65ch] text-xs leading-relaxed text-muted-foreground">
+            {plan.summary.trim()}
+          </p>
+        ) : null}
+      </div>
+
+      {plan.steps.length > 0 ? (
+        <ol className="flex list-decimal flex-col gap-1.5 ps-4 text-xs text-foreground">
+          {plan.steps.map((step, index) => (
+            <li key={`${plan.planId}-${index}`} className="leading-snug">
+              {step.label}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          size="sm"
+          className="h-8 min-w-24 rounded-full px-4"
+          disabled={confirming}
+          onClick={onConfirm}
+        >
+          {confirming ? "Confirming…" : "Confirm"}
+        </Button>
+      </div>
+    </div>
   );
 }

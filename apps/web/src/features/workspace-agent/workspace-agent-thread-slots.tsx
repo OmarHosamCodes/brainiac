@@ -73,9 +73,7 @@ export function WorkspaceAgentThreadWelcome() {
   if (!ctx) return null;
   return (
     <EmptyState className="mx-auto py-6">
-      <EmptyStateGreeting className="text-base text-muted-foreground">
-        {ctx.emptyHint}
-      </EmptyStateGreeting>
+      <EmptyStateGreeting className="text-base text-foreground">{ctx.emptyHint}</EmptyStateGreeting>
       {ctx.quickStarts.length > 0 ? (
         <EmptyStateSuggestions>
           {ctx.quickStarts.map((start, index) => (

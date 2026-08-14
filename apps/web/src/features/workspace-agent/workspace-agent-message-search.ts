@@ -8,7 +8,10 @@ export type WorkspaceAgentMessageSearchHit = {
 
 const CONTEXT = 24;
 
-export function findWorkspaceAgentMessageHits(haystack: string, query: string): WorkspaceAgentMessageSearchHit[] {
+export function findWorkspaceAgentMessageHits(
+  haystack: string,
+  query: string,
+): WorkspaceAgentMessageSearchHit[] {
   const needle = query.trim();
   if (!needle) return [];
   const lowerHay = haystack.toLowerCase();
@@ -30,7 +33,9 @@ export function findWorkspaceAgentMessageHits(haystack: string, query: string): 
   return hits;
 }
 
-export function joinOrchMessageText(messages: Array<{ parts?: Array<{ type: string; text?: string }> }>) {
+export function joinOrchMessageText(
+  messages: Array<{ parts?: Array<{ type: string; text?: string }> }>,
+) {
   return messages
     .flatMap((message) => message.parts ?? [])
     .filter((part) => part.type === "text" && typeof part.text === "string")

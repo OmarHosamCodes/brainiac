@@ -15,18 +15,19 @@ type WorkspaceAgentViewProps = {
 
 const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
 
-const expandTransition = {
+const shellLayout = {
   type: "spring" as const,
-  stiffness: 420,
-  damping: 36,
-  mass: 0.8,
+  stiffness: 380,
+  damping: 34,
+  mass: 0.85,
 };
-const contentExit = { duration: 0.14, ease: EASE_OUT_QUART };
+const contentFade = { duration: 0.16, delay: 0.05, ease: EASE_OUT_QUART };
 
 export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
   const isWorking = view.isPending;
   const collapsedLabel = isWorking ? "Working..." : "Message Orch";
   const showArtifactSplit = Boolean(view.activeArtifact);
+  const expanded = view.expanded;
 
   return (
     <AssistantRuntimeProvider runtime={view.runtime}>
@@ -36,59 +37,38 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
           className={cn(
             "pointer-events-none fixed inset-x-0 z-40 flex items-end justify-center px-4",
             view.bottomOffsetClass,
+            expanded ? "pb-0" : "pb-3",
           )}
         >
-          <AnimatePresence initial={false}>
-            {!view.expanded ? (
+          <motion.div
+            layout
+            layoutDependency={expanded}
+            transition={{ layout: shellLayout }}
+            className={cn(
+              "pointer-events-auto origin-bottom overflow-hidden text-card-foreground",
+              expanded
+                ? cn(
+                    "flex w-full flex-col rounded-2xl border border-border bg-card shadow-lg",
+                    showArtifactSplit ? "max-w-[1200px]" : "max-w-[960px]",
+                  )
+                : cn(
+                    "group/orch mx-auto flex w-full justify-center rounded-full border",
+                    isWorking
+                      ? "workspace-agent-pill-shimmer h-2 w-44 border-transparent bg-foreground/40"
+                      : "h-2 w-52 border-transparent bg-foreground/35",
+                    "motion-safe:transition-[width,height,max-width,padding,background-color,border-color,box-shadow] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.25,1,0.5,1)]",
+                    "hover:h-12 hover:w-full hover:max-w-[22rem] hover:border-border hover:bg-card hover:px-4 hover:shadow-md",
+                    "focus-within:h-12 focus-within:w-full focus-within:max-w-[22rem] focus-within:border-border focus-within:bg-card focus-within:px-4 focus-within:shadow-md",
+                  ),
+            )}
+          >
+            {expanded ? (
               <motion.div
-                key="workspace-agent-collapsed"
-                className="pointer-events-auto flex w-full max-w-[360px] items-center justify-center py-3"
-                exit={{ opacity: 0, transition: { duration: 0.1 } }}
-              >
-                <div className="group/pill flex w-full items-center justify-center">
-                  <button
-                    type="button"
-                    aria-label={collapsedLabel}
-                    title={isWorking ? "Working..." : "Message Orch (Ctrl+J)"}
-                    aria-busy={isWorking || undefined}
-                    className={cn(
-                      "group relative flex items-center justify-center overflow-hidden rounded-full",
-                      "border border-transparent",
-                      isWorking
-                        ? "workspace-agent-pill-shimmer h-1.5 w-28 bg-foreground/40"
-                        : "h-1.5 w-32 bg-foreground/35",
-                      "motion-safe:transition-[width,height,padding,background-color,border-color] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.25,1,0.5,1)]",
-                      "group-hover/pill:h-11 group-hover/pill:w-full group-hover/pill:justify-between group-hover/pill:border-border group-hover/pill:bg-card group-hover/pill:px-4 group-hover/pill:shadow-md",
-                      "focus-visible:h-11 focus-visible:w-full focus-visible:justify-between focus-visible:border-border focus-visible:bg-card focus-visible:px-4 focus-visible:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                    )}
-                    onClick={() => view.setExpanded(true)}
-                  >
-                    <span className="hidden w-full items-center justify-between whitespace-nowrap text-sm group-hover/pill:flex group-focus-visible:flex">
-                      {isWorking ? (
-                        <span className="workspace-agent-pill-shimmer-text text-foreground">
-                          {collapsedLabel}
-                        </span>
-                      ) : (
-                        <>
-                          <span className="text-foreground">{collapsedLabel}</span>
-                          <kbd className="text-xs text-muted-foreground">Ctrl+J</kbd>
-                        </>
-                      )}
-                    </span>
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="workspace-agent-expanded"
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 16, transition: contentExit }}
-                transition={expandTransition}
-                className={cn(
-                  "pointer-events-auto flex w-full flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-lg",
-                  showArtifactSplit ? "max-w-[1200px]" : "max-w-[960px]",
-                )}
+                key="workspace-agent-panel"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={contentFade}
+                className="flex min-h-0 w-full flex-col"
               >
                 <WorkspaceAgentChatPanelView
                   messages={view.messages}
@@ -96,6 +76,9 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                   conversationsLoading={view.conversationsLoading}
                   historyQuery={view.historyQuery}
                   onHistoryQueryChange={view.setHistoryQuery}
+                  historyRailOpen={view.historyRailOpen}
+                  onToggleHistoryRail={view.onToggleHistoryRail}
+                  onCloseHistoryRail={view.onCloseHistoryRail}
                   threadSearchOpen={view.threadSearchOpen}
                   onToggleThreadSearch={view.onToggleThreadSearch}
                   threadSearchQuery={view.threadSearchQuery}
@@ -206,7 +189,11 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                       layout
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0, transition: contentExit }}
+                      exit={{
+                        opacity: 0,
+                        height: 0,
+                        transition: { duration: 0.14, ease: EASE_OUT_QUART },
+                      }}
                       transition={{ duration: 0.18, ease: EASE_OUT_QUART }}
                       className="overflow-hidden border-t border-border px-3 py-2"
                     >
@@ -221,8 +208,31 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                   ) : null}
                 </AnimatePresence>
               </motion.div>
+            ) : (
+              <button
+                type="button"
+                aria-label={collapsedLabel}
+                aria-expanded={false}
+                title={isWorking ? "Working..." : "Message Orch (Ctrl+J)"}
+                aria-busy={isWorking || undefined}
+                className="flex size-full min-h-2 items-center justify-between whitespace-nowrap text-sm focus-visible:outline-none"
+                onClick={() => view.setExpanded(true)}
+              >
+                <span className="hidden w-full items-center justify-between group-hover/orch:flex group-focus-within/orch:flex">
+                  {isWorking ? (
+                    <span className="workspace-agent-pill-shimmer-text text-foreground">
+                      {collapsedLabel}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-foreground">{collapsedLabel}</span>
+                      <kbd className="text-xs text-muted-foreground">Ctrl+J</kbd>
+                    </>
+                  )}
+                </span>
+              </button>
             )}
-          </AnimatePresence>
+          </motion.div>
 
           <WorkspaceAgentModelLibraryView
             open={view.modelLibraryOpen}
