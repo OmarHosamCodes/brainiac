@@ -215,6 +215,7 @@ export * from "./general";
 export * from "./people";
 export * from "./sales";
 export * from "./schemas";
+export * from "./knowledge";
 export * from "./strategy";
 export * from "./tasks";
 export * from "./types";
