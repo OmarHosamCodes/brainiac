@@ -58,6 +58,8 @@ export type InfiniteCanvasProps = {
   onNodesChange: (nodes: CanvasNodeModel[]) => void;
   onSelectedNodeIdsChange: (selectedNodeIds: string[]) => void;
   onCreateNode: (payload: { x: number; y: number }) => void;
+  onCreateRequest?: (payload: { x: number; y: number; screenX: number; screenY: number }) => void;
+  onPlaceUnplaced?: (payload: { objectId: string; x: number; y: number }) => void;
   onEditNode: (payload: { nodeId: string }) => void;
   onConnectNodePair: (payload: { orchestratorNodeId: string; standardNodeId: string }) => void;
   onDisconnectNodePair: (payload: { orchestratorNodeId: string; standardNodeId: string }) => void;
@@ -69,6 +71,8 @@ export type InfiniteCanvasProps = {
 export type InfiniteCanvasHandle = {
   fitAllNodes: () => void;
   createNodeAtViewportCenter: () => void;
+  viewportCenter: () => { x: number; y: number } | null;
+  pointFromClient: (clientX: number, clientY: number) => { x: number; y: number } | null;
 };
 
 const FIT_PADDING = 0.15;
@@ -99,6 +103,8 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
       onNodesChange,
       onSelectedNodeIdsChange,
       onCreateNode,
+      onCreateRequest,
+      onPlaceUnplaced,
       onEditNode,
       onConnectNodePair,
       onDisconnectNodePair,
@@ -159,19 +165,26 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
       [fitView, nodes.length, reactFlow, syncZoomPercent],
     );
 
-    const createNodeAtViewportCenter = useCallback(() => {
+    const viewportCenter = useCallback(() => {
       const shell = shellRef.current;
-      if (!shell) {
-        return;
-      }
-
+      if (!shell) return null;
       const rect = shell.getBoundingClientRect();
-      const worldPoint = screenToFlowPosition({
+      return screenToFlowPosition({
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
       });
+    }, [screenToFlowPosition]);
+
+    const pointFromClient = useCallback(
+      (clientX: number, clientY: number) => screenToFlowPosition({ x: clientX, y: clientY }),
+      [screenToFlowPosition],
+    );
+
+    const createNodeAtViewportCenter = useCallback(() => {
+      const worldPoint = viewportCenter();
+      if (!worldPoint) return;
       onCreateNode(worldPoint);
-    }, [onCreateNode, screenToFlowPosition]);
+    }, [onCreateNode, viewportCenter]);
 
     const fitNode = useCallback(
       (nodeId: string) => {
@@ -185,10 +198,16 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
       [fitView],
     );
 
-    useImperativeHandle(ref, () => ({ fitAllNodes, createNodeAtViewportCenter }), [
-      createNodeAtViewportCenter,
-      fitAllNodes,
-    ]);
+    useImperativeHandle(
+      ref,
+      () => ({
+        fitAllNodes,
+        createNodeAtViewportCenter,
+        viewportCenter,
+        pointFromClient,
+      }),
+      [createNodeAtViewportCenter, fitAllNodes, pointFromClient, viewportCenter],
+    );
 
     useEffect(() => {
       syncZoomPercent();
@@ -261,9 +280,28 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
       (event: MouseEvent | React.MouseEvent) => {
         event.preventDefault();
         const worldPoint = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+        if (onCreateRequest) {
+          onCreateRequest({
+            ...worldPoint,
+            screenX: event.clientX,
+            screenY: event.clientY,
+          });
+          return;
+        }
         onCreateNode(worldPoint);
       },
-      [onCreateNode, screenToFlowPosition],
+      [onCreateNode, onCreateRequest, screenToFlowPosition],
+    );
+
+    const handlePaneDrop = useCallback(
+      (event: React.DragEvent) => {
+        const objectId = event.dataTransfer.getData("application/orch-knowledge-id");
+        if (!objectId || !onPlaceUnplaced) return;
+        event.preventDefault();
+        const worldPoint = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+        onPlaceUnplaced({ objectId, x: worldPoint.x, y: worldPoint.y });
+      },
+      [onPlaceUnplaced, screenToFlowPosition],
     );
 
     const handleNudgeNodes = useCallback(
@@ -332,6 +370,13 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
             onMoveEnd={syncZoomPercent}
             onNodeDoubleClick={(_event, node) => onOpenNode({ nodeId: node.id })}
             onPaneContextMenu={handlePaneContextMenu}
+            onDrop={handlePaneDrop}
+            onDragOver={(event) => {
+              const types = Array.from(event.dataTransfer.types);
+              if (types.includes("application/orch-knowledge-id")) {
+                event.preventDefault();
+              }
+            }}
             isValidConnection={(connection) =>
               isValidWorkspaceConnection(
                 {
@@ -461,7 +506,7 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
                 <LayoutGrid className="mx-auto size-7 text-muted" />
                 <h3 className="mt-4 text-lg font-bold text-highlighted">No nodes yet</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">
-                  Right-click the canvas to add a node, or use the button below.
+                  Right-click the canvas to add knowledge, or add a node.
                 </p>
                 <Button
                   className="mt-4"
