@@ -71,7 +71,12 @@ import {
   getWorkspaceSnapshot,
   saveWorkspaceNodes,
 } from "../workspace/service";
-import { createAgencyProposalRecord, createCanvasProposalRecord } from "./agency-proposals";
+import { getKnowledgeObject, queryKnowledgeObjects } from "../workspace/knowledge-service";
+import {
+  createAgencyProposalRecord,
+  createCanvasProposalRecord,
+  createKnowledgeProposalRecord,
+} from "./agency-proposals";
 import {
   buildDashboardConversationDeletionResult,
   buildDashboardConversationTitle,
@@ -374,6 +379,27 @@ function createCanvasAgentRuntime(
   return {
     createProposal: async (input) =>
       createCanvasProposalRecord(actorUserId, {
+        action: input.action,
+        label: input.label,
+        conversationId: input.conversationId ?? conversationId,
+        teamId,
+      }),
+    queryKnowledge: async (input) =>
+      queryKnowledgeObjects(actorUserId, {
+        teamId: input.teamId ?? teamId ?? undefined,
+        objectType: input.objectType,
+        query: input.query,
+        about: input.about,
+        limit: input.limit,
+      }),
+    getKnowledge: async (input) =>
+      getKnowledgeObject(actorUserId, {
+        id: input.id,
+        objectType: input.objectType,
+        teamId: input.teamId ?? teamId ?? undefined,
+      }),
+    createKnowledgeProposal: async (input) =>
+      createKnowledgeProposalRecord(actorUserId, {
         action: input.action,
         label: input.label,
         conversationId: input.conversationId ?? conversationId,

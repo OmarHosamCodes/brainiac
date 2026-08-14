@@ -85,7 +85,7 @@ export const agentRouter = {
       .input(
         z.object({
           teamId: z.string().min(1).optional(),
-          domain: z.enum(["agency", "canvas"]).optional(),
+          domain: z.enum(["agency", "canvas", "knowledge"]).optional(),
           conversationId: z.string().min(1).optional(),
           plan: z.object({
             planId: z.string().min(1),

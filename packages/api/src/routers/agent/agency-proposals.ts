@@ -14,6 +14,11 @@ import {
   stampCanvasCreateIds,
   type CanvasAction,
 } from "@orch/agent/canvas-actions";
+import {
+  knowledgeActionLabel,
+  knowledgeActionSchema,
+  knowledgeDraftPlanSchema,
+} from "@orch/agent/knowledge-actions";
 import { applyCanvasAction } from "@orch/agent/tools";
 import { db } from "@orch/db";
 import {
@@ -63,6 +68,7 @@ import {
   updateMyAgencyTimeEntry,
 } from "../agency-ops/time-tracking/service";
 import { getWorkspaceSnapshot, saveWorkspaceNodes } from "../workspace/service";
+import { applyKnowledgeAction } from "../workspace/knowledge-service";
 
 const PROPOSAL_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -79,7 +85,7 @@ type ConfirmProposalRecord = {
 async function appendConfirmProposalsToAssistantMessage(
   actorUserId: string,
   conversationId: string | null | undefined,
-  toolName: "propose_canvas_action" | "propose_agency_action",
+  toolName: "propose_canvas_action" | "propose_agency_action" | "propose_knowledge_action",
   proposals: ConfirmProposalRecord[],
 ) {
   if (!conversationId || proposals.length === 0) {
@@ -567,6 +573,51 @@ export async function createCanvasProposalRecord(
   };
 }
 
+export async function createKnowledgeProposalRecord(
+  actorUserId: string,
+  input: {
+    action: unknown;
+    label?: string;
+    conversationId?: string | null;
+    teamId?: string | null;
+  },
+) {
+  if (input.teamId) {
+    await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  }
+  const action = knowledgeActionSchema.parse(input.action);
+  const now = new Date();
+  const id = createWorkspaceId("aap");
+  const label = input.label?.trim() || knowledgeActionLabel(action);
+  await db.insert(agentAgencyProposal).values({
+    id,
+    domain: "knowledge",
+    teamId: input.teamId ?? null,
+    actorUserId,
+    conversationId: input.conversationId ?? null,
+    messageId: null,
+    action,
+    beforeState: null,
+    afterState: action,
+    label,
+    status: "pending",
+    illustrationArtifactId: null,
+    error: null,
+    expiresAt: new Date(now.getTime() + PROPOSAL_TTL_MS),
+    createdAt: now,
+    updatedAt: now,
+  });
+  return {
+    proposalId: id,
+    status: "pending" as const,
+    action,
+    before: null,
+    after: action,
+    label,
+    boardHref: "/canvas",
+  };
+}
+
 export async function confirmCanvasPlan(
   actorUserId: string,
   input: { conversationId?: string | null; teamId?: string | null; plan: unknown },
@@ -662,6 +713,25 @@ export async function approveAgencyProposal(
   }
 
   try {
+    if (row.domain === "knowledge") {
+      const applied = await applyKnowledgeAction(actorUserId, {
+        action: knowledgeActionSchema.parse(row.action),
+        proposalId: row.id,
+        teamId: input.teamId ?? row.teamId,
+      });
+      const snapshot = await getWorkspaceSnapshot(actorUserId, {});
+      await db
+        .update(agentAgencyProposal)
+        .set({ status: "executed", updatedAt: new Date(), error: null })
+        .where(eq(agentAgencyProposal.id, row.id));
+      return {
+        proposalId: row.id,
+        status: "executed" as const,
+        result: applied,
+        label: row.label,
+        workspaceSnapshot: snapshot,
+      };
+    }
     if (row.domain === "canvas") {
       const canvasAction = canvasActionSchema.parse(row.action);
       const result = await executeCanvasAction(actorUserId, canvasAction);
@@ -736,30 +806,71 @@ export async function rejectAgencyProposal(
   return { proposalId: row.id, status: "rejected" as const };
 }
 
+export async function confirmKnowledgePlan(
+  actorUserId: string,
+  input: { conversationId?: string | null; teamId?: string | null; plan: unknown },
+) {
+  if (input.teamId) {
+    await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  }
+  const plan = knowledgeDraftPlanSchema.parse(input.plan);
+  const proposals = [];
+  for (const step of plan.steps) {
+    const proposal = await createKnowledgeProposalRecord(actorUserId, {
+      action: step.action,
+      label: step.label,
+      conversationId: input.conversationId,
+      teamId: input.teamId,
+    });
+    proposals.push(proposal);
+  }
+  await appendConfirmProposalsToAssistantMessage(
+    actorUserId,
+    input.conversationId,
+    "propose_knowledge_action",
+    proposals,
+  );
+  return { planId: plan.planId, proposals };
+}
+
 export async function confirmAgentPlan(
   actorUserId: string,
   input: {
-    domain?: "agency" | "canvas";
+    domain?: "agency" | "canvas" | "knowledge";
     teamId?: string;
     conversationId?: string | null;
     plan: unknown;
   },
 ) {
-  if ((input.domain ?? "agency") === "canvas") {
-    return confirmCanvasPlan(actorUserId, {
-      conversationId: input.conversationId,
-      teamId: input.teamId,
-      plan: input.plan,
-    });
+  const domain = input.domain ?? "agency";
+  switch (domain) {
+    case "knowledge":
+      return confirmKnowledgePlan(actorUserId, {
+        conversationId: input.conversationId,
+        teamId: input.teamId,
+        plan: input.plan,
+      });
+    case "canvas":
+      return confirmCanvasPlan(actorUserId, {
+        conversationId: input.conversationId,
+        teamId: input.teamId,
+        plan: input.plan,
+      });
+    case "agency": {
+      if (!input.teamId) {
+        throw new ORPCError("BAD_REQUEST", { message: "Agency plan confirm requires a team." });
+      }
+      return confirmAgencyPlan(actorUserId, {
+        teamId: input.teamId,
+        conversationId: input.conversationId,
+        plan: input.plan,
+      });
+    }
+    default: {
+      const _exhaustive: never = domain;
+      return _exhaustive;
+    }
   }
-  if (!input.teamId) {
-    throw new ORPCError("BAD_REQUEST", { message: "Agency plan confirm requires a team." });
-  }
-  return confirmAgencyPlan(actorUserId, {
-    teamId: input.teamId,
-    conversationId: input.conversationId,
-    plan: input.plan,
-  });
 }
 
 export function parseAgencyDraftPlan(plan: unknown): AgencyDraftPlan {
