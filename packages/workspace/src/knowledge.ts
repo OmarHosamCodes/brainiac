@@ -8,11 +8,9 @@ import {
 } from "./constants";
 import {
   workspaceAgencyRefSchema,
-  workspaceDecisionBlockSchema,
   workspaceNodeSchema,
   workspaceNodeTabSchema,
   workspaceNodeVisibilitySchema,
-  workspaceNotesBlockSchema,
 } from "./schemas";
 import type { WorkspaceNode } from "./types";
 
@@ -24,6 +22,7 @@ export const knowledgeObjectTypeSchema = z.enum([
   "decision",
   "person",
   "source",
+  "folder",
   "agency.project",
   "agency.task",
   "agency.member",
@@ -37,6 +36,7 @@ export const canvasNativeObjectTypeSchema = z.enum([
   "decision",
   "person",
   "source",
+  "folder",
 ]);
 
 export const knowledgeRelationTypeSchema = z.enum([
@@ -46,7 +46,28 @@ export const knowledgeRelationTypeSchema = z.enum([
   "blocks",
   "mentions",
   "is",
+  "in",
 ]);
+
+export const knowledgeBoardCardKindSchema = z.enum([
+  "document",
+  "knowledge",
+  "agency",
+  "folder",
+  "inbox",
+]);
+
+export const KNOWLEDGE_INBOX_CLUSTER_ID = "__knowledge-inbox";
+export const KNOWLEDGE_INBOX_ORIGIN_X = -2800;
+export const KNOWLEDGE_INBOX_ORIGIN_Y = -240;
+export const KNOWLEDGE_INBOX_COLUMNS = 3;
+export const KNOWLEDGE_INBOX_GAP = 24;
+export const KNOWLEDGE_CARD_WIDTH = 280;
+export const KNOWLEDGE_CARD_HEIGHT = 180;
+export const KNOWLEDGE_FOLDER_WIDTH = 640;
+export const KNOWLEDGE_FOLDER_HEIGHT = 420;
+export const KNOWLEDGE_AGENCY_PIN_WIDTH = 260;
+export const KNOWLEDGE_AGENCY_PIN_HEIGHT = 140;
 
 export const knowledgeTargetSchema = z.object({
   objectType: knowledgeObjectTypeSchema,
@@ -58,6 +79,35 @@ export const knowledgeDecisionPropertiesSchema = z.object({
   recommendation: z.string().max(4000).default(""),
   decidedAt: z.string().datetime().nullable().default(null),
 });
+
+export const knowledgeFolderPropertiesSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+});
+
+export const knowledgeSourcePropertiesSchema = z
+  .object({
+    kind: z.enum(["upload", "url"]),
+    uploadId: z.string().trim().min(1).max(240).optional(),
+    url: z.string().trim().url().max(2000).optional(),
+    filename: z.string().trim().min(1).max(240).optional(),
+    mediaType: z.string().trim().min(1).max(120).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.kind === "upload" && !value.uploadId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["uploadId"],
+        message: "Upload sources require uploadId",
+      });
+    }
+    if (value.kind === "url" && !value.url) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["url"],
+        message: "URL sources require url",
+      });
+    }
+  });
 
 export const knowledgeDocumentContentSchema = z.object({
   body: z.string().max(4000).default(""),
@@ -123,6 +173,8 @@ export const knowledgeRelationSchema = z.object({
 export const knowledgePlacementSchema = z.object({
   id: z.string().min(1),
   objectId: z.string().min(1),
+  objectType: knowledgeObjectTypeSchema.optional(),
+  teamId: z.string().min(1).nullable().optional(),
   viewId: z.string().min(1).default("board"),
   x: z.number().finite(),
   y: z.number().finite(),
@@ -137,10 +189,13 @@ export type KnowledgeObjectType = z.infer<typeof knowledgeObjectTypeSchema>;
 export type CanvasNativeObjectType = z.infer<typeof canvasNativeObjectTypeSchema>;
 export type AgencyKnowledgeObjectType = Extract<KnowledgeObjectType, `agency.${string}`>;
 export type KnowledgeRelationType = z.infer<typeof knowledgeRelationTypeSchema>;
+export type KnowledgeBoardCardKind = z.infer<typeof knowledgeBoardCardKindSchema>;
 export type KnowledgeTarget = z.infer<typeof knowledgeTargetSchema>;
 export type KnowledgeObject = z.infer<typeof knowledgeObjectSchema>;
 export type KnowledgeRelation = z.infer<typeof knowledgeRelationSchema>;
 export type KnowledgePlacement = z.infer<typeof knowledgePlacementSchema>;
+export type KnowledgeFolderProperties = z.infer<typeof knowledgeFolderPropertiesSchema>;
+export type KnowledgeSourceProperties = z.infer<typeof knowledgeSourcePropertiesSchema>;
 export const knowledgeObjectViewSchema = z.object({
   origin: z.enum(["canvas", "agency"]),
   objectType: knowledgeObjectTypeSchema,
@@ -161,12 +216,147 @@ export const knowledgeObjectViewSchema = z.object({
 
 export type KnowledgeObjectView = z.infer<typeof knowledgeObjectViewSchema>;
 
+export const knowledgeBoardCardSchema = z.object({
+  id: z.string().min(1),
+  kind: knowledgeBoardCardKindSchema,
+  objectType: knowledgeObjectTypeSchema,
+  title: z.string(),
+  x: z.number().finite(),
+  y: z.number().finite(),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  parentId: z.string().min(1).nullable().optional(),
+  href: z.string(),
+  agencyHref: z.string().nullable().optional(),
+  chip: z.string(),
+  bodyPreview: z.string().optional(),
+  readOnly: z.boolean().optional(),
+  unplaced: z.boolean().optional(),
+  origin: z.enum(["canvas", "agency", "inbox"]),
+  teamId: z.string().nullable().optional(),
+  nodeType: z.enum(["standard", "orchestrator"]).optional(),
+  connections: z.array(z.object({ targetNodeId: z.string().min(1) })).optional(),
+  tint: z.string().optional(),
+});
+
+export type KnowledgeBoardCard = z.infer<typeof knowledgeBoardCardSchema>;
+
 export function isCanvasNativeObjectType(value: string): value is CanvasNativeObjectType {
   return canvasNativeObjectTypeSchema.safeParse(value).success;
 }
 
 export function isAgencyObjectType(value: string): value is AgencyKnowledgeObjectType {
   return knowledgeObjectTypeSchema.safeParse(value).success && value.startsWith("agency.");
+}
+
+export function isBoardNoodleRelation(relationType: KnowledgeRelationType): boolean {
+  return relationType === "related";
+}
+
+export function shouldProjectIntoWorkspaceBlob(objectType: string): boolean {
+  return objectType === "document";
+}
+
+export function knowledgeObjectHref(objectType: KnowledgeObjectType, id: string): string {
+  if (objectType === "document") return `/node/${id}`;
+  return `/object/${id}`;
+}
+
+export function knowledgeChipLabel(objectType: KnowledgeObjectType): string {
+  switch (objectType) {
+    case "document":
+      return "Document";
+    case "note":
+      return "Note";
+    case "decision":
+      return "Decision";
+    case "person":
+      return "Person";
+    case "source":
+      return "Source";
+    case "folder":
+      return "Folder";
+    case "agency.project":
+      return "Project";
+    case "agency.task":
+      return "Task";
+    case "agency.member":
+      return "Member";
+    case "agency.client":
+      return "Client";
+    case "agency.timeEntry":
+      return "Time";
+    default: {
+      const _exhaustive: never = objectType;
+      return _exhaustive;
+    }
+  }
+}
+
+export function defaultKnowledgePlacementSize(objectType: KnowledgeObjectType): {
+  width: number;
+  height: number;
+} {
+  switch (objectType) {
+    case "document":
+      return { width: DEFAULT_WORKSPACE_NODE_WIDTH, height: DEFAULT_WORKSPACE_NODE_HEIGHT };
+    case "folder":
+      return { width: KNOWLEDGE_FOLDER_WIDTH, height: KNOWLEDGE_FOLDER_HEIGHT };
+    case "agency.project":
+    case "agency.task":
+    case "agency.member":
+    case "agency.client":
+    case "agency.timeEntry":
+      return { width: KNOWLEDGE_AGENCY_PIN_WIDTH, height: KNOWLEDGE_AGENCY_PIN_HEIGHT };
+    case "note":
+    case "decision":
+    case "person":
+    case "source":
+      return { width: KNOWLEDGE_CARD_WIDTH, height: KNOWLEDGE_CARD_HEIGHT };
+    default: {
+      const _exhaustive: never = objectType;
+      return _exhaustive;
+    }
+  }
+}
+
+export function inboxClusterPlacement(index: number): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  const column = index % KNOWLEDGE_INBOX_COLUMNS;
+  const row = Math.floor(index / KNOWLEDGE_INBOX_COLUMNS);
+  return {
+    x: KNOWLEDGE_INBOX_ORIGIN_X + column * (KNOWLEDGE_CARD_WIDTH + KNOWLEDGE_INBOX_GAP),
+    y: KNOWLEDGE_INBOX_ORIGIN_Y + row * (KNOWLEDGE_CARD_HEIGHT + KNOWLEDGE_INBOX_GAP),
+    width: KNOWLEDGE_CARD_WIDTH,
+    height: KNOWLEDGE_CARD_HEIGHT,
+  };
+}
+
+export function inboxClusterFrame(unplacedCount: number): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  const columns = Math.min(KNOWLEDGE_INBOX_COLUMNS, Math.max(1, unplacedCount));
+  const rows = Math.max(1, Math.ceil(unplacedCount / KNOWLEDGE_INBOX_COLUMNS));
+  return {
+    x: KNOWLEDGE_INBOX_ORIGIN_X - 24,
+    y: KNOWLEDGE_INBOX_ORIGIN_Y - 56,
+    width: columns * (KNOWLEDGE_CARD_WIDTH + KNOWLEDGE_INBOX_GAP) + 24,
+    height: rows * (KNOWLEDGE_CARD_HEIGHT + KNOWLEDGE_INBOX_GAP) + 64,
+  };
+}
+
+export function parseKnowledgeSourceProperties(
+  properties: Record<string, unknown>,
+): KnowledgeSourceProperties | null {
+  const parsed = knowledgeSourcePropertiesSchema.safeParse(properties);
+  return parsed.success ? parsed.data : null;
 }
 
 function knowledgeId(prefix: string, ...parts: string[]) {
@@ -280,6 +470,8 @@ export function workspaceNodeToKnowledge(node: WorkspaceNode): {
   const placement = knowledgePlacementSchema.parse({
     id: knowledgeId("kplc", parsed.id, "board", ownerUserId),
     objectId: parsed.id,
+    objectType: "document",
+    teamId: parsed.teamId ?? null,
     viewId: "board",
     x: parsed.x,
     y: parsed.y,
@@ -322,109 +514,37 @@ export function workspaceNodeToKnowledge(node: WorkspaceNode): {
   return { object, placement, relations };
 }
 
-function synthesizeTab(input: {
-  object: KnowledgeObject;
-  blockType: "notes" | "decision";
-  body: string;
-  recommendation: string;
-}) {
-  const timestamp = input.object.updatedAt;
-  const block =
-    input.blockType === "decision"
-      ? workspaceDecisionBlockSchema.parse({
-          id: knowledgeId("block", input.object.id, "decision"),
-          type: "decision",
-          title: input.object.title,
-          pros: [],
-          cons: [],
-          recommendation: input.recommendation,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        })
-      : workspaceNotesBlockSchema.parse({
-          id: knowledgeId("block", input.object.id, "notes"),
-          type: "notes",
-          title: input.object.title,
-          body: input.body,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
-  return workspaceNodeTabSchema.parse({
-    id: knowledgeId("tab", input.object.id, "overview"),
-    title: "Overview",
-    blocks: [block],
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  });
-}
-
 export function knowledgeToWorkspaceNode(
   object: KnowledgeObject,
   placement: KnowledgePlacement | null,
   relations: KnowledgeRelation[],
 ): WorkspaceNode {
   const parsedObject = knowledgeObjectSchema.parse(object);
+  if (parsedObject.objectType !== "document") {
+    throw new Error("Only document objects project into workspace nodes");
+  }
   const x = placement?.x ?? 0;
   const y = placement?.y ?? 0;
   const width = placement?.width ?? DEFAULT_WORKSPACE_NODE_WIDTH;
   const height = placement?.height ?? DEFAULT_WORKSPACE_NODE_HEIGHT;
   const agencyRef = agencyRefFromRelations(parsedObject, relations);
-
-  if (parsedObject.objectType === "document") {
-    const content = knowledgeDocumentContentSchema.parse(parsedObject.content ?? {});
-    const connections =
-      content.nodeType === "orchestrator"
-        ? relations
-            .filter(
-              (relation) =>
-                relation.fromObjectId === parsedObject.id &&
-                relation.relationType === "related" &&
-                relation.toObjectType === "document",
-            )
-            .map((relation) => ({ targetNodeId: relation.toObjectId }))
-        : [];
-    return workspaceNodeSchema.parse({
-      id: parsedObject.id,
-      title: parsedObject.title,
-      content: content.body,
-      nodeType: content.nodeType,
-      ownerUserId: parsedObject.ownerUserId,
-      visibility: parsedObject.visibility,
-      teamId: parsedObject.teamId ?? null,
-      agencyRef,
-      x,
-      y,
-      width,
-      height,
-      label: content.label ?? parsedObject.title,
-      minWidth: content.minWidth ?? DEFAULT_WORKSPACE_NODE_MIN_WIDTH,
-      minHeight: content.minHeight ?? DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
-      createdAt: parsedObject.createdAt,
-      updatedAt: parsedObject.updatedAt,
-      tabs: content.tabs,
-      customBlockTemplates: content.customBlockTemplates,
-      connections,
-      viewState: content.viewState,
-      dashboard: content.dashboard,
-    });
-  }
-
-  const properties = parsedObject.properties;
-  const body = typeof properties.body === "string" ? properties.body : "";
-  const recommendation =
-    typeof properties.recommendation === "string" ? properties.recommendation : "";
-  const blockType = parsedObject.objectType === "decision" ? "decision" : "notes";
-  const tab = synthesizeTab({
-    object: parsedObject,
-    blockType,
-    body,
-    recommendation,
-  });
+  const content = knowledgeDocumentContentSchema.parse(parsedObject.content ?? {});
+  const connections =
+    content.nodeType === "orchestrator"
+      ? relations
+          .filter(
+            (relation) =>
+              relation.fromObjectId === parsedObject.id &&
+              isBoardNoodleRelation(relation.relationType) &&
+              relation.toObjectType === "document",
+          )
+          .map((relation) => ({ targetNodeId: relation.toObjectId }))
+      : [];
   return workspaceNodeSchema.parse({
     id: parsedObject.id,
     title: parsedObject.title,
-    content: body,
-    nodeType: "standard",
+    content: content.body,
+    nodeType: content.nodeType,
     ownerUserId: parsedObject.ownerUserId,
     visibility: parsedObject.visibility,
     teamId: parsedObject.teamId ?? null,
@@ -433,15 +553,15 @@ export function knowledgeToWorkspaceNode(
     y,
     width,
     height,
-    label: parsedObject.title,
-    minWidth: DEFAULT_WORKSPACE_NODE_MIN_WIDTH,
-    minHeight: DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
+    label: content.label ?? parsedObject.title,
+    minWidth: content.minWidth ?? DEFAULT_WORKSPACE_NODE_MIN_WIDTH,
+    minHeight: content.minHeight ?? DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
     createdAt: parsedObject.createdAt,
     updatedAt: parsedObject.updatedAt,
-    tabs: [tab],
-    customBlockTemplates: [],
-    connections: [],
-    viewState: { activeTabId: tab.id, notePreviewState: {} },
-    dashboard: { tint: "neutral", featuredBlocks: [] },
+    tabs: content.tabs,
+    customBlockTemplates: content.customBlockTemplates,
+    connections,
+    viewState: content.viewState,
+    dashboard: content.dashboard,
   });
 }

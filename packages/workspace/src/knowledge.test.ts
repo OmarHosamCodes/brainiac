@@ -3,6 +3,9 @@ import { describe, expect, test } from "bun:test";
 import { createWorkspaceNode } from "./index";
 import {
   agencyRefFromRelations,
+  knowledgeFolderPropertiesSchema,
+  knowledgeObjectHref,
+  knowledgeSourcePropertiesSchema,
   knowledgeToWorkspaceNode,
   workspaceNodeToKnowledge,
 } from "./knowledge";
@@ -81,7 +84,46 @@ describe("workspace knowledge projectors", () => {
     expect(agencyRefFromRelations(projected.object, projected.relations)?.projectId).toBe("proj-1");
   });
 
-  test("does not put related edges on a standard note projection", () => {
+  test("documents open node pages and knowledge cards open object pages", () => {
+    expect(knowledgeObjectHref("document", "node-1")).toBe("/node/node-1");
+    expect(knowledgeObjectHref("note", "kobj-1")).toBe("/object/kobj-1");
+    expect(knowledgeObjectHref("folder", "kobj-2")).toBe("/object/kobj-2");
+  });
+
+  test("does not project notes into workspace document nodes", () => {
+    expect(() =>
+      knowledgeToWorkspaceNode(
+        {
+          id: "kobj-note",
+          objectType: "note",
+          title: "Remember",
+          ownerUserId: "user-1",
+          visibility: "private",
+          teamId: null,
+          properties: { body: "hello" },
+          content: null,
+          createdAt: "2026-08-14T07:00:00.000Z",
+          updatedAt: "2026-08-14T07:00:00.000Z",
+        },
+        null,
+        [],
+      ),
+    ).toThrow(/document objects project/);
+  });
+
+  test("folder in relations never become board noodles", () => {
+    const folder = {
+      id: "kobj-folder",
+      objectType: "folder" as const,
+      title: "Launch",
+      ownerUserId: "user-1",
+      visibility: "private" as const,
+      teamId: null,
+      properties: { title: "Launch" },
+      content: null,
+      createdAt: "2026-08-14T07:00:00.000Z",
+      updatedAt: "2026-08-14T07:00:00.000Z",
+    };
     const note = {
       id: "kobj-note",
       objectType: "note" as const,
@@ -91,25 +133,47 @@ describe("workspace knowledge projectors", () => {
       teamId: null,
       properties: { body: "hello" },
       content: null,
-      createdAt: "2026-08-14T07:00:00.000Z",
-      updatedAt: "2026-08-14T07:00:00.000Z",
+      createdAt: folder.createdAt,
+      updatedAt: folder.updatedAt,
     };
-    const restored = knowledgeToWorkspaceNode(note, null, [
-      {
-        id: "krel-1",
-        fromObjectId: note.id,
-        fromObjectType: "note",
-        toObjectType: "document",
-        toObjectId: "node-other",
-        relationType: "related",
-        ownerUserId: "user-1",
-        teamId: null,
-        properties: {},
-        createdAt: note.createdAt,
-        updatedAt: note.updatedAt,
-      },
+    const inRelation = {
+      id: "krel-in",
+      fromObjectId: note.id,
+      fromObjectType: "note" as const,
+      toObjectType: "folder" as const,
+      toObjectId: folder.id,
+      relationType: "in" as const,
+      ownerUserId: "user-1",
+      teamId: null,
+      properties: {},
+      createdAt: folder.createdAt,
+      updatedAt: folder.updatedAt,
+    };
+    const orchestrator = createWorkspaceNode({
+      id: "node-orch",
+      title: "Orch",
+      ownerUserId: "user-1",
+      nodeType: "orchestrator",
+      connections: [{ targetNodeId: "node-target" }],
+    });
+    const projected = workspaceNodeToKnowledge(orchestrator);
+    const restored = knowledgeToWorkspaceNode(projected.object, projected.placement, [
+      ...projected.relations,
+      inRelation,
     ]);
-    expect(restored.connections).toEqual([]);
-    expect(restored.tabs[0]?.blocks[0]?.type).toBe("notes");
+    expect(restored.connections).toEqual([{ targetNodeId: "node-target" }]);
+    expect(inRelation.relationType).toBe("in");
+  });
+
+  test("parses source upload properties and folder title-only properties", () => {
+    expect(
+      knowledgeSourcePropertiesSchema.parse({
+        kind: "upload",
+        uploadId: "upload-1",
+        filename: "brief.pdf",
+        mediaType: "application/pdf",
+      }).uploadId,
+    ).toBe("upload-1");
+    expect(knowledgeFolderPropertiesSchema.parse({ title: "Research" }).title).toBe("Research");
   });
 });

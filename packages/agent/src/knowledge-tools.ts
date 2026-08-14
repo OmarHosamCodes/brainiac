@@ -18,7 +18,7 @@ function buildKnowledgeQueryTool(runtime: CanvasAgentRuntime) {
   return tool({
     name: "query_knowledge",
     description:
-      "Query the team brain: canvas notes/decisions plus live Agency projects, tasks, members, clients, and time entries. Use about: { objectType, id } to find what we know about a project or task. Never invent Agency ids.",
+      "Query the team brain: canvas notes, decisions, sources, folders, plus live Agency projects, tasks, members, clients, and time entries. Use about: { objectType, id } for backlinks. Folders use in relations. Never invent Agency ids.",
     inputSchema: z.object({
       teamId: z.string().trim().min(1).optional(),
       objectType: knowledgeObjectTypeSchema.optional(),
@@ -56,7 +56,7 @@ function buildKnowledgePlanTool() {
   return tool({
     name: "draft_knowledge_plan",
     description:
-      "Draft a multi-step knowledge plan (notes, decisions, links to Agency). Does not write. User must Confirm.",
+      "Draft a multi-step knowledge plan (notes, decisions, sources, folders, in grouping, Agency links). Connect and group — do not mutate Agency records. Does not write. User must Confirm.",
     inputSchema: z.object({
       title: z.string().trim().min(1).max(160),
       summary: z.string().trim().min(1).max(1_000),
@@ -85,7 +85,7 @@ function buildKnowledgeProposeTool(runtime: CanvasAgentRuntime) {
   return tool({
     name: "propose_knowledge_action",
     description:
-      "Propose one knowledge write (object.create/update/delete, relation.create/delete, placement.upsert). Does not apply. Cannot create or edit Agency projects/tasks/time. Link with about. Then ui_present and ask Approve.",
+      "Propose one knowledge write (object.create/update/delete, relation.create/delete including in to folders, placement.upsert for Agency pins). Does not apply. Cannot create or edit Agency projects/tasks/time. Link with about, group with in. Then ui_present and ask Approve.",
     inputSchema: z.object({
       action: knowledgeActionSchema,
       label: z.string().trim().min(1).max(200).optional(),
