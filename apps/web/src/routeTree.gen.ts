@@ -20,6 +20,7 @@ import { Route as AuthenticatedCanvasRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAgencyMeRouteImport } from './routes/_authenticated/agency.me'
 import { Route as AuthenticatedBillingSuccessRouteImport } from './routes/_authenticated/billing.success'
 import { Route as AuthenticatedNodeIdRouteImport } from './routes/_authenticated/node.$id'
+import { Route as AuthenticatedObjectIdRouteImport } from './routes/_authenticated/object.$id'
 import { Route as AuthenticatedAgencyChromeAgencyIndexRouteImport } from './routes/_authenticated/_agency-chrome/agency.index'
 import { Route as AuthenticatedAgencyChromeAgencyDashboardRouteImport } from './routes/_authenticated/_agency-chrome/agency.dashboard'
 import { Route as AuthenticatedAgencyChromeAgencyManagementRouteImport } from './routes/_authenticated/_agency-chrome/agency.management'
@@ -87,6 +88,11 @@ const AuthenticatedBillingSuccessRoute =
 const AuthenticatedNodeIdRoute = AuthenticatedNodeIdRouteImport.update({
   id: '/node/$id',
   path: '/node/$id',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedObjectIdRoute = AuthenticatedObjectIdRouteImport.update({
+  id: '/object/$id',
+  path: '/object/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedAgencyChromeAgencyIndexRoute =
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/agency/me': typeof AuthenticatedAgencyMeRoute
   '/billing/success': typeof AuthenticatedBillingSuccessRoute
   '/node/$id': typeof AuthenticatedNodeIdRoute
+  '/object/$id': typeof AuthenticatedObjectIdRoute
   '/agency/dashboard': typeof AuthenticatedAgencyChromeAgencyDashboardRoute
   '/agency/management': typeof AuthenticatedAgencyChromeAgencyManagementRouteWithChildren
   '/agency/members/$userId': typeof AuthenticatedAgencyMembersUserIdRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByTo {
   '/agency/me': typeof AuthenticatedAgencyMeRoute
   '/billing/success': typeof AuthenticatedBillingSuccessRoute
   '/node/$id': typeof AuthenticatedNodeIdRoute
+  '/object/$id': typeof AuthenticatedObjectIdRoute
   '/agency/dashboard': typeof AuthenticatedAgencyChromeAgencyDashboardRoute
   '/agency/management': typeof AuthenticatedAgencyChromeAgencyManagementRouteWithChildren
   '/agency/members/$userId': typeof AuthenticatedAgencyMembersUserIdRoute
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/_authenticated/agency/me': typeof AuthenticatedAgencyMeRoute
   '/_authenticated/billing/success': typeof AuthenticatedBillingSuccessRoute
   '/_authenticated/node/$id': typeof AuthenticatedNodeIdRoute
+  '/_authenticated/object/$id': typeof AuthenticatedObjectIdRoute
   '/_authenticated/_agency-chrome/agency/dashboard': typeof AuthenticatedAgencyChromeAgencyDashboardRoute
   '/_authenticated/_agency-chrome/agency/management': typeof AuthenticatedAgencyChromeAgencyManagementRouteWithChildren
   '/_authenticated/agency/members/$userId': typeof AuthenticatedAgencyMembersUserIdRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
     | '/agency/me'
     | '/billing/success'
     | '/node/$id'
+    | '/object/$id'
     | '/agency/dashboard'
     | '/agency/management'
     | '/agency/members/$userId'
@@ -279,6 +289,7 @@ export interface FileRouteTypes {
     | '/agency/me'
     | '/billing/success'
     | '/node/$id'
+    | '/object/$id'
     | '/agency/dashboard'
     | '/agency/management'
     | '/agency/members/$userId'
@@ -305,6 +316,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agency/me'
     | '/_authenticated/billing/success'
     | '/_authenticated/node/$id'
+    | '/_authenticated/object/$id'
     | '/_authenticated/_agency-chrome/agency/dashboard'
     | '/_authenticated/_agency-chrome/agency/management'
     | '/_authenticated/agency/members/$userId'
@@ -406,6 +418,13 @@ declare module '@tanstack/react-router' {
       path: '/node/$id'
       fullPath: '/node/$id'
       preLoaderRoute: typeof AuthenticatedNodeIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/object/$id': {
+      id: '/_authenticated/object/$id'
+      path: '/object/$id'
+      fullPath: '/object/$id'
+      preLoaderRoute: typeof AuthenticatedObjectIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/_agency-chrome/agency/': {
@@ -568,6 +587,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAgencyMeRoute: typeof AuthenticatedAgencyMeRoute
   AuthenticatedBillingSuccessRoute: typeof AuthenticatedBillingSuccessRoute
   AuthenticatedNodeIdRoute: typeof AuthenticatedNodeIdRoute
+  AuthenticatedObjectIdRoute: typeof AuthenticatedObjectIdRoute
   AuthenticatedAgencyMembersUserIdRoute: typeof AuthenticatedAgencyMembersUserIdRoute
 }
 
@@ -577,6 +597,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAgencyMeRoute: AuthenticatedAgencyMeRoute,
   AuthenticatedBillingSuccessRoute: AuthenticatedBillingSuccessRoute,
   AuthenticatedNodeIdRoute: AuthenticatedNodeIdRoute,
+  AuthenticatedObjectIdRoute: AuthenticatedObjectIdRoute,
   AuthenticatedAgencyMembersUserIdRoute: AuthenticatedAgencyMembersUserIdRoute,
 }
 
