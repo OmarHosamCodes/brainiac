@@ -5,7 +5,9 @@ type CanvasKnowledgeQuickAddContainerProps = {
   teamId?: string | null;
 };
 
-export function CanvasKnowledgeQuickAddContainer({ teamId }: CanvasKnowledgeQuickAddContainerProps) {
+export function CanvasKnowledgeQuickAddContainer({
+  teamId,
+}: CanvasKnowledgeQuickAddContainerProps) {
   const view = useCanvasKnowledgeQuickAdd({ teamId });
   return <CanvasKnowledgeQuickAddView {...view} />;
 }

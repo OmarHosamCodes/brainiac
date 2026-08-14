@@ -23,10 +23,7 @@ import type { CanvasNodeModel } from "@/features/workspace/canvas/canvas-types";
 import { CanvasKnowledgeQuickAdd } from "@/features/workspace-knowledge/workspace-knowledge";
 import { useCanvasKnowledgeBoard } from "@/features/workspace-knowledge/hooks/use-canvas-knowledge-board";
 import { KnowledgeBoardCardView } from "@/features/workspace-knowledge/knowledge-board-card-view";
-import {
-  isDocumentBoardCard,
-  knowledgeOpenHref,
-} from "@/features/workspace-knowledge/board-cards";
+import { isDocumentBoardCard, knowledgeOpenHref } from "@/features/workspace-knowledge/board-cards";
 import { cn } from "@/lib/utils";
 
 function renderWorkspaceCard(
