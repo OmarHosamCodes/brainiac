@@ -1,3 +1,4 @@
+import { knowledgeDraftPlanSchema } from "@orch/agent/knowledge-actions";
 import type {
   AgentModelPreset,
   AgentScopeRef,
@@ -1014,7 +1015,12 @@ export function useWorkspaceAgent() {
 
   const confirmPlanMutation = useMutation({
     mutationFn: async (plan: OrchUIDataParts["orchPlan"]) => {
-      const domain = surface === "canvas" ? "canvas" : "agency";
+      const domain =
+        surface === "agency"
+          ? "agency"
+          : knowledgeDraftPlanSchema.safeParse(plan).success
+            ? "knowledge"
+            : "canvas";
       if (domain === "agency" && !teamId) throw new Error("No active Agency team.");
       return orpcClient.agent.proposals.confirmPlan({
         ...(teamId ? { teamId } : {}),
