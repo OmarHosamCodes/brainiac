@@ -24,8 +24,15 @@ const TOOL_CATALOG: ToolCatalogDefinition[] = [
     modes: ALL_MODES,
   },
   {
-    name: "search_dashboard",
-    usage: "Searches node titles, tabs, and block content on the canvas.",
+    name: "query_knowledge",
+    usage:
+      "Queries the team brain and live Agency projections (projects, tasks, members, clients, time).",
+    surface: ["canvas"],
+    modes: ALL_MODES,
+  },
+  {
+    name: "get_knowledge_object",
+    usage: "Reads one canvas knowledge object or live Agency record, including inbound links.",
     surface: ["canvas"],
     modes: ALL_MODES,
   },
@@ -169,10 +176,22 @@ const TOOL_CATALOG: ToolCatalogDefinition[] = [
     modes: ["agent"],
   },
   {
+    name: "draft_knowledge_plan",
+    usage: "Drafts a multi-step knowledge-graph plan for user confirmation (no writes).",
+    surface: ["canvas"],
+    modes: ["plan"],
+  },
+  {
     name: "draft_canvas_plan",
     usage: "Drafts a multi-step Canvas change plan for user confirmation (no writes).",
     surface: ["canvas"],
     modes: ["plan"],
+  },
+  {
+    name: "propose_knowledge_action",
+    usage: "Proposes one knowledge create/update/link with before/after for Approve/Reject.",
+    surface: ["canvas"],
+    modes: ["agent"],
   },
   {
     name: "propose_canvas_action",

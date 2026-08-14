@@ -1,6 +1,9 @@
 import {
   WORKSPACE_NODE_LIMIT,
   workspaceNodeSchema,
+  type KnowledgeObjectType,
+  type KnowledgeObjectView,
+  type KnowledgeTarget,
   type WorkspaceMarketplaceItem,
   type WorkspaceNode,
 } from "@orch/workspace";
@@ -643,6 +646,31 @@ export type AgencyAgentRuntime = {
 
 export type CanvasAgentRuntime = {
   createProposal: (input: {
+    action: unknown;
+    label?: string;
+    conversationId?: string | null;
+  }) => Promise<{
+    proposalId: string;
+    status: "pending";
+    action: unknown;
+    before: unknown;
+    after: unknown;
+    label: string;
+    boardHref?: string | null;
+  }>;
+  queryKnowledge?: (input: {
+    teamId?: string;
+    objectType?: KnowledgeObjectType;
+    query?: string;
+    about?: KnowledgeTarget;
+    limit?: number;
+  }) => Promise<{ items: KnowledgeObjectView[] }>;
+  getKnowledge?: (input: {
+    id: string;
+    objectType?: KnowledgeObjectType;
+    teamId?: string;
+  }) => Promise<unknown>;
+  createKnowledgeProposal?: (input: {
     action: unknown;
     label?: string;
     conversationId?: string | null;

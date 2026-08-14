@@ -9,6 +9,8 @@ describe("listAgentToolCatalog", () => {
 
     expect(names).toContain("ui_present");
     expect(names).toContain("list_dashboard_nodes");
+    expect(names).toContain("query_knowledge");
+    expect(names).toContain("get_knowledge_object");
     expect(names).toContain("get_current_time");
     expect(names).toContain("ask_agency_question");
     expect(names).not.toContain("create_node");
@@ -24,6 +26,7 @@ describe("listAgentToolCatalog", () => {
     const names = tools.map((tool) => tool.name);
     expect(names).toContain("ui_present");
     expect(names).toContain("propose_canvas_action");
+    expect(names).toContain("propose_knowledge_action");
     expect(names).not.toContain("patch_block");
     expect(names).not.toContain("create_node");
   });
@@ -32,6 +35,7 @@ describe("listAgentToolCatalog", () => {
     const tools = listAgentToolCatalog({ surface: "canvas", mode: "plan" });
     const names = tools.map((tool) => tool.name);
     expect(names).toContain("draft_canvas_plan");
+    expect(names).toContain("draft_knowledge_plan");
     expect(names).toContain("list_dashboard_nodes");
     expect(names).not.toContain("propose_canvas_action");
   });
