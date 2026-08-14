@@ -67,7 +67,9 @@ export function KnowledgeObjectPageView({
         <dl className="grid gap-3 text-sm">
           {propertyLines.map((line) => (
             <div key={line.label} className="grid gap-1">
-              <dt className="text-xs font-medium uppercase tracking-wide text-muted">{line.label}</dt>
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted">
+                {line.label}
+              </dt>
               <dd className="text-toned">{line.value}</dd>
             </div>
           ))}
@@ -92,7 +94,10 @@ export function KnowledgeObjectPageView({
           <ul className="space-y-2">
             {backlinks.map((link) => (
               <li key={link.id}>
-                <Link className="text-sm text-primary underline-offset-4 hover:underline" to={link.href}>
+                <Link
+                  className="text-sm text-primary underline-offset-4 hover:underline"
+                  to={link.href}
+                >
                   {link.label}
                 </Link>
               </li>

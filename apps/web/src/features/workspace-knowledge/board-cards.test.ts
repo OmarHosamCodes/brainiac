@@ -42,7 +42,13 @@ function knowledgeCard(partial: Partial<KnowledgeBoardCard> & { id: string }): K
 describe("mergeCanvasBoard", () => {
   test("keeps documents on node pages and knowledge on object pages", () => {
     const merged = mergeCanvasBoard(
-      [documentNode({ id: "node-1", nodeType: "orchestrator", connections: [{ targetNodeId: "node-2" }] })],
+      [
+        documentNode({
+          id: "node-1",
+          nodeType: "orchestrator",
+          connections: [{ targetNodeId: "node-2" }],
+        }),
+      ],
       [
         knowledgeCard({ id: "kobj-1" }),
         knowledgeCard({
@@ -150,7 +156,9 @@ describe("mergeCanvasBoard", () => {
     );
     expect(shouldPersistKnowledgeGeometry(nodes, "kobj-unplaced")).toBe(false);
     const movedOut = nodes.map((node) =>
-      node.id === "kobj-unplaced" ? { ...node, x: 900, y: 40, parentId: null, unplaced: true } : node,
+      node.id === "kobj-unplaced"
+        ? { ...node, x: 900, y: 40, parentId: null, unplaced: true }
+        : node,
     );
     expect(shouldPersistKnowledgeGeometry(movedOut, "kobj-unplaced")).toBe(true);
     expect(findFolderDropTarget(movedOut, "kobj-unplaced")).toBe("folder-1");

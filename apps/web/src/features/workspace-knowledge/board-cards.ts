@@ -80,10 +80,7 @@ function pointInRect(node: CanvasNodeModel, x: number, y: number): boolean {
   return x >= node.x && x <= node.x + node.width && y >= node.y && y <= node.y + node.height;
 }
 
-export function shouldPersistKnowledgeGeometry(
-  nodes: CanvasNodeModel[],
-  cardId: string,
-): boolean {
+export function shouldPersistKnowledgeGeometry(nodes: CanvasNodeModel[], cardId: string): boolean {
   const card = nodes.find((node) => node.id === cardId);
   if (!card || isDocumentBoardCard(card) || card.kind === "inbox") {
     return false;
@@ -91,9 +88,13 @@ export function shouldPersistKnowledgeGeometry(
   if (findFolderDropTarget(nodes, cardId)) {
     return true;
   }
-  const inbox = nodes.find((node) => node.id === KNOWLEDGE_INBOX_CLUSTER_ID || node.kind === "inbox");
+  const inbox = nodes.find(
+    (node) => node.id === KNOWLEDGE_INBOX_CLUSTER_ID || node.kind === "inbox",
+  );
   const stillUnplaced =
-    Boolean(card.unplaced) || card.parentId === KNOWLEDGE_INBOX_CLUSTER_ID || card.parentId === inbox?.id;
+    Boolean(card.unplaced) ||
+    card.parentId === KNOWLEDGE_INBOX_CLUSTER_ID ||
+    card.parentId === inbox?.id;
   if (!stillUnplaced || !inbox) {
     return true;
   }

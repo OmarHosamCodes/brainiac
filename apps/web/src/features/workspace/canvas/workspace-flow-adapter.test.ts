@@ -86,9 +86,7 @@ describe("applyFlowChangesToWorkspaceNodes", () => {
       ],
       [],
     );
-    expect(flowEdges).toEqual([
-      expect.objectContaining({ source: "orch", target: "doc" }),
-    ]);
+    expect(flowEdges).toEqual([expect.objectContaining({ source: "orch", target: "doc" })]);
   });
 
   test("nests folder and inbox children as parent frames", () => {

@@ -53,7 +53,7 @@ export function workspaceNodesToFlow(
       height: node.height,
       style: isParentFrame(node) ? { width: node.width, height: node.height } : undefined,
       selected: selectedSet.has(node.id),
-      parentId: parent ? node.parentId ?? undefined : undefined,
+      parentId: parent ? (node.parentId ?? undefined) : undefined,
       extent: parent ? "parent" : undefined,
       zIndex: isParentFrame(node) ? -1 : undefined,
       data: {
@@ -72,7 +72,11 @@ export function workspaceNodesToFlow(
   const flowEdges: Edge<WorkspaceFlowEdgeData>[] = [];
 
   for (const node of nodes) {
-    if (!isDocumentBoardCard(node) || node.nodeType !== "orchestrator" || !node.connections?.length) {
+    if (
+      !isDocumentBoardCard(node) ||
+      node.nodeType !== "orchestrator" ||
+      !node.connections?.length
+    ) {
       continue;
     }
 

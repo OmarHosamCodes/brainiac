@@ -95,9 +95,7 @@ function rowToPlacement(row: typeof workspacePlacement.$inferSelect): KnowledgeP
   return {
     id: row.id,
     objectId: row.objectId,
-    objectType: row.objectType
-      ? knowledgeObjectTypeSchema.parse(row.objectType)
-      : undefined,
+    objectType: row.objectType ? knowledgeObjectTypeSchema.parse(row.objectType) : undefined,
     teamId: row.teamId,
     viewId: row.viewId,
     x: row.x,
