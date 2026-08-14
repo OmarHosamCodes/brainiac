@@ -13,8 +13,10 @@ import {
 } from "./agency-question";
 import { buildAgencyAgentTools } from "./agency-tools";
 import { canvasDraftPlanSchema, canvasProposalSnapshotSchema } from "./canvas-actions";
+import { knowledgeDraftPlanSchema, knowledgeProposalSnapshotSchema } from "./knowledge-actions";
 import { buildCanvasScopedPatchNote } from "./canvas-scope-instructions";
 import { buildCanvasWriteTools } from "./canvas-tools";
+import { buildKnowledgeTools } from "./knowledge-tools";
 import { resolveUnlockedSurfaces } from "./tool-catalog";
 import {
   agencyQuestionRetryNote,
@@ -294,7 +296,8 @@ function buildCanvasAgentModeInstructions(workspace: DashboardAgentWorkspaceCont
   });
   return [
     buildAgentInstructions({ ...workspace, surface: "canvas" }),
-    "Agent mode: never write Canvas data directly. Call propose_canvas_action for each intended write (node/tab/block create, patch, replace, or delete).",
+    "Canvas is a view of the team brain. Agency projects, tasks, members, clients, and time entries are live records — link with about, never copy. Private notes stay private. Query before proposing.",
+    "Agent mode: never write Canvas data directly. Call propose_canvas_action for board/block AST edits and propose_knowledge_action for notes, decisions, and Agency links.",
     "When you need clarification, call ask_agency_question (do not ask only in prose).",
     "Required: after each propose_canvas_action, call ui_present with kind workspaceBlock or workspaceNode, then tell the user to Approve or Reject.",
     "Never claim a write succeeded until the user Approves. Prefer one proposal at a time unless the user asks for a batch.",
@@ -654,6 +657,7 @@ function providerErrorUserMessage(errorMessage: string): string {
 type MergedAgentTool =
   | ReturnType<typeof buildDashboardAgentTools>[number]
   | ReturnType<typeof buildCanvasWriteTools>[number]
+  | ReturnType<typeof buildKnowledgeTools>[number]
   | ReturnType<typeof buildAgencyAgentTools>[number];
 
 function mergeOpenRouterTools(groups: MergedAgentTool[][]) {
@@ -688,7 +692,10 @@ async function* streamToolEnabledPass(
     : [];
   const canvasWrites: MergedAgentTool[] =
     surfaces.includes("canvas") && args.canvasRuntime
-      ? buildCanvasWriteTools(args.canvasRuntime, args.toolPreset)
+      ? [
+          ...buildCanvasWriteTools(args.canvasRuntime, args.toolPreset),
+          ...buildKnowledgeTools(args.canvasRuntime, args.toolPreset),
+        ]
       : [];
   const agencyTools: MergedAgentTool[] =
     surfaces.includes("agency") && args.agencyRuntime
@@ -771,11 +778,17 @@ async function* streamToolEnabledPass(
               artifacts.push(artifact);
               enqueue({ type: "artifact", artifact });
             }
-            if (tool.name === "draft_agency_plan" || tool.name === "draft_canvas_plan") {
+            if (
+              tool.name === "draft_agency_plan" ||
+              tool.name === "draft_canvas_plan" ||
+              tool.name === "draft_knowledge_plan"
+            ) {
               const plan =
                 tool.name === "draft_canvas_plan"
                   ? canvasDraftPlanSchema.safeParse(tool.output)
-                  : agencyDraftPlanSchema.safeParse(tool.output);
+                  : tool.name === "draft_knowledge_plan"
+                    ? knowledgeDraftPlanSchema.safeParse(tool.output)
+                    : agencyDraftPlanSchema.safeParse(tool.output);
               if (plan.success) {
                 enqueue({ type: "plan", plan: plan.data });
               }
@@ -786,17 +799,26 @@ async function* streamToolEnabledPass(
                 enqueue({ type: "question", question: question.data });
               }
             }
-            if (tool.name === "propose_agency_action" || tool.name === "propose_canvas_action") {
+            if (
+              tool.name === "propose_agency_action" ||
+              tool.name === "propose_canvas_action" ||
+              tool.name === "propose_knowledge_action"
+            ) {
               const proposal =
                 tool.name === "propose_canvas_action"
                   ? canvasProposalSnapshotSchema.safeParse({
                       ...(typeof tool.output === "object" && tool.output ? tool.output : {}),
                       status: "pending",
                     })
-                  : agencyProposalSnapshotSchema.safeParse({
-                      ...(typeof tool.output === "object" && tool.output ? tool.output : {}),
-                      status: "pending",
-                    });
+                  : tool.name === "propose_knowledge_action"
+                    ? knowledgeProposalSnapshotSchema.safeParse({
+                        ...(typeof tool.output === "object" && tool.output ? tool.output : {}),
+                        status: "pending",
+                      })
+                    : agencyProposalSnapshotSchema.safeParse({
+                        ...(typeof tool.output === "object" && tool.output ? tool.output : {}),
+                        status: "pending",
+                      });
               if (proposal.success) {
                 enqueue({
                   type: "proposal",
@@ -1270,7 +1292,9 @@ export async function* streamDashboardAgent(
     if (
       toolCalls.some(
         (tool) =>
-          (tool.name === "draft_agency_plan" || tool.name === "draft_canvas_plan") &&
+          (tool.name === "draft_agency_plan" ||
+            tool.name === "draft_canvas_plan" ||
+            tool.name === "draft_knowledge_plan") &&
           tool.status === "completed",
       )
     ) {
@@ -1278,7 +1302,9 @@ export async function* streamDashboardAgent(
     } else if (
       toolCalls.some(
         (tool) =>
-          (tool.name === "propose_agency_action" || tool.name === "propose_canvas_action") &&
+          (tool.name === "propose_agency_action" ||
+            tool.name === "propose_canvas_action" ||
+            tool.name === "propose_knowledge_action") &&
           tool.status === "completed",
       )
     ) {
