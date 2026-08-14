@@ -23,6 +23,12 @@ export function useCanvasKnowledgeBoard(input: {
   captureError: string | null;
   syncGeometry: (nextNodes: CanvasNodeModel[]) => void;
   removeCard: (nodeId: string) => Promise<void>;
+  placeCard: (input: {
+    objectId: string;
+    x: number;
+    y: number;
+    objectType?: string;
+  }) => Promise<void>;
 } {
   const teamId = input.teamId ?? undefined;
   const captureKnowledge = useWorkspaceKnowledgeStore((state) => state.captureKnowledge);
@@ -136,6 +142,53 @@ export function useCanvasKnowledgeBoard(input: {
     };
   }, []);
 
+  const placeCard = useCallback(
+    async (inputPlace: { objectId: string; x: number; y: number; objectType?: string }) => {
+      const unplacedCard = (boardQuery.data?.unplaced ?? []).find(
+        (card) => card.id === inputPlace.objectId,
+      );
+      const objectType = unplacedCard?.objectType;
+      await captureKnowledge({
+        action: {
+          type: "placement.upsert",
+          objectId: inputPlace.objectId,
+          objectType,
+          teamId: teamId ?? null,
+          x: inputPlace.x,
+          y: inputPlace.y,
+          width: unplacedCard?.width,
+          height: unplacedCard?.height,
+        },
+        teamId,
+        silent: true,
+      });
+      const board = cardsRef.current;
+      const dropped = {
+        id: inputPlace.objectId,
+        x: inputPlace.x,
+        y: inputPlace.y,
+        width: unplacedCard?.width ?? 280,
+        height: unplacedCard?.height ?? 180,
+        kind: unplacedCard?.kind,
+        objectType,
+      } as CanvasNodeModel;
+      const folderId = findFolderDropTarget([...board, dropped], inputPlace.objectId);
+      if (folderId) {
+        await captureKnowledge({
+          action: {
+            type: "relation.create",
+            fromObjectId: inputPlace.objectId,
+            to: { objectType: "folder", id: folderId },
+            relationType: "in",
+          },
+          teamId,
+          silent: true,
+        });
+      }
+    },
+    [boardQuery.data?.unplaced, captureKnowledge, teamId],
+  );
+
   const removeCard = useCallback(
     async (nodeId: string) => {
       const card = cards.find((node) => node.id === nodeId);
@@ -156,5 +209,6 @@ export function useCanvasKnowledgeBoard(input: {
     captureError,
     syncGeometry,
     removeCard,
+    placeCard,
   };
 }

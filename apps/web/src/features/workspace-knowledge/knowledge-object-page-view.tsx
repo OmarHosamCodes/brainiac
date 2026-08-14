@@ -18,6 +18,13 @@ export type KnowledgeObjectPageViewProps = {
   agencyLinks: { label: string; href: string }[];
   error: string | null;
   missing: boolean;
+  linkRelationType: string;
+  linkTargetId: string;
+  linkTargets: KnowledgeObjectBacklink[];
+  linkPending: boolean;
+  onLinkRelationTypeChange: (value: string) => void;
+  onLinkTargetIdChange: (value: string) => void;
+  onCreateLink: () => void;
   onOpenOnBoard: () => void;
 };
 
@@ -30,6 +37,13 @@ export function KnowledgeObjectPageView({
   agencyLinks,
   error,
   missing,
+  linkRelationType,
+  linkTargetId,
+  linkTargets,
+  linkPending,
+  onLinkRelationTypeChange,
+  onLinkTargetIdChange,
+  onCreateLink,
   onOpenOnBoard,
 }: KnowledgeObjectPageViewProps) {
   return (
@@ -85,6 +99,39 @@ export function KnowledgeObjectPageView({
           ))}
         </div>
       ) : null}
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-highlighted">Link to</h2>
+        <div className="flex flex-wrap gap-2">
+          <select
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={linkRelationType}
+            onChange={(event) => onLinkRelationTypeChange(event.target.value)}
+            aria-label="Relation type"
+          >
+            <option value="about">about</option>
+            <option value="supports">supports</option>
+            <option value="related">related</option>
+            <option value="mentions">mentions</option>
+          </select>
+          <select
+            className="h-9 min-w-48 flex-1 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={linkTargetId}
+            onChange={(event) => onLinkTargetIdChange(event.target.value)}
+            aria-label="Link target"
+          >
+            <option value="">Choose a target</option>
+            {linkTargets.map((target) => (
+              <option key={target.id} value={target.id}>
+                {target.label}
+              </option>
+            ))}
+          </select>
+          <Button type="button" disabled={linkPending || !linkTargetId} onClick={onCreateLink}>
+            Link
+          </Button>
+        </div>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-highlighted">Backlinks</h2>

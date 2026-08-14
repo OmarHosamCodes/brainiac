@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 811 |
+| golden-feature | 816 |
 | server-operation | 16 |
 | shared-infrastructure | 455 |
 | static-presentation | 22 |
@@ -55,7 +55,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | team | 19 |
 | time-tracking | 102 |
 | web-platform | 250 |
-| workspace | 133 |
+| workspace | 138 |
 
 ## Artifacts
 
@@ -802,13 +802,18 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/workspace-agent/workspace-agent.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-knowledge/board-cards.test.ts` | workspace | test | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/workspace-knowledge/board-cards.ts` | workspace | domain-logic | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
-| `apps/web/src/features/workspace-knowledge/canvas-knowledge-quick-add-view.tsx` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
-| `apps/web/src/features/workspace-knowledge/containers/canvas-knowledge-quick-add-container.tsx` | workspace | container | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
+| `apps/web/src/features/workspace-knowledge/canvas-knowledge-create-dialog-view.tsx` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-knowledge/canvas-knowledge-create-menu-view.tsx` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-knowledge/containers/canvas-knowledge-create-dialog-container.tsx` | workspace | container | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
+| `apps/web/src/features/workspace-knowledge/containers/canvas-knowledge-create-menu-container.tsx` | workspace | container | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/workspace-knowledge/containers/knowledge-object-page-container.tsx` | workspace | container | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/workspace-knowledge/hooks/use-canvas-knowledge-board.ts` | workspace | feature-hook | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
-| `apps/web/src/features/workspace-knowledge/hooks/use-canvas-knowledge-quick-add.ts` | workspace | feature-hook | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/workspace-knowledge/hooks/use-canvas-knowledge-create-menu.ts` | workspace | feature-hook | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
+| `apps/web/src/features/workspace-knowledge/hooks/use-canvas-knowledge-create.ts` | workspace | feature-hook | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/workspace-knowledge/hooks/use-knowledge-object-page.ts` | workspace | feature-hook | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/workspace-knowledge/knowledge-board-card-view.tsx` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-knowledge/knowledge-create.test.ts` | workspace | test | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/workspace-knowledge/knowledge-create.ts` | workspace | domain-logic | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-knowledge/knowledge-object-page-view.tsx` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-knowledge/stores/workspace-knowledge.ts` | workspace | client-state | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical client-state layer. | content: oRPC procedures or clients, Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-knowledge/workspace-knowledge.tsx` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |

@@ -20,8 +20,10 @@ import { dashboardErrorAlertClass } from "@/features/dashboard/dashboard-ui";
 import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
 import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
 import type { CanvasNodeModel } from "@/features/workspace/canvas/canvas-types";
-import { CanvasKnowledgeQuickAdd } from "@/features/workspace-knowledge/workspace-knowledge";
+import { CanvasKnowledgeCreateMenuContainer } from "@/features/workspace-knowledge/containers/canvas-knowledge-create-menu-container";
+import { CanvasKnowledgeCreateDialog } from "@/features/workspace-knowledge/workspace-knowledge";
 import { useCanvasKnowledgeBoard } from "@/features/workspace-knowledge/hooks/use-canvas-knowledge-board";
+import { useWorkspaceKnowledgeStore } from "@/features/workspace-knowledge/stores/workspace-knowledge";
 import { KnowledgeBoardCardView } from "@/features/workspace-knowledge/knowledge-board-card-view";
 import { isDocumentBoardCard, knowledgeOpenHref } from "@/features/workspace-knowledge/board-cards";
 import { cn } from "@/lib/utils";
@@ -59,6 +61,16 @@ export function CanvasPage() {
     documents: board.nodes,
     teamId: selectedTeamId || null,
   });
+  const openCreateMenuAt = useWorkspaceKnowledgeStore((state) => state.openCreateMenuAt);
+
+  const resolveBoardPoint = useCallback(() => canvasRef.current?.viewportCenter() ?? null, []);
+
+  const handleCreateDocument = useCallback(
+    (point?: { x: number; y: number }) => {
+      board.openCreateNode(point ?? canvasRef.current?.viewportCenter() ?? { x: 0, y: 0 });
+    },
+    [board.openCreateNode],
+  );
 
   useEffect(() => {
     if (board.selectedNodeIds.length > 0) {
@@ -155,6 +167,10 @@ export function CanvasPage() {
               onNodesChange={handleFlowNodesChange}
               onSelectedNodeIdsChange={board.setSelectedNodeIds}
               onCreateNode={board.openCreateNode}
+              onCreateRequest={openCreateMenuAt}
+              onPlaceUnplaced={(payload) => {
+                void knowledge.placeCard(payload);
+              }}
               onEditNode={handleEditNode}
               onConnectNodePair={board.connectNodePair}
               onDisconnectNodePair={board.disconnectNodePair}
@@ -164,11 +180,15 @@ export function CanvasPage() {
             />
           </main>
 
-          <div className="pointer-events-none absolute left-4 top-4 z-30 md:left-6 md:top-6">
-            <div className="pointer-events-auto">
-              <CanvasKnowledgeQuickAdd teamId={selectedTeamId || null} />
-            </div>
-          </div>
+          <CanvasKnowledgeCreateDialog
+            teamId={selectedTeamId || null}
+            resolveBoardPoint={resolveBoardPoint}
+            onCreateDocument={handleCreateDocument}
+          />
+          <CanvasKnowledgeCreateMenuContainer
+            teamId={selectedTeamId || null}
+            onCreateDocument={handleCreateDocument}
+          />
 
           <div className="pointer-events-none absolute bottom-[11.5rem] left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-[12rem] md:left-6">
             {board.isWorkspaceRefreshing ? (

@@ -4,11 +4,14 @@ import {
   knowledgeObjectTypeSchema,
   parseKnowledgeSourceProperties,
   type KnowledgeObjectType,
+  type KnowledgeRelationType,
 } from "@orch/workspace";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { KnowledgeObjectPageViewProps } from "@/features/workspace-knowledge/knowledge-object-page-view";
+import { useWorkspaceKnowledgeStore } from "@/features/workspace-knowledge/stores/workspace-knowledge";
+import { knowledgeLinkRelationTypes } from "@/features/workspace-knowledge/knowledge-create";
 import { useNavigate, useParams, useSearchParams } from "@/lib/navigation";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -31,6 +34,16 @@ export function useKnowledgeObjectPage(): KnowledgeObjectPageViewProps {
       input: { id, objectType, teamId },
     }),
     enabled: id.length > 0,
+  });
+  const captureKnowledge = useWorkspaceKnowledgeStore((state) => state.captureKnowledge);
+  const capturePending = useWorkspaceKnowledgeStore((state) => state.capturePending);
+  const [linkRelationType, setLinkRelationType] = useState<string>("about");
+  const [linkTargetId, setLinkTargetId] = useState("");
+
+  const targetsQuery = useQuery({
+    ...orpc.workspace.knowledge.query.queryOptions({
+      input: { teamId, includeAgency: true, limit: 40 },
+    }),
   });
 
   const view = query.data?.view;
@@ -96,6 +109,48 @@ export function useKnowledgeObjectPage(): KnowledgeObjectPageViewProps {
     void navigate("/canvas");
   }, [navigate]);
 
+  const linkTargets = useMemo(
+    () =>
+      (targetsQuery.data?.items ?? [])
+        .filter((item) => item.id !== id)
+        .map((item) => ({
+          id: `${item.objectType}:${item.id}`,
+          label: `${item.title} (${item.objectType})`,
+          href: item.href ?? knowledgeObjectHref(item.objectType, item.id),
+        })),
+    [id, targetsQuery.data?.items],
+  );
+
+  const onCreateLink = useCallback(() => {
+    const selected = linkTargets.find((item) => item.id === linkTargetId);
+    const target = (targetsQuery.data?.items ?? []).find(
+      (item) => `${item.objectType}:${item.id}` === linkTargetId,
+    );
+    if (!selected || !target || !id) return;
+    const relationType = knowledgeLinkRelationTypes.includes(
+      linkRelationType as (typeof knowledgeLinkRelationTypes)[number],
+    )
+      ? (linkRelationType as KnowledgeRelationType)
+      : "about";
+    void captureKnowledge({
+      action: {
+        type: "relation.create",
+        fromObjectId: id,
+        to: { objectType: target.objectType, id: target.id },
+        relationType,
+      },
+      teamId,
+    }).catch(() => undefined);
+  }, [
+    captureKnowledge,
+    id,
+    linkRelationType,
+    linkTargetId,
+    linkTargets,
+    teamId,
+    targetsQuery.data?.items,
+  ]);
+
   return {
     title: view?.title ?? "Knowledge",
     chip: view ? knowledgeChipLabel(view.objectType) : "Object",
@@ -105,6 +160,13 @@ export function useKnowledgeObjectPage(): KnowledgeObjectPageViewProps {
     agencyLinks,
     error: query.error ? getErrorMessage(query.error, "Could not load this object.") : null,
     missing: Boolean(view?.missing),
+    linkRelationType,
+    linkTargetId,
+    linkTargets,
+    linkPending: capturePending,
+    onLinkRelationTypeChange: setLinkRelationType,
+    onLinkTargetIdChange: setLinkTargetId,
+    onCreateLink,
     onOpenOnBoard,
   };
 }
