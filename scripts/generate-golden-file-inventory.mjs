@@ -157,6 +157,7 @@ const featureDomainAliases = new Map([
   ["time-tracking", "time-tracking"],
   ["user-settings", "web-platform"],
   ["workspace", "workspace"],
+  ["workspace-knowledge", "workspace"],
 ]);
 
 const goldenLayers = new Set([
@@ -387,6 +388,7 @@ function inferOperationDomain(path) {
   if (/clockify/i.test(path)) return "time-tracking";
   if (/grant-lifetime-pro/i.test(path)) return "billing";
   if (/clear-team-data/i.test(path)) return "team";
+  if (/workspace-knowledge/i.test(path)) return "workspace";
   if (/agency/i.test(path)) return "agency-shared";
   return "server-platform";
 }
