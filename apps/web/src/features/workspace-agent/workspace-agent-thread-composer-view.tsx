@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   ListTodo,
   MessageCircleQuestion,
+  Plus,
   Wrench,
   X,
 } from "lucide-react";
@@ -26,6 +27,7 @@ import {
   ComposerMenu,
   ComposerMenuItem,
 } from "@/components/elements/composer";
+import type { KnowledgeCreateKind } from "@/features/workspace-knowledge/knowledge-create";
 import { WorkspaceAgentScopeChipView } from "@/features/workspace-agent/scope-chip-view";
 import { WorkspaceAgentThreadModelSelector } from "@/features/workspace-agent/workspace-agent-thread-model-selector";
 import { WorkspaceAgentToolMenuView } from "@/features/workspace-agent/tool-menu-view";
@@ -148,6 +150,8 @@ export type WorkspaceAgentThreadComposerViewProps = {
   planModeEnabled: boolean;
   crossSurfaceUnlockLabel: "Agency" | "Canvas" | null;
   onUnlockCrossSurface: () => void;
+  knowledgeCreateItems: Array<{ kind: KnowledgeCreateKind; label: string }>;
+  onCreateKnowledgeKind: (kind: KnowledgeCreateKind) => void;
   selectedModelLabel: string;
   selectedModelButtonLabel: string;
   resolvedModelLabel: string | null;
@@ -194,6 +198,8 @@ export function WorkspaceAgentThreadComposerView({
   planModeEnabled,
   crossSurfaceUnlockLabel,
   onUnlockCrossSurface,
+  knowledgeCreateItems,
+  onCreateKnowledgeKind,
   selectedModelLabel,
   selectedModelButtonLabel,
   resolvedModelLabel,
@@ -355,6 +361,30 @@ export function WorkspaceAgentThreadComposerView({
                             />
                             {scopeModeActive ? "Stop adding to scope" : "Add to scope"}
                           </ComposerMenuItem>
+
+                          {knowledgeCreateItems.length > 0 ? (
+                            <>
+                              <Separator className="my-1" />
+                              <p className="px-2.5 pt-1 pb-0.5 text-[11px] font-medium text-muted-foreground">
+                                Knowledge
+                              </p>
+                              {knowledgeCreateItems.map((item) => (
+                                <ComposerMenuItem
+                                  key={item.kind}
+                                  onClick={() => {
+                                    onCreateKnowledgeKind(item.kind);
+                                    onToolsMenuOpenChange(false);
+                                  }}
+                                >
+                                  <Plus
+                                    className="size-3.5 shrink-0 text-muted-foreground"
+                                    aria-hidden
+                                  />
+                                  {item.label}
+                                </ComposerMenuItem>
+                              ))}
+                            </>
+                          ) : null}
 
                           <Separator className="my-1" />
 
