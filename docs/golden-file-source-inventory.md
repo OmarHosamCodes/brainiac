@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-08-14 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-08-15 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -1236,7 +1236,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/workspace/knowledge-agency.test.ts` | workspace | test | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/workspace/knowledge-agency.ts` | workspace | api-service | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/workspace/knowledge-capture.ts` | workspace | domain-logic | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
-| `packages/api/src/routers/workspace/knowledge-service.test.ts` | workspace | test | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical test layer. | content: Bun test declarations, database access, environment contract; structure: test filename |
+| `packages/api/src/routers/workspace/knowledge-service.integration.test.ts` | workspace | test | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical test layer. | content: Bun test declarations, database access, environment contract; structure: test filename |
 | `packages/api/src/routers/workspace/knowledge-service.ts` | workspace | api-service | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/workspace/router.ts` | workspace | api-router | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical api-router layer. | content: Zod contracts, oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
 | `packages/api/src/routers/workspace/schemas.ts` | workspace | api-contract | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical api-contract layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
