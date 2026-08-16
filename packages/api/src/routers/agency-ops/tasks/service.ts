@@ -1,4 +1,5 @@
 import {
+  agencyOpsClient,
   agencyOpsProjectTaskBlueprint,
   agencyOpsProjectTaskAssignee,
   agencyOpsProjectTask,
@@ -31,6 +32,10 @@ import { syncJourneyStepStatuses, applyJourneySyncNotifications } from "../share
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
+import {
+  buildTaskListSearchPredicate,
+  tokenizeTaskListSearch,
+} from "./task-list-search";
 import { publishAgencyTaskUpdated } from "../live/live";
 
 async function createTaskBlueprintForViewer(
@@ -257,7 +262,7 @@ export async function listAgencyProjectTasks(
     await getProjectByIdForTeam(input.teamId, input.projectId);
   }
 
-  const searchTerm = input.search?.trim().toLowerCase();
+  const searchTokens = tokenizeTaskListSearch(input.search ?? "");
   const filters = [eq(agencyOpsProjectTask.teamId, input.teamId)];
 
   if (input.projectId) {
@@ -362,34 +367,52 @@ export async function listAgencyProjectTasks(
     );
   }
 
-  if (searchTerm) {
-    filters.push(sql`lower(${agencyOpsProjectTask.title}) like ${`%${searchTerm}%`}`);
+  const searchPredicate = buildTaskListSearchPredicate(searchTokens);
+  if (searchPredicate) {
+    filters.push(searchPredicate);
   }
 
   const page = Math.max(1, input.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 50));
   const offset = (page - 1) * pageSize;
   const whereClause = and(...filters);
+  const needsSearchJoins = searchTokens.length > 0;
 
-  const [countRow] = await db
-    .select({
-      count: wantsDoneByCompletion
-        ? sql<number>`coalesce(sum(${viewerCompletionCountSql}), 0)`
-        : sql<number>`count(*)`,
-    })
-    .from(agencyOpsProjectTask)
-    .where(whereClause);
+  const countSelect = {
+    count: wantsDoneByCompletion
+      ? sql<number>`coalesce(sum(${viewerCompletionCountSql}), 0)`
+      : sql<number>`count(*)`,
+  };
+
+  const [countRow] = needsSearchJoins
+    ? await db
+        .select(countSelect)
+        .from(agencyOpsProjectTask)
+        .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
+        .leftJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+        .where(whereClause)
+    : await db.select(countSelect).from(agencyOpsProjectTask).where(whereClause);
 
   const parsedTotal = Number(countRow?.count ?? 0);
   const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
-  const rows = await db
-    .select(projectTaskColumns)
-    .from(agencyOpsProjectTask)
-    .where(whereClause)
-    .orderBy(desc(agencyOpsProjectTask.createdAt))
-    .limit(pageSize)
-    .offset(offset);
+  const rows = needsSearchJoins
+    ? await db
+        .select(projectTaskColumns)
+        .from(agencyOpsProjectTask)
+        .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
+        .leftJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+        .where(whereClause)
+        .orderBy(desc(agencyOpsProjectTask.createdAt))
+        .limit(pageSize)
+        .offset(offset)
+    : await db
+        .select(projectTaskColumns)
+        .from(agencyOpsProjectTask)
+        .where(whereClause)
+        .orderBy(desc(agencyOpsProjectTask.createdAt))
+        .limit(pageSize)
+        .offset(offset);
 
   const assigneesByTask = await loadTaskAssignees(rows.map((row) => row.id));
   const memberStatusesByTask = input.assigneeUserId
