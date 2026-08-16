@@ -1,8 +1,12 @@
 import {
   groupItemsByClient,
-  projectSearchableText,
   sortProjectsByClientThenName,
 } from "@/features/shared/choosers/agency-chooser-shell";
+import {
+  chooserFieldHits,
+  chooserPathMatches,
+  tokenizeChooserQuery,
+} from "@/features/time-tracking/agency-task-chooser-search";
 
 export type ChooserProject = {
   id: string;
@@ -23,11 +27,13 @@ export type ChooserProjectGroup = {
   project: ChooserProject;
   tasks: ChooserTask[];
   isFavorite: boolean;
+  searchExpandProject: boolean;
 };
 
 export type ChooserClientGroup = {
   clientName: string;
   projects: ChooserProjectGroup[];
+  searchExpandClient: boolean;
 };
 
 export type ChooserSections = {
@@ -39,12 +45,6 @@ function sortTasksByTitle(left: ChooserTask, right: ChooserTask) {
   return left.title.localeCompare(right.title);
 }
 
-function taskSearchableText(task: ChooserTask, project: ChooserProject | undefined): string {
-  return [task.title, task.status, project?.name ?? "", project?.clientName ?? ""]
-    .join(" ")
-    .toLowerCase();
-}
-
 export function buildAgencyTaskChooserSections(input: {
   projects: ChooserProject[];
   tasks: ChooserTask[];
@@ -52,7 +52,8 @@ export function buildAgencyTaskChooserSections(input: {
   favoriteTaskIds: string[];
   searchTerm: string;
 }): ChooserSections {
-  const filterQuery = input.searchTerm.trim().toLowerCase();
+  const tokens = tokenizeChooserQuery(input.searchTerm);
+  const searching = tokens.length > 0;
   const projectsById = new Map(input.projects.map((project) => [project.id, project]));
   const favoriteProjectIdSet = new Set(input.favoriteProjectIds);
 
@@ -66,17 +67,44 @@ export function buildAgencyTaskChooserSections(input: {
     tasksByProjectId.set(projectId, [...projectTasks].sort(sortTasksByTitle));
   }
 
-  function filterTasksForProject(project: ChooserProject, projectTasks: ChooserTask[]) {
-    if (!filterQuery) return projectTasks;
-    const projectMatched = projectSearchableText(project).includes(filterQuery);
-    if (projectMatched) return projectTasks;
-    return projectTasks.filter((task) => taskSearchableText(task, project).includes(filterQuery));
+  function tasksForProject(
+    project: ChooserProject,
+    projectTasks: ChooserTask[],
+  ): { tasks: ChooserTask[]; searchExpandProject: boolean } | null {
+    if (!searching) return { tasks: projectTasks, searchExpandProject: false };
+    const matchingTasks = projectTasks.filter(
+      (task) =>
+        chooserPathMatches(
+          { clientName: project.clientName, projectName: project.name, taskTitle: task.title },
+          tokens,
+        ) && chooserFieldHits(task.title, tokens),
+    );
+    const projectPathMatches = chooserPathMatches(
+      { clientName: project.clientName, projectName: project.name },
+      tokens,
+    );
+    if (!projectPathMatches && matchingTasks.length === 0) {
+      return null;
+    }
+    return {
+      tasks: matchingTasks,
+      searchExpandProject: matchingTasks.length > 0,
+    };
   }
 
-  function projectMatchesSearch(project: ChooserProject, projectTasks: ChooserTask[]) {
-    if (!filterQuery) return true;
-    if (projectSearchableText(project).includes(filterQuery)) return true;
-    return projectTasks.some((task) => taskSearchableText(task, project).includes(filterQuery));
+  function toProjectGroup(
+    project: ChooserProject,
+    isFavorite: boolean,
+  ): ChooserProjectGroup | null {
+    const allTasks = tasksByProjectId.get(project.id) ?? [];
+    const filtered = tasksForProject(project, allTasks);
+    if (!filtered) return null;
+    return {
+      project,
+      tasks: filtered.tasks,
+      isFavorite,
+      searchExpandProject: filtered.searchExpandProject,
+    };
   }
 
   const favoriteProjects: ChooserProjectGroup[] = [];
@@ -85,14 +113,10 @@ export function buildAgencyTaskChooserSections(input: {
   for (const projectId of input.favoriteProjectIds) {
     const project = projectsById.get(projectId);
     if (!project || seenFavoriteProjectIds.has(project.id)) continue;
-    const allTasks = tasksByProjectId.get(project.id) ?? [];
-    if (!projectMatchesSearch(project, allTasks)) continue;
+    const group = toProjectGroup(project, true);
+    if (!group) continue;
     seenFavoriteProjectIds.add(project.id);
-    favoriteProjects.push({
-      project,
-      tasks: filterTasksForProject(project, allTasks),
-      isFavorite: true,
-    });
+    favoriteProjects.push(group);
   }
 
   // Favorited tasks pull their project into favorites when the project itself isn't favorited.
@@ -101,35 +125,34 @@ export function buildAgencyTaskChooserSections(input: {
     if (!task) continue;
     const project = projectsById.get(task.projectId);
     if (!project || seenFavoriteProjectIds.has(project.id)) continue;
-    const allTasks = tasksByProjectId.get(project.id) ?? [];
-    if (!projectMatchesSearch(project, allTasks)) continue;
+    const group = toProjectGroup(project, favoriteProjectIdSet.has(project.id));
+    if (!group) continue;
     seenFavoriteProjectIds.add(project.id);
-    favoriteProjects.push({
-      project,
-      tasks: filterTasksForProject(project, allTasks),
-      isFavorite: favoriteProjectIdSet.has(project.id),
-    });
+    favoriteProjects.push(group);
   }
 
   const remainingProjects = input.projects
     .filter((project) => !seenFavoriteProjectIds.has(project.id))
-    .filter((project) => {
-      const allTasks = tasksByProjectId.get(project.id) ?? [];
-      return projectMatchesSearch(project, allTasks);
-    })
     .sort(sortProjectsByClientThenName);
 
-  const clientGroups = groupItemsByClient(remainingProjects).map((group) => ({
-    clientName: group.clientName || "No client",
-    projects: group.projects.map((project) => {
-      const allTasks = tasksByProjectId.get(project.id) ?? [];
-      return {
-        project,
-        tasks: filterTasksForProject(project, allTasks),
-        isFavorite: favoriteProjectIdSet.has(project.id),
-      };
-    }),
-  }));
+  const remainingGroupsByProjectId = new Map<string, ChooserProjectGroup>();
+  for (const project of remainingProjects) {
+    const group = toProjectGroup(project, favoriteProjectIdSet.has(project.id));
+    if (group) remainingGroupsByProjectId.set(project.id, group);
+  }
+
+  const clientGroups = groupItemsByClient(
+    remainingProjects.filter((project) => remainingGroupsByProjectId.has(project.id)),
+  ).map((group) => {
+    const projects = group.projects
+      .map((project) => remainingGroupsByProjectId.get(project.id))
+      .filter((entry): entry is ChooserProjectGroup => entry != null);
+    return {
+      clientName: group.clientName || "No client",
+      projects,
+      searchExpandClient: searching && projects.length > 0,
+    };
+  });
 
   return {
     favorites: favoriteProjects,
