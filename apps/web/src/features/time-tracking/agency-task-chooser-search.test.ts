@@ -35,10 +35,10 @@ describe("chooserPathMatches", () => {
 
   test("does not steal tokens from another client", () => {
     expect(
-      chooserPathMatches(
-        { clientName: "Beta", projectName: "Website", taskTitle: "Design" },
-        ["acme", "design"],
-      ),
+      chooserPathMatches({ clientName: "Beta", projectName: "Website", taskTitle: "Design" }, [
+        "acme",
+        "design",
+      ]),
     ).toBe(false);
   });
 

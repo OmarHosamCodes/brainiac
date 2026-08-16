@@ -32,10 +32,7 @@ import { syncJourneyStepStatuses, applyJourneySyncNotifications } from "../share
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
-import {
-  buildTaskListSearchPredicate,
-  tokenizeTaskListSearch,
-} from "./task-list-search";
+import { buildTaskListSearchPredicate, tokenizeTaskListSearch } from "./task-list-search";
 import { publishAgencyTaskUpdated } from "../live/live";
 
 async function createTaskBlueprintForViewer(

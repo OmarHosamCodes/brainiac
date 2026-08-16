@@ -1,9 +1,5 @@
 export function tokenizeChooserQuery(query: string): string[] {
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/u)
-    .filter(Boolean);
+  return query.trim().toLowerCase().split(/\s+/u).filter(Boolean);
 }
 
 function fieldHits(value: string, token: string): boolean {
