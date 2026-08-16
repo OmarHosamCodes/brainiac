@@ -2,59 +2,66 @@
 name: Orch
 description: A spatial knowledge workspace with an embedded agent. Quiet instrument, photographic depth. Dual register — dark cinematic marketing, light precise product.
 colors:
-  operator-violet: "#5b5bd6"
-  operator-violet-soft: "#e8e7f8"
-  ink: "#2a2a3a"
-  ink-muted: "#5c5c72"
-  ink-dimmed: "#7a7a90"
-  paper: "#f7f7fb"
-  paper-pure: "#fbfbfd"
-  surface-elevated: "#ececf4"
-  surface-sunken: "#e4e4ee"
-  hairline: "#d8d8e4"
-  hairline-strong: "#c8c8d6"
-  ink-inverted: "#f2f2f5"
-  paper-inverted: "#1c1c28"
-  surface-inverted: "#2a2a38"
-  surface-inverted-elevated: "#343444"
-  hairline-inverted: "#3f3f50"
-  state-success: "#22c55e"
-  state-warning: "#f59e0b"
-  state-error: "#ef4444"
-  state-info: "#3b82f6"
+  operator-violet: "oklch(0.55 0.22 264.53)"
+  operator-violet-dark: "oklch(0.58 0.21 260.84)"
+  operator-violet-brand: "#5b5bd6"
+  operator-violet-soft: "oklch(0.94 0.04 264)"
+  ink: "oklch(0 0 0)"
+  ink-muted: "oklch(0.44 0 0)"
+  paper: "oklch(0.99 0 0)"
+  paper-pure: "oklch(1 0 0)"
+  surface-elevated: "oklch(0.94 0 0)"
+  surface-muted: "oklch(0.97 0 0)"
+  hairline: "oklch(0.92 0 0)"
+  input-fill: "oklch(0.94 0 0)"
+  ink-inverted: "oklch(1 0 0)"
+  paper-inverted: "oklch(0 0 0)"
+  surface-inverted: "oklch(0.14 0 0)"
+  surface-inverted-elevated: "oklch(0.25 0 0)"
+  surface-inverted-muted: "oklch(0.23 0 0)"
+  hairline-inverted: "oklch(0.26 0 0)"
+  ink-muted-inverted: "oklch(0.72 0 0)"
+  state-success: "oklch(0.55 0.15 150)"
+  state-success-dark: "oklch(0.72 0.17 145)"
+  state-warning: "oklch(0.56 0.15 55)"
+  state-warning-dark: "oklch(0.79 0.15 70)"
+  state-error: "oklch(0.63 0.19 23.03)"
+  state-error-dark: "oklch(0.69 0.2 23.91)"
+  state-info: "oklch(0.55 0.21 255)"
+  state-info-dark: "oklch(0.68 0.16 252)"
 typography:
   display:
-    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "clamp(2.75rem, 7vw, 5.5rem)"
     fontWeight: 600
     lineHeight: 1.05
     letterSpacing: "-0.03em"
   headline:
-    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "clamp(1.875rem, 4vw, 3rem)"
     fontWeight: 600
     lineHeight: 1.1
     letterSpacing: "-0.025em"
   title:
-    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "-0.01em"
   body:
-    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
   body-lg:
-    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
   label:
-    fontFamily: "Poppins, IBM Plex Sans Arabic, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, IBM Plex Sans Arabic, ui-sans-serif, system-ui, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 1.2
@@ -67,14 +74,18 @@ typography:
     letterSpacing: "normal"
 rounded:
   none: "0"
-  sm: "6px"
-  md: "10px"
-  lg: "12px"
-  xl: "16px"
-  card: "16px"
+  sm: "4px"
+  md: "6px"
+  lg: "8px"
+  xl: "12px"
+  "2xl": "14.4px"
+  "4xl": "20.8px"
+  dense: "8px"
+  control: "14.4px"
+  shell: "16px"
   full: "9999px"
 spacing:
-  hairline: "1px"
+  base: "4px"
   xs: "4px"
   sm: "8px"
   md: "16px"
@@ -82,123 +93,131 @@ spacing:
   xl: "40px"
   section: "96px"
   section-lg: "144px"
+  rail-collapsed: "3.25rem"
+  rail-expanded: "15.5rem"
 components:
   button-primary:
     backgroundColor: "{colors.ink}"
     textColor: "{colors.paper-pure}"
-    rounded: "{rounded.full}"
-    padding: "12px 24px"
+    rounded: "{rounded.control}"
+    padding: "8px 12px"
+    height: "32px"
   button-primary-hover:
-    backgroundColor: "{colors.ink-muted}"
+    backgroundColor: "color-mix(in oklab, {colors.ink} 80%, transparent)"
     textColor: "{colors.paper-pure}"
+  button-outline:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "8px 12px"
+  button-outline-hover:
+    backgroundColor: "{colors.surface-muted}"
+    textColor: "{colors.ink}"
   button-ghost:
     backgroundColor: "transparent"
     textColor: "{colors.ink}"
-    rounded: "{rounded.full}"
-    padding: "12px 24px"
+    rounded: "{rounded.control}"
+    padding: "8px 12px"
   button-ghost-hover:
-    backgroundColor: "{colors.surface-elevated}"
-    textColor: "{colors.ink}"
-  button-outline:
-    backgroundColor: "transparent"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.full}"
-    padding: "12px 24px"
-  button-outline-hover:
-    backgroundColor: "{colors.surface-elevated}"
+    backgroundColor: "{colors.surface-muted}"
     textColor: "{colors.ink}"
   badge:
     backgroundColor: "{colors.surface-elevated}"
     textColor: "{colors.ink-muted}"
-    rounded: "{rounded.full}"
-    padding: "2px 10px"
+    rounded: "{rounded.control}"
+    padding: "2px 8px"
+    height: "20px"
   input:
-    backgroundColor: "{colors.paper-pure}"
+    backgroundColor: "color-mix(in oklab, {colors.input-fill} 50%, transparent)"
     textColor: "{colors.ink}"
-    rounded: "{rounded.lg}"
-    padding: "12px 16px"
+    rounded: "{rounded.control}"
+    padding: "4px 10px"
+    height: "32px"
   input-focus:
-    backgroundColor: "{colors.paper-pure}"
+    backgroundColor: "color-mix(in oklab, {colors.input-fill} 50%, transparent)"
     textColor: "{colors.ink}"
   card:
     backgroundColor: "{colors.paper-pure}"
     textColor: "{colors.ink}"
-    rounded: "{rounded.card}"
-    padding: "24px"
+    rounded: "{rounded.4xl}"
+    padding: "20px"
   eyebrow:
     backgroundColor: "transparent"
-    textColor: "{colors.ink-dimmed}"
+    textColor: "{colors.ink-muted}"
     typography: "{typography.label}"
 ---
 
 # Design System: Orch
 
-## 1. Overview
+## Overview
 
 **Creative North Star: "Quiet instrument, photographic depth"**
 
-Orch is a dual-register system. Marketing is dark and cinematic: large type, generous air, aurora atmosphere reserved for the hero. Product shares one cool zinc/violet family across light and dark: a surface ladder, hairlines, monochrome primary CTAs, and one accent used sparingly. Same typographic voice, same component vocabulary, different rhythm and ambient light.
+Orch is a dual-register system. Marketing is dark and cinematic: large type, generous air, aurora atmosphere reserved for the hero. Product shares one cool zinc family across light and dark — a surface ladder, hairlines, monochrome primary CTAs, and one violet accent used sparingly. Same typographic voice, same component vocabulary, different rhythm and ambient light.
 
-Inspiration (synthesize, don't copy): Apple (whitespace, optical type, glass nav rare), Linear (near-black surface ladder, hairlines), Vercel (hero atmosphere only). Depth comes from tonal steps and light, not from shadow-on-every-card.
+Shipped tokens live in `apps/web/src/index.css` (Vercel/tweakcn shadcn theme). Neutrals are achromatic zinc steps; the brand accent is `chart-2` (Operator Violet). Depth comes from tonal steps and hairlines, not from shadow-on-every-card. Inspiration (synthesize, don't copy): Apple whitespace, Linear surface ladder, Vercel hero atmosphere only.
 
 The system rejects category defaults. No purple gradient heroes, no animated orbs as brand, no gradient text, no glassmorphism-as-default, no AI neon. The agent is a tool. The canvas is the product.
 
 **Key Characteristics:**
 
-- Restrained color: cool zinc neutrals tinted toward hue ~269 (never true white, never emerald paper). Primary CTAs are monochrome (near-black in light, near-white in dark). Operator Violet is the sole brand accent on ≤10% of any product surface (selection, sidebar active, focus glow).
-- Typographic hierarchy carries the system. Poppins for Latin (600 display, not shouty 700), IBM Plex Sans Arabic for Arabic glyphs, IBM Plex Mono for tool traces and metrics.
-- Surface ladder, not flat paper. Paper → elevated → sunken → hairline. Shadows only for true float (modals, popovers).
-- Radii: 12–16px on cards/inputs; full pills on buttons and badges. No 32px over-round.
+- Restrained color: zinc neutrals (`--background` / `--secondary` / `--muted` / `--border`) with Operator Violet (`--chart-2`) as the sole brand accent on ≤10% of any product surface (selection, heatmaps, soft glows, canvas minimap). Primary CTAs are monochrome (`--primary` black in light, white in dark).
+- Typographic hierarchy carries the system. `--font-sans`: Poppins for Latin, IBM Plex Sans Arabic for Arabic glyphs; IBM Plex Mono for tool traces and metrics.
+- Surface ladder, not flat paper. Background → card → secondary/muted → border. Soft shadows only for true float (dialogs, popovers) via the theme shadow scale.
+- Radii from `--radius` (`0.5rem`): controls use `rounded-2xl` (~14px); cards/dialogs use `radius-4xl` capped at 24px; dense tables pin `radius-dense` at 8px.
 - Marketing may use aurora/mesh and blur-text reveals; product stays quiet. `prefers-reduced-motion` is mandatory.
 
-## 2. Colors
+## Colors
+
+Cool zinc neutrals with one violet accent. Runtime source: `:root` / `.dark` in `apps/web/src/index.css`.
 
 ### Primary
 
-- **Ink / Paper CTA** (`oklch(0.22 0.02 269)` light / `oklch(0.922 0 0)` dark): Monochrome primary buttons. Light uses cool near-black; dark uses near-white. Not a decorative hue.
-- **Operator Violet** (`oklch(0.488 0.243 264.376)`): The single brand accent. Selection, active nav/sidebar, soft glows, canvas minimap. Never decorative wallpaper. Soft tint for badges: `oklch(0.94 0.04 264)`.
+- **Ink / Paper CTA** (`oklch(0 0 0)` light → `oklch(1 0 0)` dark): Monochrome `--primary` buttons. Not a decorative hue.
+- **Operator Violet** (`oklch(0.55 0.22 264.53)` light / `oklch(0.58 0.21 260.84)` dark as `--chart-2`): The single brand accent. Selection, heatmaps, soft glows, canvas minimap, marketing threads (`#5b5bd6` literal in hero/login). Soft tint via `color-mix` or `oklch(0.94 0.04 264)`. Never decorative wallpaper.
 
 ### Neutral
 
-- **Ink** (`oklch(0.22 0.02 269)`): Body text, primary headings (light).
-- **Ink Muted** (`oklch(0.48 0.02 269)`): Secondary text.
-- **Ink Dimmed** (`oklch(0.55 0.01 269)`): Tertiary text, metadata.
-- **Paper** (`oklch(0.985 0.006 269)`): Default light page background. Cool violet-tinted off-white, never true white, never emerald.
-- **Paper Pure** (`oklch(0.995 0.004 269)`): Cards and inputs in light.
-- **Surface Elevated** (`oklch(0.94 0.015 270)`): Sidebars, toolbars, ghost hover.
-- **Surface Sunken** (`oklch(0.92 0.012 269)`): Recessed wells, inset panels.
-- **Hairline** / **Hairline Strong**: Default and strong separators on hue ~269.
+- **Ink** (`oklch(0 0 0)` / `--foreground`): Body text, headings (light).
+- **Ink Muted** (`oklch(0.44 0 0)` / `--muted-foreground`): Secondary text, placeholders.
+- **Paper** (`oklch(0.99 0 0)` / `--background`): Default light page ground — near-white zinc, not cream, not emerald.
+- **Paper Pure** (`oklch(1 0 0)` / `--card`): Cards and raised surfaces in light.
+- **Surface Elevated** (`oklch(0.94 0 0)` / `--secondary`, `--accent`): Chrome fills, ghost hover, elevated wells.
+- **Surface Muted** (`oklch(0.97 0 0)` / `--muted`): Soft recessed fills.
+- **Hairline** (`oklch(0.92 0 0)` / `--border`): Default separators; inputs use `--input` (`oklch(0.94 0 0)`).
 
 ### Inverted (Dark theme + marketing)
 
-- **Paper Inverted** (`oklch(0.15 0.02 269)`): Page / marketing hero ground.
-- **Surface Inverted** (`oklch(0.20 0.02 266)`): Raised dark panels.
-- **Surface Inverted Elevated** (`oklch(0.30 0.03 271)`): Higher dark surfaces / muted fills.
-- **Ink Inverted** / **Hairline Inverted**: Text and borders on dark.
+- **Paper Inverted** (`oklch(0 0 0)` / `--background`): Page / marketing hero ground.
+- **Surface Inverted** (`oklch(0.14 0 0)` / `--card`): Raised dark panels.
+- **Surface Inverted Elevated** (`oklch(0.25 0 0)` / `--secondary`): Higher dark fills; muted at `oklch(0.23 0 0)`.
+- **Ink Inverted** / **Hairline Inverted**: `--foreground` / `--border` on dark (`oklch(1 0 0)` / `oklch(0.26 0 0)`).
 
 ### State
 
-- **Success** (`#22c55e`, `oklch(0.72 0.17 145)`): Confirmations, healthy status. Semantic only — not the brand accent.
-- **Warning** (`#f59e0b`): Caution.
-- **Error** (`#ef4444`): Failures, destructive.
-- **Info** (`#3b82f6`, `oklch(0.62 0.18 252)`): Neutral system messages.
+- **Success** (`oklch(0.55 0.15 150)` light / `oklch(0.72 0.17 145)` dark): Confirmations, healthy status. Semantic only — not the brand accent.
+- **Warning** (`oklch(0.56 0.15 55)` light / `oklch(0.79 0.15 70)` dark): Caution.
+- **Error** (`oklch(0.63 0.19 23.03)` light / `oklch(0.69 0.2 23.91)` dark): Failures, destructive (`--destructive`).
+- **Info** (`oklch(0.55 0.21 255)` light / `oklch(0.68 0.16 252)` dark): Neutral system messages.
 
 ### Named Rules
 
 **The One Voice Rule.** Operator Violet on ≤10% of any product screen. Rarity is the point. Primary CTAs stay monochrome.
 
-**The Soft Paper Rule.** Light mode never uses true `#fff` as the page ground. Paper is cool violet-tinted off-white (hue ~269).
+**The Soft Paper Rule.** Light mode page ground is cool near-white zinc (`oklch(0.99 0 0)`), never warm cream or emerald paper. Do not tint the ladder toward terracotta or purple wallpaper.
 
-**The Tinted Neutral Rule.** No raw `#000` / `#fff`. Neutrals carry light chroma toward hue ~269.
+**The Tinted Accent Rule.** Neutrals stay achromatic zinc; chroma belongs to Operator Violet and semantic state colors only.
 
 **The Marketing Atmosphere Exception.** Soft aurora/mesh glow on the dark hero is allowed once. It is not a product pattern.
 
-## 3. Typography
+## Typography
 
 **English (Latin):** Poppins  
 **Arabic:** IBM Plex Sans Arabic  
-**Stack:** `"Poppins", "IBM Plex Sans Arabic", system-ui, sans-serif`  
-**Mono:** IBM Plex Mono
+**Stack:** `"Poppins", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif` (`--font-sans`)  
+**Mono:** IBM Plex Mono (`--font-mono`)
+
+**Character:** Optical, bilingual, instrument-grade. Hierarchy from weight and size within one sans stack — never a second display face for product chrome.
 
 ### Hierarchy
 
@@ -217,89 +236,103 @@ The system rejects category defaults. No purple gradient heroes, no animated orb
 
 **The Eyebrow Restraint Rule.** Uppercase labels are rare. Identical section eyebrows across a page are banned.
 
-## 4. Elevation
+## Elevation & Depth
 
-Depth is a surface ladder first, hairlines second, shadow last.
+Depth is a surface ladder first, hairlines second, shadow last. Product chrome uses opaque sidebar surfaces with a 1px hairline ring — not glass.
 
 ### Surface ladder (light)
 
-1. Paper (page)
-2. Paper Pure (cards/inputs)
-3. Surface Elevated (chrome)
-4. Surface Sunken (wells)
+1. Paper (`--background`)
+2. Paper Pure (`--card` / `--popover`)
+3. Surface Elevated (`--secondary` / `--accent`)
+4. Surface Muted (`--muted`) + Hairline (`--border`)
 
 ### Surface ladder (dark / marketing)
 
-1. Paper Inverted
-2. Surface Inverted
-3. Surface Inverted Elevated
+1. Paper Inverted (`--background`)
+2. Surface Inverted (`--card`)
+3. Popover / elevated (`--popover`, `--secondary`, `--accent`)
+4. Hairline Inverted (`--border`)
 
 ### Shadow vocabulary
 
-- **state-lift**: Hover on interactive CTAs only.
-- **focus-ring**: `0 0 0 3px oklch(0.556 0 0 / 0.25)` — neutral ring; violet soft glow only where selection needs it.
-- **float-low**: Toasts, popovers, dropdowns.
-- **float-high**: Modals, command palette.
+Theme scale in `index.css` (HSL black, low opacity):
 
-**Hairline First.** Separation is hairline before tonal step before shadow.
+- **2xs / xs:** `0px 1px 2px` at ~9% — micro resting edge.
+- **sm / default / md:** stacked 1–2px blurs at ~18% — quiet lift.
+- **lg / xl:** taller offsets for dropdowns and sheets.
+- **2xl:** stronger single blur for rare emphasis.
+- **focus-ring:** `ring-3` at `ring/30` on controls — neutral `--ring`, not violet-by-default.
+- **chrome-hairline:** `box-shadow: 0 0 0 1px var(--color-sidebar-border)` on app-shell chrome (not a drop shadow).
 
-**No Ghost Cards.** Never pair `1px` border with a wide soft drop shadow as decoration. Pick one.
+### Named Rules
 
-## 5. Components
+**The Hairline First Rule.** Separation is hairline before tonal step before shadow.
+
+**The No Ghost Cards Rule.** Never pair a `1px` border with a wide soft drop shadow as decoration. Pick one.
+
+**The Flat-By-Default Rule.** Surfaces are flat at rest. Shadows appear for true float (dialogs, popovers, toasts) or brief state feedback.
+
+## Components
+
+Controls share `rounded-2xl` (~14.4px from `--radius`), medium weight, and monochrome primary fill. Philosophy: refined and restrained — instrument chrome, not marketing chrome.
 
 ### Buttons
 
-- Full-pill. Primary: monochrome ink / paper / weight 600. Hover: slightly lighter or darker step on the same ramp. Ghost and outline with elevated hover fill.
+- **Shape:** Soft squircle (`rounded-2xl`, ~14px) — not full pill on default shadcn buttons.
+- **Primary:** `--primary` / `--primary-foreground` (ink on paper / paper on ink), height `32px` default, `hover:bg-primary/80`.
+- **Outline / Ghost / Secondary:** Hairline or transparent; hover fills `--muted` or secondary mix.
+- **Focus:** `ring-3` + `ring-ring/30`; destructive variants use destructive ring tokens.
+
+### Badges / Chips
+
+- **Style:** `rounded-2xl`, height `20px`, `px-2`, medium `text-xs`.
+- **State:** Default monochrome; semantic success/warning/destructive use tinted fills (`bg-success/10`, etc.). Filter pills follow the same quiet treatment.
 
 ### Cards / Containers
 
-- Radius `16px` (card token). Hairline border. Flat at rest. No nested cards.
+- **Corner Style:** `rounded-[min(var(--radius-4xl),24px)]` (~21px, cap 24px).
+- **Background:** `--card` with `ring-1 ring-foreground/5` (dark: `/10`).
+- **Shadow Strategy:** `shadow-sm` optional; prefer ring/hairline at rest.
+- **Border:** Prefer ring over heavy border; no nested cards.
+- **Internal Padding:** `--card-spacing` (~20px default / 16px `sm`).
 
-### Inputs
+### Inputs / Fields
 
-- Radius `12px`. Focus border + neutral focus-ring.
+- **Style:** Height `32px`, `rounded-2xl`, `bg-input/50`, transparent border until focus.
+- **Focus:** Border shifts to `--ring` + neutral `ring-3` / `ring-ring/30` — subtle, not a heavy violet glow.
+- **Error:** `aria-invalid` → destructive border + ring.
 
 ### Navigation
 
 - **Marketing:** Footer nav; optional frosted top strip only if it earns its place. No sticky chrome by default.
-- **Product:** Top-bar or rail. Active: Operator Violet text + soft tint (`bg-sidebar-primary/10`). Never a side-stripe.
+- **Product:** Connected left rail + top context bar (`app-shell`). Active: Operator Violet text + soft tint (`bg-sidebar-primary/10` or chart-2 mixes). Nested routes use a quiet 1px thread line — never a side-stripe. Rail collapsed `3.25rem` / expanded `15.5rem`.
 
 ### Tool Trace (signature)
 
 Label-scale tool name in mono, violet running indicator while live, hairline separator, mono body for args/results. Selectable. No badge soup.
 
-## 6. Marketing motion
+### Marketing motion (register exception)
 
-Allowed on marketing only, and sparingly (≤3 animated pieces per page):
+Allowed on marketing only, sparingly (≤3 animated pieces per page): aurora/mesh behind the hero, BlurText headline reveal, soft CTA attraction, SpotlightCard for at most two feature moments. All degrade under `prefers-reduced-motion`. Product motion stays to shell rail easing (`--motion-ease-rail`) and short state transitions (`120–220ms`).
 
-- Aurora / soft mesh atmosphere behind the hero
-- BlurText or equivalent headline reveal
-- Magnet / soft CTA attraction
-- SpotlightCard for at most two feature moments
-- AnimatedContent scroll reveals
+## Do's and Don'ts
 
-All must degrade under `prefers-reduced-motion` to opacity or instant.
+### Do:
 
-## 7. Do's and Don'ts
+- **Do** use monochrome primary CTAs; reserve Operator Violet (`chart-2` / `#5b5bd6`) for selection, heatmaps, soft glows, and chrome accents ≤10%.
+- **Do** walk the surface ladder (background → card → secondary/muted → border) before reaching for shadow.
+- **Do** use Poppins + IBM Plex Sans Arabic (`--font-sans`) and IBM Plex Mono for system-reported truth.
+- **Do** keep control radii on the `--radius` scale (`rounded-2xl` controls, `radius-4xl` cards); use full pills only for intentionally circular chrome (e.g. mobile nav trigger).
+- **Do** put product nav in the rail/top-bar; make tool traces selectable and plain-prose-shaped.
+- **Do** respect `prefers-reduced-motion` for shell, marketing, and feedback animations.
 
-### Do
+### Don't:
 
-- Use monochrome primary CTAs; reserve Operator Violet for selection, sidebar active, and soft glows.
-- Keep accent ≤10% of product screens.
-- Walk the surface ladder before reaching for shadow.
-- Use 12–16px radii on containers; pills on buttons and badges.
-- Put marketing navigation in the footer; product nav in rail/top-bar.
-- Make tool traces selectable and plain-prose-shaped.
-- Respect `prefers-reduced-motion`.
-
-### Don't
-
-- Don't use SaaS-cream or AI-slop patterns (orbs, gradient text, icon-card grids, hero metrics).
-- Don't use true white (`#fff`) as the light page ground.
-- Don't tint light paper toward emerald or warm cream.
-- Don't ship flat zinc-only UI with no tonal depth.
-- Don't use side-stripe borders, gradient text, or glass as default.
-- Don't wrap everything in a card; nested cards are always wrong.
-- Don't put an uppercase eyebrow on every section.
-- Don't orchestrate entrance sequences in product surfaces.
-- Don't use em dashes in copy or UI text.
+- **Don't** invent a new palette — no Operator Cobalt revival, no purple-on-white SaaS gradients, no warm cream paper.
+- **Don't** flood product UI with violet wallpaper or gradient text.
+- **Don't** use liquid glass / `ui-liquid-glass-*` for overlays or Canvas chrome; use opaque shadcn surfaces + hairlines.
+- **Don't** wrap everything in a card; nested cards are always wrong.
+- **Don't** put an uppercase eyebrow on every section or orchestrate entrance sequences in product surfaces.
+- **Don't** use side-stripe active indicators — use text + soft tint, or the quiet thread line for nested routes.
+- **Don't** use em dashes in copy or UI text.

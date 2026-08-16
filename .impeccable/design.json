@@ -1,0 +1,437 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-16T07:07:00Z",
+  "title": "Design System: Orch",
+  "extensions": {
+    "colorMeta": {
+      "operator-violet": {
+        "role": "primary",
+        "displayName": "Operator Violet",
+        "canonical": "oklch(0.55 0.22 264.53)",
+        "cssVar": "--chart-2",
+        "tonalRamp": [
+          "oklch(0.22 0.10 264)",
+          "oklch(0.32 0.14 264)",
+          "oklch(0.42 0.18 264)",
+          "oklch(0.48 0.22 264)",
+          "oklch(0.55 0.22 264.53)",
+          "oklch(0.68 0.14 264)",
+          "oklch(0.82 0.08 264)",
+          "oklch(0.94 0.04 264)"
+        ]
+      },
+      "operator-violet-dark": {
+        "role": "primary",
+        "displayName": "Operator Violet (Dark)",
+        "canonical": "oklch(0.58 0.21 260.84)",
+        "cssVar": "--chart-2 (.dark)"
+      },
+      "operator-violet-brand": {
+        "role": "primary",
+        "displayName": "Operator Violet Brand Hex",
+        "canonical": "#5b5bd6",
+        "purpose": "Marketing/login hard-coded accent literal; aligns with chart-2 family."
+      },
+      "operator-violet-soft": {
+        "role": "primary-soft",
+        "displayName": "Operator Violet Soft",
+        "canonical": "oklch(0.94 0.04 264)"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0 0 0)",
+        "cssVar": "--foreground / --primary (light)",
+        "tonalRamp": [
+          "oklch(0 0 0)",
+          "oklch(0.14 0 0)",
+          "oklch(0.25 0 0)",
+          "oklch(0.44 0 0)",
+          "oklch(0.72 0 0)",
+          "oklch(0.92 0 0)",
+          "oklch(0.97 0 0)",
+          "oklch(0.99 0 0)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral-muted",
+        "displayName": "Ink Muted",
+        "canonical": "oklch(0.44 0 0)",
+        "cssVar": "--muted-foreground"
+      },
+      "paper": {
+        "role": "background",
+        "displayName": "Paper",
+        "canonical": "oklch(0.99 0 0)",
+        "cssVar": "--background"
+      },
+      "paper-pure": {
+        "role": "surface",
+        "displayName": "Paper Pure",
+        "canonical": "oklch(1 0 0)",
+        "cssVar": "--card"
+      },
+      "surface-elevated": {
+        "role": "surface-elevated",
+        "displayName": "Surface Elevated",
+        "canonical": "oklch(0.94 0 0)",
+        "cssVar": "--secondary / --accent"
+      },
+      "surface-muted": {
+        "role": "surface-muted",
+        "displayName": "Surface Muted",
+        "canonical": "oklch(0.97 0 0)",
+        "cssVar": "--muted"
+      },
+      "hairline": {
+        "role": "border",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.92 0 0)",
+        "cssVar": "--border"
+      },
+      "input-fill": {
+        "role": "input",
+        "displayName": "Input Fill",
+        "canonical": "oklch(0.94 0 0)",
+        "cssVar": "--input"
+      },
+      "paper-inverted": {
+        "role": "background-inverted",
+        "displayName": "Paper Inverted",
+        "canonical": "oklch(0 0 0)",
+        "cssVar": "--background (.dark)"
+      },
+      "surface-inverted": {
+        "role": "surface-inverted",
+        "displayName": "Surface Inverted",
+        "canonical": "oklch(0.14 0 0)",
+        "cssVar": "--card (.dark)"
+      },
+      "surface-inverted-elevated": {
+        "role": "surface-inverted-elevated",
+        "displayName": "Surface Inverted Elevated",
+        "canonical": "oklch(0.25 0 0)",
+        "cssVar": "--secondary (.dark)"
+      },
+      "surface-inverted-muted": {
+        "role": "surface-inverted-muted",
+        "displayName": "Surface Inverted Muted",
+        "canonical": "oklch(0.23 0 0)",
+        "cssVar": "--muted (.dark)"
+      },
+      "ink-inverted": {
+        "role": "neutral-inverted",
+        "displayName": "Ink Inverted",
+        "canonical": "oklch(1 0 0)",
+        "cssVar": "--foreground (.dark)"
+      },
+      "ink-muted-inverted": {
+        "role": "neutral-muted-inverted",
+        "displayName": "Ink Muted Inverted",
+        "canonical": "oklch(0.72 0 0)",
+        "cssVar": "--muted-foreground (.dark)"
+      },
+      "hairline-inverted": {
+        "role": "border-inverted",
+        "displayName": "Hairline Inverted",
+        "canonical": "oklch(0.26 0 0)",
+        "cssVar": "--border (.dark)"
+      },
+      "state-success": {
+        "role": "state-success",
+        "displayName": "State Success",
+        "canonical": "oklch(0.55 0.15 150)",
+        "cssVar": "--success"
+      },
+      "state-success-dark": {
+        "role": "state-success",
+        "displayName": "State Success (Dark)",
+        "canonical": "oklch(0.72 0.17 145)"
+      },
+      "state-warning": {
+        "role": "state-warning",
+        "displayName": "State Warning",
+        "canonical": "oklch(0.56 0.15 55)",
+        "cssVar": "--warning"
+      },
+      "state-warning-dark": {
+        "role": "state-warning",
+        "displayName": "State Warning (Dark)",
+        "canonical": "oklch(0.79 0.15 70)"
+      },
+      "state-error": {
+        "role": "state-error",
+        "displayName": "State Error",
+        "canonical": "oklch(0.63 0.19 23.03)",
+        "cssVar": "--destructive"
+      },
+      "state-error-dark": {
+        "role": "state-error",
+        "displayName": "State Error (Dark)",
+        "canonical": "oklch(0.69 0.2 23.91)"
+      },
+      "state-info": {
+        "role": "state-info",
+        "displayName": "State Info",
+        "canonical": "oklch(0.55 0.21 255)",
+        "cssVar": "--info"
+      },
+      "state-info-dark": {
+        "role": "state-info",
+        "displayName": "State Info (Dark)",
+        "canonical": "oklch(0.68 0.16 252)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Marketing hero headlines. Optical 600 weight, tight tracking."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section openings on marketing pages, page titles in product."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, panel headers, modal titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default reading text. Capped at 65–75ch on prose surfaces."
+      },
+      "body-lg": {
+        "displayName": "Body Large",
+        "purpose": "Hero supporting copy and marketing introductions."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Sparse uppercase markers and status indicators. Never on every section."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Tool calls, latencies, IDs, code. What the system reports."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-2xs",
+        "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.09)",
+        "purpose": "Micro resting edge from theme scale."
+      },
+      {
+        "name": "shadow-sm",
+        "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18)",
+        "purpose": "Quiet card/control lift."
+      },
+      {
+        "name": "shadow-lg",
+        "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 4px 6px -1px hsl(0 0% 0% / 0.18)",
+        "purpose": "Dropdowns, sheets, floating chrome."
+      },
+      {
+        "name": "shadow-xl",
+        "value": "0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 8px 10px -1px hsl(0 0% 0% / 0.18)",
+        "purpose": "Dialogs and high float surfaces."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent)",
+        "purpose": "Keyboard focus on inputs and buttons (neutral ring)."
+      },
+      {
+        "name": "chrome-hairline",
+        "value": "0 0 0 1px var(--color-sidebar-border)",
+        "purpose": "App-shell opaque chrome edge — hairline, not glass."
+      }
+    ],
+    "motion": [
+      {
+        "name": "motion-duration-fast",
+        "value": "120ms",
+        "purpose": "Micro color/opacity transitions."
+      },
+      {
+        "name": "motion-duration-base",
+        "value": "180ms",
+        "purpose": "Default state transitions."
+      },
+      {
+        "name": "motion-duration-panel",
+        "value": "220ms",
+        "purpose": "Panel and confirm enters."
+      },
+      {
+        "name": "motion-duration-rail",
+        "value": "320ms",
+        "purpose": "App-shell rail expand/collapse."
+      },
+      {
+        "name": "motion-ease-out",
+        "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Default easing for state transitions."
+      },
+      {
+        "name": "motion-ease-rail",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "Rail width and nested-thread reveals."
+      },
+      {
+        "name": "motion-ease-emphasized",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Task complete / pulse feedback."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Monochrome CTA. rounded-2xl, height 32px, weight medium.",
+      "html": "<button class=\"ds-btn-primary\">Open workspace</button>",
+      "css": ".ds-btn-primary { background: var(--primary); color: var(--primary-foreground); font-family: var(--font-sans); font-weight: 500; font-size: 0.875rem; height: 32px; padding: 0 12px; border: 1px solid transparent; border-radius: calc(var(--radius) * 1.8); cursor: pointer; transition: background-color 120ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { background: color-mix(in oklab, var(--primary) 80%, transparent); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary CTA. Hairline border, background surface.",
+      "html": "<button class=\"ds-btn-outline\">See pricing</button>",
+      "css": ".ds-btn-outline { background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-weight: 500; font-size: 0.875rem; height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: calc(var(--radius) * 1.8); cursor: pointer; } .ds-btn-outline:hover { background: var(--muted); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Tertiary action. Transparent until hover fills muted.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: var(--foreground); font-family: var(--font-sans); font-weight: 500; font-size: 0.875rem; height: 32px; padding: 0 12px; border: 1px solid transparent; border-radius: calc(var(--radius) * 1.8); cursor: pointer; } .ds-btn-ghost:hover { background: var(--muted); } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "radius-4xl capped 24px, ring hairline, flat at rest.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Free</div><div class=\"ds-card-body\">Start with 10 nodes and the AI agent.</div></div>",
+      "css": ".ds-card { background: var(--card); color: var(--card-foreground); border-radius: min(calc(var(--radius) * 2.6), 24px); padding: 20px; font-family: var(--font-sans); box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent); } .ds-card-title { font-weight: 600; font-size: 1.125rem; margin-bottom: 8px; } .ds-card-body { font-weight: 400; font-size: 0.875rem; line-height: 1.6; color: var(--muted-foreground); }"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "32px control, rounded-2xl, subtle neutral focus ring.",
+      "html": "<input class=\"ds-input\" type=\"email\" placeholder=\"name@company.com\" />",
+      "css": ".ds-input { background: color-mix(in oklab, var(--input) 50%, transparent); color: var(--foreground); font-family: var(--font-sans); font-weight: 400; font-size: 0.875rem; height: 32px; padding: 4px 10px; border: 1px solid transparent; border-radius: calc(var(--radius) * 1.8); outline: none; width: 100%; box-sizing: border-box; } .ds-input::placeholder { color: var(--muted-foreground); } .ds-input:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent); }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Quiet rounded-2xl chip for filters and status.",
+      "html": "<span class=\"ds-badge\">Waste</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; height: 20px; padding: 2px 8px; border-radius: calc(var(--radius) * 1.8); background: var(--secondary); color: var(--muted-foreground); font-family: var(--font-sans); font-size: 0.75rem; font-weight: 500; white-space: nowrap; }"
+    },
+    {
+      "name": "App Shell Rail Link",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Product rail row — soft violet active, never side-stripe.",
+      "html": "<a class=\"ds-rail-link ds-rail-link--active\" href=\"#\"><span class=\"ds-rail-label\">Tracker</span></a>",
+      "css": ".ds-rail-link { display: flex; align-items: center; gap: 0.625rem; height: 2.25rem; padding-inline: 0.625rem; border-radius: 0.625rem; color: var(--sidebar-foreground); font-family: var(--font-sans); font-size: 0.8125rem; font-weight: 500; text-decoration: none; } .ds-rail-link:hover { background: var(--sidebar-accent); } .ds-rail-link--active { color: var(--chart-2); background: color-mix(in oklab, var(--chart-2) 10%, transparent); } .ds-rail-link:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 30%, transparent); }"
+    },
+    {
+      "name": "Tool Trace",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature agent tool call — mono label, violet live pulse, selectable prose.",
+      "html": "<div class=\"ds-tool-trace\"><div class=\"ds-tool-trace__name\">agency.timeEntries.list</div><div class=\"ds-tool-trace__body\">teamId · from · to</div></div>",
+      "css": ".ds-tool-trace { border-top: 1px solid var(--border); padding: 8px 0; font-family: var(--font-mono); color: var(--foreground); user-select: text; } .ds-tool-trace__name { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); } .ds-tool-trace__name::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 9999px; background: var(--chart-2); vertical-align: middle; } .ds-tool-trace__body { margin-top: 4px; font-size: 0.8125rem; line-height: 1.5; color: var(--foreground); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Quiet instrument, photographic depth",
+    "overview": "Orch is a dual-register system. Marketing is dark and cinematic: large type, generous air, aurora atmosphere reserved for the hero. Product shares one cool zinc family across light and dark — a surface ladder, hairlines, monochrome primary CTAs, and one violet accent used sparingly. Same typographic voice, same component vocabulary, different rhythm and ambient light.\n\nShipped tokens live in `apps/web/src/index.css` (Vercel/tweakcn shadcn theme). Neutrals are achromatic zinc steps; the brand accent is `chart-2` (Operator Violet). Depth comes from tonal steps and hairlines, not from shadow-on-every-card. Inspiration (synthesize, don't copy): Apple whitespace, Linear surface ladder, Vercel hero atmosphere only.\n\nThe system rejects category defaults. No purple gradient heroes, no animated orbs as brand, no gradient text, no glassmorphism-as-default, no AI neon. The agent is a tool. The canvas is the product.",
+    "keyCharacteristics": [
+      "Restrained color: zinc neutrals (`--background` / `--secondary` / `--muted` / `--border`) with Operator Violet (`--chart-2`) as the sole brand accent on ≤10% of any product surface (selection, heatmaps, soft glows, canvas minimap). Primary CTAs are monochrome (`--primary` black in light, white in dark).",
+      "Typographic hierarchy carries the system. `--font-sans`: Poppins for Latin, IBM Plex Sans Arabic for Arabic glyphs; IBM Plex Mono for tool traces and metrics.",
+      "Surface ladder, not flat paper. Background → card → secondary/muted → border. Soft shadows only for true float (dialogs, popovers) via the theme shadow scale.",
+      "Radii from `--radius` (`0.5rem`): controls use `rounded-2xl` (~14px); cards/dialogs use `radius-4xl` capped at 24px; dense tables pin `radius-dense` at 8px.",
+      "Marketing may use aurora/mesh and blur-text reveals; product stays quiet. `prefers-reduced-motion` is mandatory."
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Operator Violet on ≤10% of any product screen. Rarity is the point. Primary CTAs stay monochrome.",
+        "section": "colors"
+      },
+      {
+        "name": "The Soft Paper Rule",
+        "body": "Light mode page ground is cool near-white zinc (`oklch(0.99 0 0)`), never warm cream or emerald paper. Do not tint the ladder toward terracotta or purple wallpaper.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tinted Accent Rule",
+        "body": "Neutrals stay achromatic zinc; chroma belongs to Operator Violet and semantic state colors only.",
+        "section": "colors"
+      },
+      {
+        "name": "The Marketing Atmosphere Exception",
+        "body": "Soft aurora/mesh glow on the dark hero is allowed once. It is not a product pattern.",
+        "section": "colors"
+      },
+      {
+        "name": "The Bilingual Stack Rule",
+        "body": "Poppins covers Latin; IBM Plex Sans Arabic covers Arabic via unicode-range fallback. Hierarchy from weight and size within that stack.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono For Truth Rule",
+        "body": "Mono for what the system reports, never running prose or headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Eyebrow Restraint Rule",
+        "body": "Uppercase labels are rare. Identical section eyebrows across a page are banned.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hairline First Rule",
+        "body": "Separation is hairline before tonal step before shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The No Ghost Cards Rule",
+        "body": "Never pair a `1px` border with a wide soft drop shadow as decoration. Pick one.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat at rest. Shadows appear for true float (dialogs, popovers, toasts) or brief state feedback.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use monochrome primary CTAs; reserve Operator Violet (`chart-2` / `#5b5bd6`) for selection, heatmaps, soft glows, and chrome accents ≤10%.",
+      "Do walk the surface ladder (background → card → secondary/muted → border) before reaching for shadow.",
+      "Do use Poppins + IBM Plex Sans Arabic (`--font-sans`) and IBM Plex Mono for system-reported truth.",
+      "Do keep control radii on the `--radius` scale (`rounded-2xl` controls, `radius-4xl` cards); use full pills only for intentionally circular chrome (e.g. mobile nav trigger).",
+      "Do put product nav in the rail/top-bar; make tool traces selectable and plain-prose-shaped.",
+      "Do respect `prefers-reduced-motion` for shell, marketing, and feedback animations."
+    ],
+    "donts": [
+      "Don't invent a new palette — no Operator Cobalt revival, no purple-on-white SaaS gradients, no warm cream paper.",
+      "Don't flood product UI with violet wallpaper or gradient text.",
+      "Don't use liquid glass / `ui-liquid-glass-*` for overlays or Canvas chrome; use opaque shadcn surfaces + hairlines.",
+      "Don't wrap everything in a card; nested cards are always wrong.",
+      "Don't put an uppercase eyebrow on every section or orchestrate entrance sequences in product surfaces.",
+      "Don't use side-stripe active indicators — use text + soft tint, or the quiet thread line for nested routes.",
+      "Don't use em dashes in copy or UI text."
+    ]
+  }
+}
