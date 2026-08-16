@@ -27,6 +27,7 @@ function projectGroup(
       status: "todo",
     })),
     isFavorite: false,
+    searchExpandProject: false,
   };
 }
 
@@ -36,6 +37,7 @@ describe("buildTaskChooserKeyboardItems", () => {
     const clientGroups: ChooserClientGroup[] = [
       {
         clientName: "Beta",
+        searchExpandClient: false,
         projects: [projectGroup("p2", "Beta", ["t3"])],
       },
     ];
@@ -67,6 +69,7 @@ describe("buildTaskChooserKeyboardItems", () => {
     const clientGroups: ChooserClientGroup[] = [
       {
         clientName: "Hidden",
+        searchExpandClient: false,
         projects: [projectGroup("p9", "Hidden", ["t9"])],
       },
     ];
@@ -106,6 +109,30 @@ describe("buildTaskChooserKeyboardItems", () => {
       includeProjects: true,
     });
     expect(items.map((item) => item.kind)).toEqual(["project", "task"]);
+  });
+
+  test("search with collapsed projects still lists project rows when includeProjects is true", () => {
+    const items = buildTaskChooserKeyboardItems({
+      favorites: [],
+      clientGroups: [
+        {
+          clientName: "Acme",
+          searchExpandClient: true,
+          projects: [
+            {
+              project: { id: "p1", name: "Website", clientName: "Acme" },
+              tasks: [{ id: "t1", projectId: "p1", title: "Design", status: "open" }],
+              isFavorite: false,
+              searchExpandProject: false,
+            },
+          ],
+        },
+      ],
+      isProjectExpanded: () => false,
+      isClientExpanded: () => true,
+      includeProjects: true,
+    });
+    expect(items.map((item) => item.kind)).toEqual(["project"]);
   });
 });
 

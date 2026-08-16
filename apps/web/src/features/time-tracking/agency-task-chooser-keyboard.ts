@@ -22,8 +22,9 @@ export function taskChooserOptionDomId(key: string): string {
 /**
  * Visible keyboard targets in Clockify-tree order: project rows, then tasks under
  * expanded projects. Clients are browse chrome only (click/toggle), not Enter targets.
- * When `includeProjects` is false (search mode), only tasks are keyboard targets so
- * Enter always commits a task.
+ * When `includeProjects` is false, only tasks are keyboard targets (e.g. search with
+ * every visible project already expanded so Enter always commits a task). When true
+ * during search with collapsed projects, project rows stay reachable so Enter can expand.
  */
 export function buildTaskChooserKeyboardItems(input: {
   favorites: ChooserProjectGroup[];
