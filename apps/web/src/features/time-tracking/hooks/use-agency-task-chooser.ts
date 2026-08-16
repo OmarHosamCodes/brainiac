@@ -292,10 +292,39 @@ export function useAgencyTaskChooser(
   const listRef = useRef<HTMLDivElement>(null);
   const [expandEpoch, setExpandEpoch] = useState(0);
 
+  const searchExpandProjectIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const entry of sections.favorites) {
+      if (entry.searchExpandProject) ids.add(entry.project.id);
+    }
+    for (const group of sections.clientGroups) {
+      for (const entry of group.projects) {
+        if (entry.searchExpandProject) ids.add(entry.project.id);
+      }
+    }
+    return ids;
+  }, [sections]);
+
+  const searchExpandClientNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const group of sections.clientGroups) {
+      if (group.searchExpandClient) names.add(group.clientName);
+    }
+    return names;
+  }, [sections]);
+
   const isProjectExpandedForList = (projectId: string) =>
-    Boolean(searchTerm.trim()) || isProjectExpanded(projectId);
+    searchExpandProjectIds.has(projectId) || isProjectExpanded(projectId);
   const isClientExpandedForList = (clientName: string) =>
-    Boolean(searchTerm.trim()) || isClientExpanded(clientName);
+    searchExpandClientNames.has(clientName) || isClientExpanded(clientName);
+
+  const includeProjects =
+    pickProject ||
+    !searchTerm.trim() ||
+    sections.favorites.some((entry) => !isProjectExpandedForList(entry.project.id)) ||
+    sections.clientGroups.some((group) =>
+      group.projects.some((entry) => !isProjectExpandedForList(entry.project.id)),
+    );
 
   const keyboardItems = useMemo(
     () =>
@@ -304,7 +333,7 @@ export function useAgencyTaskChooser(
         clientGroups: sections.clientGroups,
         isProjectExpanded: isProjectExpandedForList,
         isClientExpanded: isClientExpandedForList,
-        includeProjects: pickProject || !searchTerm.trim(),
+        includeProjects,
       }),
     // expandEpoch invalidates after project/client toggles.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- expand helpers close over render state
@@ -313,6 +342,7 @@ export function useAgencyTaskChooser(
       sections.clientGroups,
       searchTerm,
       expandEpoch,
+      includeProjects,
       selectedTask?.projectId,
       bestMatchTask?.projectId,
     ],
