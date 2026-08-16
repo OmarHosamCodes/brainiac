@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 
+import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
 import {
   agencyFocusRingClass,
   agencyTaskChooserSectionHoverClass,
@@ -17,6 +18,8 @@ type AgencyTaskChooserClientSectionProps = {
   clientName: string;
   projectCount: number;
   expanded: boolean;
+  searchTerm: string;
+  highlightSearch: boolean;
   onToggle: () => void;
   children: ReactNode;
 };
@@ -25,6 +28,8 @@ export function AgencyTaskChooserClientSection({
   clientName,
   projectCount,
   expanded,
+  searchTerm,
+  highlightSearch,
   onToggle,
   children,
 }: AgencyTaskChooserClientSectionProps) {
@@ -43,7 +48,11 @@ export function AgencyTaskChooserClientSection({
         aria-expanded={expanded}
       >
         <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">
-          {clientName}
+          {highlightSearch ? (
+            <AgencySearchHighlight text={clientName} query={searchTerm} />
+          ) : (
+            clientName
+          )}
         </span>
         <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-normal text-muted-foreground tabular-nums">
           {projectCount} {projectCount === 1 ? "project" : "projects"}

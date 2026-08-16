@@ -74,9 +74,6 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     onToggleClient,
     onToggleProjectFavorite,
     onToggleTaskFavorite,
-    hasMoreTasks,
-    loadingMoreTasks,
-    onLoadMoreTasks,
     highlightSearch,
     bestMatchTaskId,
     activeOptionKey,
@@ -360,6 +357,8 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                               clientName={group.clientName}
                               projectCount={group.projects.length}
                               expanded={isClientExpanded(group.clientName)}
+                              searchTerm={searchTerm}
+                              highlightSearch={highlightSearch}
                               onToggle={() => onToggleClient(group.clientName)}
                             >
                               {group.projects.map((entry) =>
@@ -372,20 +371,6 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                     )}
                   </AnimatePresence>
                 )}
-                {hasMoreTasks && !pickProject ? (
-                  <div className="px-2 pt-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-muted-foreground"
-                      disabled={loadingMoreTasks}
-                      onClick={onLoadMoreTasks}
-                    >
-                      {loadingMoreTasks ? "Loading…" : "Load more tasks"}
-                    </Button>
-                  </div>
-                ) : null}
               </div>
 
               <div className="border-t border-border px-3 py-2.5">

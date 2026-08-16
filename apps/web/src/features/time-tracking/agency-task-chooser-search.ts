@@ -1,6 +1,6 @@
-export function tokenizeChooserQuery(query: string): string[] {
-  return query.trim().toLowerCase().split(/\s+/u).filter(Boolean);
-}
+import { tokenizeAgencySearchQuery } from "@/features/shared/agency-list-search";
+
+export { tokenizeAgencySearchQuery as tokenizeChooserQuery };
 
 function fieldHits(value: string, token: string): boolean {
   return value.toLowerCase().includes(token);

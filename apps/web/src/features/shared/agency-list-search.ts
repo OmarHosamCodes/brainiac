@@ -3,6 +3,10 @@ export type AgencySearchHighlightPart = {
   match: boolean;
 };
 
+export function tokenizeAgencySearchQuery(query: string): string[] {
+  return query.trim().toLowerCase().split(/\s+/u).filter(Boolean);
+}
+
 export function normalizeAgencySearchTerm(term: string): string {
   return term.trim().toLowerCase();
 }
@@ -13,28 +17,59 @@ export function agencyListSearchMatches(term: string, ...fields: string[]): bool
   return fields.some((field) => field.toLowerCase().includes(normalized));
 }
 
+function collectHighlightRanges(
+  text: string,
+  tokens: string[],
+): Array<{ start: number; end: number }> {
+  const lowerText = text.toLowerCase();
+  const ranges: Array<{ start: number; end: number }> = [];
+
+  for (const token of tokens) {
+    let from = 0;
+    while (from < text.length) {
+      const index = lowerText.indexOf(token, from);
+      if (index === -1) break;
+      ranges.push({ start: index, end: index + token.length });
+      from = index + token.length;
+    }
+  }
+
+  if (ranges.length === 0) return [];
+  ranges.sort((left, right) => left.start - right.start || left.end - right.end);
+
+  const merged: Array<{ start: number; end: number }> = [ranges[0]!];
+  for (const range of ranges.slice(1)) {
+    const last = merged[merged.length - 1]!;
+    if (range.start <= last.end) {
+      last.end = Math.max(last.end, range.end);
+      continue;
+    }
+    merged.push(range);
+  }
+  return merged;
+}
+
 export function splitAgencySearchHighlight(
   text: string,
   query: string,
 ): AgencySearchHighlightPart[] {
-  const normalized = normalizeAgencySearchTerm(query);
-  if (!normalized) return [{ text, match: false }];
+  const tokens = tokenizeAgencySearchQuery(query);
+  if (tokens.length === 0) return [{ text, match: false }];
 
-  const lowerText = text.toLowerCase();
+  const ranges = collectHighlightRanges(text, tokens);
+  if (ranges.length === 0) return [{ text, match: false }];
+
   const parts: AgencySearchHighlightPart[] = [];
-  let start = 0;
-
-  while (start < text.length) {
-    const index = lowerText.indexOf(normalized, start);
-    if (index === -1) {
-      parts.push({ text: text.slice(start), match: false });
-      break;
+  let cursor = 0;
+  for (const range of ranges) {
+    if (range.start > cursor) {
+      parts.push({ text: text.slice(cursor, range.start), match: false });
     }
-    if (index > start) {
-      parts.push({ text: text.slice(start, index), match: false });
-    }
-    parts.push({ text: text.slice(index, index + normalized.length), match: true });
-    start = index + normalized.length;
+    parts.push({ text: text.slice(range.start, range.end), match: true });
+    cursor = range.end;
+  }
+  if (cursor < text.length) {
+    parts.push({ text: text.slice(cursor), match: false });
   }
 
   return parts.length > 0 ? parts : [{ text, match: false }];

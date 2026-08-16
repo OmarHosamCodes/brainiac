@@ -5,6 +5,7 @@ import {
 import {
   chooserFieldHits,
   chooserPathMatches,
+  chooserSearchExpand,
   tokenizeChooserQuery,
 } from "@/features/time-tracking/agency-task-chooser-search";
 
@@ -86,9 +87,14 @@ export function buildAgencyTaskChooserSections(input: {
     if (!projectPathMatches && matchingTasks.length === 0) {
       return null;
     }
+    const { expandProject } = chooserSearchExpand({
+      client: chooserFieldHits(project.clientName, tokens),
+      project: chooserFieldHits(project.name, tokens),
+      task: matchingTasks.length > 0,
+    });
     return {
       tasks: matchingTasks,
-      searchExpandProject: matchingTasks.length > 0,
+      searchExpandProject: expandProject,
     };
   }
 
@@ -150,7 +156,11 @@ export function buildAgencyTaskChooserSections(input: {
     return {
       clientName: group.clientName || "No client",
       projects,
-      searchExpandClient: searching && projects.length > 0,
+      searchExpandClient: chooserSearchExpand({
+        client: chooserFieldHits(group.clientName || "No client", tokens),
+        project: projects.some((entry) => chooserFieldHits(entry.project.name, tokens)),
+        task: projects.some((entry) => entry.searchExpandProject),
+      }).expandClient,
     };
   });
 
