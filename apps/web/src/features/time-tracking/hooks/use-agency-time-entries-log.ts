@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { useAgencyTimeEntriesLogStore } from "@/features/time-tracking/stores/agency-time-entries-log";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import {
-  useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
+import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-task-chooser-catalog";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";

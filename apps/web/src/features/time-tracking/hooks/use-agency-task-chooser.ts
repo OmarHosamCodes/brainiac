@@ -21,9 +21,9 @@ import {
 } from "@/features/shared/choosers/agency-chooser-shell";
 import {
   useAgencyFavoritesQuery,
-  useAgencyProjectTasksForChooserQuery,
   useAgencyProjectTemplatesQuery,
 } from "@/features/shared/agency-queries";
+import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-task-chooser-catalog";
 import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 import { statusLabel } from "@/features/task-management/agency-task-status";
 import {
@@ -122,9 +122,6 @@ export type AgencyTaskChooserViewModel = {
   onToggleClient: (clientName: string) => void;
   onToggleProjectFavorite: (projectId: string) => void;
   onToggleTaskFavorite: (taskId: string) => void;
-  hasMoreTasks: boolean;
-  loadingMoreTasks: boolean;
-  onLoadMoreTasks: () => void;
   highlightSearch: boolean;
   bestMatchTaskId: string | null;
   activeOptionKey: string | null;
@@ -566,9 +563,6 @@ export function useAgencyTaskChooser(
     onToggleClient: handleToggleClient,
     onToggleProjectFavorite: handleToggleProjectFavorite,
     onToggleTaskFavorite: handleToggleTaskFavorite,
-    hasMoreTasks: Boolean(chooserTasksQuery.hasNextPage),
-    loadingMoreTasks: chooserTasksQuery.isFetchingNextPage,
-    onLoadMoreTasks: () => void chooserTasksQuery.fetchNextPage(),
     highlightSearch,
     bestMatchTaskId: bestMatchTaskId || null,
     activeOptionKey,

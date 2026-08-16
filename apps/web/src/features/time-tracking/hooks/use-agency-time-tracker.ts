@@ -31,10 +31,10 @@ import {
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import {
   useAgencyActiveTimerQuery,
-  useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
+import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-task-chooser-catalog";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
   activeTimerStartToIso,
