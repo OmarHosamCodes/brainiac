@@ -13,9 +13,9 @@ import {
   invalidateAgencyEntriesQueries,
   invalidateAgencyReportsQueries,
   useAgencyClientsQuery,
-  useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
 } from "@/features/shared/agency-queries";
+import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-task-chooser-catalog";
 import { allAgencyReportFieldIds } from "@/features/reports/agency-report-fields";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {

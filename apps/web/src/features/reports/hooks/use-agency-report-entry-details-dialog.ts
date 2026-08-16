@@ -10,9 +10,9 @@ import {
   invalidateAgencyDashboardQueries,
   invalidateAgencyEntriesQueries,
   invalidateAgencyReportsQueries,
-  useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
 } from "@/features/shared/agency-queries";
+import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-task-chooser-catalog";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
   draftToIsoRange,

@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { agencyManagementPaneFromPathname } from "@/features/shared/agency-management-sections";
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
+import { ensureAgencyTaskChooserCatalog } from "@/features/shared/agency-task-chooser-catalog";
 import { ensureAgencyWorkBootQueries } from "@/features/shared/agency-queries";
 import {
   focusMonthKeyFromAnchor,
@@ -229,6 +230,7 @@ export async function ensureAgencySegmentBootQueries(
     }
     case "reports":
       await Promise.all([
+        ensureAgencyTaskChooserCatalog(queryClient, teamId),
         ensureSyncedQuery(
           queryClient,
           orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),

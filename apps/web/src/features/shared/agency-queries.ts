@@ -1,5 +1,5 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
-import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
 import { authClient } from "@/lib/auth-client";
@@ -16,27 +16,19 @@ import {
 import { getQueryClient } from "@/lib/query-client";
 import type { AgencyClientArchiveFilter } from "@/features/shared/agency-client-archive-filter";
 import type { AgencyProjectTrashFilter } from "@/features/shared/agency-project-trash-filter";
-import { orpc, orpcClient } from "@/lib/orpc";
-import {
-  adjustPaginatedTotal,
-  EMPTY_LIST_OVERLAY,
-  mergeListWithOverlay,
-} from "@/features/shared/agency-optimistic-merge";
+import { orpc } from "@/lib/orpc";
 import {
   withAgencySyncQueryOptions,
   prefetchAgencySyncQueryOptions,
 } from "@/features/shared/agency-query-options";
-import {
-  taskMatchesAgencyFilters,
-  useAgencyOptimisticStore,
-} from "@/features/shared/stores/agency-optimistic";
+import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 import {
-  findProjectTaskInCache,
   isAgencyActiveMembersQueryKey,
   isAgencyActiveTimerQueryKey,
   isAgencyTimeEntriesListQueryKey,
 } from "@/features/shared/agency-query-cache";
+import { ensureAgencyTaskChooserCatalog } from "@/features/shared/agency-task-chooser-catalog";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
 import type { AgencyProjectTask } from "@orch/api/schemas/agency-ops";
 
@@ -69,6 +61,7 @@ export async function ensureAgencyWorkBootQueries(
   if (!teamId) return;
 
   await Promise.all([
+    ensureAgencyTaskChooserCatalog(queryClient, teamId),
     queryClient.ensureQueryData(
       prefetchAgencySyncQueryOptions(
         orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
@@ -431,232 +424,6 @@ export function useAgencyProjectTasksQuery(
   ]);
 
   return useMergedAgencyProjectTasksQuery(query, teamId, stableFilters);
-}
-
-export function useAgencyProjectTasksInfiniteQuery(
-  teamId: string,
-  filters: AgencyProjectTasksFilters = {},
-) {
-  const pageSize = filters.pageSize ?? 50;
-  const statusesKey = filters.statuses?.join(",") ?? "";
-
-  const baseInput = useMemo(
-    () => ({
-      teamId,
-      pageSize,
-      ...(filters.projectId ? { projectId: filters.projectId } : {}),
-      ...(filters.assigneeUserId ? { assigneeUserId: filters.assigneeUserId } : {}),
-      ...(filters.delegatedByUserId ? { delegatedByUserId: filters.delegatedByUserId } : {}),
-      ...(filters.journeyDiscoveryForUserId
-        ? { journeyDiscoveryForUserId: filters.journeyDiscoveryForUserId }
-        : {}),
-      ...(filters.statuses ? { statuses: filters.statuses } : {}),
-      ...(filters.search ? { search: filters.search } : {}),
-    }),
-    [
-      teamId,
-      pageSize,
-      filters.projectId,
-      filters.assigneeUserId,
-      filters.delegatedByUserId,
-      filters.journeyDiscoveryForUserId,
-      statusesKey,
-      filters.statuses,
-      filters.search,
-    ],
-  );
-
-  const queryEnabled =
-    Boolean(teamId) &&
-    (filters.projectId === undefined || Boolean(filters.projectId)) &&
-    (filters.assigneeUserId === undefined || Boolean(filters.assigneeUserId)) &&
-    (filters.delegatedByUserId === undefined || Boolean(filters.delegatedByUserId)) &&
-    (filters.journeyDiscoveryForUserId === undefined ||
-      Boolean(filters.journeyDiscoveryForUserId)) &&
-    (filters.enabled === undefined || filters.enabled);
-
-  const queryKey = useMemo(
-    () =>
-      [
-        ...orpc.agencyOps.projectTasks.list.queryOptions({ input: baseInput }).queryKey,
-        "infinite",
-      ] as const,
-    [baseInput],
-  );
-
-  const registerProjectTasksQuery = useAgencyOpsStore((s) => s.registerProjectTasksQuery);
-  const unregisterProjectTasksQuery = useAgencyOpsStore((s) => s.unregisterProjectTasksQuery);
-
-  const query = useInfiniteQuery({
-    queryKey,
-    queryFn: async ({ pageParam }) =>
-      orpcClient.agencyOps.projectTasks.list({
-        ...baseInput,
-        page: pageParam,
-      }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      if (lastPage.page * lastPage.pageSize < lastPage.total) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
-    enabled: queryEnabled,
-    staleTime: 15_000,
-    placeholderData: keepPreviousData,
-  });
-
-  useEffect(() => {
-    if (!teamId || !queryEnabled) return;
-    registerProjectTasksQuery({
-      queryKey: [...queryKey],
-      teamId,
-      projectId: filters.projectId,
-      assigneeUserId: filters.assigneeUserId,
-      statuses: filters.statuses,
-    });
-    return () => unregisterProjectTasksQuery([...queryKey]);
-  }, [
-    teamId,
-    queryKey,
-    queryEnabled,
-    filters.projectId,
-    filters.assigneeUserId,
-    filters.statuses,
-    registerProjectTasksQuery,
-    unregisterProjectTasksQuery,
-  ]);
-
-  const overlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
-  const pruneTasks = useAgencyOptimisticStore((state) => state.pruneTasks);
-
-  const matches = useMemo(
-    () => (task: Parameters<typeof taskMatchesAgencyFilters>[0]) =>
-      taskMatchesAgencyFilters(task, {
-        projectId: filters.projectId,
-        assigneeUserId: filters.assigneeUserId,
-        delegatedByUserId: filters.delegatedByUserId,
-        journeyDiscoveryForUserId: filters.journeyDiscoveryForUserId,
-        statuses: filters.statuses,
-      }),
-    [
-      filters.projectId,
-      filters.assigneeUserId,
-      filters.delegatedByUserId,
-      filters.journeyDiscoveryForUserId,
-      filters.statuses,
-      statusesKey,
-    ],
-  );
-
-  const serverItems = useMemo(
-    () => query.data?.pages.flatMap((page) => page.items) ?? [],
-    [query.data?.pages],
-  );
-
-  const items = useMemo(
-    () => mergeListWithOverlay(serverItems, overlay, matches),
-    [serverItems, overlay, matches],
-  );
-
-  const isDoneCompletionList =
-    Boolean(filters.assigneeUserId) &&
-    Boolean(filters.statuses?.includes("done")) &&
-    !filters.statuses?.includes("open") &&
-    !filters.statuses?.includes("in_progress");
-
-  const total = useMemo(() => {
-    if (isDoneCompletionList) {
-      return items.reduce((sum, task) => sum + (task.viewerCompletionCount ?? 0), 0);
-    }
-    const serverTotal = query.data?.pages[0]?.total ?? 0;
-    return adjustPaginatedTotal(serverTotal, overlay, serverItems);
-  }, [isDoneCompletionList, items, overlay, query.data?.pages, serverItems]);
-
-  useEffect(() => {
-    if (!teamId || !query.isSuccess) return;
-    // Only the assignee-filtered Active rail may prune status/create overlays.
-    // Done-list pages can carry a patched in_progress row and drop the overlay
-    // while Active still has a stale open row (timer flash).
-    const isActiveRail =
-      Boolean(filters.assigneeUserId) &&
-      Boolean(filters.statuses?.includes("open") || filters.statuses?.includes("in_progress")) &&
-      !filters.statuses?.includes("done");
-    if (!isActiveRail) return;
-    pruneTasks(teamId, serverItems);
-  }, [teamId, query.isSuccess, pruneTasks, serverItems, filters.assigneeUserId, filters.statuses]);
-
-  return { ...query, items, total };
-}
-
-const TASK_CHOOSER_PAGE_SIZE = 100;
-
-export function useAgencyProjectTasksForChooserQuery(
-  teamId: string,
-  filters: Omit<AgencyProjectTasksFilters, "page" | "pageSize"> = {},
-  options: { selectedTaskIds?: readonly string[] } = {},
-) {
-  const { search, ...catalogFilters } = filters;
-  const catalogQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
-    ...catalogFilters,
-    pageSize: TASK_CHOOSER_PAGE_SIZE,
-  });
-  const normalizedSearch = search?.trim() ?? "";
-  const searchQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
-    ...catalogFilters,
-    search: normalizedSearch || "__chooser_search_disabled__",
-    enabled: Boolean(normalizedSearch) && (filters.enabled === undefined || filters.enabled),
-    pageSize: TASK_CHOOSER_PAGE_SIZE,
-  });
-  const selectedTaskIdsKey = options.selectedTaskIds?.filter(Boolean).join(",") ?? "";
-  const selectedTaskIds = useMemo(
-    () => [...new Set(selectedTaskIdsKey.split(",").filter(Boolean))],
-    [selectedTaskIdsKey],
-  );
-  const missingSelectedTaskIds = selectedTaskIds.filter(
-    (taskId) => !catalogQuery.items.some((task) => task.id === taskId),
-  );
-  const missingSelectedTaskIdsKey = missingSelectedTaskIds.join(",");
-
-  useEffect(() => {
-    if (
-      !teamId ||
-      missingSelectedTaskIds.length === 0 ||
-      !catalogQuery.hasNextPage ||
-      catalogQuery.isFetchingNextPage
-    ) {
-      return;
-    }
-    void catalogQuery.fetchNextPage({ cancelRefetch: false });
-  }, [
-    teamId,
-    missingSelectedTaskIdsKey,
-    catalogQuery.hasNextPage,
-    catalogQuery.isFetchingNextPage,
-    catalogQuery.fetchNextPage,
-    catalogQuery.data?.pages.length,
-  ]);
-
-  const items = useMemo(() => {
-    const byId = new Map(catalogQuery.items.map((task) => [task.id, task]));
-    for (const task of searchQuery.items) byId.set(task.id, task);
-    for (const taskId of selectedTaskIds) {
-      const cachedTask = findProjectTaskInCache(teamId, taskId);
-      if (cachedTask) byId.set(cachedTask.id, cachedTask);
-    }
-    return [...byId.values()];
-  }, [catalogQuery.items, searchQuery.items, selectedTaskIds, teamId]);
-  const activeQuery = normalizedSearch ? searchQuery : catalogQuery;
-  const isPending = catalogQuery.isPending && items.length === 0;
-
-  return {
-    ...activeQuery,
-    items,
-    total: activeQuery.total,
-    isPending,
-    isLoading: isPending,
-    isFetchingAll: catalogQuery.isFetchingNextPage && missingSelectedTaskIds.length > 0,
-  };
 }
 
 export type { AgencyPresenceMember } from "@/features/shared/agency-presence-members";
