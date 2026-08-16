@@ -262,6 +262,14 @@ export async function listAgencyProjectTasks(
   const searchTokens = tokenizeTaskListSearch(input.search ?? "");
   const filters = [eq(agencyOpsProjectTask.teamId, input.teamId)];
 
+  // Soft-deleted projects are excluded from all agency listings.
+  filters.push(isNull(agencyOpsProject.deletedAt));
+  // Team-wide lists match the default projects query (active clients only).
+  // Project-scoped lists keep archived-client tasks when the project id is explicit.
+  if (!input.projectId) {
+    filters.push(isNull(agencyOpsClient.archivedAt));
+  }
+
   if (input.projectId) {
     filters.push(eq(agencyOpsProjectTask.projectId, input.projectId));
   }
@@ -373,7 +381,6 @@ export async function listAgencyProjectTasks(
   const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 50));
   const offset = (page - 1) * pageSize;
   const whereClause = and(...filters);
-  const needsSearchJoins = searchTokens.length > 0;
 
   const countSelect = {
     count: wantsDoneByCompletion
@@ -381,35 +388,26 @@ export async function listAgencyProjectTasks(
       : sql<number>`count(*)`,
   };
 
-  const [countRow] = needsSearchJoins
-    ? await db
-        .select(countSelect)
-        .from(agencyOpsProjectTask)
-        .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
-        .leftJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-        .where(whereClause)
-    : await db.select(countSelect).from(agencyOpsProjectTask).where(whereClause);
+  // Always join project/client so trash + archived-client filters apply (search also needs them).
+  const [countRow] = await db
+    .select(countSelect)
+    .from(agencyOpsProjectTask)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .where(whereClause);
 
   const parsedTotal = Number(countRow?.count ?? 0);
   const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
-  const rows = needsSearchJoins
-    ? await db
-        .select(projectTaskColumns)
-        .from(agencyOpsProjectTask)
-        .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
-        .leftJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-        .where(whereClause)
-        .orderBy(desc(agencyOpsProjectTask.createdAt))
-        .limit(pageSize)
-        .offset(offset)
-    : await db
-        .select(projectTaskColumns)
-        .from(agencyOpsProjectTask)
-        .where(whereClause)
-        .orderBy(desc(agencyOpsProjectTask.createdAt))
-        .limit(pageSize)
-        .offset(offset);
+  const rows = await db
+    .select(projectTaskColumns)
+    .from(agencyOpsProjectTask)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .where(whereClause)
+    .orderBy(desc(agencyOpsProjectTask.createdAt))
+    .limit(pageSize)
+    .offset(offset);
 
   const assigneesByTask = await loadTaskAssignees(rows.map((row) => row.id));
   const memberStatusesByTask = input.assigneeUserId
