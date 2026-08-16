@@ -103,7 +103,7 @@ function useChooserTaskPages(
 
   const overlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
   const serverItems = useMemo(
-    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    () => query.data?.pages?.flatMap((page) => page?.items ?? []) ?? [],
     [query.data?.pages],
   );
   const items = useMemo(
@@ -146,11 +146,11 @@ export function useAgencyProjectTasksForChooserQuery(
     catalogQuery.hasNextPage,
     catalogQuery.isFetchingNextPage,
     catalogQuery.fetchNextPage,
-    catalogQuery.data?.pages.length,
+    catalogQuery.data?.pages?.length,
     searchQuery.hasNextPage,
     searchQuery.isFetchingNextPage,
     searchQuery.fetchNextPage,
-    searchQuery.data?.pages.length,
+    searchQuery.data?.pages?.length,
   ]);
 
   const items = useMemo(() => {

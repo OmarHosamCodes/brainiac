@@ -25,6 +25,7 @@ const listQueryKey = [
 ] as const;
 
 const infiniteQueryKey = [...listQueryKey, "infinite"] as const;
+const chooserCatalogQueryKey = [...listQueryKey, "infinite", "catalog"] as const;
 
 function makeTask(id: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -82,6 +83,36 @@ describe("patchInsertedProjectTaskInCache", () => {
     );
     expect(data?.items.map((item) => item.id)).toEqual(["new-task", "existing"]);
     expect(data?.total).toBe(2);
+  });
+
+  test("seeds and keeps infinite shape for chooser catalog keys ending in catalog", () => {
+    const client = setupClient();
+    client.setQueryData(chooserCatalogQueryKey, {
+      pages: [{ items: [makeTask("existing")], page: 1, pageSize: 100, total: 1 }],
+      pageParams: [1],
+    });
+    patchInsertedProjectTaskInCache(teamId, makeTask("new-task"));
+    const data = client.getQueryData<{
+      pages: Array<{ items: Array<{ id: string }>; total?: number }>;
+    }>(chooserCatalogQueryKey);
+    expect(data?.pages).toBeDefined();
+    expect(data?.pages[0]?.items.map((item) => item.id)).toEqual(["new-task", "existing"]);
+    expect(Object.hasOwn(data ?? {}, "items")).toBe(false);
+  });
+
+  test("heals list-shaped data corruptly stored under a chooser infinite key", () => {
+    const client = setupClient();
+    client.setQueryData(chooserCatalogQueryKey, {
+      items: [makeTask("existing")],
+      total: 1,
+    });
+    expect(() => patchInsertedProjectTaskInCache(teamId, makeTask("new-task"))).not.toThrow();
+    const data = client.getQueryData<{
+      pages?: Array<{ items: Array<{ id: string }> }>;
+      items?: unknown;
+    }>(chooserCatalogQueryKey);
+    expect(data?.pages?.[0]?.items.map((item) => item.id)).toEqual(["new-task", "existing"]);
+    expect(data?.items).toBeUndefined();
   });
 });
 

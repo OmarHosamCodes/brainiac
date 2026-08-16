@@ -142,6 +142,31 @@ export function taskVisibleToAssignee(
   assigneeUserId: string,
 ): boolean {
   if (task.assignedToTeam) return true;
+  // #region agent log
+  if (!Array.isArray(task.assignees)) {
+    fetch("http://127.0.0.1:7426/ingest/ccff2d3d-07dc-43a2-9258-da9208dfd805", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "ecaea0",
+      },
+      body: JSON.stringify({
+        sessionId: "ecaea0",
+        runId: "post-fix",
+        hypothesisId: "H2",
+        location: "agency-query-cache.ts:taskVisibleToAssignee",
+        message: "assignees missing when matching task list query",
+        data: {
+          assigneesType: typeof task.assignees,
+          assignedToTeam: task.assignedToTeam,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    console.error("[debug-ecaea0] task.assignees is not an array", task);
+    return false;
+  }
+  // #endregion
   return task.assignees.some((assignee) => assignee.userId === assigneeUserId);
 }
 
@@ -330,7 +355,8 @@ export async function refetchAgencyProjectJourneyQueries(teamId: string, project
 }
 
 function isInfiniteProjectTasksQueryKey(queryKey: QueryKey) {
-  return queryKey[queryKey.length - 1] === "infinite";
+  // Chooser catalog keys are [...listKey, "infinite", "catalog" | "search"].
+  return queryKey.includes("infinite");
 }
 
 export function patchAllProjectTasksListData(
@@ -343,14 +369,29 @@ export function patchAllProjectTasksListData(
   const queryClient = getQueryClient();
   forEachAgencyProjectTasksListQuery(teamId, (queryKey, input) => {
     queryClient.setQueryData<AgencyProjectTasksCacheData | undefined>(queryKey, (current) => {
-      // Infinite lists must keep { pages } shape; seeding a list shape breaks the rail.
-      const seeded =
-        current == null && isInfiniteProjectTasksQueryKey(queryKey)
-          ? {
-              pages: [{ items: [] as AgencyProjectTask[], total: 0, page: 1, pageSize: 50 }],
-              pageParams: [1],
-            }
-          : current;
+      // Infinite lists must keep { pages } shape; seeding a list shape breaks the rail/chooser.
+      let seeded = current;
+      if (isInfiniteProjectTasksQueryKey(queryKey)) {
+        if (current == null) {
+          seeded = {
+            pages: [{ items: [] as AgencyProjectTask[], total: 0, page: 1, pageSize: 50 }],
+            pageParams: [1],
+          };
+        } else if (!isInfiniteQueryData(current) && isListQueryData(current)) {
+          // Heal corrupt list-shaped data previously written under chooser infinite keys.
+          seeded = {
+            pages: [
+              {
+                items: current.items,
+                total: current.total ?? current.items.length,
+                page: 1,
+                pageSize: 50,
+              },
+            ],
+            pageParams: [1],
+          };
+        }
+      }
       return apply(seeded, input);
     });
   });
@@ -381,7 +422,7 @@ export function patchInsertedProjectTaskInCache(teamId: string, task: AgencyProj
       list: (data) => insertTaskIntoPage(data, task),
       infinite: (pages) => {
         const existingPageIndex = pages.findIndex((page) =>
-          page.items.some((item) => item.id === task.id),
+          pageItems(page).some((item) => item.id === task.id),
         );
         if (existingPageIndex !== -1) {
           return pages.map((page, index) =>
@@ -471,7 +512,7 @@ export function patchProjectTaskBlueprintDescriptionInCache(
       infinite: (pages) =>
         pages.map((page) => ({
           ...page,
-          items: page.items.map((task) =>
+          items: pageItems(page).map((task) =>
             task.id !== taskId
               ? task
               : {
@@ -498,7 +539,7 @@ export function patchDeletedProjectTaskInCache(teamId: string, taskId: string) {
         infinite: (pages) =>
           pages.map((page) => ({
             ...page,
-            items: page.items.filter((task) => task.id !== taskId),
+            items: pageItems(page).filter((task) => task.id !== taskId),
           })),
       },
       { createIfEmpty: false },
