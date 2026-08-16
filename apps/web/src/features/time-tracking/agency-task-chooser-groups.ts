@@ -92,8 +92,10 @@ export function buildAgencyTaskChooserSections(input: {
       project: chooserFieldHits(project.name, tokens),
       task: matchingTasks.length > 0,
     });
+    // Task-title hits: show only those tasks and auto-expand.
+    // Client/project-only hits: keep all tasks so expanding the row still lists them.
     return {
-      tasks: matchingTasks,
+      tasks: matchingTasks.length > 0 ? matchingTasks : projectTasks,
       searchExpandProject: expandProject,
     };
   }

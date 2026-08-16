@@ -91,7 +91,7 @@ describe("nested search", () => {
     expect(acme?.projects[0]?.tasks.map((task) => task.id)).toEqual(["t1"]);
   });
 
-  test("client-only query keeps all client projects collapsed with all tasks hidden from filter list", () => {
+  test("client-only query keeps all client projects collapsed but retains tasks for manual expand", () => {
     const sections = buildAgencyTaskChooserSections({
       projects,
       tasks,
@@ -103,10 +103,11 @@ describe("nested search", () => {
     expect(acme?.searchExpandClient).toBe(true);
     expect(acme?.projects.map((entry) => entry.project.id).sort()).toEqual(["p1", "p3"]);
     expect(acme?.projects.every((entry) => entry.searchExpandProject === false)).toBe(true);
-    expect(acme?.projects.every((entry) => entry.tasks.length === 0)).toBe(true);
+    const website = acme?.projects.find((entry) => entry.project.id === "p1");
+    expect(website?.tasks.map((task) => task.id).sort()).toEqual(["t1", "t2"]);
   });
 
-  test("project-only query keeps that project and does not auto-expand tasks", () => {
+  test("project-only query keeps that project collapsed but retains its tasks for manual expand", () => {
     const sections = buildAgencyTaskChooserSections({
       projects,
       tasks,
@@ -117,6 +118,6 @@ describe("nested search", () => {
     const acme = sections.clientGroups.find((group) => group.clientName === "Acme");
     expect(acme?.projects.map((entry) => entry.project.id)).toEqual(["p1"]);
     expect(acme?.projects[0]?.searchExpandProject).toBe(false);
-    expect(acme?.projects[0]?.tasks).toEqual([]);
+    expect(acme?.projects[0]?.tasks.map((task) => task.id).sort()).toEqual(["t1", "t2"]);
   });
 });
