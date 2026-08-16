@@ -157,7 +157,7 @@ export function useAgencyTaskChooser(
     disabled = false,
     loading = false,
     placeholder = "Task",
-    searchPlaceholder = "Search projects or clients",
+    searchPlaceholder = "Search client, project, or task",
     className,
     open: controlledOpen,
     onOpenChange,

@@ -3,12 +3,7 @@ import { and, ilike, or, type SQL } from "drizzle-orm";
 
 /** Same whitespace tokenize as the web chooser; capped for SQL safety. */
 export function tokenizeTaskListSearch(query: string): string[] {
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/u)
-    .filter(Boolean)
-    .slice(0, 8);
+  return query.trim().toLowerCase().split(/\s+/u).filter(Boolean).slice(0, 8);
 }
 
 /**
