@@ -22,16 +22,16 @@
 
 ## Shape brief (confirmed)
 
-| Item | Decision |
-| ---- | -------- |
-| Job | Type one box: find a task (or project when `pickProject`) across client, project, and task names |
-| Audience | Agency member mid-track or editing an entry; keyboard-first, impatient |
-| Mode | Operate |
+| Item        | Decision                                                                                                                                                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Job         | Type one box: find a task (or project when `pickProject`) across client, project, and task names                                                                                                                                            |
+| Audience    | Agency member mid-track or editing an entry; keyboard-first, impatient                                                                                                                                                                      |
+| Mode        | Operate                                                                                                                                                                                                                                     |
 | Match model | Industry default: whitespace tokens, AND, each token may hit any level of the **same** client→project→task path. Whole-string phrase is a relevance boost when it still matches as a substring of one field, not a separate query language. |
-| Expand | **Hits only:** hide non-matching siblings. Expand a client if it or a descendant matches. Expand a project only if a **task** on that project matches. Client-name-only or project-name-only hits stay collapsed at the next level. |
-| Surfaces | All `AgencyTaskChooser` instances |
-| Untouched | Favorites ranking, create-task / create-project dialogs, trigger formats, description suggestions, My Tasks rail grouping (except it already uses this chooser) |
-| Anti-goals | Linear global Search, fuzzy typo engine, `@` syntax, auto-selecting an ambiguous first row on type |
+| Expand      | **Hits only:** hide non-matching siblings. Expand a client if it or a descendant matches. Expand a project only if a **task** on that project matches. Client-name-only or project-name-only hits stay collapsed at the next level.         |
+| Surfaces    | All `AgencyTaskChooser` instances                                                                                                                                                                                                           |
+| Untouched   | Favorites ranking, create-task / create-project dialogs, trigger formats, description suggestions, My Tasks rail grouping (except it already uses this chooser)                                                                             |
+| Anti-goals  | Linear global Search, fuzzy typo engine, `@` syntax, auto-selecting an ambiguous first row on type                                                                                                                                          |
 
 ### Interaction thesis
 
@@ -48,20 +48,20 @@ Search the denormalized path, **display** the Clockify tree. Query `"Acme Websit
 
 ## File map
 
-| File | Responsibility |
-| ---- | -------------- |
-| `apps/web/src/features/time-tracking/agency-task-chooser-search.ts` | Tokenize, path AND match, expand flags |
-| `apps/web/src/features/time-tracking/agency-task-chooser-search.test.ts` | Matcher tests |
-| `apps/web/src/features/time-tracking/agency-task-chooser-groups.ts` | Filter + attach expand flags |
-| `apps/web/src/features/time-tracking/agency-task-chooser-groups.test.ts` | Section tests for nested queries |
-| `apps/web/src/features/time-tracking/hooks/use-agency-task-chooser.ts` | Use flags instead of expand-all-on-search; keyboard includeProjects |
-| `apps/web/src/features/time-tracking/agency-task-chooser-keyboard.ts` | Include collapsed project rows while searching |
-| `apps/web/src/features/time-tracking/agency-task-chooser-keyboard.test.ts` | Keyboard list with mixed expand |
-| `apps/web/src/features/time-tracking/choosers/agency-task-chooser-view.tsx` | Empty copy only if needed |
-| `packages/api/src/routers/agency-ops/tasks/task-list-search.ts` | Shared token SQL predicate |
-| `packages/api/src/routers/agency-ops/tasks/task-list-search.test.ts` | Tokenize + predicate shape tests |
-| `packages/api/src/routers/agency-ops/tasks/service.ts` | Use token AND + project/client join |
-| `docs/golden-file-source-inventory.md` | `bun run check:golden` if new in-scope files |
+| File                                                                        | Responsibility                                                      |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `apps/web/src/features/time-tracking/agency-task-chooser-search.ts`         | Tokenize, path AND match, expand flags                              |
+| `apps/web/src/features/time-tracking/agency-task-chooser-search.test.ts`    | Matcher tests                                                       |
+| `apps/web/src/features/time-tracking/agency-task-chooser-groups.ts`         | Filter + attach expand flags                                        |
+| `apps/web/src/features/time-tracking/agency-task-chooser-groups.test.ts`    | Section tests for nested queries                                    |
+| `apps/web/src/features/time-tracking/hooks/use-agency-task-chooser.ts`      | Use flags instead of expand-all-on-search; keyboard includeProjects |
+| `apps/web/src/features/time-tracking/agency-task-chooser-keyboard.ts`       | Include collapsed project rows while searching                      |
+| `apps/web/src/features/time-tracking/agency-task-chooser-keyboard.test.ts`  | Keyboard list with mixed expand                                     |
+| `apps/web/src/features/time-tracking/choosers/agency-task-chooser-view.tsx` | Empty copy only if needed                                           |
+| `packages/api/src/routers/agency-ops/tasks/task-list-search.ts`             | Shared token SQL predicate                                          |
+| `packages/api/src/routers/agency-ops/tasks/task-list-search.test.ts`        | Tokenize + predicate shape tests                                    |
+| `packages/api/src/routers/agency-ops/tasks/service.ts`                      | Use token AND + project/client join                                 |
+| `docs/golden-file-source-inventory.md`                                      | `bun run check:golden` if new in-scope files                        |
 
 ---
 
@@ -120,10 +120,10 @@ describe("chooserPathMatches", () => {
 
   test("does not steal tokens from another client", () => {
     expect(
-      chooserPathMatches(
-        { clientName: "Beta", projectName: "Website", taskTitle: "Design" },
-        ["acme", "design"],
-      ),
+      chooserPathMatches({ clientName: "Beta", projectName: "Website", taskTitle: "Design" }, [
+        "acme",
+        "design",
+      ]),
     ).toBe(false);
   });
 
@@ -165,11 +165,7 @@ Expected: FAIL (module missing)
 
 ```typescript
 export function tokenizeChooserQuery(query: string): string[] {
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/u)
-    .filter(Boolean);
+  return query.trim().toLowerCase().split(/\s+/u).filter(Boolean);
 }
 
 function fieldHits(value: string, token: string): boolean {
@@ -321,29 +317,29 @@ export type ChooserClientGroup = {
 Inside `buildAgencyTaskChooserSections`:
 
 ```typescript
-  const tokens = tokenizeChooserQuery(input.searchTerm);
-  const searching = tokens.length > 0;
+const tokens = tokenizeChooserQuery(input.searchTerm);
+const searching = tokens.length > 0;
 
-  function tasksForProject(project: ChooserProject, projectTasks: ChooserTask[]) {
-    if (!searching) return { tasks: projectTasks, searchExpandProject: false };
-    const matchingTasks = projectTasks.filter((task) =>
-      chooserPathMatches(
-        { clientName: project.clientName, projectName: project.name, taskTitle: task.title },
-        tokens,
-      ),
-    );
-    const projectPathMatches = chooserPathMatches(
-      { clientName: project.clientName, projectName: project.name },
+function tasksForProject(project: ChooserProject, projectTasks: ChooserTask[]) {
+  if (!searching) return { tasks: projectTasks, searchExpandProject: false };
+  const matchingTasks = projectTasks.filter((task) =>
+    chooserPathMatches(
+      { clientName: project.clientName, projectName: project.name, taskTitle: task.title },
       tokens,
-    );
-    if (!projectPathMatches && matchingTasks.length === 0) {
-      return null;
-    }
-    return {
-      tasks: matchingTasks,
-      searchExpandProject: matchingTasks.length > 0,
-    };
+    ),
+  );
+  const projectPathMatches = chooserPathMatches(
+    { clientName: project.clientName, projectName: project.name },
+    tokens,
+  );
+  if (!projectPathMatches && matchingTasks.length === 0) {
+    return null;
   }
+  return {
+    tasks: matchingTasks,
+    searchExpandProject: matchingTasks.length > 0,
+  };
+}
 ```
 
 When mapping favorites and client groups, skip `null`, set `searchExpandClient: searching && group.projects.length > 0`. Keep existing favorite-first ordering.
@@ -424,48 +420,48 @@ Expected: FAIL until types include the new flags (fix fixtures in existing tests
 In `use-agency-task-chooser.ts` replace:
 
 ```typescript
-  const isProjectExpandedForList = (projectId: string) =>
-    Boolean(searchTerm.trim()) || isProjectExpanded(projectId);
-  const isClientExpandedForList = (clientName: string) =>
-    Boolean(searchTerm.trim()) || isClientExpanded(clientName);
+const isProjectExpandedForList = (projectId: string) =>
+  Boolean(searchTerm.trim()) || isProjectExpanded(projectId);
+const isClientExpandedForList = (clientName: string) =>
+  Boolean(searchTerm.trim()) || isClientExpanded(clientName);
 ```
 
 with lookups on the current `sections`:
 
 ```typescript
-  const searchExpandProjectIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const entry of sections.favorites) {
+const searchExpandProjectIds = useMemo(() => {
+  const ids = new Set<string>();
+  for (const entry of sections.favorites) {
+    if (entry.searchExpandProject) ids.add(entry.project.id);
+  }
+  for (const group of sections.clientGroups) {
+    for (const entry of group.projects) {
       if (entry.searchExpandProject) ids.add(entry.project.id);
     }
-    for (const group of sections.clientGroups) {
-      for (const entry of group.projects) {
-        if (entry.searchExpandProject) ids.add(entry.project.id);
-      }
-    }
-    return ids;
-  }, [sections]);
+  }
+  return ids;
+}, [sections]);
 
-  const searchExpandClientNames = useMemo(() => {
-    const names = new Set<string>();
-    for (const group of sections.clientGroups) {
-      if (group.searchExpandClient) names.add(group.clientName);
-    }
-    return names;
-  }, [sections]);
+const searchExpandClientNames = useMemo(() => {
+  const names = new Set<string>();
+  for (const group of sections.clientGroups) {
+    if (group.searchExpandClient) names.add(group.clientName);
+  }
+  return names;
+}, [sections]);
 
-  const isProjectExpandedForList = (projectId: string) =>
-    searchExpandProjectIds.has(projectId) || isProjectExpanded(projectId);
-  const isClientExpandedForList = (clientName: string) =>
-    searchExpandClientNames.has(clientName) || isClientExpanded(clientName);
+const isProjectExpandedForList = (projectId: string) =>
+  searchExpandProjectIds.has(projectId) || isProjectExpanded(projectId);
+const isClientExpandedForList = (clientName: string) =>
+  searchExpandClientNames.has(clientName) || isClientExpanded(clientName);
 
-  const includeProjects =
-    pickProject ||
-    !searchTerm.trim() ||
-    sections.favorites.some((entry) => !isProjectExpandedForList(entry.project.id)) ||
-    sections.clientGroups.some((group) =>
-      group.projects.some((entry) => !isProjectExpandedForList(entry.project.id)),
-    );
+const includeProjects =
+  pickProject ||
+  !searchTerm.trim() ||
+  sections.favorites.some((entry) => !isProjectExpandedForList(entry.project.id)) ||
+  sections.clientGroups.some((group) =>
+    group.projects.some((entry) => !isProjectExpandedForList(entry.project.id)),
+  );
 ```
 
 Pass `includeProjects` into `buildTaskChooserKeyboardItems`. Keep Enter-on-project as toggle (existing). When a search expands a project because of a task hit, first keyboard target should remain the best task via existing `indexOfTaskChooserItem` / `bestMatchTaskId`.
@@ -548,12 +544,7 @@ Expected: FAIL
 
 ```typescript
 export function tokenizeTaskListSearch(query: string): string[] {
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/u)
-    .filter(Boolean)
-    .slice(0, 8);
+  return query.trim().toLowerCase().split(/\s+/u).filter(Boolean).slice(0, 8);
 }
 ```
 
