@@ -1072,6 +1072,31 @@ function createAgencyOpsActions(
         description: trimmedDescription || undefined,
       })) as AgencyProjectTask;
 
+      // #region agent log
+      fetch("http://127.0.0.1:7426/ingest/ccff2d3d-07dc-43a2-9258-da9208dfd805", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "ecaea0",
+        },
+        body: JSON.stringify({
+          sessionId: "ecaea0",
+          runId: "pre-fix",
+          hypothesisId: "H2",
+          location: "agency-ops.ts:createProjectTask:created",
+          message: "created task assignees shape",
+          data: {
+            reusedExisting: Boolean(existingByTitle),
+            assigneesIsArray: Array.isArray(created.assignees),
+            assigneesType: typeof created.assignees,
+            assigneesLength: Array.isArray(created.assignees) ? created.assignees.length : null,
+            status: created.status,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+
       if (existingByTitle) {
         patchUpdatedProjectTask(payload.teamId, {
           ...created,

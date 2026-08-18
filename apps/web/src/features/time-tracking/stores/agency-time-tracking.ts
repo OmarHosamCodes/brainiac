@@ -960,10 +960,20 @@ function createAgencyTimeTrackingActions(
 
     set((s) => ({ ...s, timerStartCount: s.timerStartCount + 1 }));
 
+    // #region agent log
+    let startPhase = "enter";
+    // #endregion
+
     try {
+      // #region agent log
+      startPhase = "cancel-queries";
+      // #endregion
       await cancelQueries([...activeTimerQueryRegistry.values()].map((entry) => entry.payload));
       await cancelQueries(getRegisteredLogQueries(affectedLogTeams));
 
+      // #region agent log
+      startPhase = "optimistic-patch";
+      // #endregion
       patchActiveTimerCaches(optimisticTimer);
 
       patchTrackerDraft(payload.teamId, {
@@ -980,7 +990,35 @@ function createAgencyTimeTrackingActions(
         const cachedTask =
           optimistic().findTask(payload.teamId, payload.task.id) ??
           findProjectTaskInCache(payload.teamId, payload.task.id);
+        // #region agent log
+        fetch("http://127.0.0.1:7426/ingest/ccff2d3d-07dc-43a2-9258-da9208dfd805", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "ecaea0",
+          },
+          body: JSON.stringify({
+            sessionId: "ecaea0",
+            runId: "pre-fix",
+            hypothesisId: "H2",
+            location: "agency-time-tracking.ts:runStartTimer:cachedTask",
+            message: "cached task before in_progress patch",
+            data: {
+              hasCachedTask: Boolean(cachedTask),
+              status: cachedTask?.status ?? null,
+              assigneesIsArray: Array.isArray(
+                (cachedTask as { assignees?: unknown } | null)?.assignees,
+              ),
+              assigneesType: typeof (cachedTask as { assignees?: unknown } | null)?.assignees,
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
         if (cachedTask && cachedTask.status === "open") {
+          // #region agent log
+          startPhase = "task-cache-patch";
+          // #endregion
           await cancelAgencyProjectTaskListQueries(payload.teamId);
           const inProgressTask = {
             ...cachedTask,
@@ -993,6 +1031,31 @@ function createAgencyTimeTrackingActions(
         }
       }
 
+      // #region agent log
+      startPhase = "api-start";
+      fetch("http://127.0.0.1:7426/ingest/ccff2d3d-07dc-43a2-9258-da9208dfd805", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "ecaea0",
+        },
+        body: JSON.stringify({
+          sessionId: "ecaea0",
+          runId: "pre-fix",
+          hypothesisId: "H1",
+          location: "agency-time-tracking.ts:runStartTimer:beforeApi",
+          message: "timer start draft/tag shape before API",
+          data: {
+            payloadTagIdsIsArray: Array.isArray(payload.tagIds),
+            draftTagIdsIsArray: Array.isArray(previousDraft?.tagIds),
+            draftTagIdsType: typeof previousDraft?.tagIds,
+            hasTask: Boolean(payload.task),
+            hasProject: Boolean(payload.project),
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       const result = (await orpcClient.agencyOps.timer.start({
         teamId: payload.teamId,
         ...(payload.project ? { projectId: payload.project.id } : {}),
@@ -1005,6 +1068,30 @@ function createAgencyTimeTrackingActions(
         createdEntry: AgencyTimeEntry | null;
       };
 
+      // #region agent log
+      startPhase = "post-api-sync";
+      fetch("http://127.0.0.1:7426/ingest/ccff2d3d-07dc-43a2-9258-da9208dfd805", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "ecaea0",
+        },
+        body: JSON.stringify({
+          sessionId: "ecaea0",
+          runId: "pre-fix",
+          hypothesisId: "H3",
+          location: "agency-time-tracking.ts:runStartTimer:afterApi",
+          message: "timer start API result shape",
+          data: {
+            hasTimer: Boolean(result.timer),
+            tagsIsArray: Array.isArray(result.timer?.tags),
+            tagsType: typeof result.timer?.tags,
+            tagsLength: Array.isArray(result.timer?.tags) ? result.timer.tags.length : null,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       patchActiveTimerCaches(result.timer, payload.teamId);
       syncDraftFromActiveTimer(payload.teamId, result.timer);
 
@@ -1015,6 +1102,31 @@ function createAgencyTimeTrackingActions(
 
       toast.success("Timer started", { description: payload.successDescription });
     } catch (error) {
+      // #region agent log
+      const err = error as { message?: string; stack?: string; name?: string };
+      fetch("http://127.0.0.1:7426/ingest/ccff2d3d-07dc-43a2-9258-da9208dfd805", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "ecaea0",
+        },
+        body: JSON.stringify({
+          sessionId: "ecaea0",
+          runId: "pre-fix",
+          hypothesisId: "H1-H3",
+          location: "agency-time-tracking.ts:runStartTimer:catch",
+          message: "Unable to start timer caught",
+          data: {
+            startPhase,
+            errorName: err?.name ?? typeof error,
+            errorMessage: getErrorMessage(error, "unknown"),
+            stack: typeof err?.stack === "string" ? err.stack.slice(0, 1500) : null,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      console.error("[debug-ecaea0] startTimer failed", { startPhase, error });
+      // #endregion
       restoreQuerySnapshots(timerSnapshots);
       restoreQuerySnapshots(logSnapshots);
       restoreTimerOverlaySnapshots(timerOverlaySnapshots);

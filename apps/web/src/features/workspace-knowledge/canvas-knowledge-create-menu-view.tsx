@@ -1,4 +1,6 @@
-import { FileText, Folder, Pin, Scale, StickyNote, Upload, User } from "lucide-react";
+import { FileText, Folder, Layers3, Pin, Plus, Scale, StickyNote, Upload, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   knowledgeCreateIconClass,
@@ -6,7 +8,6 @@ import {
   knowledgeCreateLabel,
   type KnowledgeCreateKind,
 } from "@/features/workspace-knowledge/knowledge-create";
-import { Separator } from "@/ui/separator";
 import { cn } from "@/lib/utils";
 
 export type CanvasKnowledgeCreateMenuViewProps = {
@@ -18,6 +19,12 @@ export type CanvasKnowledgeCreateMenuViewProps = {
   onSelect: (kind: KnowledgeCreateKind) => void;
   onOpenUnplaced: () => void;
 };
+
+type MenuMotionState = "hidden" | "opening" | "open" | "closing";
+
+const RADIAL_RADIUS = 70;
+const CLOSE_DURATION_MS = 260;
+const ACTION_SAFE_INSET = 28;
 
 function kindIcon(kind: KnowledgeCreateKind) {
   switch (kind) {
@@ -42,6 +49,30 @@ function kindIcon(kind: KnowledgeCreateKind) {
   }
 }
 
+function radialPosition(index: number) {
+  const angle = (index / knowledgeCreateKinds.length) * Math.PI * 2 - Math.PI / 2;
+  return {
+    x: Math.round(Math.cos(angle) * RADIAL_RADIUS),
+    y: Math.round(Math.sin(angle) * RADIAL_RADIUS),
+  };
+}
+
+function keepActionInsideCanvas(
+  position: { x: number; y: number },
+  cursor: { x: number; y: number },
+  canvasRect: DOMRect | undefined,
+) {
+  const left = (canvasRect?.left ?? 0) + ACTION_SAFE_INSET;
+  const right = (canvasRect?.right ?? window.innerWidth) - ACTION_SAFE_INSET;
+  const top = (canvasRect?.top ?? 0) + ACTION_SAFE_INSET;
+  const bottom = (canvasRect?.bottom ?? window.innerHeight) - ACTION_SAFE_INSET;
+
+  return {
+    x: Math.min(Math.max(cursor.x + position.x, left), right) - cursor.x,
+    y: Math.min(Math.max(cursor.y + position.y, top), bottom) - cursor.y,
+  };
+}
+
 export function CanvasKnowledgeCreateMenuView({
   open,
   x,
@@ -51,51 +82,149 @@ export function CanvasKnowledgeCreateMenuView({
   onSelect,
   onOpenUnplaced,
 }: CanvasKnowledgeCreateMenuViewProps) {
-  if (!open) return null;
-  return (
+  const [motionState, setMotionState] = useState<MenuMotionState>(open ? "open" : "hidden");
+  const [activeKind, setActiveKind] = useState<KnowledgeCreateKind | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setMotionState("opening");
+      const timeout = window.setTimeout(() => setMotionState("open"), 0);
+      return () => window.clearTimeout(timeout);
+    }
+
+    setActiveKind(null);
+    setMotionState((current) => (current === "hidden" ? "hidden" : "closing"));
+    const timeout = window.setTimeout(() => setMotionState("hidden"), CLOSE_DURATION_MS);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", closeOnEscape, true);
+    return () => window.removeEventListener("keydown", closeOnEscape, true);
+  }, [onClose, open]);
+
+  if (motionState === "hidden" || typeof document === "undefined") return null;
+
+  const expanded = motionState === "open";
+  const closing = motionState === "closing";
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const canvasRect = document
+    .querySelector<HTMLElement>("[aria-label='Workspace canvas']")
+    ?.getBoundingClientRect();
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-40"
+      className={cn(
+        "fixed inset-0 z-40",
+        closing && "pointer-events-none",
+      )}
       onClick={onClose}
       onContextMenu={(event) => event.preventDefault()}
     >
-      <ul
+      <div
         role="menu"
         aria-label="Add to canvas"
-        className="absolute z-50 min-w-48 origin-top-left overflow-hidden rounded-2xl bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/5 dark:ring-foreground/10"
-        style={{ left: x, top: y }}
+        className="absolute z-50 size-52"
+        style={{
+          left: x,
+          top: y,
+          opacity: motionState === "opening" ? 0 : 1,
+          transform: `translate(-50%, -50%) scale(${motionState === "opening" ? 0.96 : 1})`,
+          transition: reducedMotion
+            ? "none"
+            : "opacity 140ms ease-out, transform 180ms cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
         onClick={(event) => event.stopPropagation()}
       >
-        {knowledgeCreateKinds.map((kind) => {
+        <div
+          className="absolute left-1/2 top-1/2 flex size-14 items-center justify-center rounded-full bg-popover text-center shadow-lg ring-1 ring-foreground/10 dark:ring-foreground/15"
+          style={{
+            opacity: expanded ? 1 : 0,
+            transform: `translate(-50%, -50%) scale(${expanded ? 1 : 0.8})`,
+            transitionProperty: "opacity, transform",
+            transitionDuration: reducedMotion ? "0ms" : "160ms",
+            transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          {activeKind ? (
+            <span className="max-w-12 text-[10px] leading-3 font-semibold text-foreground">
+              {knowledgeCreateLabel(activeKind)}
+            </span>
+          ) : (
+            <Plus className="size-4 text-muted-foreground" aria-hidden />
+          )}
+        </div>
+
+        {knowledgeCreateKinds.map((kind, index) => {
           const Icon = kindIcon(kind);
-          return (
-            <li key={kind} role="none">
-              <button
-                type="button"
-                role="menuitem"
-                className="flex min-h-7 w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground"
-                onClick={() => onSelect(kind)}
-              >
-                <Icon className={cn("size-4", knowledgeCreateIconClass(kind))} aria-hidden />
-                {knowledgeCreateLabel(kind)}
-              </button>
-            </li>
+          const position = keepActionInsideCanvas(
+            radialPosition(index),
+            { x, y },
+            canvasRect,
           );
-        })}
-        {unplacedCount > 0 ? (
-          <li role="none">
-            <Separator className="my-1" />
+          const delay = reducedMotion
+            ? 0
+            : closing
+              ? (knowledgeCreateKinds.length - index - 1) * 14
+              : index * 18;
+
+          return (
             <button
+              key={kind}
               type="button"
               role="menuitem"
-              className="flex min-h-7 w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground"
-              onClick={onOpenUnplaced}
+              aria-label={`Add ${knowledgeCreateLabel(kind)}`}
+              className={cn(
+                knowledgeCreateIconClass(kind),
+                "absolute left-1/2 top-1/2 flex size-10 items-center justify-center rounded-full bg-popover shadow-md ring-1 ring-foreground/10 outline-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/30 motion-reduce:transition-none",
+                activeKind === kind && "bg-accent text-accent-foreground ring-ring/30",
+              )}
+              style={{
+                opacity: expanded ? 1 : 0,
+                transform: expanded
+                  ? "translate(-50%, -50%) scale(1)"
+                  : `translate(calc(-50% - ${position.x}px), calc(-50% - ${position.y}px)) scale(0.72)`,
+                left: `calc(50% + ${position.x}px)`,
+                top: `calc(50% + ${position.y}px)`,
+                transitionDelay: `${delay}ms`,
+                transitionDuration: reducedMotion ? "0ms" : closing ? "120ms" : "180ms",
+                transitionProperty: "opacity, transform, background-color, color",
+                transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+              onBlur={() => setActiveKind(null)}
+              onFocus={() => setActiveKind(kind)}
+              onMouseEnter={() => setActiveKind(kind)}
+              onMouseLeave={() => setActiveKind(null)}
+              onClick={() => onSelect(kind)}
+              title={knowledgeCreateLabel(kind)}
             >
-              Waiting cards
-              <span className="ml-auto text-xs text-muted-foreground">{unplacedCount}</span>
+              <Icon className="size-4" aria-hidden />
             </button>
-          </li>
+          );
+        })}
+
+        {unplacedCount > 0 ? (
+          <button
+            type="button"
+            className="absolute left-1/2 top-full mt-2 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-popover px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-sm ring-1 ring-foreground/10 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+            style={{
+              opacity: expanded ? 1 : 0,
+              transition: reducedMotion ? "none" : "opacity 120ms ease-out 80ms",
+            }}
+            onClick={onOpenUnplaced}
+          >
+            <Layers3 className="size-3.5" aria-hidden />
+            Waiting cards <span className="text-foreground">{unplacedCount}</span>
+          </button>
         ) : null}
-      </ul>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
