@@ -31,7 +31,7 @@ const menuItemClass =
   "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-muted outline-hidden transition-colors hover:bg-elevated hover:text-highlighted focus-visible:bg-elevated focus-visible:text-highlighted";
 
 const railSublinkClass =
-  "app-shell__rail-sublink text-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground";
+  "app-shell__rail-sublink text-xs font-medium text-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground";
 
 type AppShellAgencyNavProps = {
   /** Hover-popover topbar link, or stacked rows for the rail and mobile drawer. */
