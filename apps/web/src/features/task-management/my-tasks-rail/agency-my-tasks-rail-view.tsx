@@ -144,7 +144,7 @@ function RailPanel({
             disabled={view.isAddingTask}
             className={cn(
               agencyTimeTrackerTaskChooserTriggerClass,
-              "w-full max-w-none justify-start",
+              "w-full max-w-none justify-start border border-border",
             )}
           />
         </div>

@@ -41,6 +41,7 @@ type AgencyMyTasksRailRowViewProps = {
   timeConsumer: MyTasksTimeConsumerDisplay | null;
   isDone: boolean;
   isSelected: boolean;
+  isThreadOpen: boolean;
   isTracking: boolean;
   playPulse: boolean;
   completeFlash: boolean;
@@ -48,6 +49,7 @@ type AgencyMyTasksRailRowViewProps = {
   pending: boolean;
   miniTimer: ReactNode;
   onSelect: () => void;
+  onOpenThread: () => void;
   onToggleComplete: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -64,6 +66,7 @@ export function AgencyMyTasksRailRowView({
   timeConsumer,
   isDone,
   isSelected,
+  isThreadOpen,
   isTracking,
   playPulse,
   completeFlash,
@@ -71,6 +74,7 @@ export function AgencyMyTasksRailRowView({
   pending,
   miniTimer,
   onSelect,
+  onOpenThread,
   onToggleComplete,
   onEdit,
   onDelete,
@@ -96,6 +100,7 @@ export function AgencyMyTasksRailRowView({
         "group/row",
         isDone && agencyMyTasksRailRowDoneClass,
         isSelected && agencyMyTasksRailRowSelectedClass,
+        isThreadOpen && "bg-muted ring-1 ring-inset ring-border",
         isTracking && agencyMyTasksRailRowTrackingClass,
         playPulse && agencyMyTasksRailRowTrackingPulseClass,
         completeFlash && agencyTaskRowCompleteClass,
@@ -148,8 +153,15 @@ export function AgencyMyTasksRailRowView({
       </motion.button>
 
       <div className="min-w-0">
-        <motion.div
-          className={cn("truncate text-sm font-medium text-foreground")}
+        <motion.button
+          type="button"
+          className={cn(
+            "max-w-full truncate text-left text-sm font-medium text-foreground",
+            "cursor-pointer underline-offset-2 hover:underline hover:text-highlighted",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
+          )}
+          aria-expanded={isThreadOpen}
+          aria-label={`Open thread for ${title}`}
           initial={false}
           animate={{
             opacity: isDone ? 0.65 : 1,
@@ -157,13 +169,17 @@ export function AgencyMyTasksRailRowView({
           }}
           transition={railRowStateTransition}
           style={{
-            textDecorationLine: isDone ? "line-through" : "none",
+            textDecorationLine: isDone ? "line-through" : undefined,
             textDecorationColor:
               "color-mix(in oklch, var(--color-muted-foreground) 80%, transparent)",
           }}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenThread();
+          }}
         >
           {title}
-        </motion.div>
+        </motion.button>
         <motion.div
           className="mt-0.5 truncate text-xs text-muted"
           initial={false}

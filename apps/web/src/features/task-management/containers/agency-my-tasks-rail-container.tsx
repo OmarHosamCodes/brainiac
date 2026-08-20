@@ -2,6 +2,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import type { ReactNode } from "react";
 
 import { agencyMyTasksClientGroupHeaderClass } from "@/features/shared/agency-ui";
+import type { AgencyTaskThreadTitlePayload } from "@/features/task-management/hooks/use-agency-task-thread-shell";
 import { useAgencyMyTasksRail } from "@/features/task-management/hooks/use-agency-my-tasks-rail";
 import {
   railLayoutTransition,
@@ -16,6 +17,8 @@ import { AgencyMyTasksRailView } from "@/features/task-management/my-tasks-rail/
 
 type AgencyMyTasksRailProps = {
   teamId: string;
+  openThreadTaskId: string | null;
+  onTitleOpenThread: (task: AgencyTaskThreadTitlePayload) => void;
 };
 
 function projectLabelForTask(
@@ -28,7 +31,11 @@ function projectLabelForTask(
   return project.name;
 }
 
-export function AgencyMyTasksRail({ teamId }: AgencyMyTasksRailProps) {
+export function AgencyMyTasksRail({
+  teamId,
+  openThreadTaskId,
+  onTitleOpenThread,
+}: AgencyMyTasksRailProps) {
   const view = useAgencyMyTasksRail({ teamId });
 
   const renderList = (): ReactNode => {
@@ -77,6 +84,8 @@ export function AgencyMyTasksRail({ teamId }: AgencyMyTasksRailProps) {
                           assignerMember={assignerMember}
                           variants={railListItemVariants}
                           stagger={stagger}
+                          isThreadOpen={openThreadTaskId === task.id}
+                          onOpenThread={() => onTitleOpenThread({ id: task.id, title: task.title })}
                         />
                       );
                     })}

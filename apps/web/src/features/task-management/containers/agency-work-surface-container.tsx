@@ -11,7 +11,7 @@ type AgencyWorkSurfaceProps = {
 };
 
 export function AgencyWorkSurface({ teamId, onSegmentChange }: AgencyWorkSurfaceProps) {
-  const view = useAgencyWorkSurface({ teamId, onSegmentChange });
+  const { view, thread } = useAgencyWorkSurface({ teamId, onSegmentChange });
   const readyView = view.status === "ready" ? view : null;
 
   return (
@@ -19,7 +19,19 @@ export function AgencyWorkSurface({ teamId, onSegmentChange }: AgencyWorkSurface
       view={view}
       trackerControl={readyView ? <AgencyTimeTracker teamId={readyView.teamId} /> : null}
       content={readyView ? <AgencyTimeEntriesLog teamId={readyView.teamId} /> : null}
-      taskRail={readyView ? <AgencyMyTasksRail teamId={readyView.teamId} /> : null}
+      taskRail={
+        readyView ? (
+          <AgencyMyTasksRail
+            teamId={readyView.teamId}
+            openThreadTaskId={thread.openTaskId}
+            onTitleOpenThread={thread.onTitleOpenThread}
+          />
+        ) : null
+      }
+      threadOpen={
+        thread.openTaskId && thread.openTaskTitle ? { title: thread.openTaskTitle } : null
+      }
+      onThreadBack={thread.onBack}
     />
   );
 }

@@ -19,6 +19,8 @@ type AgencyMyTasksRailRowProps = {
   assignerMember: AgencyMemberOption | null;
   variants: Variants;
   stagger: number;
+  isThreadOpen: boolean;
+  onOpenThread: () => void;
 };
 
 export function AgencyMyTasksRailRow({
@@ -28,6 +30,8 @@ export function AgencyMyTasksRailRow({
   assignerMember,
   variants,
   stagger,
+  isThreadOpen,
+  onOpenThread,
 }: AgencyMyTasksRailRowProps) {
   const isDone = task.viewerStatus === "done";
   const isSelected = view.selectedTaskId === task.id;
@@ -64,6 +68,7 @@ export function AgencyMyTasksRailRow({
       timeConsumer={timeConsumer}
       isDone={isDone}
       isSelected={isSelected}
+      isThreadOpen={isThreadOpen}
       isTracking={isTracking}
       playPulse={view.justPlayedTaskId === task.id}
       completeFlash={view.justCompletedTaskId === task.id}
@@ -71,6 +76,7 @@ export function AgencyMyTasksRailRow({
       pending={pending}
       miniTimer={miniTimer}
       onSelect={() => view.onSelectTask(task.id)}
+      onOpenThread={onOpenThread}
       onToggleComplete={() => {
         if (isDone) void view.onReopenTask(task);
         else void view.onCompleteTask(task.id);
