@@ -21,6 +21,7 @@ import {
   agencyTimeEntryRailCalendarClass,
   agencyTimeEntryRailClass,
   agencyTimeEntryRailDurationClass,
+  agencyTimeEntryDurationInputClass,
   agencyTimeEntryRailTimeClass,
   agencyTimeEntryRowClass,
   agencyTimeEntryRowEditingClass,
@@ -69,6 +70,8 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     durationLabel,
     editingDescription,
     editingDuration,
+    durationInputDraft,
+    durationInputRef,
     timeEditorOpen,
     onToggleExpand,
     onRestart,
@@ -88,10 +91,13 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onStartDateChange,
     onDurationChange,
     onDurationBlur,
+    onDurationFocus,
+    onDurationPointerDown,
+    onDurationMouseUp,
+    onDurationKeyDown,
     onInlineKeyDown,
     onEditingDescriptionChange,
     onTimeEditorOpenChange,
-    onEditingDurationChange,
   } = view;
 
   const taskChooserTriggerClass = cn(
@@ -264,19 +270,21 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         <div className={agencyTimeEntryRailDurationClass}>
           {!isMulti ? (
             <Input
+              ref={durationInputRef}
+              type="text"
               data-time-field="duration"
-              value={editDraft.durationInput}
+              value={editingDuration ? durationInputDraft : editDraft.durationInput}
               onChange={(e) => onDurationChange(e.target.value)}
-              onFocus={() => onEditingDurationChange(true)}
+              onPointerDown={onDurationPointerDown}
+              onFocus={onDurationFocus}
+              onMouseUp={onDurationMouseUp}
               onBlur={onDurationBlur}
-              onKeyDown={onInlineKeyDown}
+              onKeyDown={onDurationKeyDown}
               disabled={editSaving || rowUpdating}
-              className={cn(
-                "h-8 w-full border-0 bg-transparent px-0 text-center shadow-none focus-visible:ring-0",
-                agencyWorkMetricClass,
-              )}
+              className={agencyTimeEntryDurationInputClass}
               aria-label="Duration"
               aria-invalid={clockInvalid.duration}
+              title="Duration — click HH, MM, or SS; ↑↓ nudge; Enter save; Esc cancel"
             />
           ) : (
             <span className={cn("block w-full text-center", agencyWorkMetricClass)}>

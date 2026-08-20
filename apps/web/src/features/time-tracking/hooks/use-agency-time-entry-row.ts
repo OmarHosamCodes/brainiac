@@ -1,4 +1,4 @@
-import type { FocusEvent, KeyboardEvent } from "react";
+import type { FocusEvent, KeyboardEvent, MouseEvent, RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
@@ -12,8 +12,8 @@ import {
   type TimeEntryClockInvalid,
   type TimeEntryDraft,
 } from "@/features/time-tracking/agency-time-entry";
+import { useAgencyDurationInput } from "@/features/time-tracking/hooks/use-agency-duration-input";
 import {
-  applyDurationToDraft,
   applyEndTimeToDraft,
   applyStartTimeToDraft,
   draftSpansNextDay,
@@ -24,9 +24,7 @@ import {
 } from "@/features/time-tracking/time-entry-draft";
 import {
   clockNudgeMinutes,
-  durationNudgeSeconds,
   nudgeClockTimeLabel,
-  nudgeDurationInput,
   shouldSyncTimeDraftFromEntry,
 } from "@/features/time-tracking/time-field-keyboard";
 import { formatDuration } from "@/lib/utils/format-duration";
@@ -83,7 +81,6 @@ function formatGroupTimeRange(group: CollapsedEntryGroup) {
 }
 
 function displayTitle(group: CollapsedEntryGroup) {
-  // Keep description empty when none was typed; project/task live in the chooser label.
   return group.description.trim();
 }
 
@@ -168,6 +165,8 @@ export type AgencyTimeEntryRowViewModel = {
   editingDescription: boolean;
   timeEditorOpen: boolean;
   editingDuration: boolean;
+  durationInputDraft: string;
+  durationInputRef: RefObject<HTMLInputElement | null>;
   onToggleExpand: () => void;
   onRestart: () => void;
   onDeleteGroup: () => void;
@@ -188,11 +187,14 @@ export type AgencyTimeEntryRowViewModel = {
   onStartDateChange: (value: string) => void;
   onDurationChange: (value: string) => void;
   onDurationBlur: (event: FocusEvent<HTMLInputElement>) => void;
+  onDurationFocus: () => void;
+  onDurationPointerDown: () => void;
+  onDurationMouseUp: (event: MouseEvent<HTMLInputElement>) => void;
+  onDurationKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onInlineBlur: () => void;
   onInlineKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onEditingDescriptionChange: (editing: boolean) => void;
   onTimeEditorOpenChange: (open: boolean) => void;
-  onEditingDurationChange: (editing: boolean) => void;
 };
 
 export function useAgencyTimeEntryRow({
@@ -238,34 +240,16 @@ export function useAgencyTimeEntryRow({
   const [editSaving, setEditSaving] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [timeEditorOpen, setTimeEditorOpen] = useState(false);
-  const [editingDuration, setEditingDuration] = useState(false);
   const groupDescription = group.description;
   const groupTaskTitle = group.taskTitle;
   const resolvedTitle = groupDescription.trim().length > 0 ? groupDescription : groupTaskTitle;
 
   const [descriptionDraft, setDescriptionDraft] = useState(() => resolvedTitle);
 
-  useEffect(() => {
-    if (editingDescription) return;
-    setDescriptionDraft(resolvedTitle);
-  }, [groupDescription, groupTaskTitle, editingDescription, resolvedTitle]);
-
-  useEffect(() => {
-    if (!shouldSyncTimeDraftFromEntry({ editingDuration, timeEditorOpen })) return;
-    const nextDraft = entryToDraft(primaryEntry);
+  const updateInlineDraft = useCallback((nextDraft: TimeEntryDraft) => {
     setEditDraft(nextDraft);
-    setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
-    setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
     setEditError(null);
-  }, [primaryEntry, editingDuration, timeEditorOpen]);
-
-  const resetEditDraft = useCallback(() => {
-    const nextDraft = entryToDraft(primaryEntry);
-    setEditDraft(nextDraft);
-    setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
-    setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
-    setEditError(null);
-  }, [primaryEntry]);
+  }, []);
 
   const saveDraft = useCallback(
     async (nextDraft: TimeEntryDraft): Promise<boolean> => {
@@ -292,6 +276,50 @@ export function useAgencyTimeEntryRow({
     },
     [onSaveEdit, primaryEntry.id],
   );
+
+  const saveInlineDraft = useCallback(
+    async (nextDraft = editDraft) => {
+      if (isMulti) return;
+      await saveDraft(nextDraft);
+    },
+    [editDraft, isMulti, saveDraft],
+  );
+
+  const resetEditDraft = useCallback(() => {
+    const nextDraft = entryToDraft(primaryEntry);
+    setEditDraft(nextDraft);
+    setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
+    setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
+    setEditError(null);
+  }, [primaryEntry]);
+
+  const duration = useAgencyDurationInput({
+    editDraft,
+    isMulti,
+    clearEditError: () => setEditError(null),
+    setEditError: (error) => setEditError(error),
+    setTimeEditorOpen,
+    setEndTimeInput,
+    updateInlineDraft,
+    saveInlineDraft,
+    resetEditDraft,
+  });
+
+  useEffect(() => {
+    if (editingDescription) return;
+    setDescriptionDraft(resolvedTitle);
+  }, [groupDescription, groupTaskTitle, editingDescription, resolvedTitle]);
+
+  useEffect(() => {
+    if (!shouldSyncTimeDraftFromEntry({ editingDuration: duration.editingDuration, timeEditorOpen }))
+      return;
+    const nextDraft = entryToDraft(primaryEntry);
+    setEditDraft(nextDraft);
+    setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
+    setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
+    duration.resetDurationSession();
+    setEditError(null);
+  }, [primaryEntry, duration.editingDuration, timeEditorOpen, duration.resetDurationSession]);
 
   const saveBulkFieldPatch = useCallback(
     async (patch: {
@@ -359,19 +387,6 @@ export function useAgencyTimeEntryRow({
     setEditingDescription(false);
   }, [resolvedTitle]);
 
-  const updateInlineDraft = useCallback((nextDraft: TimeEntryDraft) => {
-    setEditDraft(nextDraft);
-    setEditError(null);
-  }, []);
-
-  const saveInlineDraft = useCallback(
-    async (nextDraft = editDraft) => {
-      if (isMulti) return;
-      await saveDraft(nextDraft);
-    },
-    [editDraft, isMulti, saveDraft],
-  );
-
   const commitStartTimeInput = useCallback(async () => {
     if (isMulti) return;
     const parsed = parseClockTimeLabel(startTimeInput, {
@@ -430,19 +445,6 @@ export function useAgencyTimeEntryRow({
     [commitEndTimeInput],
   );
 
-  const onDurationBlur = useCallback(
-    async (event: FocusEvent<HTMLInputElement>) => {
-      const stayingInTime = isTimeFieldTarget(event.relatedTarget);
-      setEditingDuration(false);
-      try {
-        await saveInlineDraft();
-      } finally {
-        if (!stayingInTime) setTimeEditorOpen(false);
-      }
-    },
-    [saveInlineDraft],
-  );
-
   const onInlineKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>) => {
       const field = event.currentTarget.dataset.timeField;
@@ -469,19 +471,8 @@ export function useAgencyTimeEntryRow({
         return;
       }
 
-      const durationDelta = durationNudgeSeconds(event);
-      if (durationDelta !== null && field === "duration") {
-        event.preventDefault();
-        const nextDuration = nudgeDurationInput(editDraft.durationInput, durationDelta);
-        if (!nextDuration) return;
-        updateInlineDraft(applyDurationToDraft(editDraft, nextDuration));
-        return;
-      }
-
       if (event.key === "Enter") {
         event.preventDefault();
-        setEditingDuration(false);
-        // Blur commits once. Saving here and then blurring double-fires updateEntry.
         event.currentTarget.blur();
         return;
       }
@@ -489,12 +480,19 @@ export function useAgencyTimeEntryRow({
       if (event.key === "Escape") {
         event.preventDefault();
         resetEditDraft();
-        setEditingDuration(false);
+        duration.resetDurationSession();
         setTimeEditorOpen(false);
         event.currentTarget.blur();
       }
     },
-    [editDraft, endTimeInput, resetEditDraft, startTimeInput, updateInlineDraft],
+    [
+      duration.resetDurationSession,
+      editDraft,
+      endTimeInput,
+      resetEditDraft,
+      startTimeInput,
+      updateInlineDraft,
+    ],
   );
 
   const rowDeleting = group.entries.some((entry) => deletingEntryIds.includes(entry.id));
@@ -560,7 +558,9 @@ export function useAgencyTimeEntryRow({
     displayTitle: displayTitle(group),
     editingDescription,
     timeEditorOpen,
-    editingDuration,
+    editingDuration: duration.editingDuration,
+    durationInputDraft: duration.durationInputDraft,
+    durationInputRef: duration.durationInputRef,
     onToggleExpand,
     onRestart: () => onRestart(group),
     onDeleteGroup: () => onDeleteGroup(group.entries.map((entry) => entry.id)),
@@ -645,15 +645,15 @@ export function useAgencyTimeEntryRow({
       }
       void saveInlineDraft(nextDraft);
     },
-    onDurationChange: (value) => updateInlineDraft(applyDurationToDraft(editDraft, value)),
-    onDurationBlur: (event) => void onDurationBlur(event),
+    onDurationChange: duration.onDurationChange,
+    onDurationBlur: (event) => void duration.onDurationBlur(event),
+    onDurationFocus: duration.onDurationFocus,
+    onDurationPointerDown: duration.onDurationPointerDown,
+    onDurationMouseUp: duration.onDurationMouseUp,
+    onDurationKeyDown: duration.onDurationKeyDown,
     onInlineBlur: () => void saveInlineDraft(),
     onInlineKeyDown,
     onEditingDescriptionChange: setEditingDescription,
     onTimeEditorOpenChange: setTimeEditorOpen,
-    onEditingDurationChange: (editing) => {
-      setEditingDuration(editing);
-      if (editing) setTimeEditorOpen(true);
-    },
   };
 }
