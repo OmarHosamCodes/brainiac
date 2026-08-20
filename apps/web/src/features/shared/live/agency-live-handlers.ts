@@ -9,6 +9,7 @@ import {
   refetchAgencyProjectJourneyQueries,
   refetchAgencyProjectScopedTaskListQueries,
 } from "@/features/shared/agency-query-cache";
+import { useAgencyTaskMessagesStore } from "@/features/task-management/stores/agency-task-messages";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
 
 export function applyViewerTimerUpdated(
@@ -61,6 +62,12 @@ function handleNotificationCreated(
   });
 }
 
+function handleTaskMessageCreated(
+  event: Extract<AgencyLiveEvent, { type: "taskMessage.created" }>,
+) {
+  useAgencyTaskMessagesStore.getState().applyLiveMessage(event.message);
+}
+
 export function handleAgencyLiveEvent(_teamId: string, event: AgencyLiveEvent) {
   switch (event.type) {
     case "timer.updated":
@@ -74,6 +81,9 @@ export function handleAgencyLiveEvent(_teamId: string, event: AgencyLiveEvent) {
       break;
     case "notification.created":
       handleNotificationCreated(event);
+      break;
+    case "taskMessage.created":
+      handleTaskMessageCreated(event);
       break;
     default: {
       const _exhaustive: never = event;

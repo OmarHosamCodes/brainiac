@@ -119,8 +119,13 @@ export function agencyClientHref(clientId: string): string {
   return `/agency/clients/${encodeURIComponent(clientId)}`;
 }
 
-export function agencyProjectHref(projectId: string): string {
-  return `/agency/projects/${encodeURIComponent(projectId)}`;
+export function agencyProjectHref(
+  projectId: string,
+  options?: { focusTask?: string },
+): string {
+  const base = `/agency/projects/${encodeURIComponent(projectId)}`;
+  if (!options?.focusTask) return base;
+  return `${base}?focusTask=${encodeURIComponent(options.focusTask)}`;
 }
 
 export function agencyReportHref(reportId: string): string {
