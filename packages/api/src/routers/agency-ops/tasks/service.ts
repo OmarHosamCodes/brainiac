@@ -34,6 +34,7 @@ import { requireTeamMembership } from "../shared/membership";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
 import { buildTaskListSearchPredicate, tokenizeTaskListSearch } from "./task-list-search";
 import { publishAgencyTaskUpdated } from "../live/live";
+import { canEditAgencyProjectTask } from "./task-edit-authz";
 
 async function createTaskBlueprintForViewer(
   teamId: string,
@@ -752,14 +753,22 @@ export async function updateAgencyProjectTask(
     isWaste?: boolean;
   },
 ) {
-  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  const actorRole = await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
   const current = await getTaskByIdForTeam(input.teamId, input.taskId);
-  const previousAssigneeIds = new Set(
-    (await loadTaskAssignees([input.taskId]))
-      .get(input.taskId)
-      ?.map((assignee) => assignee.userId) ?? [],
-  );
+  const assignees = (await loadTaskAssignees([input.taskId])).get(input.taskId) ?? [];
+  if (
+    !canEditAgencyProjectTask({
+      assignedToTeam: current.assignedToTeam,
+      assigneeUserIds: assignees.map((item) => item.userId),
+      actorUserId,
+      actorRole,
+    })
+  ) {
+    throw new ORPCError("FORBIDDEN", { message: "Only assignees or editors can update this task." });
+  }
+
+  const previousAssigneeIds = new Set(assignees.map((assignee) => assignee.userId));
 
   const title = input.title?.trim();
   if (title === "") {

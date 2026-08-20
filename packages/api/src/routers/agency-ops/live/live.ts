@@ -86,6 +86,32 @@ export const agencyLiveEventSchema = z.discriminatedUnion("type", [
     updatedAt: z.string().datetime(),
     notification: notificationRecordSchema,
   }),
+  z.object({
+    type: z.literal("taskMessage.created"),
+    teamId: z.string().min(1),
+    taskId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+    message: z.object({
+      id: z.string(),
+      teamId: z.string(),
+      taskId: z.string(),
+      userId: z.string(),
+      userName: z.string(),
+      userAvatar: z.string().nullable(),
+      content: z.string(),
+      createdAt: z.string(),
+      attachments: z.array(
+        z.object({
+          id: z.string(),
+          fileName: z.string(),
+          mimeType: z.string(),
+          sizeBytes: z.number().int().nonnegative(),
+          url: z.string().nullable(),
+        }),
+      ),
+      pending: z.boolean().optional(),
+    }),
+  }),
 ]);
 
 export type AgencyLiveEvent = z.infer<typeof agencyLiveEventSchema>;
@@ -102,6 +128,8 @@ function liveEventCoalesceKey(event: AgencyLiveEvent): string | null {
       return `task.updated:${event.taskId}`;
     case "notification.created":
       return `notification.created:${event.notification.id}`;
+    case "taskMessage.created":
+      return `taskMessage.created:${event.taskId}:${event.message.id}`;
     default: {
       const _exhaustive: never = event;
       return _exhaustive;
@@ -317,6 +345,19 @@ export async function publishAgencyTaskUpdated(
     teamId,
     taskId: task.id,
     task,
+    updatedAt: liveUpdatedAt(new Date()),
+  });
+}
+
+export async function publishAgencyTaskMessageCreated(
+  teamId: string,
+  message: Extract<AgencyLiveEvent, { type: "taskMessage.created" }>["message"],
+) {
+  await publishAgencyLiveEvent(teamId, {
+    type: "taskMessage.created",
+    teamId,
+    taskId: message.taskId,
+    message,
     updatedAt: liveUpdatedAt(new Date()),
   });
 }

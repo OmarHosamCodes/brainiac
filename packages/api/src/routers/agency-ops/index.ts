@@ -12,6 +12,7 @@ import { resourcingRouter } from "./resourcing/router";
 import { integrationsRouter } from "./integrations/router";
 import { liveRouter } from "./live/router";
 import { memberProfileRouter } from "./member-profile/router";
+import { taskMessagesRouter } from "./task-messages/router";
 
 export const agencyOpsRouter = {
   live: liveRouter.live,
@@ -21,6 +22,7 @@ export const agencyOpsRouter = {
   projectTemplates: projectTemplatesRouter.projectTemplates,
   favorites: favoritesRouter.favorites,
   projectTasks: tasksRouter.projectTasks,
+  taskMessages: taskMessagesRouter.taskMessages,
   tags: tagsRouter.tags,
   departments: departmentsRouter.departments,
   timer: timeTrackingRouter.timer,

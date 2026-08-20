@@ -66,26 +66,27 @@ export function createTaskAttachmentUploadToken(args: {
   return `${body}.${signature}`;
 }
 
-export function verifyTaskAttachmentUploadToken(
+export type TaskAttachmentUploadTokenPayload = {
+  teamId: string;
+  taskId: string;
+  fileName: string;
+  mimeType: string;
+  storageKey: string;
+  sizeBytes: number;
+};
+
+export function parseTaskAttachmentUploadToken(
   token: string,
-  expected: {
-    teamId: string;
-    taskId: string;
-    fileName: string;
-    mimeType: string;
-    storageKey: string;
-    sizeBytes: number;
-  },
-) {
+): TaskAttachmentUploadTokenPayload | null {
   const [body, signature] = token.split(".");
-  if (!body || !signature) return false;
+  if (!body || !signature) return null;
 
   const expectedSignature = createHmac("sha256", env.BETTER_AUTH_SECRET)
     .update(body)
     .digest("base64url");
   const provided = Buffer.from(signature);
   const signed = Buffer.from(expectedSignature);
-  if (provided.length !== signed.length || !timingSafeEqual(provided, signed)) return false;
+  if (provided.length !== signed.length || !timingSafeEqual(provided, signed)) return null;
 
   let payload: Record<string, unknown>;
   try {
@@ -94,8 +95,38 @@ export function verifyTaskAttachmentUploadToken(
       unknown
     >;
   } catch {
-    return false;
+    return null;
   }
+
+  if (
+    typeof payload.teamId !== "string" ||
+    typeof payload.taskId !== "string" ||
+    typeof payload.fileName !== "string" ||
+    typeof payload.mimeType !== "string" ||
+    typeof payload.storageKey !== "string" ||
+    typeof payload.sizeBytes !== "number" ||
+    typeof payload.expiresAt !== "number" ||
+    payload.expiresAt <= Date.now()
+  ) {
+    return null;
+  }
+
+  return {
+    teamId: payload.teamId,
+    taskId: payload.taskId,
+    fileName: payload.fileName,
+    mimeType: payload.mimeType,
+    storageKey: payload.storageKey,
+    sizeBytes: payload.sizeBytes,
+  };
+}
+
+export function verifyTaskAttachmentUploadToken(
+  token: string,
+  expected: TaskAttachmentUploadTokenPayload,
+) {
+  const payload = parseTaskAttachmentUploadToken(token);
+  if (!payload) return false;
 
   return (
     payload.teamId === expected.teamId &&
@@ -103,9 +134,7 @@ export function verifyTaskAttachmentUploadToken(
     payload.fileName === expected.fileName &&
     payload.mimeType === expected.mimeType &&
     payload.storageKey === expected.storageKey &&
-    payload.sizeBytes === expected.sizeBytes &&
-    typeof payload.expiresAt === "number" &&
-    payload.expiresAt > Date.now()
+    payload.sizeBytes === expected.sizeBytes
   );
 }
 
