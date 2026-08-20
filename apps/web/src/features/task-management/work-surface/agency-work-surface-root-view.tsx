@@ -14,6 +14,7 @@ type AgencyWorkSurfaceRootViewProps = {
   content: ReactNode;
   taskRail?: ReactNode;
   threadCover?: ReactNode;
+  onThreadCoverShowComplete?: () => void;
 };
 
 export function AgencyWorkSurfaceRootView({
@@ -22,6 +23,7 @@ export function AgencyWorkSurfaceRootView({
   content,
   taskRail,
   threadCover = null,
+  onThreadCoverShowComplete,
 }: AgencyWorkSurfaceRootViewProps) {
   let surface: ReactNode;
 
@@ -51,6 +53,7 @@ export function AgencyWorkSurfaceRootView({
           }
           taskRail={taskRail}
           threadCover={threadCover}
+          onThreadCoverShowComplete={onThreadCoverShowComplete}
         />
       );
       break;

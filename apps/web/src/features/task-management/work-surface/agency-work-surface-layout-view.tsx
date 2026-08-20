@@ -10,6 +10,7 @@ type AgencyWorkSurfaceLayoutViewProps = {
   contentPane: ReactNode;
   taskRail?: ReactNode;
   threadCover?: ReactNode;
+  onThreadCoverShowComplete?: () => void;
 };
 
 export function AgencyWorkSurfaceLayoutView({
@@ -17,6 +18,7 @@ export function AgencyWorkSurfaceLayoutView({
   contentPane,
   taskRail,
   threadCover,
+  onThreadCoverShowComplete,
 }: AgencyWorkSurfaceLayoutViewProps) {
   return (
     <div
@@ -36,6 +38,10 @@ export function AgencyWorkSurfaceLayoutView({
                 initial="hidden"
                 animate="show"
                 exit="exit"
+                onAnimationComplete={(definition) => {
+                  if (definition !== "show") return;
+                  onThreadCoverShowComplete?.();
+                }}
               >
                 {threadCover}
               </motion.div>

@@ -33,6 +33,7 @@ type AgencyTaskThreadViewProps = {
   composerFiles: File[];
   replyTo: AgencyTaskMessage | null;
   orchMentioned: boolean;
+  orchPresenceActive: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
   composerTextareaRef: RefObject<HTMLTextAreaElement | null>;
   hasOlder: boolean;
@@ -79,6 +80,7 @@ export function AgencyTaskThreadView({
   composerFiles,
   replyTo,
   orchMentioned,
+  orchPresenceActive,
   fileInputRef,
   composerTextareaRef,
   hasOlder,
@@ -158,6 +160,7 @@ export function AgencyTaskThreadView({
           files={composerFiles}
           replyTo={replyTo}
           orchMentioned={orchMentioned}
+          orchPresenceActive={orchPresenceActive}
           fileInputRef={fileInputRef}
           textareaRef={composerTextareaRef}
           onContentChange={onComposerContentChange}

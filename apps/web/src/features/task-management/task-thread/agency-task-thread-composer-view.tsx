@@ -1,6 +1,12 @@
 import { Paperclip, Plus, Send, X } from "lucide-react";
+import { motion } from "motion/react";
 import type { FormEvent, KeyboardEvent, RefObject } from "react";
 
+import {
+  ORCH_PRESENCE_LAYOUT_ID,
+  orchPresenceContentFade,
+  orchPresenceMorphTransition,
+} from "@/features/shared/orch-presence-morph";
 import { taskMessageReplyPreview } from "@/features/task-management/task-thread/agency-task-thread-message-actions";
 import type { AgencyTaskMessage } from "@orch/api/routers/agency-ops/task-messages/schemas";
 import { Badge } from "@/ui/badge";
@@ -14,6 +20,8 @@ type AgencyTaskThreadComposerViewProps = {
   files: File[];
   replyTo: AgencyTaskMessage | null;
   orchMentioned: boolean;
+  /** True after cover handoff — mounts shared layoutId for dock ↔ badge morph. */
+  orchPresenceActive: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   onContentChange: (value: string) => void;
@@ -31,6 +39,7 @@ export function AgencyTaskThreadComposerView({
   files,
   replyTo,
   orchMentioned,
+  orchPresenceActive,
   fileInputRef,
   textareaRef,
   onContentChange,
@@ -103,51 +112,48 @@ export function AgencyTaskThreadComposerView({
         ) : null}
 
         <div className="flex min-h-6 items-center gap-2 px-0.5">
-          <Badge
-            asChild
-            variant="secondary"
-            className={cn(
-              "h-auto gap-1 rounded-full border py-0.5 pl-2 pr-1 transition-[border-color,background-color,box-shadow,color] duration-200 ease-out",
-              "motion-reduce:transition-none",
-              orchMentioned
-                ? "border-chart-2/30 bg-chart-2/15 text-foreground shadow-[0_0_0_1px_color-mix(in_oklch,var(--chart-2)_14%,transparent)]"
-                : "border-border/70 bg-background/40 text-muted-foreground hover:border-border hover:bg-background/70 hover:text-foreground",
-            )}
-          >
-            <button
-              type="button"
-              disabled={pending}
-              aria-pressed={orchMentioned}
-              aria-label={orchMentioned ? "Remove Orch mention" : "Mention Orch"}
-              onClick={onToggleOrchMention}
-              className="inline-flex items-center gap-1"
+          {orchPresenceActive ? (
+            <motion.div
+              layoutId={ORCH_PRESENCE_LAYOUT_ID}
+              transition={orchPresenceMorphTransition}
+              style={{ borderRadius: 9999 }}
+              className="orch-presence-land inline-flex w-fit"
             >
-              <span className={cn("text-xs font-medium", orchMentioned && "text-foreground")}>
-                Orch
-              </span>
-              <span
-                className={cn(
-                  "flex size-5 items-center justify-center rounded-full transition-[background-color,color,transform] duration-200 ease-out",
-                  "motion-reduce:transition-none",
-                  orchMentioned
-                    ? "rotate-45 bg-chart-2/25 text-chart-2"
-                    : "bg-muted/80 text-muted-foreground",
-                )}
-                aria-hidden
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92, filter: "blur(3px)" }}
+                animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                transition={orchPresenceContentFade}
+                className="inline-flex"
               >
-                <Plus className="size-3.5" />
-              </span>
-            </button>
-          </Badge>
+                <OrchMentionBadge
+                  pending={pending}
+                  orchMentioned={orchMentioned}
+                  onToggleOrchMention={onToggleOrchMention}
+                />
+              </motion.div>
+            </motion.div>
+          ) : (
+            <OrchMentionBadge
+              pending={pending}
+              orchMentioned={orchMentioned}
+              onToggleOrchMention={onToggleOrchMention}
+            />
+          )}
           {orchMentioned ? (
-            <span
-              className={cn(
-                "text-[11px] leading-none text-muted-foreground",
-                "animate-in fade-in duration-150 ease-out motion-reduce:animate-none",
-              )}
-            >
-              Asks in this thread
-            </span>
+            orchPresenceActive ? (
+              <motion.span
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ ...orchPresenceContentFade, delay: 0.18 }}
+                className="text-[11px] leading-none text-muted-foreground"
+              >
+                Asks in this thread
+              </motion.span>
+            ) : (
+              <span className="text-[11px] leading-none text-muted-foreground">
+                Asks in this thread
+              </span>
+            )
           ) : null}
         </div>
 
@@ -235,5 +241,52 @@ export function AgencyTaskThreadComposerView({
         </div>
       </div>
     </form>
+  );
+}
+
+function OrchMentionBadge({
+  pending,
+  orchMentioned,
+  onToggleOrchMention,
+}: {
+  pending: boolean;
+  orchMentioned: boolean;
+  onToggleOrchMention: () => void;
+}) {
+  return (
+    <Badge
+      asChild
+      variant="secondary"
+      className={cn(
+        "h-auto gap-1 rounded-full border py-0.5 pl-2 pr-1 transition-[border-color,background-color,box-shadow,color] duration-200 ease-out",
+        "motion-reduce:transition-none",
+        orchMentioned
+          ? "border-chart-2/30 bg-chart-2/15 text-foreground shadow-[0_0_0_1px_color-mix(in_oklch,var(--chart-2)_14%,transparent)]"
+          : "border-border/70 bg-background/40 text-muted-foreground hover:border-border hover:bg-background/70 hover:text-foreground",
+      )}
+    >
+      <button
+        type="button"
+        disabled={pending}
+        aria-pressed={orchMentioned}
+        aria-label={orchMentioned ? "Remove Orch mention" : "Mention Orch"}
+        onClick={onToggleOrchMention}
+        className="inline-flex items-center gap-1"
+      >
+        <span className={cn("text-xs font-medium", orchMentioned && "text-foreground")}>Orch</span>
+        <span
+          className={cn(
+            "flex size-5 items-center justify-center rounded-full transition-[background-color,color,transform] duration-200 ease-out",
+            "motion-reduce:transition-none",
+            orchMentioned
+              ? "rotate-45 bg-chart-2/25 text-chart-2"
+              : "bg-muted/80 text-muted-foreground",
+          )}
+          aria-hidden
+        >
+          <Plus className="size-3.5" />
+        </span>
+      </button>
+    </Badge>
   );
 }

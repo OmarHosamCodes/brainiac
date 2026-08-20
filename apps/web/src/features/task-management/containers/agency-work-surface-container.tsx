@@ -43,6 +43,7 @@ export function AgencyWorkSurface({ teamId, onSegmentChange }: AgencyWorkSurface
           />
         ) : null
       }
+      onThreadCoverShowComplete={thread.onCoverShowComplete}
     />
   );
 }

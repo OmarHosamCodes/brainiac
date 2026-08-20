@@ -21,6 +21,7 @@ import { runAgencyTaskThreadOrchAsk } from "@/features/task-management/task-thre
 import { resolveTaskThreadProjectLabel } from "@/features/task-management/task-thread/agency-task-thread-project-label";
 import { buildAgencyTaskThreadTimeline } from "@/features/task-management/task-thread/agency-task-thread-timeline";
 import { teamDetailQueryOptions } from "@/features/team/team-queries";
+import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 import { useAuthSession } from "@/lib/auth-session";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -65,6 +66,7 @@ export function useAgencyTaskThread({
 
   const updateProjectTask = useAgencyOpsStore((s) => s.updateProjectTask);
   const taskPending = useAgencyOpsStore((s) => s.pendingTaskIds.includes(taskId));
+  const orchPresenceActive = useWorkspaceAgentStore((s) => s.orchPresence === "thread");
 
   useEffect(() => {
     return () => {
@@ -335,6 +337,7 @@ export function useAgencyTaskThread({
     composerFiles,
     replyTo,
     orchMentioned,
+    orchPresenceActive,
     fileInputRef,
     composerTextareaRef,
     hasOlder: Boolean(messagesQuery.hasNextPage),
