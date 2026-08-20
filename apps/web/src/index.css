@@ -1131,9 +1131,25 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
   animation-delay: calc(var(--i, 0) * 40ms);
 }
 
+/** Quiet Operator Violet settle after Orch dock ↔ thread-badge shared morph. */
+@keyframes orch-presence-land {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklch, var(--chart-2) 26%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+
+.orch-presence-land {
+  animation: orch-presence-land var(--motion-duration-flash) var(--motion-ease-emphasized) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .project-share-panel-in,
-  .project-share-legend-in {
+  .project-share-legend-in,
+  .orch-presence-land {
     animation: none;
   }
 }
