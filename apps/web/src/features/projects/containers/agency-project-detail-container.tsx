@@ -6,6 +6,7 @@ import { AgencyProjectTasks } from "@/features/task-management/task-list/agency-
 type AgencyProjectDetailContainerProps = {
   teamId: string;
   projectId: string;
+  focusTaskId?: string;
   onBack: () => void;
   onSelectClient?: (clientId: string) => void;
 };
@@ -13,6 +14,7 @@ type AgencyProjectDetailContainerProps = {
 export function AgencyProjectDetailContainer({
   teamId,
   projectId,
+  focusTaskId,
   onBack,
   onSelectClient,
 }: AgencyProjectDetailContainerProps) {
@@ -23,6 +25,7 @@ export function AgencyProjectDetailContainer({
       teamId={teamId}
       projectId={projectId}
       projectName={viewModel.project.name}
+      focusTaskId={focusTaskId}
     />
   ) : null;
 

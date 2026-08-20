@@ -47,6 +47,14 @@ export function validateProfileSearch(search: Record<string, unknown>): {
   };
 }
 
+export function validateProjectSearch(search: Record<string, unknown>): {
+  focusTask?: string;
+} {
+  return {
+    focusTask: optionalString(search.focusTask),
+  };
+}
+
 export function validateLoginSearch(search: Record<string, unknown>): {
   redirect?: string;
   error?: string;
