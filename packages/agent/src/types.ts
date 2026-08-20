@@ -240,6 +240,7 @@ export const agentScopeRefKindSchema = z.enum([
   "timeEntry",
   "project",
   "task",
+  "taskMessage",
   "member",
   "surface",
 ]);

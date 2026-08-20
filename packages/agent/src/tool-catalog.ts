@@ -215,6 +215,7 @@ export function resolveUnlockedSurfaces(input: {
       ref.kind === "timeEntry" ||
       ref.kind === "project" ||
       ref.kind === "task" ||
+      ref.kind === "taskMessage" ||
       ref.kind === "member"
     ) {
       unlocked.add("agency");
