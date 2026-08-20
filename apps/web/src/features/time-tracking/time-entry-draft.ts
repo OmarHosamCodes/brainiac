@@ -246,6 +246,21 @@ export function applyDurationToDraft(draft: TimeEntryDraft, durationInput: strin
   };
 }
 
+export type DurationCommitResult =
+  | { draft: TimeEntryDraft }
+  | { error: "Invalid duration."; revertInput: string };
+
+export function commitDurationToDraft(
+  draft: TimeEntryDraft,
+  rawInput: string,
+): DurationCommitResult {
+  const trimmed = rawInput.trim();
+  if (!trimmed || parseDurationInput(trimmed) === null) {
+    return { error: "Invalid duration.", revertInput: draft.durationInput };
+  }
+  return { draft: applyDurationToDraft(draft, trimmed) };
+}
+
 export function applyEndTimeToDraft(draft: TimeEntryDraft, endTime: string): TimeEntryDraft {
   const start = combineDateAndTime(draft.date, draft.startTime);
   const end = combineDateAndTime(draft.date, endTime);

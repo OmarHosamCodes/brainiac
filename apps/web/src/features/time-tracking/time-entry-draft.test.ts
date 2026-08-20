@@ -3,6 +3,7 @@ import {
   applyDurationToDraft,
   applyEndTimeToDraft,
   applyStartTimeToDraft,
+  commitDurationToDraft,
   draftSpansNextDay,
   draftToIsoRange,
   entryToDraft,
@@ -205,5 +206,31 @@ describe("time-entry-draft", () => {
     expect(parseClockTimeLabel("1.30", { preferMeridiem: "PM" })).toBe("13:30:00");
     expect(parseClockTimeLabel("130", { preferMeridiem: "PM" })).toBe("13:30:00");
     expect(parseClockTimeLabel("130", { preferMeridiem: "AM" })).toBe("01:30:00");
+  });
+
+  test("commitDurationToDraft normalizes shorthand and updates end time", () => {
+    const draft: TimeEntryDraft = {
+      ...baseDraft,
+      date: "2026-08-20",
+      startTime: "09:00:00",
+      endTime: "09:03:30",
+      durationInput: "00:03:30",
+    };
+    const result = commitDurationToDraft(draft, "1:30");
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.draft.durationInput).toBe("01:30:00");
+    expect(result.draft.endTime).toBe("10:30:00");
+  });
+
+  test("commitDurationToDraft rejects invalid input with revert token", () => {
+    const draft: TimeEntryDraft = {
+      ...baseDraft,
+      durationInput: "00:03:30",
+    };
+    expect(commitDurationToDraft(draft, "abc")).toEqual({
+      error: "Invalid duration.",
+      revertInput: "00:03:30",
+    });
   });
 });
