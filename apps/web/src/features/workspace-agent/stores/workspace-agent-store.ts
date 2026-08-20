@@ -7,14 +7,14 @@ type WorkspaceAgentUiState = {
   scopeHintSeen: boolean;
   draft: string;
   scopeChips: AgentScopeRef[];
-  pendingComposerSeed: { text: string; toolPreset: "plan" | "agent" } | null;
+  pendingComposerSeed: { text: string; toolPreset: "ask" | "plan" | "agent" } | null;
   setExpanded: (expanded: boolean) => void;
   toggleExpanded: () => void;
   setScopeModeActive: (active: boolean) => void;
   toggleScopeMode: () => void;
   markScopeHintSeen: () => void;
   setDraft: (draft: string) => void;
-  seedComposer: (input: { text: string; toolPreset: "plan" | "agent" }) => void;
+  seedComposer: (input: { text: string; toolPreset: "ask" | "plan" | "agent" }) => void;
   clearComposerSeed: () => void;
   addScopeChip: (chip: AgentScopeRef) => void;
   removeScopeChip: (id: string) => void;
