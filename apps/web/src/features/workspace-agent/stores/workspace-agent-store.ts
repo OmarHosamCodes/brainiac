@@ -1,8 +1,12 @@
 import type { AgentScopeRef } from "@orch/agent/types";
 import { create } from "zustand";
 
+export type OrchPresence = "dock" | "thread";
+
 type WorkspaceAgentUiState = {
   expanded: boolean;
+  /** Where the Orch presence chrome lives: global dock vs task-thread composer badge. */
+  orchPresence: OrchPresence;
   scopeModeActive: boolean;
   scopeHintSeen: boolean;
   draft: string;
@@ -10,6 +14,7 @@ type WorkspaceAgentUiState = {
   pendingComposerSeed: { text: string; toolPreset: "ask" | "plan" | "agent" } | null;
   setExpanded: (expanded: boolean) => void;
   toggleExpanded: () => void;
+  setOrchPresence: (presence: OrchPresence) => void;
   setScopeModeActive: (active: boolean) => void;
   toggleScopeMode: () => void;
   markScopeHintSeen: () => void;
@@ -30,19 +35,32 @@ function readScopeHintSeen() {
 
 export const useWorkspaceAgentStore = create<WorkspaceAgentUiState>((set, get) => ({
   expanded: false,
+  orchPresence: "dock",
   scopeModeActive: false,
   scopeHintSeen: readScopeHintSeen(),
   draft: "",
   scopeChips: [],
   pendingComposerSeed: null,
-  setExpanded: (expanded) =>
+  setExpanded: (expanded) => {
+    if (get().orchPresence === "thread") return;
     set({
       expanded,
       scopeModeActive: expanded ? get().scopeModeActive : false,
-    }),
+    });
+  },
   toggleExpanded: () => get().setExpanded(!get().expanded),
-  setScopeModeActive: (active) => set({ scopeModeActive: active }),
+  setOrchPresence: (presence) =>
+    set({
+      orchPresence: presence,
+      expanded: false,
+      scopeModeActive: presence === "thread" ? false : get().scopeModeActive,
+    }),
+  setScopeModeActive: (active) => {
+    if (get().orchPresence === "thread") return;
+    set({ scopeModeActive: active });
+  },
   toggleScopeMode: () => {
+    if (get().orchPresence === "thread") return;
     const next = !get().scopeModeActive;
     set({
       scopeModeActive: next,
@@ -56,7 +74,13 @@ export const useWorkspaceAgentStore = create<WorkspaceAgentUiState>((set, get) =
     set({ scopeHintSeen: true });
   },
   setDraft: (draft) => set({ draft }),
-  seedComposer: (input) => set({ pendingComposerSeed: input, expanded: true }),
+  seedComposer: (input) => {
+    if (get().orchPresence === "thread") {
+      set({ pendingComposerSeed: input });
+      return;
+    }
+    set({ pendingComposerSeed: input, expanded: true });
+  },
   clearComposerSeed: () => set({ pendingComposerSeed: null }),
   addScopeChip: (chip) =>
     set((state) =>
