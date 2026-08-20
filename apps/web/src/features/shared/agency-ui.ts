@@ -445,6 +445,15 @@ export const agencyTimeEntryClockTimeInputClass = cn(
   "disabled:cursor-not-allowed disabled:opacity-60",
 );
 
+export const agencyTimeEntryDurationInputClass = cn(
+  "h-8 w-full min-w-0 appearance-none rounded-none border border-transparent bg-transparent px-0 py-0",
+  "text-center font-mono text-sm font-semibold tabular-nums text-highlighted shadow-none outline-none",
+  "transition-colors hover:border-border",
+  "focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-0",
+  "disabled:cursor-not-allowed disabled:opacity-60",
+  "aria-invalid:border-destructive aria-invalid:focus-visible:border-destructive",
+);
+
 /** Left cluster — badge, description, task (free; not column-locked). */
 export const agencyTimeEntryMainClass = "flex min-w-0 flex-1 self-stretch items-center gap-0 pl-3";
 
