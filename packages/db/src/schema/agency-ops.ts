@@ -240,6 +240,59 @@ export const agencyOpsProjectTaskAssignee = pgTable(
   ],
 );
 
+/** Task team chat messages (keyed by task; no separate thread table). */
+export const agencyOpsTaskMessage = pgTable(
+  "agency_ops_task_message",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => agencyOpsProjectTask.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    content: text("content").notNull().default(""),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_task_message_team_task_created_idx").on(
+      table.teamId,
+      table.taskId,
+      table.createdAt,
+    ),
+    index("agency_ops_task_message_task_idx").on(table.taskId),
+  ],
+);
+
+export const agencyOpsTaskAttachment = pgTable(
+  "agency_ops_task_attachment",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    messageId: text("message_id")
+      .notNull()
+      .references(() => agencyOpsTaskMessage.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    storageKey: text("storage_key").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("agency_ops_task_attachment_message_idx").on(table.messageId),
+    index("agency_ops_task_attachment_team_idx").on(table.teamId),
+  ],
+);
+
 export const agencyOpsProjectTaskMemberStatus = pgTable(
   "agency_ops_project_task_member_status",
   {
