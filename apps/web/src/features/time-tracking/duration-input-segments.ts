@@ -125,6 +125,33 @@ export function isDurationDigitKey(key: string): boolean {
   return key.length === 1 && key >= "0" && key <= "9";
 }
 
+/** ↑/↓ step in total seconds for the focused HH / MM / SS segment. */
+export function durationSegmentNudgeSeconds(
+  segmentIndex: DurationSegmentIndex,
+  event: { key: string; shiftKey: boolean },
+): number | null {
+  if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return null;
+  const sign = event.key === "ArrowUp" ? 1 : -1;
+  let unit: number;
+  switch (segmentIndex) {
+    case 0:
+      unit = 3_600;
+      break;
+    case 1:
+      unit = 60;
+      break;
+    case 2:
+      unit = 1;
+      break;
+    default: {
+      const _exhaustive: never = segmentIndex;
+      return _exhaustive;
+    }
+  }
+  const step = event.shiftKey ? (segmentIndex === 2 ? 60 : unit * 5) : unit;
+  return sign * step;
+}
+
 export function selectDurationSegmentInInput(
   input: HTMLInputElement,
   segmentIndex: DurationSegmentIndex,

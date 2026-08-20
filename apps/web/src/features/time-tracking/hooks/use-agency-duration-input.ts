@@ -7,6 +7,7 @@ import {
   isDurationDigitKey,
   moveDurationSegment,
   normalizeDurationShape,
+  durationSegmentNudgeSeconds,
   segmentIndexFromCaret,
   selectDurationSegmentInInput,
   type DurationSegmentIndex,
@@ -17,10 +18,7 @@ import {
   formatClockTimeLabel,
   type TimeEntryDraft,
 } from "@/features/time-tracking/time-entry-draft";
-import {
-  durationNudgeSeconds,
-  nudgeDurationInput,
-} from "@/features/time-tracking/time-field-keyboard";
+import { nudgeDurationInput } from "@/features/time-tracking/time-field-keyboard";
 
 type DurationCaret = {
   segmentIndex: DurationSegmentIndex;
@@ -243,7 +241,7 @@ export function useAgencyDurationInput({
         return;
       }
 
-      const durationDelta = durationNudgeSeconds(event);
+      const durationDelta = durationSegmentNudgeSeconds(caret.segmentIndex, event);
       if (durationDelta !== null) {
         event.preventDefault();
         const nextDuration = nudgeDurationInput(currentValue, durationDelta);

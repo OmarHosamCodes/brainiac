@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   applyDurationBackspace,
   applyDurationDigit,
+  durationSegmentNudgeSeconds,
   durationSegmentSelection,
   moveDurationSegment,
   normalizeDurationShape,
@@ -56,5 +57,14 @@ describe("duration-input-segments", () => {
   test("applyDurationBackspace walks segments backward", () => {
     expect(applyDurationBackspace("00:03:30", 2, 0).value).toBe("00:03:00");
     expect(applyDurationBackspace("00:03:35", 2, 1).value).toBe("00:03:30");
+  });
+
+  test("durationSegmentNudgeSeconds scales by focused segment", () => {
+    expect(durationSegmentNudgeSeconds(0, { key: "ArrowUp", shiftKey: false })).toBe(3_600);
+    expect(durationSegmentNudgeSeconds(1, { key: "ArrowUp", shiftKey: false })).toBe(60);
+    expect(durationSegmentNudgeSeconds(2, { key: "ArrowDown", shiftKey: false })).toBe(-1);
+    expect(durationSegmentNudgeSeconds(1, { key: "ArrowUp", shiftKey: true })).toBe(300);
+    expect(durationSegmentNudgeSeconds(2, { key: "ArrowUp", shiftKey: true })).toBe(60);
+    expect(durationSegmentNudgeSeconds(0, { key: "ArrowLeft", shiftKey: false })).toBeNull();
   });
 });
