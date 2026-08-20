@@ -365,6 +365,7 @@ export function AgencyTaskRowView({ viewModel, miniTimer }: AgencyTaskRowViewPro
 
   return (
     <li
+      data-task-id={viewModel.task.id}
       className={cn(
         "group/task-row",
         agencyTaskRowClass,

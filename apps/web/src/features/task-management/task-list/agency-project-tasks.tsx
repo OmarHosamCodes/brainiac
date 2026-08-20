@@ -1,5 +1,5 @@
 import { AlertTriangle, ListChecks, ListPlus, Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AgencyTaskGroupRow } from "@/features/task-management/task-list/agency-task-group-row";
 import { Button } from "@/ui/button";
@@ -14,18 +14,37 @@ type AgencyProjectTasksProps = {
   teamId: string;
   projectId: string;
   projectName: string;
+  focusTaskId?: string;
 };
 
-export function AgencyProjectTasks({ teamId, projectId, projectName }: AgencyProjectTasksProps) {
+export function AgencyProjectTasks({
+  teamId,
+  projectId,
+  projectName,
+  focusTaskId,
+}: AgencyProjectTasksProps) {
   const agencyOps = useAgencyOpsStore();
   const isCreatingTask = useAgencyOpsStore(selectIsCreatingTask);
   const deletingTaskIds = useAgencyOpsStore((s) => s.deletingTaskIds);
   const [titleDraft, setTitleDraft] = useState("");
+  const [selectedTaskId, setSelectedTaskId] = useState(focusTaskId ?? "");
 
   const tasksQuery = useAgencyProjectTasksQuery(teamId, { projectId });
 
   const tasks = tasksQuery.data?.items ?? [];
   const taskGroups = groupTasksByProjectTitle(tasks);
+
+  useEffect(() => {
+    if (focusTaskId) setSelectedTaskId(focusTaskId);
+  }, [focusTaskId]);
+
+  useEffect(() => {
+    if (!focusTaskId || tasksQuery.isPending) return;
+    const row = document.querySelector<HTMLElement>(
+      `[data-task-id='${CSS.escape(focusTaskId)}']`,
+    );
+    row?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [focusTaskId, tasksQuery.isPending, tasks.length]);
 
   async function createTask() {
     const title = titleDraft.trim();
@@ -114,7 +133,11 @@ export function AgencyProjectTasks({ teamId, projectId, projectName }: AgencyPro
               key={group.groupKey}
               group={group}
               mode="project"
+              teamId={teamId}
+              selectedTaskId={selectedTaskId}
+              highlightTaskId={focusTaskId}
               deletingTaskIds={deletingTaskIds}
+              onSelect={setSelectedTaskId}
               onDeleteInstance={(task) => void deleteTask(task)}
             />
           ))}

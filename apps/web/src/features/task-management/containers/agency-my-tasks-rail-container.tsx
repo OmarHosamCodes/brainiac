@@ -85,7 +85,22 @@ export function AgencyMyTasksRail({
                           variants={railListItemVariants}
                           stagger={stagger}
                           isThreadOpen={openThreadTaskId === task.id}
-                          onOpenThread={() => onTitleOpenThread({ id: task.id, title: task.title })}
+                          onOpenThread={() =>
+                            onTitleOpenThread({
+                              id: task.id,
+                              title: task.title,
+                              projectId: task.projectId,
+                              projectName: project?.name ?? null,
+                              assignedToTeam: task.assignedToTeam,
+                              assignees: task.assignedToTeam
+                                ? []
+                                : task.assignees.map((assignee) => ({
+                                    userId: assignee.userId,
+                                    userName: assignee.userName,
+                                    userAvatar: assignee.userAvatar,
+                                  })),
+                            })
+                          }
                         />
                       );
                     })}

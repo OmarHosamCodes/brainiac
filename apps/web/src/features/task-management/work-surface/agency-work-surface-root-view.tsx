@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 
 import type { AgencyWorkSurfaceView } from "@/features/task-management/agency-work";
 import { agencyTimeLogPanelClass, agencyTimeTrackerPanelClass } from "@/features/shared/agency-ui";
-import { AgencyTaskThreadShellView } from "@/features/task-management/task-thread/agency-task-thread-shell-view";
 import { AgencyWorkSurfaceEmptyView } from "@/features/task-management/work-surface/agency-work-surface-empty-view";
 import { AgencyWorkSurfaceErrorView } from "@/features/task-management/work-surface/agency-work-surface-error-view";
 import { AgencyWorkSurfaceLayoutView } from "@/features/task-management/work-surface/agency-work-surface-layout-view";
@@ -14,8 +13,7 @@ type AgencyWorkSurfaceRootViewProps = {
   trackerControl: ReactNode;
   content: ReactNode;
   taskRail?: ReactNode;
-  threadOpen: { title: string } | null;
-  onThreadBack: () => void;
+  threadCover?: ReactNode;
 };
 
 export function AgencyWorkSurfaceRootView({
@@ -23,13 +21,8 @@ export function AgencyWorkSurfaceRootView({
   trackerControl,
   content,
   taskRail,
-  threadOpen,
-  onThreadBack,
+  threadCover = null,
 }: AgencyWorkSurfaceRootViewProps) {
-  const threadCover = threadOpen ? (
-    <AgencyTaskThreadShellView title={threadOpen.title} onBack={onThreadBack} />
-  ) : null;
-
   let surface: ReactNode;
 
   switch (view.status) {

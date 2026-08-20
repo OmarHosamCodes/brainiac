@@ -31,7 +31,7 @@ export function AgencyWorkSurfaceLayoutView({
             {threadCover ? (
               <motion.div
                 key="task-thread-cover"
-                className="absolute inset-0 z-10 overflow-hidden rounded-lg border border-border bg-card"
+                className="absolute inset-0 z-30 overflow-hidden rounded-lg border border-border bg-card"
                 variants={threadCoverVariants}
                 initial="hidden"
                 animate="show"

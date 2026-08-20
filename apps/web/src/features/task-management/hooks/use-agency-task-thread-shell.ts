@@ -8,23 +8,49 @@ import {
 export type AgencyTaskThreadTitlePayload = {
   id: string;
   title: string;
+  projectId: string;
+  projectName: string | null;
+  assignedToTeam: boolean;
+  assignees: Array<{
+    userId: string;
+    userName: string;
+    userAvatar: string | null;
+  }>;
+};
+
+export type AgencyTaskThreadOpenMeta = {
+  title: string;
+  projectId: string;
+  projectName: string | null;
+  assignedToTeam: boolean;
+  assignees: AgencyTaskThreadTitlePayload["assignees"];
 };
 
 const initialOpen: AgencyTaskThreadOpenState = { openTaskId: null };
 
 export function useAgencyTaskThreadShell() {
   const [open, dispatch] = useReducer(reduceAgencyTaskThreadOpen, initialOpen);
-  const [openTaskTitle, setOpenTaskTitle] = useState<string | null>(null);
+  const [openTaskMeta, setOpenTaskMeta] = useState<AgencyTaskThreadOpenMeta | null>(null);
 
   function onTitleOpenThread(task: AgencyTaskThreadTitlePayload) {
     const next = reduceAgencyTaskThreadOpen(open, { type: "title", taskId: task.id });
     dispatch({ type: "title", taskId: task.id });
-    setOpenTaskTitle(next.openTaskId ? task.title : null);
+    setOpenTaskMeta(
+      next.openTaskId
+        ? {
+            title: task.title,
+            projectId: task.projectId,
+            projectName: task.projectName,
+            assignedToTeam: task.assignedToTeam,
+            assignees: task.assignees,
+          }
+        : null,
+    );
   }
 
   function onBack() {
     dispatch({ type: "back" });
-    setOpenTaskTitle(null);
+    setOpenTaskMeta(null);
   }
 
   useEffect(() => {
@@ -33,7 +59,7 @@ export function useAgencyTaskThreadShell() {
       if (event.key !== "Escape") return;
       event.preventDefault();
       dispatch({ type: "escape" });
-      setOpenTaskTitle(null);
+      setOpenTaskMeta(null);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -41,7 +67,7 @@ export function useAgencyTaskThreadShell() {
 
   return {
     openTaskId: open.openTaskId,
-    openTaskTitle,
+    openTaskMeta,
     onTitleOpenThread,
     onBack,
   };
