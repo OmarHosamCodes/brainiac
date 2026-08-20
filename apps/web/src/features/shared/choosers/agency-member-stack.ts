@@ -1,4 +1,4 @@
-/** Stack trigger: size-6 avatars, -ml-2 overlap, trailing plus with -ml-1 when empty. */
+/** Stack trigger: size-6 avatars, -ml-2 overlap; plus when ≤1 assignee, else +N overflow. */
 export const ASSIGNEE_STACK_AVATAR_PX = 24;
 export const ASSIGNEE_STACK_OVERLAP_PX = 8;
 export const ASSIGNEE_STACK_PLUS_OVERLAP_PX = 4;
@@ -25,7 +25,9 @@ export function assigneeStackWidthPx(visible: number, overflow: number, showPlus
 export function fitAssigneeAvatarStack(memberCount: number, maxWidthPx: number): AssigneeStackFit {
   const count = Math.max(0, memberCount);
   if (count === 0) return { visible: 0, overflow: 0 };
-  if (assigneeStackWidthPx(count, 0, false) <= maxWidthPx) {
+  // Solo (or empty) keeps a trailing plus; 2+ drops the plus and may use +N.
+  const showPlus = count <= 1;
+  if (assigneeStackWidthPx(count, 0, showPlus) <= maxWidthPx) {
     return { visible: count, overflow: 0 };
   }
   for (let visible = count - 1; visible >= 0; visible -= 1) {
@@ -35,4 +37,9 @@ export function fitAssigneeAvatarStack(memberCount: number, maxWidthPx: number):
     }
   }
   return { visible: 0, overflow: count };
+}
+
+/** Trailing plus when empty or only one assignee; +N replaces it once overflow exists. */
+export function shouldShowAssigneeStackPlus(memberCount: number, overflow: number): boolean {
+  return memberCount <= 1 && overflow === 0;
 }

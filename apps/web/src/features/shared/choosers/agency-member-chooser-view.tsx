@@ -1,6 +1,7 @@
 import { Check, ChevronDown, Plus, Search, UserRound, UsersRound } from "lucide-react";
 
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
+import { shouldShowAssigneeStackPlus } from "@/features/shared/choosers/agency-member-stack";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Skeleton } from "@/ui/skeleton";
@@ -48,6 +49,8 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
   const stackMembers = multiple?.selectedMembers ?? [];
   const stackVisible = stackMembers.slice(0, stackVisibleCount);
   const stackOverflow = stackOverflowCount;
+  const showStackPlus =
+    !assignedToTeam && shouldShowAssigneeStackPlus(stackMembers.length, stackOverflow);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -116,14 +119,14 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                 +{stackOverflow}
               </span>
             ) : null}
-            {!assignedToTeam && stackVisible.length === 0 && stackOverflow === 0 ? (
+            {showStackPlus ? (
               <span
                 className={cn(
                   "relative z-20 flex size-6 shrink-0 items-center justify-center rounded-full",
                   "border border-dashed border-default bg-elevated text-muted",
                   "transition-colors hover:border-ring hover:bg-default hover:text-highlighted",
                   "motion-reduce:transition-none",
-                  "-ml-1",
+                  stackVisible.length > 0 ? "-ml-2" : "-ml-1",
                 )}
                 aria-hidden
               >

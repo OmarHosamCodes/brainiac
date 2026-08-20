@@ -4,6 +4,7 @@ import {
   ASSIGNEE_STACK_MAX_WIDTH_PX,
   assigneeStackWidthPx,
   fitAssigneeAvatarStack,
+  shouldShowAssigneeStackPlus,
 } from "./agency-member-stack";
 
 describe("fitAssigneeAvatarStack", () => {
@@ -12,6 +13,14 @@ describe("fitAssigneeAvatarStack", () => {
       visible: 0,
       overflow: 0,
     });
+  });
+
+  test("solo assignee fits with room for the trailing plus", () => {
+    expect(fitAssigneeAvatarStack(1, ASSIGNEE_STACK_MAX_WIDTH_PX)).toEqual({
+      visible: 1,
+      overflow: 0,
+    });
+    expect(assigneeStackWidthPx(1, 0, true)).toBeLessThanOrEqual(ASSIGNEE_STACK_MAX_WIDTH_PX);
   });
 
   test("shows every avatar when the stack fits", () => {
@@ -37,5 +46,14 @@ describe("fitAssigneeAvatarStack", () => {
 
   test("falls back to +N only when avatars cannot fit", () => {
     expect(fitAssigneeAvatarStack(5, 20)).toEqual({ visible: 0, overflow: 5 });
+  });
+});
+
+describe("shouldShowAssigneeStackPlus", () => {
+  test("shows plus for empty or solo, not when overflow or multi", () => {
+    expect(shouldShowAssigneeStackPlus(0, 0)).toBe(true);
+    expect(shouldShowAssigneeStackPlus(1, 0)).toBe(true);
+    expect(shouldShowAssigneeStackPlus(2, 0)).toBe(false);
+    expect(shouldShowAssigneeStackPlus(3, 2)).toBe(false);
   });
 });
