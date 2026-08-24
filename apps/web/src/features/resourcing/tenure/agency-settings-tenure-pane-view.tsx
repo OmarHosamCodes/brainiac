@@ -81,6 +81,7 @@ export function AgencySettingsTenurePaneView({
           quarterlyMinHours={viewModel.quarterlyMinHours}
           monthlyMinHours={viewModel.monthlyMinHours}
           requiredDailyHours={viewModel.requiredDailyHours}
+          offDayReduceHours={viewModel.offDayReduceHours}
           weekStartLabel={viewModel.weekStartLabel}
           departmentCount={viewModel.departmentCount}
           memberCount={viewModel.memberCount}

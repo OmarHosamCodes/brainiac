@@ -19,7 +19,7 @@ describe("computeAttendanceStreak", () => {
     expect(result.currentStreak).toBe(2);
   });
 
-  test("off day breaks streak", () => {
+  test("off day does not break streak", () => {
     const result = computeAttendanceStreak({
       anchorDate: "2026-08-10",
       schedule,
@@ -40,7 +40,7 @@ describe("computeAttendanceStreak", () => {
       ],
       calendarDays: [],
     });
-    expect(result.currentStreak).toBe(1);
+    expect(result.currentStreak).toBe(2);
   });
 
   test("incomplete today does not break active streak", () => {

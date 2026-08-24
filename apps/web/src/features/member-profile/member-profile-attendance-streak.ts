@@ -42,7 +42,12 @@ export function computeAttendanceStreak(input: {
 }): AttendanceStreakModel {
   const heatByDate = new Map(input.heatDays.map((day) => [day.date, day]));
   const calendarByDate = new Map(input.calendarDays.map((day) => [day.date, day]));
-  const streakAnchor = resolveStreakAnchor(input.anchorDate, input.schedule, heatByDate);
+  const streakAnchor = resolveStreakAnchor(
+    input.anchorDate,
+    input.schedule,
+    heatByDate,
+    calendarByDate,
+  );
 
   let currentStreak = 0;
   let cursor = streakAnchor;
@@ -52,7 +57,10 @@ export function computeAttendanceStreak(input: {
       continue;
     }
     const dayState = resolveDayState(cursor, heatByDate, calendarByDate);
-    if (dayState.off) break;
+    if (dayState.off) {
+      cursor = addDaysToDateKey(cursor, -1);
+      continue;
+    }
     if (dayState.present) {
       currentStreak += 1;
       cursor = addDaysToDateKey(cursor, -1);
@@ -62,7 +70,13 @@ export function computeAttendanceStreak(input: {
   }
 
   const inMonthWorking = input.calendarDays
-    .filter((day) => day.inMonth && day.status !== "weekend" && day.status !== "holiday")
+    .filter(
+      (day) =>
+        day.inMonth &&
+        day.status !== "weekend" &&
+        day.status !== "holiday" &&
+        day.status !== "leave",
+    )
     .sort((a, b) => a.date.localeCompare(b.date));
   const monthPresentDays = inMonthWorking.filter((day) => day.status === "present").length;
   const monthWorkingDays = inMonthWorking.length;
@@ -109,13 +123,18 @@ function resolveStreakAnchor(
   anchorDate: string,
   schedule: WorkSchedule,
   heatByDate: Map<string, HeatDay>,
+  calendarByDate: Map<string, CalendarDay>,
 ): string {
   let cursor = anchorDate;
   while (isWeekendDateKey(cursor, schedule.weekStartsOn, schedule.weekendDurationDays)) {
     cursor = addDaysToDateKey(cursor, -1);
   }
   const anchorHeat = heatByDate.get(cursor);
-  if ((anchorHeat?.totalSeconds ?? 0) <= 0 && !anchorHeat?.off) {
+  const cal = calendarByDate.get(cursor);
+  const anchorOff = Boolean(
+    anchorHeat?.off ?? (cal?.status === "leave" || cal?.status === "holiday"),
+  );
+  if ((anchorHeat?.totalSeconds ?? 0) <= 0 && !anchorOff) {
     cursor = addDaysToDateKey(cursor, -1);
     while (isWeekendDateKey(cursor, schedule.weekStartsOn, schedule.weekendDurationDays)) {
       cursor = addDaysToDateKey(cursor, -1);

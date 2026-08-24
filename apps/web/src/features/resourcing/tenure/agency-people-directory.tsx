@@ -30,6 +30,7 @@ type AgencyPeopleDirectoryProps = {
   quarterlyMinHours: number | null;
   monthlyMinHours: number | null;
   requiredDailyHours: number | null;
+  offDayReduceHours: number | null;
   weekStartLabel: string | null;
   departmentCount: number;
   memberCount: number;
@@ -57,6 +58,7 @@ export function AgencyPeopleDirectory({
   quarterlyMinHours,
   monthlyMinHours,
   requiredDailyHours,
+  offDayReduceHours,
   weekStartLabel,
   departmentCount,
   memberCount,
@@ -183,9 +185,10 @@ export function AgencyPeopleDirectory({
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <dt className="text-muted">Work schedule</dt>
                 <dd className="text-highlighted font-mono tabular-nums text-end">
-                  {requiredDailyHours != null || weekStartLabel
+                  {requiredDailyHours != null || offDayReduceHours != null || weekStartLabel
                     ? [
                         requiredDailyHours != null ? `${requiredDailyHours}h/day` : null,
+                        offDayReduceHours != null ? `${offDayReduceHours}h/off day` : null,
                         weekStartLabel ? `starts ${weekStartLabel}` : null,
                       ]
                         .filter(Boolean)

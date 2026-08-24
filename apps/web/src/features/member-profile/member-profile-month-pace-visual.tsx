@@ -173,6 +173,9 @@ export function MemberProfileMonthPaceVisual({ pace, className }: Props) {
         <p className={cn(agencyWorkMetaClass, "pt-0.5 text-foreground/60")}>
           {pace.remainingWorkingDays} working day{pace.remainingWorkingDays === 1 ? "" : "s"} left
           in {pace.monthLabel}
+          {pace.offDaysInMonth > 0
+            ? ` · ${pace.offDaysInMonth} off day${pace.offDaysInMonth === 1 ? "" : "s"} applied`
+            : ""}
         </p>
       </div>
     </div>

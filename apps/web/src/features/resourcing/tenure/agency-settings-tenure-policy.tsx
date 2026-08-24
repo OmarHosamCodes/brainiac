@@ -35,6 +35,7 @@ export type TenurePolicyDraft = {
   internDurationMonths: string;
   internDurationWeeks: string;
   requiredDailyHours: string;
+  offDayReduceHours: string;
   weekStartsOn: string;
   weekendDurationDays: string;
   policyEffectiveFrom: string;
@@ -77,6 +78,7 @@ export function AgencySettingsTenurePolicy({
   const internWeeksId = `${idPrefix}-intern-weeks`;
   const penaltyId = `${idPrefix}-penalty-months`;
   const dailyHoursId = `${idPrefix}-daily-hours`;
+  const offDayReduceHoursId = `${idPrefix}-off-day-reduce-hours`;
   const weekStartsId = `${idPrefix}-week-starts`;
   const weekendDaysId = `${idPrefix}-weekend-days`;
 
@@ -266,6 +268,26 @@ export function AgencySettingsTenurePolicy({
                   onPolicyDraftChange({ ...policyDraft, requiredDailyHours: event.target.value })
                 }
               />
+            </div>
+
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor={offDayReduceHoursId} className={agencyFormLabelClass}>
+                Hours reduced per off day
+              </Label>
+              <Input
+                id={offDayReduceHoursId}
+                type="number"
+                min={0}
+                max={24}
+                value={policyDraft.offDayReduceHours}
+                className="w-full max-w-[10rem]"
+                onChange={(event) =>
+                  onPolicyDraftChange({ ...policyDraft, offDayReduceHours: event.target.value })
+                }
+              />
+              <p className="text-muted mt-1 text-xs">
+                Lowers month and quarter minimum and target for each weekday off day or holiday.
+              </p>
             </div>
 
             <div className={agencyFormFieldClass}>

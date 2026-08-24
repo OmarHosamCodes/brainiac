@@ -45,6 +45,7 @@ function sampleMonthPace(): GaugeMonthPaceVisual {
     projectedHoursLabel: "168h 30m",
     monthMinHours: 175,
     monthTargetHours: 200,
+    offDaysInMonth: 0,
     elapsedWorkingDays: 12,
     remainingWorkingDays: 10,
     monthWorkingDays: 22,
@@ -127,9 +128,24 @@ describe("computeMonthPaceVisual", () => {
       ],
       schedule: { weekStartsOn: 1, weekendDurationDays: 2, requiredDailyHours: 8 },
       monthlyMinHours: 150,
+      offDayReduceHours: 8,
+      offDayKeys: new Set(),
       todayKey: "2026-08-05",
     });
     expect(pace?.monthTargetHours).toBe(pace!.monthWorkingDays * 8);
     expect(pace?.paceToTargetHoursPerDay).toBeGreaterThan(pace!.paceToMinHoursPerDay);
+  });
+
+  test("off days lower adjusted min and target", () => {
+    const pace = computeMonthPaceVisual({
+      dayHours: [{ date: "2026-08-04", label: "Mon", hoursLabel: "8h", totalSeconds: 28_800 }],
+      schedule: { weekStartsOn: 1, weekendDurationDays: 2, requiredDailyHours: 8 },
+      monthlyMinHours: 175,
+      offDayReduceHours: 8,
+      offDayKeys: new Set(["2026-08-06", "2026-08-07"]),
+      todayKey: "2026-08-05",
+    });
+    expect(pace?.offDaysInMonth).toBe(2);
+    expect(pace?.monthMinHours).toBe(159);
   });
 });

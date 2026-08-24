@@ -1,5 +1,7 @@
 import { buildWeekHours } from "@orch/api/routers/agency-ops/member-profile/member-profile-hr";
+import { expandLeaveDays } from "@orch/api/routers/agency-ops/member-profile/member-profile-heat";
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
+import { addDaysToDateKey } from "@orch/api/routers/agency-ops/time-tracking/local-week-bounds";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "@/lib/navigation";
@@ -1161,6 +1163,27 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     }
 
     const todayMonthPrefix = today.slice(0, 7);
+    const monthStart = `${todayMonthPrefix}-01`;
+    const monthEndYear = Number(today.slice(0, 4));
+    const monthEndMonth = Number(today.slice(5, 7));
+    const monthEndNext =
+      monthEndMonth === 12
+        ? `${monthEndYear + 1}-01-01`
+        : `${monthEndYear}-${String(monthEndMonth + 1).padStart(2, "0")}-01`;
+    const monthEnd = addDaysToDateKey(monthEndNext, -1);
+    const leaveByDate = expandLeaveDays(
+      data.leave.map((entry) => ({
+        id: entry.id,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        type: entry.type,
+        reason: entry.reason,
+      })),
+      monthStart,
+      monthEnd,
+    );
+    const offDayKeys = new Set(leaveByDate.keys());
+
     const calendarMatchesToday =
       data.calendarMonth.year === Number(today.slice(0, 4)) &&
       data.calendarMonth.month === Number(today.slice(5, 7));
@@ -1195,6 +1218,8 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
           tenurePolicy?.requiredDailyHours ?? DEFAULT_WORK_SCHEDULE.requiredDailyHours,
       },
       monthlyMinHours: tenurePolicy?.monthlyMinHours ?? 200,
+      offDayReduceHours: tenurePolicy?.offDayReduceHours ?? 8,
+      offDayKeys,
       todayKey: today,
     });
 
