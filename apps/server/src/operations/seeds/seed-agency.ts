@@ -938,6 +938,7 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
       requiredDailyHours: 8,
       weekStartsOn: 1,
       weekendDurationDays: 2,
+      offDayReduceHours: 8,
       policyEffectiveFrom: shiftDate(now, { days: -365 }),
       enabled: true,
       createdAt: now,

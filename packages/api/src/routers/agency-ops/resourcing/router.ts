@@ -31,6 +31,7 @@ const tenurePolicySchema = z.object({
   requiredDailyHours: z.number().int().min(1).max(24),
   weekStartsOn: z.number().int().min(0).max(6),
   weekendDurationDays: z.number().int().min(1).max(3),
+  offDayReduceHours: z.number().int().min(0).max(24),
   policyEffectiveFrom: z.string().datetime(),
   enabled: z.boolean(),
 });

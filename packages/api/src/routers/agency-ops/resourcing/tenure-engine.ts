@@ -42,6 +42,7 @@ export type TenurePolicyInput = {
   requiredDailyHours: number;
   weekStartsOn: number;
   weekendDurationDays: number;
+  offDayReduceHours: number;
   policyEffectiveFrom: Date;
   enabled: boolean;
 };

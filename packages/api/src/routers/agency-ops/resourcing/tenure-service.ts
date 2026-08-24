@@ -42,6 +42,7 @@ type TenurePolicyRecord = {
   requiredDailyHours: number;
   weekStartsOn: number;
   weekendDurationDays: number;
+  offDayReduceHours: number;
   policyEffectiveFrom: string;
   enabled: boolean;
 };
@@ -127,6 +128,7 @@ function toPolicyRecord(row: typeof agencyOpsTenurePolicy.$inferSelect): TenureP
     requiredDailyHours: row.requiredDailyHours,
     weekStartsOn: row.weekStartsOn,
     weekendDurationDays: row.weekendDurationDays,
+    offDayReduceHours: row.offDayReduceHours,
     policyEffectiveFrom: row.policyEffectiveFrom.toISOString(),
     enabled: row.enabled,
   };
@@ -144,6 +146,7 @@ function toPolicyInput(row: typeof agencyOpsTenurePolicy.$inferSelect): TenurePo
     requiredDailyHours: row.requiredDailyHours,
     weekStartsOn: row.weekStartsOn,
     weekendDurationDays: row.weekendDurationDays,
+    offDayReduceHours: row.offDayReduceHours,
     policyEffectiveFrom: row.policyEffectiveFrom,
     enabled: row.enabled,
   };
@@ -161,6 +164,7 @@ function defaultPolicyInput(): TenurePolicyInput {
     requiredDailyHours: 8,
     weekStartsOn: 1,
     weekendDurationDays: 2,
+    offDayReduceHours: 8,
     policyEffectiveFrom: new Date(),
     enabled: false,
   };
@@ -451,6 +455,7 @@ export async function upsertTenurePolicy(
     requiredDailyHours: number;
     weekStartsOn: number;
     weekendDurationDays: number;
+    offDayReduceHours: number;
     policyEffectiveFrom: string;
     enabled: boolean;
   },
@@ -477,6 +482,10 @@ export async function upsertTenurePolicy(
     throw new ORPCError("BAD_REQUEST", { message: "weekendDurationDays must be 1–3." });
   }
 
+  if (input.offDayReduceHours < 0 || input.offDayReduceHours > 24) {
+    throw new ORPCError("BAD_REQUEST", { message: "offDayReduceHours must be 0–24." });
+  }
+
   const policyEffectiveFrom = new Date(input.policyEffectiveFrom);
   if (Number.isNaN(policyEffectiveFrom.getTime())) {
     throw new ORPCError("BAD_REQUEST", { message: "Invalid policyEffectiveFrom." });
@@ -500,6 +509,7 @@ export async function upsertTenurePolicy(
       requiredDailyHours: input.requiredDailyHours,
       weekStartsOn: input.weekStartsOn,
       weekendDurationDays: input.weekendDurationDays,
+      offDayReduceHours: input.offDayReduceHours,
       policyEffectiveFrom,
       enabled: input.enabled,
       createdAt: existing?.createdAt ?? now,
@@ -518,6 +528,7 @@ export async function upsertTenurePolicy(
         requiredDailyHours: input.requiredDailyHours,
         weekStartsOn: input.weekStartsOn,
         weekendDurationDays: input.weekendDurationDays,
+        offDayReduceHours: input.offDayReduceHours,
         policyEffectiveFrom,
         enabled: input.enabled,
         updatedAt: now,
