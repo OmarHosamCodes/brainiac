@@ -35,6 +35,7 @@ export type TenurePolicyInput = {
   fiscalYearStartMonth: number;
   fiscalYearStartDay: number;
   quarterlyMinHours: number;
+  monthlyMinHours: number;
   penaltyMonths: number;
   internDurationMonths: number;
   internDurationWeeks: number;

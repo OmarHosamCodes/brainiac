@@ -35,6 +35,7 @@ type TenurePolicyRecord = {
   fiscalYearStartMonth: number;
   fiscalYearStartDay: number;
   quarterlyMinHours: number;
+  monthlyMinHours: number;
   penaltyMonths: number;
   internDurationMonths: number;
   internDurationWeeks: number;
@@ -119,6 +120,7 @@ function toPolicyRecord(row: typeof agencyOpsTenurePolicy.$inferSelect): TenureP
     fiscalYearStartMonth: row.fiscalYearStartMonth,
     fiscalYearStartDay: row.fiscalYearStartDay,
     quarterlyMinHours: row.quarterlyMinHours,
+    monthlyMinHours: row.monthlyMinHours,
     penaltyMonths: row.penaltyMonths,
     internDurationMonths: row.internDurationMonths,
     internDurationWeeks: row.internDurationWeeks,
@@ -135,6 +137,7 @@ function toPolicyInput(row: typeof agencyOpsTenurePolicy.$inferSelect): TenurePo
     fiscalYearStartMonth: row.fiscalYearStartMonth,
     fiscalYearStartDay: row.fiscalYearStartDay,
     quarterlyMinHours: row.quarterlyMinHours,
+    monthlyMinHours: row.monthlyMinHours,
     penaltyMonths: row.penaltyMonths,
     internDurationMonths: row.internDurationMonths,
     internDurationWeeks: row.internDurationWeeks,
@@ -151,6 +154,7 @@ function defaultPolicyInput(): TenurePolicyInput {
     fiscalYearStartMonth: 1,
     fiscalYearStartDay: 1,
     quarterlyMinHours: 525,
+    monthlyMinHours: 200,
     penaltyMonths: 6,
     internDurationMonths: 4,
     internDurationWeeks: 0,
@@ -440,6 +444,7 @@ export async function upsertTenurePolicy(
     fiscalYearStartMonth: number;
     fiscalYearStartDay: number;
     quarterlyMinHours: number;
+    monthlyMinHours: number;
     penaltyMonths: number;
     internDurationMonths: number;
     internDurationWeeks: number;
@@ -488,6 +493,7 @@ export async function upsertTenurePolicy(
       fiscalYearStartMonth: input.fiscalYearStartMonth,
       fiscalYearStartDay: input.fiscalYearStartDay,
       quarterlyMinHours: input.quarterlyMinHours,
+      monthlyMinHours: input.monthlyMinHours,
       penaltyMonths: input.penaltyMonths,
       internDurationMonths: input.internDurationMonths,
       internDurationWeeks: input.internDurationWeeks,
@@ -505,6 +511,7 @@ export async function upsertTenurePolicy(
         fiscalYearStartMonth: input.fiscalYearStartMonth,
         fiscalYearStartDay: input.fiscalYearStartDay,
         quarterlyMinHours: input.quarterlyMinHours,
+        monthlyMinHours: input.monthlyMinHours,
         penaltyMonths: input.penaltyMonths,
         internDurationMonths: input.internDurationMonths,
         internDurationWeeks: input.internDurationWeeks,

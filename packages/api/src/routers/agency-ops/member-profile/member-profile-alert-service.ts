@@ -269,6 +269,7 @@ export async function listMemberProfileAlerts(
     fiscalYearStartDay: policyRow?.fiscalYearStartDay ?? 1,
   });
   const quarterlyMinHours = policyRow?.quarterlyMinHours ?? 525;
+  const monthlyMinHours = policyRow?.monthlyMinHours ?? 200;
   const alertPolicy = await loadAlertPolicy(input.teamId);
   const fromKey = addDaysToDateKey(todayKey, -100);
   const days = await loadDaySeconds(
@@ -283,6 +284,7 @@ export async function listMemberProfileAlerts(
     days,
     schedule,
     calendar,
+    monthlyMinHours,
     quarterlyMinHours,
     suppressedFingerprints: suppressed,
     todayKey,

@@ -14,6 +14,7 @@ import {
 
 const schedule = { requiredDailyHours: 8, weekStartsOn: 1, weekendDurationDays: 2 };
 const calendar = { fiscalYearStartMonth: 1, fiscalYearStartDay: 1 };
+const monthlyMinHours = 200;
 
 describe("member-profile-alerts detectors", () => {
   test("member.alert is a registered notification type", () => {
@@ -44,15 +45,31 @@ describe("member-profile-alerts detectors", () => {
       { dateKey: "2026-08-03", totalSeconds: 3600, wasteSeconds: 0 },
       { dateKey: "2026-08-10", totalSeconds: 3600, wasteSeconds: 0 },
     ];
-    const alert = detectMonthPace({ days, schedule, todayKey: "2026-08-20" });
+    const alert = detectMonthPace({ days, schedule, monthlyMinHours, todayKey: "2026-08-20" });
     expect(alert?.kind).toBe("month_pace");
     expect(alert?.fingerprint).toBe("month_pace:2026-08");
+  });
+
+  test("detectMonthPace uses policy monthly minimum in alert copy", () => {
+    const days = [
+      { dateKey: "2026-08-03", totalSeconds: 3600, wasteSeconds: 0 },
+      { dateKey: "2026-08-10", totalSeconds: 3600, wasteSeconds: 0 },
+    ];
+    const alert = detectMonthPace({
+      days,
+      schedule,
+      monthlyMinHours: 175,
+      todayKey: "2026-08-20",
+    });
+    expect(alert?.body).toContain("vs 175h month minimum");
+    expect(alert?.context.requiredHours).toBe(175);
   });
 
   test("detectMonthPace skips early in month", () => {
     const alert = detectMonthPace({
       days: [{ dateKey: "2026-08-03", totalSeconds: 0, wasteSeconds: 0 }],
       schedule,
+      monthlyMinHours,
       todayKey: "2026-08-03",
     });
     expect(alert).toBeNull();
@@ -85,6 +102,7 @@ describe("member-profile-alerts detectors", () => {
       todayKey: "2026-08-05",
       schedule,
       calendar,
+      monthlyMinHours,
       quarterlyMinHours: 525,
       suppressedFingerprints: new Set(["abnormal_day:2026-08-04"]),
       days: [{ dateKey: "2026-08-04", totalSeconds: 13 * 3600, wasteSeconds: 0 }],
@@ -116,6 +134,7 @@ describe("member-profile-alerts detectors", () => {
     const alert = detectMonthPace({
       days,
       schedule,
+      monthlyMinHours,
       todayKey: "2026-08-20",
       policy: { ...DEFAULT_ALERT_POLICY, monthPaceEnabled: false },
     });
@@ -173,6 +192,7 @@ describe("member-profile-alerts detectors", () => {
       todayKey: "2026-08-05",
       schedule,
       calendar,
+      monthlyMinHours,
       quarterlyMinHours: 525,
       suppressedFingerprints: new Set(),
       policy: { ...DEFAULT_ALERT_POLICY, abnormalDayEnabled: false },

@@ -140,6 +140,7 @@ export function detectAbnormalDays(input: {
 export function detectMonthPace(input: {
   days: DaySeconds[];
   schedule: WorkSchedule;
+  monthlyMinHours: number;
   todayKey: string;
   policy?: MemberProfileAlertPolicy;
 }): DetectedAlert | null {
@@ -153,7 +154,7 @@ export function detectMonthPace(input: {
   const elapsedWorking = workingDaysInRange(start, elapsedEnd, input.schedule);
   if (monthWorking <= 0 || elapsedWorking / monthWorking < PACE_ELAPSED_GATE) return null;
 
-  const monthMinHours = input.schedule.requiredDailyHours * monthWorking;
+  const monthMinHours = input.monthlyMinHours;
   const { total } = secondsInRange(input.days, start, elapsedEnd);
   const loggedHours = total / 3600;
   const pacePerDay = elapsedWorking > 0 ? loggedHours / elapsedWorking : 0;
@@ -258,6 +259,7 @@ export function detectSystemAlerts(input: {
   days: DaySeconds[];
   schedule: WorkSchedule;
   calendar: FiscalCalendar;
+  monthlyMinHours: number;
   quarterlyMinHours: number;
   suppressedFingerprints: ReadonlySet<string>;
   todayKey: string;
@@ -278,6 +280,7 @@ export function detectSystemAlerts(input: {
   const month = detectMonthPace({
     days: input.days,
     schedule: input.schedule,
+    monthlyMinHours: input.monthlyMinHours,
     todayKey: input.todayKey,
     policy,
   });

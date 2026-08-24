@@ -41,6 +41,7 @@ function basePolicy(overrides: Partial<TenurePolicyInput> = {}): TenurePolicyInp
     fiscalYearStartMonth: 1,
     fiscalYearStartDay: 1,
     quarterlyMinHours: 525,
+    monthlyMinHours: 200,
     penaltyMonths: 6,
     internDurationMonths: 4,
     internDurationWeeks: 0,

@@ -24,6 +24,7 @@ const tenurePolicySchema = z.object({
   fiscalYearStartMonth: z.number().int().min(1).max(12),
   fiscalYearStartDay: z.number().int().min(1).max(31),
   quarterlyMinHours: z.number().int().positive(),
+  monthlyMinHours: z.number().int().positive(),
   penaltyMonths: z.number().int().positive(),
   internDurationMonths: z.number().int().nonnegative(),
   internDurationWeeks: z.number().int().nonnegative(),
