@@ -61,4 +61,30 @@ describe("resolveCalendarDayActions", () => {
       }).map((action) => action.kind),
     ).toEqual(["select_range", "add_off_day"]);
   });
+
+  test("self cannot remove team holidays", () => {
+    expect(
+      resolveCalendarDayActions({
+        inMonth: true,
+        status: "holiday",
+        leaveId: "h1",
+        hasActivity: false,
+        isSelf: true,
+        isManager: false,
+      }).map((action) => action.kind),
+    ).toEqual(["select_range", "add_off_day"]);
+  });
+
+  test("manager can remove team holidays", () => {
+    expect(
+      resolveCalendarDayActions({
+        inMonth: true,
+        status: "holiday",
+        leaveId: "h1",
+        hasActivity: false,
+        isSelf: false,
+        isManager: true,
+      }),
+    ).toContainEqual({ kind: "remove_off_day", leaveId: "h1" });
+  });
 });

@@ -11,7 +11,12 @@ export function buildMemberProfileAlertHref(input: {
   if (input.alertId) params.set("alertId", input.alertId);
   if (input.dateKey && /^\d{4}-\d{2}-\d{2}$/.test(input.dateKey)) {
     params.set("day", input.dateKey);
-  } else if (input.periodKey && /^\d{4}-\d{2}$/.test(input.periodKey)) {
+  } else if (
+    input.periodKey &&
+    (/^\d{4}-\d{2}$/.test(input.periodKey) ||
+      /^tm:\d{4}-\d{2}-\d{2}$/.test(input.periodKey) ||
+      /^\d{4}-Q[1-4]$/.test(input.periodKey))
+  ) {
     params.set("period", input.periodKey);
   }
   return `/agency/members/${encodeURIComponent(input.subjectUserId)}?${params.toString()}`;

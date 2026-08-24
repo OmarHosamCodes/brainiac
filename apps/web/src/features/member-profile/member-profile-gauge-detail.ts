@@ -1,9 +1,4 @@
-import {
-  computeAdjustedExpectations,
-  countOffDaysOnWeekdaysInRange,
-  countWeekdaysInRange,
-  countWorkingDaysInRange,
-} from "@orch/api/routers/agency-ops/resourcing/work-schedule";
+import { projectPeriodPace } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 
 import type { StatPlateKey } from "@/features/member-profile/member-profile-instrument-plate";
 import {
@@ -212,16 +207,7 @@ function shortHoursFromSeconds(totalSeconds: number): string {
   return `${hours}h ${minutes}m`;
 }
 
-function workingDaysInRange(
-  fromKey: string,
-  toKey: string,
-  schedule: GaugeWorkSchedule,
-  offDayKeys: ReadonlySet<string>,
-): number {
-  return countWorkingDaysInRange(fromKey, toKey, schedule, offDayKeys);
-}
-
-/** Month pace dossier (mirrors alert month_pace math; target = required daily × working days). */
+/** Month pace dossier (mirrors alert month_pace math via projectPeriodPace). */
 export function computeMonthPaceVisual(input: {
   dayHours: GaugeDayHours[];
   schedule: GaugeWorkSchedule;
@@ -233,42 +219,40 @@ export function computeMonthPaceVisual(input: {
   periodEndKey: string;
   periodLabel: string;
 }): GaugeMonthPaceVisual | null {
-  const start = input.periodStartKey;
-  const end = input.periodEndKey;
-  const elapsedEnd = input.todayKey < end ? input.todayKey : end;
-  const monthWorking = workingDaysInRange(start, end, input.schedule, input.offDayKeys);
-  const elapsedWorking = workingDaysInRange(start, elapsedEnd, input.schedule, input.offDayKeys);
-  const remainingWorking = workingDaysInRange(input.todayKey, end, input.schedule, input.offDayKeys);
-  if (monthWorking <= 0 || elapsedWorking <= 0) return null;
+  const projection = projectPeriodPace({
+    startKey: input.periodStartKey,
+    endKey: input.periodEndKey,
+    todayKey: input.todayKey,
+    daySeconds: input.dayHours.map((day) => ({
+      dateKey: day.date,
+      totalSeconds: day.totalSeconds,
+    })),
+    schedule: input.schedule,
+    baseMinHours: input.monthlyMinHours,
+    offDayReduceHours: input.offDayReduceHours,
+    offDayKeys: input.offDayKeys,
+  });
+  if (!projection) return null;
 
-  let loggedSeconds = 0;
-  for (const day of input.dayHours) {
-    if (day.date < start || day.date > elapsedEnd) continue;
-    loggedSeconds += day.totalSeconds;
-  }
-  const loggedHours = loggedSeconds / 3600;
-  const pacePerDay = loggedHours / elapsedWorking;
-  const projectedHours = pacePerDay * monthWorking;
-  const weekdaysInMonth = countWeekdaysInRange(start, end, input.schedule);
-  const offDaysInMonth = countOffDaysOnWeekdaysInRange(
-    start,
-    end,
-    input.schedule,
-    input.offDayKeys,
-  );
-  const { adjustedMinHours: monthMinHours, adjustedTargetHours: monthTargetHours } =
-    computeAdjustedExpectations({
-      weekdaysInRange: weekdaysInMonth,
-      offDaysOnWeekdays: offDaysInMonth,
-      baseMinHours: input.monthlyMinHours,
-      requiredDailyHours: input.schedule.requiredDailyHours,
-      offDayReduceHours: input.offDayReduceHours,
-    });
+  const {
+    loggedHours,
+    projectedHours,
+    monthMinHours,
+    monthTargetHours,
+    offDaysInMonth,
+    elapsedWorkingDays,
+    remainingWorkingDays,
+    monthWorkingDays,
+  } = projection;
 
   const paceToMinHoursPerDay =
-    remainingWorking > 0 ? Math.max(0, monthMinHours - loggedHours) / remainingWorking : 0;
+    remainingWorkingDays > 0
+      ? Math.max(0, monthMinHours - loggedHours) / remainingWorkingDays
+      : 0;
   const paceToTargetHoursPerDay =
-    remainingWorking > 0 ? Math.max(0, monthTargetHours - loggedHours) / remainingWorking : 0;
+    remainingWorkingDays > 0
+      ? Math.max(0, monthTargetHours - loggedHours) / remainingWorkingDays
+      : 0;
 
   const monthLabel = input.periodLabel;
 
@@ -284,9 +268,9 @@ export function computeMonthPaceVisual(input: {
     monthMinHours,
     monthTargetHours,
     offDaysInMonth,
-    elapsedWorkingDays: elapsedWorking,
-    remainingWorkingDays: remainingWorking,
-    monthWorkingDays: monthWorking,
+    elapsedWorkingDays,
+    remainingWorkingDays,
+    monthWorkingDays,
     paceToMinHoursPerDay,
     paceToTargetHoursPerDay,
     onTrackForMin: projectedHours >= monthMinHours,
@@ -452,7 +436,7 @@ export function buildGaugeDetail(context: GaugeDetailContext): GaugeDetailModel 
           key,
           title,
           explain:
-            "Consecutive working days with logged time. Weekends, off days, and zero-hour days break the run.",
+            "Consecutive working days with logged time. Weekends and off days are skipped. A working day with no hours ends the run.",
           metric,
           shortLabel,
           tone,

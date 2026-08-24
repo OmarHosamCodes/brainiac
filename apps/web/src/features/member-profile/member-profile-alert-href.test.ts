@@ -31,4 +31,23 @@ describe("buildMemberProfileAlertHref", () => {
       }),
     ).toBe("/agency/members/user-1?focus=alerts&period=2026-08");
   });
+
+  test("uses tenure month fingerprint when no day", () => {
+    expect(
+      buildMemberProfileAlertHref({
+        subjectUserId: "user-1",
+        alertId: "a1",
+        periodKey: "tm:2026-07-26",
+      }),
+    ).toBe("/agency/members/user-1?focus=alerts&alertId=a1&period=tm%3A2026-07-26");
+  });
+
+  test("uses fiscal quarter period when no day", () => {
+    expect(
+      buildMemberProfileAlertHref({
+        subjectUserId: "user-1",
+        periodKey: "2026-Q3",
+      }),
+    ).toBe("/agency/members/user-1?focus=alerts&period=2026-Q3");
+  });
 });

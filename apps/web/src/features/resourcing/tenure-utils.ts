@@ -6,6 +6,7 @@ import {
   getTenureMonthForDate,
   getTenureMonthByStartKey,
   resolveProfilePeriodMonth,
+  shiftProfilePeriodMonth,
   shiftTenureMonthStart,
   toFiscalCalendar,
   type ProfilePeriodMonth,
@@ -17,6 +18,7 @@ export {
   getTenureMonthForDate,
   getTenureMonthByStartKey,
   resolveProfilePeriodMonth,
+  shiftProfilePeriodMonth,
   shiftTenureMonthStart,
   toFiscalCalendar,
 };
