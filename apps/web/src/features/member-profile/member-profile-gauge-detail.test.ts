@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 
 import {
   buildGaugeDetail,
+  buildStreakVisual,
+  computeMonthPaceVisual,
   type GaugeDetailContext,
+  type GaugeMonthPaceVisual,
 } from "@/features/member-profile/member-profile-gauge-detail";
 
 function baseContext(patch: Partial<GaugeDetailContext> = {}): GaugeDetailContext {
@@ -17,10 +20,12 @@ function baseContext(patch: Partial<GaugeDetailContext> = {}): GaugeDetailContex
     periodTotalSeconds: 344_520,
     periodWasteSeconds: 0,
     periodWasteLabel: "0m",
+    hoursBreakdown: { paidSeconds: 300_000, internalSeconds: 44_520 },
     dayHours: [],
     calendarLabel: "August 2026",
     calendarDays: [],
     wasteDays: [],
+    monthPaceVisual: null,
     gauge: {
       key: "leaves",
       valueLabel: "1/15",
@@ -31,152 +36,100 @@ function baseContext(patch: Partial<GaugeDetailContext> = {}): GaugeDetailContex
   };
 }
 
+function sampleMonthPace(): GaugeMonthPaceVisual {
+  return {
+    monthLabel: "August 2026",
+    loggedHours: 120,
+    loggedHoursLabel: "120h",
+    projectedHours: 168.5,
+    projectedHoursLabel: "168h 30m",
+    monthMinHours: 175,
+    monthTargetHours: 200,
+    elapsedWorkingDays: 12,
+    remainingWorkingDays: 10,
+    monthWorkingDays: 22,
+    paceToMinHoursPerDay: 5.5,
+    paceToTargetHoursPerDay: 8,
+    onTrackForMin: false,
+    onTrackForTarget: false,
+    scaleMaxHours: 216,
+  };
+}
+
 describe("buildGaugeDetail", () => {
-  test("leaves explains allowance and offers add when manager", () => {
+  test("period with month pace visual replaces list body", () => {
+    const pace = sampleMonthPace();
     const detail = buildGaugeDetail(
       baseContext({
-        leaveEntries: [
-          {
-            id: "l1",
-            startDate: "2026-08-01",
-            endDate: "2026-08-01",
-            typeLabel: "PTO",
-            rangeLabel: "Aug 1, 2026",
-          },
-        ],
-        gauge: { key: "leaves", valueLabel: "1/15", ratio: 1 / 15, tone: "success" },
+        monthPaceVisual: pace,
+        gauge: { key: "period", valueLabel: "120h", ratio: 0.6, tone: "foreground" },
       }),
     );
-    expect(detail.title).toBe("Off days");
-    expect(detail.explain).toContain("1 of 15");
-    expect(detail.rows).toHaveLength(1);
-    expect(detail.rows[0]?.meta).toBe("PTO");
-    expect(detail.primaryAction).toEqual({ kind: "add_off_day", label: "Add off day" });
-    expect(detail.emptyLabel).toBeNull();
+    expect(detail.monthPaceVisual).toEqual(pace);
+    expect(detail.stats).toHaveLength(0);
+    expect(detail.rows).toHaveLength(0);
   });
 
-  test("leaves hides add when cannot manage leave", () => {
+  test("present streak visual replaces day list", () => {
     const detail = buildGaugeDetail(
       baseContext({
-        canManageLeave: false,
-        gauge: { key: "leaves", valueLabel: "0/15", ratio: 0, tone: "success" },
-      }),
-    );
-    expect(detail.primaryAction).toBeNull();
-    expect(detail.emptyLabel).toMatch(/No off days/);
-  });
-
-  test("period lists day hours and focuses busiest day", () => {
-    const detail = buildGaugeDetail(
-      baseContext({
-        dayHours: [
-          {
-            date: "2026-08-01",
-            label: "Fri, Aug 1",
-            hoursLabel: "2h",
-            totalSeconds: 7200,
-          },
-          {
-            date: "2026-08-02",
-            label: "Sat, Aug 2",
-            hoursLabel: "8h",
-            totalSeconds: 28_800,
-          },
-        ],
-        gauge: { key: "period", valueLabel: "10h", ratio: 0.5, tone: "foreground" },
-      }),
-    );
-    expect(detail.title).toBe("Period hours");
-    expect(detail.rows).toHaveLength(2);
-    expect(detail.primaryAction).toEqual({
-      kind: "focus_day",
-      label: "View busiest day",
-      date: "2026-08-02",
-    });
-  });
-
-  test("period empty has no focus action", () => {
-    const detail = buildGaugeDetail(
-      baseContext({
-        dayHours: [],
-        gauge: { key: "period", valueLabel: "0m", ratio: 0.08, tone: "foreground" },
-      }),
-    );
-    expect(detail.emptyLabel).toMatch(/No time logged/);
-    expect(detail.primaryAction).toBeNull();
-  });
-
-  test("present lists calendar present days with streak summary", () => {
-    const detail = buildGaugeDetail(
-      baseContext({
-        calendarDays: [
-          {
-            date: "2026-08-03",
-            inMonth: true,
-            status: "present",
-            dayLabel: "Mon 3",
-          },
-          {
-            date: "2026-08-04",
-            inMonth: true,
-            status: "empty",
-            dayLabel: "Tue 4",
-          },
-        ],
         attendanceStreak: {
-          currentStreak: 3,
-          bestInMonth: 5,
-          monthPresentDays: 9,
-          segments: ["present", "present", "present", "missed", "missed", "missed", "missed"],
+          currentStreak: 2,
+          bestInMonth: 13,
+          monthPresentDays: 21,
+          monthWorkingDays: 22,
+          segments: ["present", "present", "missed", "missed", "missed", "missed", "missed"],
         },
-        gauge: { key: "present", valueLabel: "3", ratio: 3 / 7, tone: "success" },
+        gauge: { key: "present", valueLabel: "2", ratio: 2 / 7, tone: "success" },
       }),
     );
-    expect(detail.title).toBe("Attendance streak");
-    expect(detail.explain).toContain("Best run in August 2026: 5 days");
-    expect(detail.rows[0]).toEqual({ label: "This month", meta: "9 days" });
-    expect(detail.rows[1]).toEqual({ label: "Best this month", meta: "5 days" });
-    expect(detail.rows).toHaveLength(3);
-    expect(detail.primaryAction).toEqual({
-      kind: "focus_day",
-      label: "View latest logged day",
-      date: "2026-08-03",
-    });
+    expect(detail.streakVisual).toEqual(
+      buildStreakVisual({
+        calendarLabel: "August 2026",
+        streak: {
+          currentStreak: 2,
+          bestInMonth: 13,
+          monthPresentDays: 21,
+          monthWorkingDays: 22,
+          segments: ["present", "present", "missed", "missed", "missed", "missed", "missed"],
+        },
+      }),
+    );
+    expect(detail.rows).toHaveLength(0);
+    expect(detail.rowsHeading).toBeNull();
+    expect(detail.stats).toHaveLength(0);
   });
+});
 
-  test("waste empty still explains share", () => {
-    const detail = buildGaugeDetail(
-      baseContext({
-        periodWasteSeconds: 0,
-        periodWasteLabel: "0m",
-        wasteDays: [],
-        gauge: { key: "waste", valueLabel: "0m", ratio: 0, tone: "warning" },
-      }),
-    );
-    expect(detail.explain).toContain("0%");
-    expect(detail.emptyLabel).toMatch(/No waste/);
-    expect(detail.primaryAction).toBeNull();
-  });
-
-  test("waste lists days and focuses first", () => {
-    const detail = buildGaugeDetail(
-      baseContext({
-        periodWasteSeconds: 3600,
-        periodTotalSeconds: 36_000,
-        periodWasteLabel: "1h",
-        wasteDays: [
-          { date: "2026-08-05", label: "Tue, Aug 5", hoursLabel: "1h" },
-          { date: "2026-08-06", label: "Wed, Aug 6", hoursLabel: "30m" },
-        ],
-        gauge: { key: "waste", valueLabel: "1h", ratio: 0.1, tone: "warning" },
-      }),
-    );
-    expect(detail.explain).toContain("10%");
-    expect(detail.rows).toHaveLength(2);
-    expect(detail.primaryAction).toEqual({
-      kind: "focus_day",
-      label: "View waste in activity",
-      date: "2026-08-05",
+describe("buildStreakVisual", () => {
+  test("computes days to best and coverage", () => {
+    const visual = buildStreakVisual({
+      calendarLabel: "August 2026",
+      streak: {
+        currentStreak: 2,
+        bestInMonth: 13,
+        monthPresentDays: 21,
+        monthWorkingDays: 22,
+        segments: [],
+      },
     });
+    expect(visual.daysToBest).toBe(11);
+    expect(visual.monthCoverageRatio).toBeCloseTo(21 / 22);
+  });
+});
+
+describe("computeMonthPaceVisual", () => {
+  test("computes target from required daily hours and pace needed", () => {
+    const pace = computeMonthPaceVisual({
+      dayHours: [
+        { date: "2026-08-04", label: "Mon", hoursLabel: "8h", totalSeconds: 28_800 },
+        { date: "2026-08-05", label: "Tue", hoursLabel: "8h", totalSeconds: 28_800 },
+      ],
+      schedule: { weekStartsOn: 1, weekendDurationDays: 2, requiredDailyHours: 8 },
+      monthlyMinHours: 150,
+      todayKey: "2026-08-05",
+    });
+    expect(pace?.monthTargetHours).toBe(pace!.monthWorkingDays * 8);
+    expect(pace?.paceToTargetHoursPerDay).toBeGreaterThan(pace!.paceToMinHoursPerDay);
   });
 });

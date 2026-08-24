@@ -540,6 +540,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
         detail={viewModel.gaugeDetail}
         onClose={viewModel.closeGauge}
         onPrimaryAction={viewModel.runGaugePrimaryAction}
+        onFocusDay={viewModel.focusGaugeDay}
       />
 
       <Dialog

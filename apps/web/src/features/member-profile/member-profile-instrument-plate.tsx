@@ -139,6 +139,49 @@ function PeriodHoursGlyph({ className }: { className?: string }) {
   );
 }
 
+const WEEK_BAR_COUNT = 7;
+const WEEK_BAR_WIDTH = 6;
+const WEEK_BAR_GAP = 2;
+const WEEK_BAR_MAX_HEIGHT = 14;
+const WEEK_BAR_BASE_Y = 22;
+
+/** Dynamic week bars for gauge dossier (ratios 0–1, up to 7). */
+export function WeekBarsGlyph({
+  ratios,
+  className,
+}: {
+  ratios: number[];
+  className?: string;
+}) {
+  const bars = ratios.slice(0, WEEK_BAR_COUNT);
+  while (bars.length < WEEK_BAR_COUNT) {
+    bars.unshift(0);
+  }
+  const totalWidth =
+    WEEK_BAR_COUNT * WEEK_BAR_WIDTH + (WEEK_BAR_COUNT - 1) * WEEK_BAR_GAP;
+  const startX = (64 - totalWidth) / 2;
+
+  return (
+    <svg viewBox="0 0 64 28" className={className} aria-hidden>
+      {bars.map((ratio, index) => {
+        const height = Math.max(2, Math.round(ratio * WEEK_BAR_MAX_HEIGHT));
+        const x = startX + index * (WEEK_BAR_WIDTH + WEEK_BAR_GAP);
+        return (
+          <rect
+            key={index}
+            x={x}
+            y={WEEK_BAR_BASE_Y - height}
+            width={WEEK_BAR_WIDTH}
+            height={height}
+            rx="1"
+            className={cn("fill-current", ratio > 0 ? "opacity-90" : "opacity-15")}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 const STREAK_SEGMENT_COUNT = 7;
 const STREAK_SEGMENT_WIDTH = 6;
 const STREAK_SEGMENT_HEIGHT = 10;
@@ -149,7 +192,7 @@ function streakSegmentX(index: number): number {
   return STREAK_CHAIN_X + index * (STREAK_SEGMENT_WIDTH + STREAK_SEGMENT_GAP);
 }
 
-function StreakChainGlyph({
+export function StreakChainGlyph({
   segments,
   className,
 }: {

@@ -15,6 +15,7 @@ import type { AlertPeriodTarget } from "@/features/member-profile/member-profile
 import { resolveAlertPeriodTarget } from "@/features/member-profile/member-profile-alert-period";
 import {
   buildGaugeDetail,
+  computeMonthPaceVisual,
   type GaugeDetailModel,
 } from "@/features/member-profile/member-profile-gauge-detail";
 import {
@@ -154,6 +155,7 @@ export type AgencyMemberProfileViewModel = {
       streakSegments?: StreakSegmentState[];
       bestInMonth?: number;
       monthPresentDays?: number;
+      monthWorkingDays?: number;
     }>;
     weekHours: Array<{
       date: string;
@@ -289,6 +291,7 @@ export type AgencyMemberProfileViewModel = {
   openGauge: (key: StatPlateKey) => void;
   closeGauge: () => void;
   runGaugePrimaryAction: () => void;
+  focusGaugeDay: (date: string) => void;
   /** Expand workspace agent with a member-scoped Ask prompt. */
   askOrchAboutMember: () => void;
   retry: () => void;
@@ -877,6 +880,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         streakSegments: attendanceStreak.segments,
         bestInMonth: attendanceStreak.bestInMonth,
         monthPresentDays: attendanceStreak.monthPresentDays,
+        monthWorkingDays: attendanceStreak.monthWorkingDays,
       },
       {
         key: "waste" as const,
@@ -1114,12 +1118,20 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       };
     });
 
-    const wasteDays: Array<{ date: string; label: string; hoursLabel: string }> = [];
+    const wasteDays: Array<{
+      date: string;
+      label: string;
+      hoursLabel: string;
+      totalSeconds: number;
+      entryCount: number;
+    }> = [];
     for (const day of data.timeline) {
       let wasteSeconds = 0;
+      let entryCount = 0;
       for (const item of day.items) {
         if (item.kind === "activity" && item.isWaste && item.durationSeconds != null) {
           wasteSeconds += item.durationSeconds;
+          entryCount += 1;
         }
       }
       if (wasteSeconds <= 0) continue;
@@ -1133,8 +1145,58 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
           timeZone: "UTC",
         }),
         hoursLabel: shortHours(wasteSeconds),
+        totalSeconds: wasteSeconds,
+        entryCount,
       });
     }
+
+    let paidSeconds = 0;
+    let internalSeconds = 0;
+    for (const day of data.timeline) {
+      for (const item of day.items) {
+        if (item.kind !== "activity" || item.isWaste || item.durationSeconds == null) continue;
+        if (item.isBillable) paidSeconds += item.durationSeconds;
+        else internalSeconds += item.durationSeconds;
+      }
+    }
+
+    const todayMonthPrefix = today.slice(0, 7);
+    const calendarMatchesToday =
+      data.calendarMonth.year === Number(today.slice(0, 4)) &&
+      data.calendarMonth.month === Number(today.slice(5, 7));
+    const monthPaceSource = calendarMatchesToday
+      ? data.calendarMonth.days
+          .filter((day) => day.inMonth)
+          .map((day) => ({ date: day.date, totalSeconds: day.totalSeconds }))
+      : data.heatMap.days.filter((day) => day.date.startsWith(todayMonthPrefix));
+
+    const monthPaceDayHours = monthPaceSource.map((day) => {
+      const date = new Date(`${day.date}T12:00:00.000Z`);
+      const label = date.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC",
+      });
+      return {
+        date: day.date,
+        label,
+        hoursLabel: shortHours(day.totalSeconds),
+        totalSeconds: day.totalSeconds,
+      };
+    });
+
+    const monthPaceVisual = computeMonthPaceVisual({
+      dayHours: monthPaceDayHours,
+      schedule: {
+        weekStartsOn,
+        weekendDurationDays,
+        requiredDailyHours:
+          tenurePolicy?.requiredDailyHours ?? DEFAULT_WORK_SCHEDULE.requiredDailyHours,
+      },
+      monthlyMinHours: tenurePolicy?.monthlyMinHours ?? 200,
+      todayKey: today,
+    });
 
     return buildGaugeDetail({
       canManageLeave: profile.canManageLeave,
@@ -1153,7 +1215,9 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       periodTotalSeconds: data.periodTotalSeconds,
       periodWasteSeconds: data.periodWasteSeconds,
       periodWasteLabel: shortHours(data.periodWasteSeconds),
+      hoursBreakdown: { paidSeconds, internalSeconds },
       dayHours,
+      monthPaceVisual,
       calendarLabel: profile.calendar.label,
       calendarDays: profile.calendar.days.map((day) => {
         const date = new Date(`${day.date}T12:00:00.000Z`);
@@ -1182,11 +1246,23 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
               currentStreak: Number(gauge.valueLabel),
               bestInMonth: gauge.bestInMonth ?? 0,
               monthPresentDays: gauge.monthPresentDays ?? 0,
+              monthWorkingDays: gauge.monthWorkingDays ?? 0,
               segments: gauge.streakSegments ?? [],
             }
           : undefined,
     });
-  }, [openGaugeKey, periodLabel, profile, profileQuery.data]);
+  }, [
+    openGaugeKey,
+    periodLabel,
+    profile,
+    profileQuery.data,
+    rangeEndKey,
+    rangeStartKey,
+    tenurePolicy,
+    today,
+    weekStartsOn,
+    weekendDurationDays,
+  ]);
 
   // Keep leave/review drafts inside the selected period when the range changes.
   const clampedDefaultDate =
@@ -1444,6 +1520,11 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       }
       setSelectedHeatDate(action.date);
       scrollToActivityDay(action.date);
+    },
+    focusGaugeDay(date: string) {
+      setOpenGaugeKey(null);
+      setSelectedHeatDate(date);
+      scrollToActivityDay(date);
     },
     askOrchAboutMember() {
       if (!profile) return;
