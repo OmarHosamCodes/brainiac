@@ -113,7 +113,7 @@ describe("buildWeekHours", () => {
 });
 
 describe("buildCalendarMonth", () => {
-  test("marks present and leave days inside the month grid", () => {
+  test("marks present, leave, holiday, and weekend days inside the month grid", () => {
     const month = buildCalendarMonth({
       monthDate: "2026-06-15",
       secondsByDate: new Map([["2026-06-02", 1800]]),
@@ -125,7 +125,16 @@ describe("buildCalendarMonth", () => {
           type: "pto",
           reason: null,
         },
+        {
+          id: "h1",
+          startDate: "2026-06-04",
+          endDate: "2026-06-04",
+          type: "team_holiday",
+          reason: null,
+        },
       ],
+      weekStartsOn: 1,
+      weekendDurationDays: 2,
     });
 
     expect(month.year).toBe(2026);
@@ -133,11 +142,36 @@ describe("buildCalendarMonth", () => {
     expect(month.weekdayLabels).toEqual(["M", "T", "W", "T", "F", "S", "S"]);
     const present = month.days.find((d) => d.date === "2026-06-02");
     const leave = month.days.find((d) => d.date === "2026-06-03");
+    const holiday = month.days.find((d) => d.date === "2026-06-04");
+    const weekend = month.days.find((d) => d.date === "2026-06-06");
     expect(present?.status).toBe("present");
     expect(present?.leaveId).toBeNull();
     expect(leave?.status).toBe("leave");
     expect(leave?.leaveId).toBe("l1");
+    expect(holiday?.status).toBe("holiday");
+    expect(holiday?.leaveId).toBe("h1");
+    expect(weekend?.status).toBe("weekend");
     expect(month.days[0]!.date <= "2026-06-01").toBe(true);
+  });
+
+  test("leave and present override weekend", () => {
+    const month = buildCalendarMonth({
+      monthDate: "2026-06-15",
+      secondsByDate: new Map([["2026-06-06", 3600]]),
+      leave: [
+        {
+          id: "l2",
+          startDate: "2026-06-07",
+          endDate: "2026-06-07",
+          type: "sick",
+          reason: null,
+        },
+      ],
+      weekStartsOn: 1,
+      weekendDurationDays: 2,
+    });
+    expect(month.days.find((d) => d.date === "2026-06-06")?.status).toBe("present");
+    expect(month.days.find((d) => d.date === "2026-06-07")?.status).toBe("leave");
   });
 
   test("weekday labels follow weekStartsOn", () => {

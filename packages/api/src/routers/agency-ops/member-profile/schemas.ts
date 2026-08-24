@@ -172,8 +172,8 @@ export const calendarMonthDaySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   dayOfMonth: z.number().int().min(1).max(31),
   inMonth: z.boolean(),
-  status: z.enum(["present", "leave", "empty"]),
-  /** Present when status is leave — used to remove the off-day range. */
+  status: z.enum(["present", "leave", "holiday", "weekend", "empty"]),
+  /** Present when status is leave or holiday — used to remove the off-day range. */
   leaveId: z.string().min(1).nullable(),
 });
 

@@ -1,4 +1,4 @@
-import { DEFAULT_WORK_SCHEDULE, rotateWeekdayLabels } from "../resourcing/work-schedule";
+import { DEFAULT_WORK_SCHEDULE, isWeekendDateKey, rotateWeekdayLabels } from "../resourcing/work-schedule";
 import {
   addDaysToDateKey,
   getLocalWeekStartKeyFromDateKey,
@@ -31,7 +31,7 @@ export type WeekHourDay = {
   totalSeconds: number;
 };
 
-export type CalendarDayStatus = "present" | "leave" | "empty";
+export type CalendarDayStatus = "present" | "leave" | "holiday" | "weekend" | "empty";
 
 export type CalendarMonthDay = {
   date: string;
@@ -168,12 +168,13 @@ export function buildWeekHours(
   });
 }
 
-/** Month grid aligned to team week start, with derived present/leave/empty. */
+/** Month grid aligned to team week start, with derived present/leave/holiday/weekend/empty. */
 export function buildCalendarMonth(input: {
   monthDate: string;
   secondsByDate: Map<string, number>;
   leave: LeaveRangeInput[];
   weekStartsOn?: number;
+  weekendDurationDays?: number;
 }): {
   year: number;
   month: number;
@@ -182,6 +183,8 @@ export function buildCalendarMonth(input: {
   days: CalendarMonthDay[];
 } {
   const weekStartsOn = input.weekStartsOn ?? DEFAULT_WORK_SCHEDULE.weekStartsOn;
+  const weekendDurationDays =
+    input.weekendDurationDays ?? DEFAULT_WORK_SCHEDULE.weekendDurationDays;
   const weekdayLabels = [...rotateWeekdayLabels(WEEKDAY_LABELS, weekStartsOn)];
   const [yearStr, monthStr] = input.monthDate.split("-");
   const year = Number(yearStr);
@@ -202,9 +205,11 @@ export function buildCalendarMonth(input: {
     const inMonth = cursor >= monthStart && cursor <= monthEnd;
     const leave = leaveByDate.get(cursor);
     const seconds = input.secondsByDate.get(cursor) ?? 0;
+    const weekend = isWeekendDateKey(cursor, weekStartsOn, weekendDurationDays);
     let status: CalendarDayStatus = "empty";
-    if (leave) status = "leave";
+    if (leave) status = leave.type === "team_holiday" ? "holiday" : "leave";
     else if (seconds > 0) status = "present";
+    else if (weekend) status = "weekend";
 
     days.push({
       date: cursor,

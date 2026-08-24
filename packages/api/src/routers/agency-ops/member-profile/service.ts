@@ -191,7 +191,8 @@ export async function getMemberProfile(
   }
   const yearStart = `${Math.min(periodYear, calYear)}-01-01`;
   const yearEnd = `${Math.max(periodYear, calYear)}-12-31`;
-  const { weekStartsOn } = await loadTeamWorkSchedule(input.teamId);
+  const schedule = await loadTeamWorkSchedule(input.teamId);
+  const { weekStartsOn, weekendDurationDays } = schedule;
   const weekBounds = getLocalWeekBounds(rangeEnd, input.utcOffsetMinutes, weekStartsOn);
   const monthStart = `${calendarMonthKey}-01`;
   const nextMonthStart =
@@ -446,6 +447,7 @@ export async function getMemberProfile(
     monthDate: monthStart,
     secondsByDate,
     weekStartsOn,
+    weekendDurationDays,
     leave: allLeave.map((row) => ({
       id: row.id,
       startDate: row.startDate,
