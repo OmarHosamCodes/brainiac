@@ -1,5 +1,7 @@
 export type FiscalQuarter = 1 | 2 | 3 | 4;
 
+import { addDaysToDateKey } from "../time-tracking/local-week-bounds";
+
 export type TenureExemptionType =
   | "team_holiday"
   | "member_waiver"
@@ -124,6 +126,223 @@ export function getFiscalQuarterForDate(date: Date, calendar: FiscalCalendar): F
       : anchorYear - 1;
 
   return { fiscalYear: fallbackYear, fiscalQuarter: 1 };
+}
+
+export type TenureMonthRange = {
+  startKey: string;
+  endKey: string;
+  label: string;
+  fingerprint: string;
+  fiscalYear: number;
+  fiscalQuarter: FiscalQuarter;
+  monthIndex: 0 | 1 | 2;
+};
+
+export type ProfilePeriodMonth = {
+  startKey: string;
+  endKey: string;
+  label: string;
+  fingerprint: string;
+  isTenureMonth: boolean;
+};
+
+function dateKeyFromUtcDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatCalendarMonthLabel(year: number, month: number): string {
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function formatTenureMonthRangeLabel(startKey: string, endKey: string): string {
+  const start = new Date(`${startKey}T12:00:00.000Z`);
+  const end = new Date(`${endKey}T12:00:00.000Z`);
+  const startPart = start.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  const endPart = end.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  return `${startPart} – ${endPart}`;
+}
+
+function buildTenureMonthRange(
+  start: Date,
+  endExclusive: Date,
+  fiscalYear: number,
+  fiscalQuarter: FiscalQuarter,
+  monthIndex: 0 | 1 | 2,
+  calendar: FiscalCalendar,
+): TenureMonthRange {
+  const startKey = dateKeyFromUtcDate(start);
+  const endKey = addDaysToDateKey(dateKeyFromUtcDate(endExclusive), -1);
+  const label =
+    calendar.fiscalYearStartDay === 1 && start.getUTCDate() === 1
+      ? formatCalendarMonthLabel(start.getUTCFullYear(), start.getUTCMonth() + 1)
+      : formatTenureMonthRangeLabel(startKey, endKey);
+
+  return {
+    startKey,
+    endKey,
+    label,
+    fingerprint: `tm:${startKey}`,
+    fiscalYear,
+    fiscalQuarter,
+    monthIndex,
+  };
+}
+
+function calendarMonthFromDateKey(dateKey: string): ProfilePeriodMonth {
+  const year = Number(dateKey.slice(0, 4));
+  const month = Number(dateKey.slice(5, 7));
+  const startKey = `${dateKey.slice(0, 7)}-01`;
+  const nextMonth =
+    month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const endKey = addDaysToDateKey(nextMonth, -1);
+  return {
+    startKey,
+    endKey,
+    label: formatCalendarMonthLabel(year, month),
+    fingerprint: `tm:${startKey}`,
+    isTenureMonth: false,
+  };
+}
+
+function tenureMonthAtIndex(
+  calendar: FiscalCalendar,
+  fiscalYear: number,
+  fiscalQuarter: FiscalQuarter,
+  monthIndex: 0 | 1 | 2,
+): TenureMonthRange {
+  const quarterRange = getFiscalQuarterRange(calendar, fiscalYear, fiscalQuarter);
+  const start = addFiscalMonths(quarterRange.start, monthIndex, calendar.fiscalYearStartDay);
+  const endExclusive = addFiscalMonths(
+    quarterRange.start,
+    monthIndex + 1,
+    calendar.fiscalYearStartDay,
+  );
+  return buildTenureMonthRange(start, endExclusive, fiscalYear, fiscalQuarter, monthIndex, calendar);
+}
+
+export function getTenureMonthForDate(date: Date, calendar: FiscalCalendar): TenureMonthRange {
+  const ref = getFiscalQuarterForDate(date, calendar);
+  const quarterRange = getFiscalQuarterRange(calendar, ref.fiscalYear, ref.fiscalQuarter);
+
+  for (const monthIndex of [0, 1, 2] as const) {
+    const start = addFiscalMonths(quarterRange.start, monthIndex, calendar.fiscalYearStartDay);
+    const endExclusive = addFiscalMonths(
+      quarterRange.start,
+      monthIndex + 1,
+      calendar.fiscalYearStartDay,
+    );
+    if (date.getTime() >= start.getTime() && date.getTime() < endExclusive.getTime()) {
+      return buildTenureMonthRange(
+        start,
+        endExclusive,
+        ref.fiscalYear,
+        ref.fiscalQuarter,
+        monthIndex,
+        calendar,
+      );
+    }
+  }
+
+  return tenureMonthAtIndex(calendar, ref.fiscalYear, ref.fiscalQuarter, 0);
+}
+
+export function getTenureMonthByStartKey(
+  startKey: string,
+  calendar: FiscalCalendar,
+): TenureMonthRange | null {
+  const ref = getFiscalQuarterForDate(new Date(`${startKey}T12:00:00.000Z`), calendar);
+  for (const monthIndex of [0, 1, 2] as const) {
+    const month = tenureMonthAtIndex(calendar, ref.fiscalYear, ref.fiscalQuarter, monthIndex);
+    if (month.startKey === startKey) return month;
+  }
+  return null;
+}
+
+export function shiftTenureMonthStart(
+  startKey: string,
+  delta: -1 | 1,
+  calendar: FiscalCalendar,
+): TenureMonthRange {
+  const current =
+    getTenureMonthByStartKey(startKey, calendar) ??
+    getTenureMonthForDate(new Date(`${startKey}T12:00:00.000Z`), calendar);
+  const nextIndex = current.monthIndex + delta;
+
+  if (nextIndex >= 0 && nextIndex <= 2) {
+    return tenureMonthAtIndex(
+      calendar,
+      current.fiscalYear,
+      current.fiscalQuarter,
+      nextIndex as 0 | 1 | 2,
+    );
+  }
+
+  let fiscalYear = current.fiscalYear;
+  let fiscalQuarter = current.fiscalQuarter + delta;
+  if (fiscalQuarter > 4) {
+    fiscalQuarter = 1;
+    fiscalYear += 1;
+  } else if (fiscalQuarter < 1) {
+    fiscalQuarter = 4;
+    fiscalYear -= 1;
+  }
+
+  return tenureMonthAtIndex(
+    calendar,
+    fiscalYear,
+    fiscalQuarter as FiscalQuarter,
+    delta === 1 ? 0 : 2,
+  );
+}
+
+export function resolveProfilePeriodMonth(input: {
+  tenureEnabled: boolean;
+  calendar: FiscalCalendar;
+  anchorDateKey: string;
+  requestedStartKey?: string;
+}): ProfilePeriodMonth {
+  if (!input.tenureEnabled) {
+    const startKey = input.requestedStartKey ?? `${input.anchorDateKey.slice(0, 7)}-01`;
+    return calendarMonthFromDateKey(startKey);
+  }
+
+  if (input.requestedStartKey) {
+    const requested = getTenureMonthByStartKey(input.requestedStartKey, input.calendar);
+    if (requested) {
+      return {
+        startKey: requested.startKey,
+        endKey: requested.endKey,
+        label: requested.label,
+        fingerprint: requested.fingerprint,
+        isTenureMonth: true,
+      };
+    }
+  }
+
+  const month = getTenureMonthForDate(
+    new Date(`${input.anchorDateKey}T12:00:00.000Z`),
+    input.calendar,
+  );
+  return {
+    startKey: month.startKey,
+    endKey: month.endKey,
+    label: month.label,
+    fingerprint: month.fingerprint,
+    isTenureMonth: true,
+  };
 }
 
 export type MemberTenureProfileInput = {

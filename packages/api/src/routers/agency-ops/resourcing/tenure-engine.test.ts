@@ -11,8 +11,11 @@ import {
   getFiscalQuarterRange,
   getFiscalYearEndDate,
   getFiscalYearStartDate,
+  getTenureMonthForDate,
   isInternQuarter,
   quarterCountsForRawTenure,
+  resolveProfilePeriodMonth,
+  shiftTenureMonthStart,
   type FiscalCalendar,
   type MemberTenureProfileInput,
   type TenureExemptionInput,
@@ -48,6 +51,7 @@ function basePolicy(overrides: Partial<TenurePolicyInput> = {}): TenurePolicyInp
     requiredDailyHours: 8,
     weekStartsOn: 1,
     weekendDurationDays: 2,
+    offDayReduceHours: 8,
     policyEffectiveFrom: new Date("2024-01-01T00:00:00.000Z"),
     enabled: true,
     ...overrides,
@@ -224,5 +228,52 @@ describe("formatTenureMonths", () => {
     expect(formatTenureMonths(14)).toBe("1y 2m");
     expect(formatTenureMonths(24)).toBe("2y");
     expect(formatTenureMonths(5)).toBe("5m");
+  });
+});
+
+describe("tenure month periods", () => {
+  test("getTenureMonthForDate uses calendar month when fiscal year starts Jan 1", () => {
+    const month = getTenureMonthForDate(new Date("2026-08-15T12:00:00.000Z"), calendarMonthStart);
+    expect(month.startKey).toBe("2026-08-01");
+    expect(month.endKey).toBe("2026-08-31");
+    expect(month.fingerprint).toBe("tm:2026-08-01");
+    expect(month.label).toBe("August 2026");
+  });
+
+  test("getTenureMonthForDate spans two calendar months when fiscal year starts Dec 26", () => {
+    const month = getTenureMonthForDate(new Date("2026-08-15T12:00:00.000Z"), calendarDec26);
+    expect(month.startKey).toBe("2026-07-26");
+    expect(month.endKey).toBe("2026-08-25");
+    expect(month.fingerprint).toBe("tm:2026-07-26");
+  });
+
+  test("shiftTenureMonthStart crosses quarter boundary", () => {
+    const shifted = shiftTenureMonthStart("2026-08-26", 1, calendarDec26);
+    expect(shifted.startKey).toBe("2026-09-26");
+    expect(shifted.endKey).toBe("2026-10-25");
+  });
+
+  test("resolveProfilePeriodMonth falls back to calendar month when tenure disabled", () => {
+    const period = resolveProfilePeriodMonth({
+      tenureEnabled: false,
+      calendar: calendarMonthStart,
+      anchorDateKey: "2026-08-20",
+    });
+    expect(period.startKey).toBe("2026-08-01");
+    expect(period.endKey).toBe("2026-08-31");
+    expect(period.isTenureMonth).toBe(false);
+    expect(period.fingerprint).toBe("tm:2026-08-01");
+  });
+
+  test("resolveProfilePeriodMonth honors requested start key when tenure enabled", () => {
+    const period = resolveProfilePeriodMonth({
+      tenureEnabled: true,
+      calendar: calendarDec26,
+      anchorDateKey: "2026-08-20",
+      requestedStartKey: "2026-07-26",
+    });
+    expect(period.startKey).toBe("2026-07-26");
+    expect(period.endKey).toBe("2026-08-25");
+    expect(period.isTenureMonth).toBe(true);
   });
 });
