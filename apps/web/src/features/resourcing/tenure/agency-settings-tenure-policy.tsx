@@ -30,6 +30,7 @@ export type TenurePolicyDraft = {
   fiscalYearStartMonth: FiscalMonth;
   fiscalYearStartDay: string;
   quarterlyMinHours: string;
+  monthlyMinHours: string;
   penaltyMonths: string;
   internDurationMonths: string;
   internDurationWeeks: string;
@@ -69,6 +70,7 @@ export function AgencySettingsTenurePolicy({
   const monthId = `${idPrefix}-fiscal-month`;
   const startDayId = `${idPrefix}-start-day`;
   const minHoursId = `${idPrefix}-min-hours`;
+  const monthlyMinHoursId = `${idPrefix}-monthly-min-hours`;
   const effectiveFromId = `${idPrefix}-effective-from`;
   const enabledId = `${idPrefix}-enabled`;
   const internMonthsId = `${idPrefix}-intern-months`;
@@ -98,6 +100,12 @@ export function AgencySettingsTenurePolicy({
             <dt className="text-muted">Min hours per quarter</dt>
             <dd className="text-highlighted font-mono tabular-nums">
               {policyDraft.quarterlyMinHours}h
+            </dd>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">Min hours per month</dt>
+            <dd className="text-highlighted font-mono tabular-nums">
+              {policyDraft.monthlyMinHours}h
             </dd>
           </div>
           <div className="border-border space-y-2 border-t pt-3">
@@ -202,6 +210,22 @@ export function AgencySettingsTenurePolicy({
               className="w-full max-w-[10rem]"
               onChange={(event) =>
                 onPolicyDraftChange({ ...policyDraft, quarterlyMinHours: event.target.value })
+              }
+            />
+          </div>
+
+          <div className={agencyFormFieldClass}>
+            <Label htmlFor={monthlyMinHoursId} className={agencyFormLabelClass}>
+              Min hours per month
+            </Label>
+            <Input
+              id={monthlyMinHoursId}
+              type="number"
+              min={1}
+              value={policyDraft.monthlyMinHours}
+              className="w-full max-w-[10rem]"
+              onChange={(event) =>
+                onPolicyDraftChange({ ...policyDraft, monthlyMinHours: event.target.value })
               }
             />
           </div>

@@ -28,6 +28,7 @@ type AgencyPeopleDirectoryProps = {
   policyEnabled: boolean;
   policyEffectiveLabel: string | null;
   quarterlyMinHours: number | null;
+  monthlyMinHours: number | null;
   requiredDailyHours: number | null;
   weekStartLabel: string | null;
   departmentCount: number;
@@ -54,6 +55,7 @@ export function AgencyPeopleDirectory({
   policyEnabled,
   policyEffectiveLabel,
   quarterlyMinHours,
+  monthlyMinHours,
   requiredDailyHours,
   weekStartLabel,
   departmentCount,
@@ -170,6 +172,12 @@ export function AgencyPeopleDirectory({
                 <dt className="text-muted">Quarter minimum</dt>
                 <dd className="text-highlighted font-mono tabular-nums">
                   {quarterlyMinHours != null ? `${quarterlyMinHours}h` : "—"}
+                </dd>
+              </div>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <dt className="text-muted">Month minimum</dt>
+                <dd className="text-highlighted font-mono tabular-nums">
+                  {monthlyMinHours != null ? `${monthlyMinHours}h` : "—"}
                 </dd>
               </div>
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

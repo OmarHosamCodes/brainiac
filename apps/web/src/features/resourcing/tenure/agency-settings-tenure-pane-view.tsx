@@ -79,6 +79,7 @@ export function AgencySettingsTenurePaneView({
           policyEnabled={viewModel.policyEnabled}
           policyEffectiveLabel={viewModel.policyEffectiveLabel}
           quarterlyMinHours={viewModel.quarterlyMinHours}
+          monthlyMinHours={viewModel.monthlyMinHours}
           requiredDailyHours={viewModel.requiredDailyHours}
           weekStartLabel={viewModel.weekStartLabel}
           departmentCount={viewModel.departmentCount}
