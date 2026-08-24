@@ -134,7 +134,9 @@ describe("buildCalendarMonth", () => {
     const present = month.days.find((d) => d.date === "2026-06-02");
     const leave = month.days.find((d) => d.date === "2026-06-03");
     expect(present?.status).toBe("present");
+    expect(present?.leaveId).toBeNull();
     expect(leave?.status).toBe("leave");
+    expect(leave?.leaveId).toBe("l1");
     expect(month.days[0]!.date <= "2026-06-01").toBe(true);
   });
 

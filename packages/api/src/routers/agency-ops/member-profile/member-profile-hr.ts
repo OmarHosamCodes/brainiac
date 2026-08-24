@@ -38,6 +38,7 @@ export type CalendarMonthDay = {
   dayOfMonth: number;
   inMonth: boolean;
   status: CalendarDayStatus;
+  leaveId: string | null;
 };
 
 const WEEKDAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"] as const;
@@ -210,6 +211,7 @@ export function buildCalendarMonth(input: {
       dayOfMonth: Number(cursor.slice(8, 10)),
       inMonth,
       status,
+      leaveId: leave?.id ?? null,
     });
     cursor = addDaysToDateKey(cursor, 1);
   }
