@@ -330,6 +330,17 @@ export function resolveProfilePeriodMonth(input: {
         isTenureMonth: true,
       };
     }
+    const containing = getTenureMonthForDate(
+      new Date(`${input.requestedStartKey}T12:00:00.000Z`),
+      input.calendar,
+    );
+    return {
+      startKey: containing.startKey,
+      endKey: containing.endKey,
+      label: containing.label,
+      fingerprint: containing.fingerprint,
+      isTenureMonth: true,
+    };
   }
 
   const month = getTenureMonthForDate(
@@ -341,6 +352,39 @@ export function resolveProfilePeriodMonth(input: {
     endKey: month.endKey,
     label: month.label,
     fingerprint: month.fingerprint,
+    isTenureMonth: true,
+  };
+}
+
+function shiftCalendarMonthStart(startKey: string, delta: -1 | 1): string {
+  const year = Number(startKey.slice(0, 4));
+  const month = Number(startKey.slice(5, 7));
+  let nextMonth = month + delta;
+  let nextYear = year;
+  if (nextMonth < 1) {
+    nextMonth = 12;
+    nextYear -= 1;
+  } else if (nextMonth > 12) {
+    nextMonth = 1;
+    nextYear += 1;
+  }
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+}
+
+export function shiftProfilePeriodMonth(
+  startKey: string,
+  delta: -1 | 1,
+  input: { tenureEnabled: boolean; calendar: FiscalCalendar },
+): ProfilePeriodMonth {
+  if (!input.tenureEnabled) {
+    return calendarMonthFromDateKey(shiftCalendarMonthStart(startKey, delta));
+  }
+  const shifted = shiftTenureMonthStart(startKey, delta, input.calendar);
+  return {
+    startKey: shifted.startKey,
+    endKey: shifted.endKey,
+    label: shifted.label,
+    fingerprint: shifted.fingerprint,
     isTenureMonth: true,
   };
 }

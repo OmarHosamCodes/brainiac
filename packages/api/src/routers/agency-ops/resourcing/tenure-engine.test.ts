@@ -15,6 +15,7 @@ import {
   isInternQuarter,
   quarterCountsForRawTenure,
   resolveProfilePeriodMonth,
+  shiftProfilePeriodMonth,
   shiftTenureMonthStart,
   type FiscalCalendar,
   type MemberTenureProfileInput,
@@ -275,5 +276,34 @@ describe("tenure month periods", () => {
     expect(period.startKey).toBe("2026-07-26");
     expect(period.endKey).toBe("2026-08-25");
     expect(period.isTenureMonth).toBe(true);
+  });
+
+  test("resolveProfilePeriodMonth uses month containing requestedStartKey when not a tenure start", () => {
+    const period = resolveProfilePeriodMonth({
+      tenureEnabled: true,
+      calendar: calendarDec26,
+      anchorDateKey: "2026-08-20",
+      requestedStartKey: "2026-08-01",
+    });
+    expect(period.startKey).toBe("2026-07-26");
+    expect(period.endKey).toBe("2026-08-25");
+  });
+
+  test("shiftProfilePeriodMonth shifts calendar months when tenure is disabled", () => {
+    const next = shiftProfilePeriodMonth("2026-08-01", 1, {
+      tenureEnabled: false,
+      calendar: calendarMonthStart,
+    });
+    expect(next.startKey).toBe("2026-09-01");
+    expect(next.endKey).toBe("2026-09-30");
+  });
+
+  test("shiftProfilePeriodMonth shifts tenure months when tenure is enabled", () => {
+    const next = shiftProfilePeriodMonth("2026-07-26", 1, {
+      tenureEnabled: true,
+      calendar: calendarDec26,
+    });
+    expect(next.startKey).toBe("2026-08-26");
+    expect(next.endKey).toBe("2026-09-25");
   });
 });

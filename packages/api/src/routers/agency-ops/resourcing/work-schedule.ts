@@ -161,3 +161,89 @@ export function computeAdjustedExpectations(input: {
     ),
   };
 }
+
+export type PeriodPaceProjection = {
+  startKey: string;
+  endKey: string;
+  elapsedEndKey: string;
+  monthWorkingDays: number;
+  elapsedWorkingDays: number;
+  remainingWorkingDays: number;
+  loggedHours: number;
+  projectedHours: number;
+  monthMinHours: number;
+  monthTargetHours: number;
+  offDaysInMonth: number;
+};
+
+export function projectPeriodPace(input: {
+  startKey: string;
+  endKey: string;
+  todayKey: string;
+  daySeconds: ReadonlyArray<{ dateKey: string; totalSeconds: number }>;
+  schedule: Pick<WorkSchedule, "weekStartsOn" | "weekendDurationDays" | "requiredDailyHours">;
+  baseMinHours: number;
+  offDayReduceHours: number;
+  offDayKeys: ReadonlySet<string>;
+}): PeriodPaceProjection | null {
+  const elapsedEndKey = input.todayKey < input.endKey ? input.todayKey : input.endKey;
+  const monthWorkingDays = countWorkingDaysInRange(
+    input.startKey,
+    input.endKey,
+    input.schedule,
+    input.offDayKeys,
+  );
+  const elapsedWorkingDays = countWorkingDaysInRange(
+    input.startKey,
+    elapsedEndKey,
+    input.schedule,
+    input.offDayKeys,
+  );
+  if (monthWorkingDays <= 0 || elapsedWorkingDays <= 0) return null;
+
+  const remainingStartKey =
+    input.todayKey >= input.endKey ? input.endKey : addDaysToDateKey(input.todayKey, 1);
+  const remainingWorkingDays =
+    input.todayKey >= input.endKey
+      ? 0
+      : countWorkingDaysInRange(remainingStartKey, input.endKey, input.schedule, input.offDayKeys);
+
+  let loggedSeconds = 0;
+  for (const day of input.daySeconds) {
+    if (day.dateKey < input.startKey || day.dateKey > elapsedEndKey) continue;
+    loggedSeconds += day.totalSeconds;
+  }
+  const loggedHours = loggedSeconds / 3600;
+  const pacePerDay = loggedHours / elapsedWorkingDays;
+  const projectedHours = pacePerDay * monthWorkingDays;
+
+  const weekdaysInMonth = countWeekdaysInRange(input.startKey, input.endKey, input.schedule);
+  const offDaysInMonth = countOffDaysOnWeekdaysInRange(
+    input.startKey,
+    input.endKey,
+    input.schedule,
+    input.offDayKeys,
+  );
+  const { adjustedMinHours: monthMinHours, adjustedTargetHours: monthTargetHours } =
+    computeAdjustedExpectations({
+      weekdaysInRange: weekdaysInMonth,
+      offDaysOnWeekdays: offDaysInMonth,
+      baseMinHours: input.baseMinHours,
+      requiredDailyHours: input.schedule.requiredDailyHours,
+      offDayReduceHours: input.offDayReduceHours,
+    });
+
+  return {
+    startKey: input.startKey,
+    endKey: input.endKey,
+    elapsedEndKey,
+    monthWorkingDays,
+    elapsedWorkingDays,
+    remainingWorkingDays,
+    loggedHours,
+    projectedHours,
+    monthMinHours,
+    monthTargetHours,
+    offDaysInMonth,
+  };
+}

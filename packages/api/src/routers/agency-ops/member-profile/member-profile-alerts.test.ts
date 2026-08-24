@@ -4,6 +4,7 @@ import { notificationTypeSchema } from "../../../schemas/notifications";
 import { memberProfileAlertPolicySchema } from "./schemas";
 import {
   abnormalDayThresholdHours,
+  alertFingerprintAliases,
   DEFAULT_ALERT_POLICY,
   detectAbnormalDays,
   detectMonthPace,
@@ -41,6 +42,17 @@ describe("member-profile-alerts detectors", () => {
     expect(alerts[0]?.fingerprint).toBe("abnormal_day:2026-08-04");
   });
 
+  test("alertFingerprintAliases links legacy and tm month pace keys", () => {
+    expect(alertFingerprintAliases("month_pace:2026-08")).toEqual([
+      "month_pace:2026-08",
+      "month_pace:tm:2026-08-01",
+    ]);
+    expect(alertFingerprintAliases("month_pace:tm:2026-08-01")).toEqual([
+      "month_pace:tm:2026-08-01",
+      "month_pace:2026-08",
+    ]);
+  });
+
   test("detectMonthPace fires when projected under 85% after midpoint", () => {
     const days = [
       { dateKey: "2026-08-03", totalSeconds: 3600, wasteSeconds: 0 },
@@ -55,6 +67,23 @@ describe("member-profile-alerts detectors", () => {
     });
     expect(alert?.kind).toBe("month_pace");
     expect(alert?.fingerprint).toBe("month_pace:tm:2026-08-01");
+  });
+
+  test("detectMonthPace uses tenure month bounds when fiscal year starts on the 26th", () => {
+    const days = [
+      { dateKey: "2026-08-03", totalSeconds: 3600, wasteSeconds: 0 },
+      { dateKey: "2026-08-10", totalSeconds: 3600, wasteSeconds: 0 },
+    ];
+    const alert = detectMonthPace({
+      days,
+      schedule,
+      monthlyMinHours,
+      offDayReduceHours,
+      todayKey: "2026-08-20",
+      tenureEnabled: true,
+      fiscalCalendar: { fiscalYearStartMonth: 12, fiscalYearStartDay: 26 },
+    });
+    expect(alert?.fingerprint).toBe("month_pace:tm:2026-07-26");
   });
 
   test("detectMonthPace uses policy monthly minimum in alert copy", () => {

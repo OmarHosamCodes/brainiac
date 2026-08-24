@@ -21,6 +21,7 @@ import { expandLeaveDays } from "./member-profile-heat";
 import {
   DEFAULT_ALERT_POLICY,
   detectSystemAlerts,
+  alertFingerprintAliases,
   toFiscalCalendar,
   type DaySeconds,
   type DetectedAlert,
@@ -42,6 +43,23 @@ export type MemberProfileAlertRecord = {
   createdAt: string;
   ephemeral: boolean;
 };
+
+function addSuppressedFingerprint(suppressed: Set<string>, fingerprint: string) {
+  for (const alias of alertFingerprintAliases(fingerprint)) {
+    suppressed.add(alias);
+  }
+}
+
+function findDurableByFingerprint(
+  map: Map<string, typeof agencyOpsMemberProfileAlert.$inferSelect>,
+  fingerprint: string,
+) {
+  for (const alias of alertFingerprintAliases(fingerprint)) {
+    const row = map.get(alias);
+    if (row) return row;
+  }
+  return undefined;
+}
 
 function mapAlertPolicy(
   row: typeof agencyOpsMemberProfileAlertPolicy.$inferSelect | undefined,
@@ -264,11 +282,11 @@ export async function listMemberProfileAlerts(
 
   for (const row of durableRows) {
     if (row.status === "removed") {
-      suppressed.add(row.fingerprint);
+      addSuppressedFingerprint(suppressed, row.fingerprint);
       continue;
     }
     if (row.status === "snoozed" && row.snoozedUntil && row.snoozedUntil > now) {
-      suppressed.add(row.fingerprint);
+      addSuppressedFingerprint(suppressed, row.fingerprint);
       continue;
     }
     if (row.status === "snoozed" && (!row.snoozedUntil || row.snoozedUntil <= now)) {
@@ -355,7 +373,7 @@ export async function listMemberProfileAlerts(
   });
 
   for (const alert of detected) {
-    const existing = durableByFingerprint.get(alert.fingerprint);
+    const existing = findDurableByFingerprint(durableByFingerprint, alert.fingerprint);
     if (existing?.status === "removed") continue;
     if (existing?.status === "snoozed" && existing.snoozedUntil && existing.snoozedUntil > now) {
       continue;

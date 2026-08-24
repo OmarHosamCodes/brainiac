@@ -182,7 +182,6 @@ export async function getMemberProfile(
 
   const startDate = localDateKeyFromInstant(rangeStart, input.utcOffsetMinutes);
   const endDate = localDateKeyFromInstant(rangeEnd, input.utcOffsetMinutes);
-  const periodYear = Number(endDate.slice(0, 4));
 
   const [schedule, policyRow] = await Promise.all([
     loadTeamWorkSchedule(input.teamId),
@@ -207,10 +206,9 @@ export async function getMemberProfile(
   });
   const monthStart = periodMonth.startKey;
   const monthEnd = periodMonth.endKey;
-  const calYear = Number(monthStart.slice(0, 4));
 
-  const yearStart = `${Math.min(periodYear, calYear)}-01-01`;
-  const yearEnd = `${Math.max(periodYear, calYear)}-12-31`;
+  const leaveFrom = [startDate, monthStart].sort()[0]!;
+  const leaveTo = [endDate, monthEnd].sort().at(-1)!;
   const weekBounds = getLocalWeekBounds(rangeEnd, input.utcOffsetMinutes, weekStartsOn);
 
   const entryFromKey = [startDate, weekBounds.weekStartKey, monthStart].sort()[0]!;
@@ -265,8 +263,8 @@ export async function getMemberProfile(
         and(
           eq(agencyOpsMemberLeave.teamId, input.teamId),
           or(isNull(agencyOpsMemberLeave.userId), eq(agencyOpsMemberLeave.userId, input.userId)),
-          lte(agencyOpsMemberLeave.startDate, yearEnd),
-          gte(agencyOpsMemberLeave.endDate, yearStart),
+          lte(agencyOpsMemberLeave.startDate, leaveTo),
+          gte(agencyOpsMemberLeave.endDate, leaveFrom),
         ),
       )
       .orderBy(asc(agencyOpsMemberLeave.startDate)),

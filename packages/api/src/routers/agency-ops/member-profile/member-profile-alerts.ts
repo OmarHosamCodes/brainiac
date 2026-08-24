@@ -8,10 +8,7 @@ import {
   type FiscalCalendar,
 } from "../resourcing/tenure-engine";
 import {
-  computeAdjustedExpectations,
-  countOffDaysOnWeekdaysInRange,
-  countWeekdaysInRange,
-  countWorkingDaysInRange,
+  projectPeriodPace,
   type WorkSchedule,
 } from "../resourcing/work-schedule";
 import { addDaysToDateKey } from "../time-tracking/local-week-bounds";
@@ -56,6 +53,19 @@ export const DEFAULT_ALERT_POLICY: MemberProfileAlertPolicy = {
 const ABNORMAL_DAY_LOOKBACK_DAYS = 30;
 const PACE_ELAPSED_GATE = 0.5;
 
+/** Legacy month keys alias to tm:YYYY-MM-01 fingerprints for suppress/upsert continuity. */
+export function alertFingerprintAliases(fingerprint: string): readonly string[] {
+  const monthLegacy = /^month_pace:(\d{4}-\d{2})$/.exec(fingerprint);
+  if (monthLegacy) return [fingerprint, `month_pace:tm:${monthLegacy[1]}-01`];
+  const monthTm = /^month_pace:tm:(\d{4}-\d{2})-01$/.exec(fingerprint);
+  if (monthTm) return [fingerprint, `month_pace:${monthTm[1]}`];
+  const wasteLegacy = /^waste_spike:(\d{4}-\d{2})$/.exec(fingerprint);
+  if (wasteLegacy) return [fingerprint, `waste_spike:tm:${wasteLegacy[1]}-01`];
+  const wasteTm = /^waste_spike:tm:(\d{4}-\d{2})-01$/.exec(fingerprint);
+  if (wasteTm) return [fingerprint, `waste_spike:${wasteTm[1]}`];
+  return [fingerprint];
+}
+
 export function abnormalDayThresholdHours(
   requiredDailyHours: number,
   extraHours: number = DEFAULT_ALERT_POLICY.abnormalDayExtraHours,
@@ -66,23 +76,6 @@ export function abnormalDayThresholdHours(
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 86_400_000);
-}
-
-function offDayKeysFromLeaveByDate(leaveByDate: ReadonlyMap<string, unknown>): ReadonlySet<string> {
-  return new Set(leaveByDate.keys());
-}
-
-function resolveMonthPacePeriod(input: {
-  todayKey: string;
-  tenureEnabled: boolean;
-  fiscalCalendar: FiscalCalendar;
-}): { start: string; end: string; key: string } {
-  const period = resolveProfilePeriodMonth({
-    tenureEnabled: input.tenureEnabled,
-    calendar: input.fiscalCalendar,
-    anchorDateKey: input.todayKey,
-  });
-  return { start: period.startKey, end: period.endKey, key: period.fingerprint };
 }
 
 function secondsInRange(days: DaySeconds[], fromKey: string, toKey: string) {
@@ -152,45 +145,46 @@ export function detectMonthPace(input: {
     fiscalYearStartMonth: 1,
     fiscalYearStartDay: 1,
   });
-  const { start, end, key } = resolveMonthPacePeriod({
-    todayKey: input.todayKey,
+  const period = resolveProfilePeriodMonth({
     tenureEnabled: input.tenureEnabled ?? false,
-    fiscalCalendar,
+    calendar: fiscalCalendar,
+    anchorDateKey: input.todayKey,
   });
-  const elapsedEnd = input.todayKey < end ? input.todayKey : end;
-  const offDayKeys = offDayKeysFromLeaveByDate(input.leaveByDate ?? new Map());
-
-  const monthWorking = countWorkingDaysInRange(start, end, input.schedule, offDayKeys);
-  const elapsedWorking = countWorkingDaysInRange(start, elapsedEnd, input.schedule, offDayKeys);
-  if (monthWorking <= 0 || elapsedWorking / monthWorking < PACE_ELAPSED_GATE) return null;
-
-  const weekdaysInMonth = countWeekdaysInRange(start, end, input.schedule);
-  const offDaysInMonth = countOffDaysOnWeekdaysInRange(start, end, input.schedule, offDayKeys);
-  const { adjustedMinHours } = computeAdjustedExpectations({
-    weekdaysInRange: weekdaysInMonth,
-    offDaysOnWeekdays: offDaysInMonth,
+  const offDayKeys = new Set((input.leaveByDate ?? new Map()).keys());
+  const projection = projectPeriodPace({
+    startKey: period.startKey,
+    endKey: period.endKey,
+    todayKey: input.todayKey,
+    daySeconds: input.days.map((day) => ({
+      dateKey: day.dateKey,
+      totalSeconds: day.totalSeconds,
+    })),
+    schedule: input.schedule,
     baseMinHours: input.monthlyMinHours,
-    requiredDailyHours: input.schedule.requiredDailyHours,
     offDayReduceHours: input.offDayReduceHours,
+    offDayKeys,
   });
-  const monthMinHours = adjustedMinHours;
-  const { total } = secondsInRange(input.days, start, elapsedEnd);
-  const loggedHours = total / 3600;
-  const pacePerDay = elapsedWorking > 0 ? loggedHours / elapsedWorking : 0;
-  const projectedHours = pacePerDay * monthWorking;
-  if (projectedHours >= monthMinHours * (policy.monthPacePercent / 100)) return null;
+  if (
+    !projection ||
+    projection.elapsedWorkingDays / projection.monthWorkingDays < PACE_ELAPSED_GATE
+  ) {
+    return null;
+  }
+  if (projection.projectedHours >= projection.monthMinHours * (policy.monthPacePercent / 100)) {
+    return null;
+  }
 
-  const defaultSnoozeUntil = new Date(`${end}T23:59:59.999Z`);
+  const defaultSnoozeUntil = new Date(`${period.endKey}T23:59:59.999Z`);
   return {
     kind: "month_pace",
-    fingerprint: `month_pace:${key}`,
+    fingerprint: `month_pace:${period.fingerprint}`,
     title: "At risk of missing month minimum",
-    body: `Projected ${Math.round(projectedHours)}h vs ${monthMinHours}h month minimum.`,
+    body: `Projected ${Math.round(projection.projectedHours)}h vs ${projection.monthMinHours}h month minimum.`,
     context: {
-      periodKey: key,
-      loggedHours: Math.round(loggedHours * 10) / 10,
-      projectedHours: Math.round(projectedHours * 10) / 10,
-      requiredHours: monthMinHours,
+      periodKey: period.fingerprint,
+      loggedHours: Math.round(projection.loggedHours * 10) / 10,
+      projectedHours: Math.round(projection.projectedHours * 10) / 10,
+      requiredHours: projection.monthMinHours,
       defaultSnoozeUntil: defaultSnoozeUntil.toISOString(),
     },
     defaultSnoozeUntil,
@@ -214,33 +208,29 @@ export function detectQuarterPace(input: {
   const range = getFiscalQuarterRange(input.calendar, ref.fiscalYear, ref.fiscalQuarter);
   const startKey = range.start.toISOString().slice(0, 10);
   const endKey = addDaysToDateKey(range.end.toISOString().slice(0, 10), -1);
-  const elapsedEnd = input.todayKey < endKey ? input.todayKey : endKey;
-  const offDayKeys = offDayKeysFromLeaveByDate(input.leaveByDate ?? new Map());
-
-  const quarterWorking = countWorkingDaysInRange(startKey, endKey, input.schedule, offDayKeys);
-  const elapsedWorking = countWorkingDaysInRange(startKey, elapsedEnd, input.schedule, offDayKeys);
-  if (quarterWorking <= 0 || elapsedWorking / quarterWorking < PACE_ELAPSED_GATE) return null;
-
-  const weekdaysInQuarter = countWeekdaysInRange(startKey, endKey, input.schedule);
-  const offDaysInQuarter = countOffDaysOnWeekdaysInRange(
+  const offDayKeys = new Set((input.leaveByDate ?? new Map()).keys());
+  const projection = projectPeriodPace({
     startKey,
     endKey,
-    input.schedule,
-    offDayKeys,
-  );
-  const { adjustedMinHours: quarterMinHours } = computeAdjustedExpectations({
-    weekdaysInRange: weekdaysInQuarter,
-    offDaysOnWeekdays: offDaysInQuarter,
+    todayKey: input.todayKey,
+    daySeconds: input.days.map((day) => ({
+      dateKey: day.dateKey,
+      totalSeconds: day.totalSeconds,
+    })),
+    schedule: input.schedule,
     baseMinHours: input.quarterlyMinHours,
-    requiredDailyHours: input.schedule.requiredDailyHours,
     offDayReduceHours: input.offDayReduceHours,
+    offDayKeys,
   });
-
-  const { total } = secondsInRange(input.days, startKey, elapsedEnd);
-  const loggedHours = total / 3600;
-  const pacePerDay = elapsedWorking > 0 ? loggedHours / elapsedWorking : 0;
-  const projectedHours = pacePerDay * quarterWorking;
-  if (projectedHours >= quarterMinHours * (policy.quarterPacePercent / 100)) return null;
+  if (
+    !projection ||
+    projection.elapsedWorkingDays / projection.monthWorkingDays < PACE_ELAPSED_GATE
+  ) {
+    return null;
+  }
+  if (projection.projectedHours >= projection.monthMinHours * (policy.quarterPacePercent / 100)) {
+    return null;
+  }
 
   const periodKey = `${ref.fiscalYear}-Q${ref.fiscalQuarter}`;
   const defaultSnoozeUntil = new Date(range.end.getTime() - 1);
@@ -248,12 +238,12 @@ export function detectQuarterPace(input: {
     kind: "quarter_pace",
     fingerprint: `quarter_pace:${periodKey}`,
     title: "At risk of missing quarter minimum",
-    body: `Projected ${Math.round(projectedHours)}h vs ${quarterMinHours}h quarter minimum.`,
+    body: `Projected ${Math.round(projection.projectedHours)}h vs ${projection.monthMinHours}h quarter minimum.`,
     context: {
       periodKey,
-      loggedHours: Math.round(loggedHours * 10) / 10,
-      projectedHours: Math.round(projectedHours * 10) / 10,
-      requiredHours: quarterMinHours,
+      loggedHours: Math.round(projection.loggedHours * 10) / 10,
+      projectedHours: Math.round(projection.projectedHours * 10) / 10,
+      requiredHours: projection.monthMinHours,
       defaultSnoozeUntil: defaultSnoozeUntil.toISOString(),
     },
     defaultSnoozeUntil,
@@ -274,25 +264,25 @@ export function detectWasteSpike(input: {
     fiscalYearStartMonth: 1,
     fiscalYearStartDay: 1,
   });
-  const { start, end, key } = resolveMonthPacePeriod({
-    todayKey: input.todayKey,
+  const period = resolveProfilePeriodMonth({
     tenureEnabled: input.tenureEnabled ?? false,
-    fiscalCalendar,
+    calendar: fiscalCalendar,
+    anchorDateKey: input.todayKey,
   });
-  const elapsedEnd = input.todayKey < end ? input.todayKey : end;
-  const { total, waste } = secondsInRange(input.days, start, elapsedEnd);
+  const elapsedEnd = input.todayKey < period.endKey ? input.todayKey : period.endKey;
+  const { total, waste } = secondsInRange(input.days, period.startKey, elapsedEnd);
   if (total <= 0) return null;
   const wasteRatio = waste / total;
   if (wasteRatio <= policy.wasteSpikePercent / 100) return null;
 
-  const defaultSnoozeUntil = new Date(`${end}T23:59:59.999Z`);
+  const defaultSnoozeUntil = new Date(`${period.endKey}T23:59:59.999Z`);
   return {
     kind: "waste_spike",
-    fingerprint: `waste_spike:${key}`,
+    fingerprint: `waste_spike:${period.fingerprint}`,
     title: "High waste this month",
     body: `${Math.round(wasteRatio * 100)}% of logged time marked waste.`,
     context: {
-      periodKey: key,
+      periodKey: period.fingerprint,
       wasteRatio: Math.round(wasteRatio * 1000) / 1000,
       loggedHours: Math.round((total / 3600) * 10) / 10,
       defaultSnoozeUntil: defaultSnoozeUntil.toISOString(),
