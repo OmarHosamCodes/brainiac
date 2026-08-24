@@ -1,6 +1,10 @@
-import { ChevronDown } from "lucide-react";
-
 import type { MemberProfileAlertsViewModel } from "@/features/member-profile/hooks/use-member-profile-alerts";
+import { AlertPlateGlyph } from "@/features/member-profile/member-profile-alert-glyphs";
+import type { AlertPlateTone } from "@/features/member-profile/member-profile-alert-plate";
+import {
+  instrumentPlateToneClass,
+  type InstrumentPlateTone,
+} from "@/features/member-profile/member-profile-instrument-plate";
 import {
   agencyFocusRingClass,
   agencyFormFieldClass,
@@ -11,7 +15,6 @@ import {
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
-import { Collapsible, CollapsibleContent } from "@/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -27,26 +30,73 @@ import { Textarea } from "@/ui/textarea";
 
 const profilePanelClass = "rounded-xl border border-border bg-card";
 
-function alertSeverityDotClass(severity: "warning" | "danger" | "info") {
-  switch (severity) {
-    case "danger":
-      return "bg-destructive";
-    case "warning":
-      return "bg-warning";
-    case "info":
-      return "bg-muted-foreground/50";
-    default: {
-      const _exhaustive: never = severity;
-      return _exhaustive;
-    }
-  }
-}
+type AlertItem = MemberProfileAlertsViewModel["items"][number];
 
 type Props = {
   alerts: MemberProfileAlertsViewModel;
 };
 
+function alertToneToInstrument(tone: AlertPlateTone): InstrumentPlateTone {
+  return tone;
+}
+
+function AlertStripRow({ alert, onOpen }: { alert: AlertItem; onOpen: () => void }) {
+  const { plate } = alert;
+  const colors = instrumentPlateToneClass(alertToneToInstrument(plate.tone));
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-start",
+        "transition-[colors,transform] duration-150 ease-out",
+        "motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.995]",
+        agencyFocusRingClass,
+        colors.plate,
+      )}
+      aria-label={`${alert.title}. ${alert.body}`}
+    >
+      <div className={cn("h-7 w-14 shrink-0", colors.ink)}>
+        <AlertPlateGlyph
+          kind={alert.kind}
+          ratio={plate.chartRatio}
+          className="h-full w-full"
+        />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-pretty text-foreground">{alert.title}</p>
+        <p className={cn(agencyWorkMetaClass, "mt-0.5 line-clamp-2 text-pretty tabular-nums")}>
+          {alert.body}
+        </p>
+        <p className={cn(agencyWorkMetaClass, "mt-1 text-foreground/60")}>
+          {alert.kindLabel}
+          <span aria-hidden> · </span>
+          {alert.sourceLabel}
+        </p>
+      </div>
+
+      <div className={cn("shrink-0 text-end leading-none", colors.ink)}>
+        <span
+          className={cn(
+            "block font-mono font-semibold tracking-tight tabular-nums",
+            plate.metric.length > 8 ? "text-lg" : plate.metric.length > 6 ? "text-xl" : "text-2xl",
+          )}
+        >
+          {plate.metric}
+        </span>
+        <span className="mt-1 block max-w-[5.5rem] text-[0.625rem] font-semibold uppercase tracking-[0.12em] opacity-90">
+          {plate.shortLabel}
+        </span>
+      </div>
+    </button>
+  );
+}
+
 export function MemberProfileAlertsPanel({ alerts }: Props) {
+  const detail = alerts.detailAlert;
+
   return (
     <>
       <section className={cn(profilePanelClass, "p-4")} aria-labelledby="member-profile-alerts">
@@ -69,212 +119,160 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
               className={cn(agencyFocusRingClass, "shrink-0")}
               onClick={() => alerts.setDialogOpen(true)}
             >
-              Add
+              Add alert
             </Button>
           ) : null}
         </div>
 
         {alerts.loading ? (
-          <div className="mt-3 space-y-3" aria-busy="true" aria-label="Loading alerts">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
+          <div className="mt-3 space-y-2" aria-busy="true" aria-label="Loading alerts">
+            <Skeleton className="h-[4.75rem] w-full rounded-xl" />
+            <Skeleton className="h-[4.75rem] w-full rounded-xl" />
           </div>
         ) : alerts.items.length === 0 ? (
-          <div className="mt-3 space-y-1">
-            <p className="text-sm text-foreground">All clear</p>
+          <div className="mt-3 space-y-1 py-2">
+            <p className="text-sm font-medium text-foreground">No open alerts</p>
             <p className={agencyWorkMetaClass}>
               {alerts.canManage
-                ? "Pace and hours look fine. Add an alert when something needs a note."
-                : "No open alerts for this member."}
+                ? "Pace and hours look fine for this member. Add an alert when something needs a follow-up."
+                : "Nothing needs your attention on this profile right now."}
             </p>
           </div>
         ) : (
-          <ul className="mt-2 divide-y divide-border">
-            {alerts.items.map((alert) => {
-              const rowId = `member-alert-${alert.id}`;
-              const noteId = `member-alert-note-${alert.id}`;
-              const heading = (
-                <>
-                  <p className="text-sm font-medium text-pretty text-foreground">{alert.title}</p>
-                  <p className={cn(agencyWorkMetaClass, "mt-0.5 text-pretty")}>
-                    <span className="text-foreground/70">{alert.kindLabel}</span>
-                    <span aria-hidden> · </span>
-                    {alert.sourceLabel}
-                    {alert.sentLabel ? (
-                      <>
-                        <span aria-hidden> · </span>
-                        {alert.sentLabel}
-                      </>
-                    ) : null}
-                  </p>
-                </>
-              );
-              const periodBody = alert.canOpenPeriod ? (
-                <button
-                  type="button"
-                  className={cn(
-                    agencyWorkMetaClass,
-                    "mt-1 block w-full rounded-md text-start text-pretty underline-offset-2",
-                    "text-foreground/85 underline decoration-foreground/30",
-                    agencyFocusRingClass,
-                    "hover:text-foreground hover:decoration-foreground/55",
-                    "motion-reduce:transition-none",
-                  )}
-                  aria-label={`Show activity for: ${alert.body}`}
-                  onClick={() => alerts.openPeriod(alert.id)}
-                >
-                  {alert.body}
-                </button>
-              ) : (
-                <p className={cn(agencyWorkMetaClass, "mt-1 text-pretty")}>{alert.body}</p>
-              );
-
-              return (
-                <li key={alert.id} className="py-3 first:pt-2">
-                  <div className="flex items-start gap-2.5">
-                    <span
-                      className={cn(
-                        "mt-1.5 size-1.5 shrink-0 rounded-full",
-                        alertSeverityDotClass(alert.severity),
-                      )}
-                      aria-hidden
-                    />
-                    <div className="min-w-0 flex-1">
-                      {alerts.canManage ? (
-                        <Collapsible
-                          open={alert.expanded}
-                          onOpenChange={(open) => alerts.setExpandedAlertId(open ? alert.id : null)}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <button
-                              type="button"
-                              id={rowId}
-                              className={cn(
-                                "min-w-0 flex-1 rounded-md text-start transition-colors",
-                                agencyFocusRingClass,
-                                "hover:bg-muted/40 focus-visible:bg-muted/40",
-                                "motion-reduce:transition-none",
-                              )}
-                              aria-expanded={alert.expanded}
-                              aria-controls={`${rowId}-panel`}
-                              onClick={() =>
-                                alerts.setExpandedAlertId(alert.expanded ? null : alert.id)
-                              }
-                            >
-                              {heading}
-                            </button>
-                            <ChevronDown
-                              className={cn(
-                                "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform duration-200 ease-out",
-                                "motion-reduce:transition-none",
-                                alert.expanded && "rotate-180",
-                              )}
-                              aria-hidden
-                            />
-                          </div>
-                          {periodBody}
-                          <CollapsibleContent id={`${rowId}-panel`} className="mt-3">
-                            <div className="space-y-2.5 rounded-lg bg-muted/35 p-2.5">
-                              <Label htmlFor={noteId} className={agencyFormLabelClass}>
-                                Note to member
-                              </Label>
-                              <Textarea
-                                id={noteId}
-                                value={alert.note}
-                                placeholder="What should they change or know?"
-                                rows={2}
-                                className="min-h-16 resize-none bg-background"
-                                onChange={(event) =>
-                                  alerts.setNoteDraft(alert.id, event.target.value)
-                                }
-                              />
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  className={agencyFocusRingClass}
-                                  disabled={alerts.pending || !alert.note.trim()}
-                                  onClick={() => void alerts.send(alert.id)}
-                                >
-                                  Notify
-                                </Button>
-                                {alert.canSnooze ? (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    className={agencyFocusRingClass}
-                                    disabled={alerts.pending}
-                                    onClick={() => void alerts.snooze(alert.id)}
-                                  >
-                                    Snooze
-                                  </Button>
-                                ) : null}
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className={agencyFocusRingClass}
-                                  disabled={alerts.pending}
-                                  onClick={() => void alerts.remove(alert.id)}
-                                >
-                                  Dismiss
-                                </Button>
-                              </div>
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ) : (
-                        <div>
-                          {heading}
-                          {periodBody}
-                          {alert.note.trim() ? (
-                            <p className={cn(agencyWorkMetaClass, "mt-2 text-pretty")}>
-                              Note: {alert.note}
-                            </p>
-                          ) : null}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
+          <ul className="mt-3 flex list-none flex-col gap-2 p-0">
+            {alerts.items.map((alert) => (
+              <li key={alert.id} className="min-w-0">
+                <AlertStripRow alert={alert} onOpen={() => alerts.openDetail(alert.id)} />
+              </li>
+            ))}
           </ul>
         )}
       </section>
+
+      <Dialog
+        open={detail !== null}
+        onOpenChange={(open) => {
+          if (!open) alerts.closeDetail();
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          {detail ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{detail.title}</DialogTitle>
+                <DialogDescription className="text-pretty tabular-nums">{detail.body}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3">
+                {detail.canOpenPeriod ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn("w-full", agencyFocusRingClass)}
+                    onClick={() => {
+                      alerts.openPeriod(detail.id);
+                      alerts.closeDetail();
+                    }}
+                  >
+                    View time entries for this period
+                  </Button>
+                ) : null}
+
+                {alerts.canManage ? (
+                  <div className="space-y-2 border-t border-border pt-3">
+                    {detail.sentLabel ? (
+                      <p className={agencyWorkMetaClass}>{detail.sentLabel}</p>
+                    ) : null}
+                    <div className={agencyFormFieldClass}>
+                      <Label htmlFor="member-alert-detail-note" className={agencyFormLabelClass}>
+                        Message to member
+                      </Label>
+                      <Textarea
+                        id="member-alert-detail-note"
+                        value={detail.note}
+                        placeholder="Explain what they should change or follow up on."
+                        rows={2}
+                        className="min-h-16 resize-none"
+                        onChange={(event) => alerts.setNoteDraft(detail.id, event.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className={agencyFocusRingClass}
+                        disabled={alerts.pending || !detail.note.trim()}
+                        onClick={() => void alerts.send(detail.id)}
+                      >
+                        Send notification
+                      </Button>
+                      {detail.canSnooze ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className={agencyFocusRingClass}
+                          disabled={alerts.pending}
+                          onClick={() => void alerts.snooze(detail.id)}
+                        >
+                          Snooze for this period
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className={agencyFocusRingClass}
+                        disabled={alerts.pending}
+                        onClick={() => void alerts.remove(detail.id)}
+                      >
+                        Dismiss alert
+                      </Button>
+                    </div>
+                  </div>
+                ) : detail.note.trim() ? (
+                  <p className={cn(agencyWorkMetaClass, "text-pretty")}>
+                    Manager note: {detail.note}
+                  </p>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={alerts.dialogOpen} onOpenChange={alerts.setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add alert</DialogTitle>
             <DialogDescription>
-              Put something on the record for this member. Notify them when you are ready.
+              Record a follow-up for this member. You can send them a notification after you save
+              it.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
             <div className={agencyFormFieldClass}>
               <Label htmlFor="member-alert-title" className={agencyFormLabelClass}>
-                Title
+                Alert title
               </Label>
               <Input
                 id="member-alert-title"
                 value={alerts.draft.title}
                 onChange={(e) => alerts.setDraft({ title: e.target.value })}
-                placeholder="Follow up on capacity"
+                placeholder="Follow up on month pace"
                 autoFocus
               />
             </div>
             <div className={agencyFormFieldClass}>
               <Label htmlFor="member-alert-note" className={agencyFormLabelClass}>
-                Note
+                Note (optional)
               </Label>
               <Textarea
                 id="member-alert-note"
                 value={alerts.draft.note}
                 onChange={(e) => alerts.setDraft({ note: e.target.value })}
                 rows={3}
-                placeholder="Optional — what should they know?"
+                placeholder="Add context for your team or the member."
               />
             </div>
           </div>
@@ -287,7 +285,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
               disabled={alerts.pending || !alerts.draft.title.trim()}
               onClick={() => void alerts.submit()}
             >
-              Add alert
+              Save alert
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -164,6 +164,8 @@ function FeedActivityRow({
   );
 }
 
+const DAY_RAIL_SCROLL_STEP_PX = 160;
+
 export function MemberProfileActivityRails({
   teamId,
   days,
@@ -172,8 +174,10 @@ export function MemberProfileActivityRails({
 }: Props) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const feedRef = useRef<HTMLDivElement>(null);
-  const navRef = useRef<HTMLElement>(null);
+  const navRailRef = useRef<HTMLDivElement>(null);
+  const navScrollRef = useRef<HTMLDivElement>(null);
   const [currentDate, setCurrentDate] = useState(days[0]?.date ?? "");
+  const [navEdges, setNavEdges] = useState({ canScrollLeft: false, canScrollRight: false });
   const liveStatusRef = useRef<HTMLParagraphElement>(null);
   const [details, setDetails] = useState<{
     title: string;
@@ -198,12 +202,12 @@ export function MemberProfileActivityRails({
 
   useEffect(() => {
     const feed = feedRef.current;
-    const nav = navRef.current;
-    if (!feed || !nav || daysWithMerged.length === 0) return;
+    const navRail = navRailRef.current;
+    if (!feed || !navRail || daysWithMerged.length === 0) return;
 
     let ticking = false;
     const syncCurrentDay = () => {
-      const marker = feed.scrollTop + nav.offsetHeight + 32;
+      const marker = feed.scrollTop + navRail.offsetHeight + 32;
       let current = daysWithMerged[0]?.date ?? "";
       for (const day of daysWithMerged) {
         const el = document.getElementById(`member-profile-day-${day.date}`);
@@ -225,14 +229,54 @@ export function MemberProfileActivityRails({
     return () => feed.removeEventListener("scroll", onScroll);
   }, [daysWithMerged]);
 
+  useEffect(() => {
+    const navScroll = navScrollRef.current;
+    if (!navScroll) return;
+
+    const updateNavEdges = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = navScroll;
+      setNavEdges({
+        canScrollLeft: scrollLeft > 4,
+        canScrollRight: scrollLeft + clientWidth < scrollWidth - 4,
+      });
+    };
+
+    updateNavEdges();
+    navScroll.addEventListener("scroll", updateNavEdges, { passive: true });
+    const observer = new ResizeObserver(updateNavEdges);
+    observer.observe(navScroll);
+    return () => {
+      navScroll.removeEventListener("scroll", updateNavEdges);
+      observer.disconnect();
+    };
+  }, [daysWithMerged]);
+
+  useEffect(() => {
+    const navScroll = navScrollRef.current;
+    if (!navScroll || !currentDate) return;
+    const active = navScroll.querySelector<HTMLElement>(`[data-day="${currentDate}"]`);
+    active?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }, [currentDate, prefersReducedMotion]);
+
+  function scrollDayRail(direction: -1 | 1) {
+    navScrollRef.current?.scrollBy({
+      left: direction * DAY_RAIL_SCROLL_STEP_PX,
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
+  }
+
   function jumpToDay(date: string) {
     const feed = feedRef.current;
-    const nav = navRef.current;
+    const navRail = navRailRef.current;
     const target = document.getElementById(`member-profile-day-${date}`);
-    if (!feed || !nav || !target) return;
+    if (!feed || !navRail || !target) return;
     setCurrentDate(date);
     feed.scrollTo({
-      top: Math.max(0, target.offsetTop - nav.offsetHeight),
+      top: Math.max(0, target.offsetTop - navRail.offsetHeight),
       behavior: prefersReducedMotion ? "auto" : "smooth",
     });
     const parts = dayRailParts(date);
@@ -259,42 +303,101 @@ export function MemberProfileActivityRails({
           ref={feedRef}
           tabIndex={0}
           className={cn(
-            "relative max-h-[min(28rem,calc(100vh-12rem))] overflow-y-auto overscroll-contain",
+            "relative min-w-0 max-h-[min(28rem,calc(100vh-12rem))] overflow-x-hidden overflow-y-auto overscroll-contain",
             "scroll-smooth motion-reduce:scroll-auto",
             "[scrollbar-gutter:stable]",
           )}
           aria-label="Activity and reviews by day"
         >
-          <nav
-            ref={navRef}
-            className="sticky top-0 z-10 flex gap-1 border-b border-border bg-card/95 px-3 py-2 backdrop-blur-sm supports-backdrop-filter:bg-card/80"
-            aria-label="Jump to activity day"
+          <div
+            ref={navRailRef}
+            className={cn(
+              "sticky top-0 z-10 border-b border-border bg-card/95 backdrop-blur-sm supports-backdrop-filter:bg-card/80",
+            )}
           >
-            {daysWithMerged.map((day) => {
-              const parts = dayRailParts(day.date);
-              const current = day.date === currentDate;
-              return (
-                <button
-                  key={day.date}
-                  type="button"
+            <nav className="relative flex items-stretch" aria-label="Jump to activity day">
+              <button
+                type="button"
+                aria-label="Scroll to earlier days"
+                disabled={!navEdges.canScrollLeft}
+                className={cn(
+                  "flex w-7 shrink-0 items-center justify-center text-muted-foreground transition-opacity duration-150",
+                  agencyFocusRingClass,
+                  "motion-reduce:transition-none",
+                  !navEdges.canScrollLeft && "pointer-events-none opacity-0",
+                )}
+                onClick={() => scrollDayRail(-1)}
+              >
+                <ChevronLeft className="size-4" aria-hidden />
+              </button>
+
+              <div className="relative min-w-0 flex-1">
+                <div
+                  ref={navScrollRef}
                   className={cn(
-                    "inline-flex min-h-8 items-center rounded-md px-2.5 font-mono text-[11px] tracking-wide transition-colors duration-150",
-                    agencyFocusRingClass,
-                    "motion-reduce:transition-none",
-                    day.date === highlightDate
-                      ? "border border-primary/40 bg-primary/10 text-foreground"
-                      : current
-                        ? "border border-border bg-muted text-foreground"
-                        : "border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                    "flex flex-nowrap gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain py-2",
+                    "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
                   )}
-                  aria-current={current || day.date === highlightDate ? "true" : undefined}
-                  onClick={() => jumpToDay(day.date)}
                 >
-                  {parts.tabLabel}
-                </button>
-              );
-            })}
-          </nav>
+                  {daysWithMerged.map((day) => {
+                    const parts = dayRailParts(day.date);
+                    const current = day.date === currentDate;
+                    return (
+                      <button
+                        key={day.date}
+                        type="button"
+                        data-day={day.date}
+                        className={cn(
+                          "inline-flex min-h-8 shrink-0 items-center whitespace-nowrap rounded-md px-2.5 font-mono text-[11px] tracking-wide transition-colors duration-150",
+                          agencyFocusRingClass,
+                          "motion-reduce:transition-none",
+                          day.date === highlightDate
+                            ? "border border-primary/40 bg-primary/10 text-foreground"
+                            : current
+                              ? "border border-border bg-muted text-foreground"
+                              : "border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                        )}
+                        aria-current={current || day.date === highlightDate ? "true" : undefined}
+                        onClick={() => jumpToDay(day.date)}
+                      >
+                        {parts.tabLabel}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div
+                  aria-hidden
+                  className={cn(
+                    "pointer-events-none absolute inset-y-0 left-0 z-[1] w-8 bg-gradient-to-r from-card/95 to-transparent transition-opacity duration-150 motion-reduce:transition-none",
+                    navEdges.canScrollLeft ? "opacity-100" : "opacity-0",
+                  )}
+                />
+                <div
+                  aria-hidden
+                  className={cn(
+                    "pointer-events-none absolute inset-y-0 right-0 z-[1] w-8 bg-gradient-to-l from-card/95 to-transparent transition-opacity duration-150 motion-reduce:transition-none",
+                    navEdges.canScrollRight ? "opacity-100" : "opacity-0",
+                  )}
+                />
+              </div>
+
+              <button
+                type="button"
+                aria-label="Scroll to later days"
+                disabled={!navEdges.canScrollRight}
+                className={cn(
+                  "flex w-7 shrink-0 items-center justify-center text-muted-foreground transition-opacity duration-150",
+                  agencyFocusRingClass,
+                  "motion-reduce:transition-none",
+                  !navEdges.canScrollRight && "pointer-events-none opacity-0",
+                )}
+                onClick={() => scrollDayRail(1)}
+              >
+                <ChevronRight className="size-4" aria-hidden />
+              </button>
+            </nav>
+          </div>
 
           {daysWithMerged.map((day) => {
             const parts = dayRailParts(day.date);

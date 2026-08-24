@@ -3,6 +3,10 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
+  buildAlertPlate,
+  type AlertPlateModel,
+} from "@/features/member-profile/member-profile-alert-plate";
+import {
   resolveAlertPeriodTarget,
   type AlertPeriodTarget,
 } from "@/features/member-profile/member-profile-alert-period";
@@ -29,14 +33,17 @@ export type MemberProfileAlertsViewModel = {
     sentLabel: string | null;
     severity: "warning" | "danger" | "info";
     canSnooze: boolean;
-    expanded: boolean;
     canOpenPeriod: boolean;
+    plate: AlertPlateModel;
   }>;
+  detailAlertId: string | null;
+  detailAlert: MemberProfileAlertsViewModel["items"][number] | null;
   dialogOpen: boolean;
   draft: { title: string; note: string };
   setDialogOpen: (open: boolean) => void;
   setDraft: (patch: Partial<{ title: string; note: string }>) => void;
-  setExpandedAlertId: (alertId: string | null) => void;
+  openDetail: (alertId: string) => void;
+  closeDetail: () => void;
   setNoteDraft: (alertId: string, note: string) => void;
   openPeriod: (alertId: string) => void;
   refetch: () => void;
@@ -94,7 +101,7 @@ export function useMemberProfileAlerts(input: {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [draft, setDraftState] = useState({ title: "", note: "" });
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
-  const [expandedAlertId, setExpandedAlertId] = useState<string | null>(null);
+  const [detailAlertId, setDetailAlertId] = useState<string | null>(null);
 
   const alertsQuery = useQuery({
     ...orpc.agencyOps.memberProfile.alerts.list.queryOptions({
@@ -119,11 +126,10 @@ export function useMemberProfileAlerts(input: {
     const data = alertsQuery.data;
     const rawItems = data?.items ?? [];
     const canManage = data?.canManageAlerts ?? false;
-    const effectiveExpandedId =
-      expandedAlertId ?? (canManage && rawItems.length === 1 ? (rawItems[0]?.id ?? null) : null);
     const items = rawItems.map((item) => {
       const noteDraft = noteDrafts[item.id] ?? item.note ?? "";
       const sentAt = item.sentAt ? new Date(item.sentAt) : null;
+      const context = item.context ?? {};
       return {
         id: item.id,
         kind: item.kind,
@@ -142,17 +148,20 @@ export function useMemberProfileAlerts(input: {
             : null,
         severity: alertSeverity(item.kind),
         canSnooze: item.source === "system",
-        expanded: effectiveExpandedId === item.id,
-        canOpenPeriod: resolveAlertPeriodTarget(item.context ?? {}) !== null,
+        canOpenPeriod: resolveAlertPeriodTarget(context) !== null,
+        plate: buildAlertPlate(item.kind, context, { title: item.title }),
       };
     });
+    const detailAlert = items.find((item) => item.id === detailAlertId) ?? null;
     return {
       canManage,
       loading: alertsQuery.isLoading && !data,
       countLabel: items.length > 0 ? String(items.length) : null,
       items,
+      detailAlertId,
+      detailAlert,
     };
-  }, [alertsQuery.data, alertsQuery.isLoading, expandedAlertId, noteDrafts]);
+  }, [alertsQuery.data, alertsQuery.isLoading, detailAlertId, noteDrafts]);
 
   return {
     ...view,
@@ -166,7 +175,12 @@ export function useMemberProfileAlerts(input: {
     setDraft(patch) {
       setDraftState((prev) => ({ ...prev, ...patch }));
     },
-    setExpandedAlertId,
+    openDetail(alertId) {
+      setDetailAlertId(alertId);
+    },
+    closeDetail() {
+      setDetailAlertId(null);
+    },
     setNoteDraft(alertId, note) {
       setNoteDrafts((prev) => ({ ...prev, [alertId]: note }));
     },
@@ -231,7 +245,7 @@ export function useMemberProfileAlerts(input: {
           alertId,
         });
         toast.success("Alert dismissed");
-        if (expandedAlertId === alertId) setExpandedAlertId(null);
+        if (detailAlertId === alertId) setDetailAlertId(null);
         await invalidateAlerts();
       } catch {
         toast.error("Couldn't dismiss alert");
@@ -246,7 +260,7 @@ export function useMemberProfileAlerts(input: {
           alertId,
         });
         toast.success("Alert snoozed for this period");
-        if (expandedAlertId === alertId) setExpandedAlertId(null);
+        if (detailAlertId === alertId) setDetailAlertId(null);
         await invalidateAlerts();
       } catch {
         toast.error("Couldn't snooze alert");

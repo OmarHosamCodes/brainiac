@@ -1,6 +1,5 @@
 import {
   CalendarOff,
-  ChevronLeft,
   ChevronRight,
   Mail,
   MapPin,
@@ -10,7 +9,7 @@ import {
 } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
-import { shellConfirmInClass, shellStaggerItemClass } from "@/features/app-shell/app-shell-ui";
+import { shellStaggerItemClass } from "@/features/app-shell/app-shell-ui";
 import { RangePresetChooser } from "@/features/shared/command-bar/range-preset-chooser";
 import { MemberProfileActivityRails } from "@/features/member-profile/member-profile-activity-rails";
 import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
@@ -20,9 +19,14 @@ import {
 } from "@/features/shared/date/member-profile-leave-range-picker";
 import type { AgencyMemberProfileViewModel } from "@/features/member-profile/hooks/use-agency-member-profile";
 import { MemberProfileAlertsPanel } from "@/features/member-profile/member-profile-alerts-view";
+import {
+  gaugeToneToPlateTone,
+  InstrumentPlate,
+  statPlateShortLabel,
+  StatPlateGlyph,
+} from "@/features/member-profile/member-profile-instrument-plate";
 import { MemberProfileRosterSwitcher } from "@/features/member-profile/member-profile-roster-switcher";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
-import { MemberProfileHeatMap } from "@/features/shared/heat/member-profile-heat-map";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -37,7 +41,6 @@ import { agencyCommandBarShellClass } from "@/features/shared/command-bar/agency
 import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
-import { Collapsible, CollapsibleContent } from "@/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -75,50 +78,130 @@ function safeHttpUrl(value: string | null | undefined): string | null {
   }
 }
 
+function OrchAgentGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} aria-hidden>
+      <circle
+        cx="16"
+        cy="16"
+        r="12"
+        fill="none"
+        className="stroke-current opacity-30"
+        strokeWidth="1.25"
+      />
+      <circle
+        cx="16"
+        cy="16"
+        r="7"
+        fill="none"
+        className="stroke-current opacity-45"
+        strokeWidth="1.25"
+        strokeDasharray="2 3"
+      />
+      <circle cx="16" cy="16" r="3.25" className="fill-current" />
+      <line
+        x1="16"
+        y1="3"
+        x2="16"
+        y2="6.5"
+        className="stroke-current opacity-55"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <line
+        x1="16"
+        y1="25.5"
+        x2="16"
+        y2="29"
+        className="stroke-current opacity-35"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function AskOrchRailCard({
+  memberName,
+  periodLabel,
+  onAsk,
+}: {
+  memberName: string;
+  periodLabel: string;
+  onAsk: () => void;
+}) {
+  const subject = memberName.trim() || "this member";
+
+  return (
+    <button
+      type="button"
+      onClick={onAsk}
+      className={cn(
+        profilePanelClass,
+        "group flex w-full items-center gap-3 px-3 py-3 text-start",
+        "border-chart-2/20 bg-chart-2/[0.04]",
+        "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
+        "hover:border-chart-2/35 hover:bg-chart-2/10 hover:shadow-[0_0_0_1px_color-mix(in_oklch,var(--chart-2)_12%,transparent)]",
+        agencyFocusRingClass,
+        "motion-reduce:transition-none",
+      )}
+      aria-label={`Summarize ${subject}'s hours, attendance, and waste for ${periodLabel}`}
+    >
+      <span
+        className={cn(
+          "grid size-10 shrink-0 place-items-center rounded-lg",
+          "bg-chart-2/12 text-chart-2 ring-1 ring-chart-2/25",
+          "transition-colors group-hover:bg-chart-2/18",
+          "motion-reduce:transition-none",
+        )}
+        aria-hidden
+      >
+        <OrchAgentGlyph className="size-5" />
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-foreground">Summarize with Orch</span>
+        <span className={cn(agencyWorkMetaClass, "mt-0.5 block truncate tabular-nums")}>
+          {periodLabel}
+          <span aria-hidden> · </span>
+          hours · attendance · waste
+        </span>
+      </span>
+
+      <ChevronRight
+        className={cn(
+          "size-4 shrink-0 text-muted-foreground/70",
+          "transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:text-chart-2",
+          "motion-reduce:transition-none motion-reduce:group-hover:translate-x-0",
+        )}
+        aria-hidden
+      />
+    </button>
+  );
+}
+
 type Props = {
   viewModel: AgencyMemberProfileViewModel;
 };
 
-function ProfileStatCard({
-  label,
-  valueLabel,
-  secondary,
-  ratio,
-  tone,
-}: {
-  label: string;
-  valueLabel: string;
-  secondary: string;
-  ratio: number;
-  tone: "success" | "warning" | "foreground";
-}) {
-  const angle = Math.round(Math.min(1, Math.max(0, ratio)) * 360);
-  const ringColor =
-    tone === "success"
-      ? "var(--success)"
-      : tone === "warning"
-        ? "var(--warning)"
-        : "var(--foreground)";
+type LeaveGauge = NonNullable<AgencyMemberProfileViewModel["profile"]>["leaveGauges"][number];
+
+function ProfileStatPlate({ gauge }: { gauge: LeaveGauge }) {
+  const plateTone = gaugeToneToPlateTone(gauge.tone);
   return (
-    <div className={cn(profilePanelClass, "flex items-center gap-3 p-3.5")}>
-      <div
-        className="relative grid size-16 shrink-0 place-items-center rounded-full"
-        style={{
-          background: `conic-gradient(${ringColor} 0 ${angle}deg, var(--muted) ${angle}deg 360deg)`,
-        }}
-        role="img"
-        aria-label={`${label}: ${valueLabel}`}
-      >
-        <div className="absolute inset-2 rounded-full bg-card" />
-        <span className="relative max-w-12 truncate px-0.5 text-center font-mono text-[11px] font-semibold tabular-nums text-foreground">
-          {valueLabel}
-        </span>
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="truncate text-xs text-muted-foreground">{secondary}</p>
-      </div>
-    </div>
+    <InstrumentPlate
+      tone={plateTone}
+      metric={gauge.valueLabel}
+      shortLabel={statPlateShortLabel(gauge.key)}
+      ariaLabel={`${gauge.label}: ${gauge.valueLabel}. ${gauge.secondary}`}
+      glyph={
+        <StatPlateGlyph
+          plateKey={gauge.key}
+          ratio={gauge.ratio}
+          className="h-full w-full"
+        />
+      }
+    />
   );
 }
 
@@ -367,81 +450,11 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
             className={cn("min-w-0 space-y-5", shellStaggerItemClass)}
             style={{ "--stagger-i": 2 } as CSSProperties}
           >
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
               {profile.leaveGauges.map((gauge) => (
-                <ProfileStatCard
-                  key={gauge.key}
-                  label={gauge.label}
-                  valueLabel={gauge.valueLabel}
-                  secondary={gauge.secondary}
-                  ratio={gauge.ratio}
-                  tone={gauge.tone}
-                />
+                <ProfileStatPlate key={gauge.key} gauge={gauge} />
               ))}
             </div>
-
-            <section className={cn(profilePanelClass, "p-4 sm:p-5")}>
-              <h2 className={agencyWorkTitleClass}>Contribution</h2>
-              <div className="mt-4">
-                <MemberProfileHeatMap
-                  heatMap={profile.heatMap}
-                  layout={profile.heatLayout}
-                  onFocusDay={viewModel.focusDay}
-                  selectedDate={profile.selectedHeatDate}
-                  weekStartsOn={period.weekStartsOn}
-                />
-              </div>
-              <Collapsible open={profile.weekHours.length > 0}>
-                <CollapsibleContent className="overflow-hidden motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:slide-in-from-top-1 motion-safe:data-[state=open]:duration-180">
-                  <div className="mt-4 border-t border-border pt-4">
-                    <div className="flex flex-wrap items-end justify-between gap-3">
-                      <div>
-                        <h3 className={agencyWorkTitleClass}>Hours logged</h3>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {profile.weekHoursCaption}
-                        </p>
-                      </div>
-                      <p
-                        key={profile.weekHoursTotalLabel}
-                        className={cn(agencyMetricClass, "text-lg", shellConfirmInClass)}
-                      >
-                        {profile.weekHoursTotalLabel}
-                      </p>
-                    </div>
-                    <div className="mt-4 flex items-end justify-between gap-2">
-                      {profile.weekHours.map((day) => (
-                        <button
-                          key={day.date}
-                          type="button"
-                          className={cn(
-                            "flex min-w-0 flex-1 flex-col items-center rounded-lg px-0.5 py-1 transition-colors hover:bg-muted/50",
-                            agencyFocusRingClass,
-                            day.date === profile.selectedHeatDate && "bg-muted/60",
-                          )}
-                          onClick={() => viewModel.focusDay(day.date)}
-                        >
-                          <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
-                            {day.hoursLabel}
-                          </span>
-                          <span
-                            className="mt-1.5 flex h-16 w-6 items-end overflow-hidden rounded-t-md rounded-b-sm bg-muted"
-                            aria-hidden
-                          >
-                            <span
-                              className="w-full rounded-t-[5px] rounded-b-sm bg-foreground transition-[height] duration-200 ease-out motion-reduce:transition-none"
-                              style={{ height: `${day.heightPct}%` }}
-                            />
-                          </span>
-                          <span className="mt-1.5 text-[11px] text-muted-foreground">
-                            {day.weekdayLabel}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </section>
 
             <MemberProfileAlertsPanel alerts={viewModel.alerts} />
 
@@ -467,32 +480,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
             style={{ "--stagger-i": 3 } as CSSProperties}
           >
             <section className={cn(profilePanelClass, "p-4")}>
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className={cn("shrink-0", agencyFocusRingClass)}
-                  onClick={profile.calendar.onPrevMonth}
-                  aria-label="Previous month"
-                >
-                  <ChevronLeft className="size-4" />
-                </Button>
-                <h2 className={cn(agencyWorkTitleClass, "min-w-0 flex-1 text-center")}>
-                  {profile.calendar.label}
-                </h2>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className={cn("shrink-0", agencyFocusRingClass)}
-                  onClick={profile.calendar.onNextMonth}
-                  aria-label="Next month"
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
-              <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
+              <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
                 {profile.calendar.weekdayLabels.map((label, index) => (
                   <span key={`${label}-${index}`}>{label}</span>
                 ))}
@@ -585,27 +573,11 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
               </div>
             </section>
 
-            <section
-              className={cn(profilePanelClass, "p-4")}
-              aria-labelledby="member-profile-ask-orch"
-            >
-              <h2 id="member-profile-ask-orch" className={agencyWorkTitleClass}>
-                Ask Orch
-              </h2>
-              <p className={cn(agencyWorkMetaClass, "mt-2 text-pretty")}>
-                Get a quick read on this member’s hours, attendance, and waste for the selected
-                period.
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={viewModel.askOrchAboutMember}
-              >
-                Ask about this member
-              </Button>
-            </section>
+            <AskOrchRailCard
+              memberName={profile.userName}
+              periodLabel={period.label}
+              onAsk={viewModel.askOrchAboutMember}
+            />
           </aside>
         </div>
       </div>

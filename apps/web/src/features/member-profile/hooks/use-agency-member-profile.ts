@@ -682,7 +682,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     alertDeepLinkHandledRef.current = linkKey;
 
     if (alertId) {
-      alerts.setExpandedAlertId(alertId);
+      alerts.openDetail(alertId);
     }
     const target = resolveAlertPeriodTarget({
       dateKey: day ?? undefined,
@@ -801,7 +801,10 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         label: "Period hours",
         valueLabel: shortHours(data.periodTotalSeconds),
         secondary: periodLabel,
-        ratio: 0,
+        ratio:
+          data.periodTotalSeconds > 0
+            ? Math.min(1, data.periodTotalSeconds / (160 * 3600))
+            : 0.08,
         tone: "foreground" as const,
       },
       {
