@@ -182,6 +182,9 @@ export const calendarMonthSchema = z.object({
   year: z.number().int(),
   month: z.number().int().min(1).max(12),
   label: z.string().min(1),
+  periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  periodEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  isTenureMonth: z.boolean(),
   weekdayLabels: z.array(z.string().min(1)).length(7),
   days: z.array(calendarMonthDaySchema),
 });

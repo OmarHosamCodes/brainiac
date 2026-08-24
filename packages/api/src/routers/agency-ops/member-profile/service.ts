@@ -7,6 +7,7 @@ import {
   agencyOpsMemberReview,
   agencyOpsProject,
   agencyOpsProjectTask,
+  agencyOpsTenurePolicy,
   agencyOpsTimeEntry,
   user,
   workspaceTeamMember,
@@ -17,6 +18,7 @@ import { and, asc, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import type { z } from "zod";
 
 import { loadTeamWorkSchedule } from "../resourcing/load-team-work-schedule";
+import { resolveProfilePeriodMonth, toFiscalCalendar } from "../resourcing/tenure-engine";
 import { requireTeamMembership } from "../shared/membership";
 import {
   addDaysToDateKey,
@@ -163,6 +165,7 @@ export async function getMemberProfile(
     from: string;
     to: string;
     calendarMonth?: string;
+    periodMonthStart?: string;
   },
 ): Promise<MemberProfile> {
   const actorRole = await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -180,26 +183,35 @@ export async function getMemberProfile(
   const startDate = localDateKeyFromInstant(rangeStart, input.utcOffsetMinutes);
   const endDate = localDateKeyFromInstant(rangeEnd, input.utcOffsetMinutes);
   const periodYear = Number(endDate.slice(0, 4));
-  const calendarMonthKey = input.calendarMonth ?? endDate.slice(0, 7);
-  if (!/^\d{4}-\d{2}$/.test(calendarMonthKey)) {
-    throw new ORPCError("BAD_REQUEST", { message: "Invalid calendarMonth" });
-  }
-  const calYear = Number(calendarMonthKey.slice(0, 4));
-  const calMonth = Number(calendarMonthKey.slice(5, 7));
-  if (calMonth < 1 || calMonth > 12) {
-    throw new ORPCError("BAD_REQUEST", { message: "Invalid calendarMonth" });
-  }
+
+  const [schedule, policyRow] = await Promise.all([
+    loadTeamWorkSchedule(input.teamId),
+    db
+      .select()
+      .from(agencyOpsTenurePolicy)
+      .where(eq(agencyOpsTenurePolicy.teamId, input.teamId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+  ]);
+  const { weekStartsOn, weekendDurationDays } = schedule;
+  const fiscalCalendar = toFiscalCalendar({
+    fiscalYearStartMonth: policyRow?.fiscalYearStartMonth ?? 1,
+    fiscalYearStartDay: policyRow?.fiscalYearStartDay ?? 1,
+  });
+  const legacyCalendarMonthStart = input.calendarMonth ? `${input.calendarMonth}-01` : undefined;
+  const periodMonth = resolveProfilePeriodMonth({
+    tenureEnabled: policyRow?.enabled ?? false,
+    calendar: fiscalCalendar,
+    anchorDateKey: endDate,
+    requestedStartKey: input.periodMonthStart ?? legacyCalendarMonthStart,
+  });
+  const monthStart = periodMonth.startKey;
+  const monthEnd = periodMonth.endKey;
+  const calYear = Number(monthStart.slice(0, 4));
+
   const yearStart = `${Math.min(periodYear, calYear)}-01-01`;
   const yearEnd = `${Math.max(periodYear, calYear)}-12-31`;
-  const schedule = await loadTeamWorkSchedule(input.teamId);
-  const { weekStartsOn, weekendDurationDays } = schedule;
   const weekBounds = getLocalWeekBounds(rangeEnd, input.utcOffsetMinutes, weekStartsOn);
-  const monthStart = `${calendarMonthKey}-01`;
-  const nextMonthStart =
-    calMonth === 12
-      ? `${calYear + 1}-01-01`
-      : `${calendarMonthKey.slice(0, 5)}${String(calMonth + 1).padStart(2, "0")}-01`;
-  const monthEnd = addDaysToDateKey(nextMonthStart, -1);
 
   const entryFromKey = [startDate, weekBounds.weekStartKey, monthStart].sort()[0]!;
   const entryToKey = [endDate, addDaysToDateKey(weekBounds.weekStartKey, 6), monthEnd]
@@ -444,7 +456,10 @@ export async function getMemberProfile(
 
   const weekHours = buildWeekHours(endDate, secondsByDate, weekStartsOn);
   const calendarMonth = buildCalendarMonth({
-    monthDate: monthStart,
+    periodStartKey: monthStart,
+    periodEndKey: monthEnd,
+    label: periodMonth.label,
+    isTenureMonth: periodMonth.isTenureMonth,
     secondsByDate,
     weekStartsOn,
     weekendDurationDays,

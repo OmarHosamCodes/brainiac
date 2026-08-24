@@ -54,7 +54,7 @@ describe("member-profile-alerts detectors", () => {
       todayKey: "2026-08-20",
     });
     expect(alert?.kind).toBe("month_pace");
-    expect(alert?.fingerprint).toBe("month_pace:2026-08");
+    expect(alert?.fingerprint).toBe("month_pace:tm:2026-08-01");
   });
 
   test("detectMonthPace uses policy monthly minimum in alert copy", () => {

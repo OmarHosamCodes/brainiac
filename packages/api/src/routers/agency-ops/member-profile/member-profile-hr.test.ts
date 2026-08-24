@@ -115,7 +115,9 @@ describe("buildWeekHours", () => {
 describe("buildCalendarMonth", () => {
   test("marks present, leave, holiday, and weekend days inside the month grid", () => {
     const month = buildCalendarMonth({
-      monthDate: "2026-06-15",
+      periodStartKey: "2026-06-01",
+      periodEndKey: "2026-06-30",
+      label: "June 2026",
       secondsByDate: new Map([["2026-06-02", 1800]]),
       leave: [
         {
@@ -157,7 +159,9 @@ describe("buildCalendarMonth", () => {
 
   test("keeps logged seconds on leave and holiday days", () => {
     const month = buildCalendarMonth({
-      monthDate: "2026-06-15",
+      periodStartKey: "2026-06-01",
+      periodEndKey: "2026-06-30",
+      label: "June 2026",
       secondsByDate: new Map([
         ["2026-06-03", 3600],
         ["2026-06-04", 7200],
@@ -186,7 +190,9 @@ describe("buildCalendarMonth", () => {
 
   test("leave and present override weekend", () => {
     const month = buildCalendarMonth({
-      monthDate: "2026-06-15",
+      periodStartKey: "2026-06-01",
+      periodEndKey: "2026-06-30",
+      label: "June 2026",
       secondsByDate: new Map([["2026-06-06", 3600]]),
       leave: [
         {
@@ -206,12 +212,33 @@ describe("buildCalendarMonth", () => {
 
   test("weekday labels follow weekStartsOn", () => {
     const month = buildCalendarMonth({
-      monthDate: "2026-06-15",
+      periodStartKey: "2026-06-01",
+      periodEndKey: "2026-06-30",
+      label: "June 2026",
       secondsByDate: new Map(),
       leave: [],
       weekStartsOn: 0,
     });
     expect(month.weekdayLabels[0]).toBe("S");
     expect(month.weekdayLabels[1]).toBe("M");
+  });
+
+  test("marks inMonth for non-calendar-aligned tenure month bounds", () => {
+    const month = buildCalendarMonth({
+      periodStartKey: "2026-08-26",
+      periodEndKey: "2026-09-25",
+      label: "Aug 26 – Sep 25, 2026",
+      isTenureMonth: true,
+      secondsByDate: new Map(),
+      leave: [],
+    });
+
+    expect(month.periodStart).toBe("2026-08-26");
+    expect(month.periodEnd).toBe("2026-09-25");
+    expect(month.isTenureMonth).toBe(true);
+    expect(month.days.find((day) => day.date === "2026-08-25")?.inMonth).toBe(false);
+    expect(month.days.find((day) => day.date === "2026-08-26")?.inMonth).toBe(true);
+    expect(month.days.find((day) => day.date === "2026-09-25")?.inMonth).toBe(true);
+    expect(month.days.find((day) => day.date === "2026-09-26")?.inMonth).toBe(false);
   });
 });

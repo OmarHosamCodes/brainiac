@@ -171,7 +171,10 @@ export function buildWeekHours(
 
 /** Month grid aligned to team week start, with derived present/leave/holiday/weekend/empty. */
 export function buildCalendarMonth(input: {
-  monthDate: string;
+  periodStartKey: string;
+  periodEndKey: string;
+  label: string;
+  isTenureMonth?: boolean;
   secondsByDate: Map<string, number>;
   leave: LeaveRangeInput[];
   weekStartsOn?: number;
@@ -180,6 +183,9 @@ export function buildCalendarMonth(input: {
   year: number;
   month: number;
   label: string;
+  periodStart: string;
+  periodEnd: string;
+  isTenureMonth: boolean;
   weekdayLabels: string[];
   days: CalendarMonthDay[];
 } {
@@ -187,13 +193,9 @@ export function buildCalendarMonth(input: {
   const weekendDurationDays =
     input.weekendDurationDays ?? DEFAULT_WORK_SCHEDULE.weekendDurationDays;
   const weekdayLabels = [...rotateWeekdayLabels(WEEKDAY_LABELS, weekStartsOn)];
-  const [yearStr, monthStr] = input.monthDate.split("-");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const monthStart = `${yearStr}-${monthStr}-01`;
-  const nextMonthStart =
-    month === 12 ? `${year + 1}-01-01` : `${yearStr}-${String(month + 1).padStart(2, "0")}-01`;
-  const monthEnd = addDaysToDateKey(nextMonthStart, -1);
+  const monthStart = input.periodStartKey;
+  const monthEnd = input.periodEndKey;
+  const { year, month } = parseDateKeyParts(monthStart);
 
   const leaveByDate = expandLeaveDays(input.leave, monthStart, monthEnd);
   const gridStart = getLocalWeekStartKeyFromDateKey(monthStart, weekStartsOn);
@@ -223,11 +225,14 @@ export function buildCalendarMonth(input: {
     cursor = addDaysToDateKey(cursor, 1);
   }
 
-  const label = new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-
-  return { year, month, label, weekdayLabels, days };
+  return {
+    year,
+    month,
+    label: input.label,
+    periodStart: monthStart,
+    periodEnd: monthEnd,
+    isTenureMonth: input.isTenureMonth ?? false,
+    weekdayLabels,
+    days,
+  };
 }

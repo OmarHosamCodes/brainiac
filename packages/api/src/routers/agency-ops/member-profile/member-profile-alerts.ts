@@ -3,6 +3,7 @@ import type { AgencyOpsMemberProfileAlertContext } from "@orch/db/schema";
 import {
   getFiscalQuarterForDate,
   getFiscalQuarterRange,
+  resolveProfilePeriodMonth,
   toFiscalCalendar,
   type FiscalCalendar,
 } from "../resourcing/tenure-engine";
@@ -62,12 +63,6 @@ export function abnormalDayThresholdHours(
   return requiredDailyHours + extraHours;
 }
 
-function yearMonthFromDateKey(dateKey: string): { year: number; month: number } {
-  return {
-    year: Number(dateKey.slice(0, 4)),
-    month: Number(dateKey.slice(5, 7)),
-  };
-}
 
 function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 86_400_000);
@@ -77,12 +72,17 @@ function offDayKeysFromLeaveByDate(leaveByDate: ReadonlyMap<string, unknown>): R
   return new Set(leaveByDate.keys());
 }
 
-function monthKeys(year: number, month: number): { start: string; end: string; key: string } {
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const next =
-    month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
-  const end = addDaysToDateKey(next, -1);
-  return { start, end, key: start.slice(0, 7) };
+function resolveMonthPacePeriod(input: {
+  todayKey: string;
+  tenureEnabled: boolean;
+  fiscalCalendar: FiscalCalendar;
+}): { start: string; end: string; key: string } {
+  const period = resolveProfilePeriodMonth({
+    tenureEnabled: input.tenureEnabled,
+    calendar: input.fiscalCalendar,
+    anchorDateKey: input.todayKey,
+  });
+  return { start: period.startKey, end: period.endKey, key: period.fingerprint };
 }
 
 function secondsInRange(days: DaySeconds[], fromKey: string, toKey: string) {
@@ -142,12 +142,21 @@ export function detectMonthPace(input: {
   offDayReduceHours: number;
   leaveByDate?: ReadonlyMap<string, unknown>;
   todayKey: string;
+  tenureEnabled?: boolean;
+  fiscalCalendar?: FiscalCalendar;
   policy?: MemberProfileAlertPolicy;
 }): DetectedAlert | null {
   const policy = input.policy ?? DEFAULT_ALERT_POLICY;
   if (!policy.monthPaceEnabled) return null;
-  const { year, month } = yearMonthFromDateKey(input.todayKey);
-  const { start, end, key } = monthKeys(year, month);
+  const fiscalCalendar = input.fiscalCalendar ?? toFiscalCalendar({
+    fiscalYearStartMonth: 1,
+    fiscalYearStartDay: 1,
+  });
+  const { start, end, key } = resolveMonthPacePeriod({
+    todayKey: input.todayKey,
+    tenureEnabled: input.tenureEnabled ?? false,
+    fiscalCalendar,
+  });
   const elapsedEnd = input.todayKey < end ? input.todayKey : end;
   const offDayKeys = offDayKeysFromLeaveByDate(input.leaveByDate ?? new Map());
 
@@ -255,12 +264,21 @@ export function detectWasteSpike(input: {
   days: DaySeconds[];
   schedule: WorkSchedule;
   todayKey: string;
+  tenureEnabled?: boolean;
+  fiscalCalendar?: FiscalCalendar;
   policy?: MemberProfileAlertPolicy;
 }): DetectedAlert | null {
   const policy = input.policy ?? DEFAULT_ALERT_POLICY;
   if (!policy.wasteSpikeEnabled) return null;
-  const { year, month } = yearMonthFromDateKey(input.todayKey);
-  const { start, end, key } = monthKeys(year, month);
+  const fiscalCalendar = input.fiscalCalendar ?? toFiscalCalendar({
+    fiscalYearStartMonth: 1,
+    fiscalYearStartDay: 1,
+  });
+  const { start, end, key } = resolveMonthPacePeriod({
+    todayKey: input.todayKey,
+    tenureEnabled: input.tenureEnabled ?? false,
+    fiscalCalendar,
+  });
   const elapsedEnd = input.todayKey < end ? input.todayKey : end;
   const { total, waste } = secondsInRange(input.days, start, elapsedEnd);
   if (total <= 0) return null;
@@ -291,6 +309,7 @@ export function detectSystemAlerts(input: {
   quarterlyMinHours: number;
   offDayReduceHours: number;
   leaveByDate?: ReadonlyMap<string, unknown>;
+  tenureEnabled?: boolean;
   suppressedFingerprints: ReadonlySet<string>;
   todayKey: string;
   now?: Date;
@@ -314,6 +333,8 @@ export function detectSystemAlerts(input: {
     offDayReduceHours: input.offDayReduceHours,
     leaveByDate: input.leaveByDate,
     todayKey: input.todayKey,
+    tenureEnabled: input.tenureEnabled,
+    fiscalCalendar: input.calendar,
     policy,
   });
   if (month && !input.suppressedFingerprints.has(month.fingerprint)) out.push(month);
@@ -334,6 +355,8 @@ export function detectSystemAlerts(input: {
     days: input.days,
     schedule: input.schedule,
     todayKey: input.todayKey,
+    tenureEnabled: input.tenureEnabled,
+    fiscalCalendar: input.calendar,
     policy,
   });
   if (waste && !input.suppressedFingerprints.has(waste.fingerprint)) out.push(waste);
