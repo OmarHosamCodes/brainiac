@@ -131,6 +131,9 @@ describe("computeMonthPaceVisual", () => {
       offDayReduceHours: 8,
       offDayKeys: new Set(),
       todayKey: "2026-08-05",
+      periodStartKey: "2026-08-01",
+      periodEndKey: "2026-08-31",
+      periodLabel: "August 2026",
     });
     expect(pace?.monthTargetHours).toBe(pace!.monthWorkingDays * 8);
     expect(pace?.paceToTargetHoursPerDay).toBeGreaterThan(pace!.paceToMinHoursPerDay);
@@ -144,6 +147,9 @@ describe("computeMonthPaceVisual", () => {
       offDayReduceHours: 8,
       offDayKeys: new Set(["2026-08-06", "2026-08-07"]),
       todayKey: "2026-08-05",
+      periodStartKey: "2026-08-01",
+      periodEndKey: "2026-08-31",
+      periodLabel: "August 2026",
     });
     expect(pace?.offDaysInMonth).toBe(2);
     expect(pace?.monthMinHours).toBe(159);

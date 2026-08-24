@@ -25,6 +25,31 @@ describe("resolveAlertPeriodTarget", () => {
     });
   });
 
+  test("maps tenure month periodKey to fiscal month bounds", () => {
+    expect(
+      resolveAlertPeriodTarget(
+        { periodKey: "tm:2026-07-26" },
+        { fiscalYearStartMonth: 12, fiscalYearStartDay: 26 },
+      ),
+    ).toEqual({
+      kind: "month",
+      monthKey: "2026-07",
+      from: "2026-07-26",
+      to: "2026-08-25",
+      focusDate: "2026-07-26",
+    });
+  });
+
+  test("maps calendar tenure fingerprint when fiscal calendar is absent", () => {
+    expect(resolveAlertPeriodTarget({ periodKey: "tm:2026-08-01" })).toEqual({
+      kind: "month",
+      monthKey: "2026-08",
+      from: "2026-08-01",
+      to: "2026-08-31",
+      focusDate: "2026-08-01",
+    });
+  });
+
   test("maps fiscal quarter keys to the quarter date range", () => {
     expect(
       resolveAlertPeriodTarget(

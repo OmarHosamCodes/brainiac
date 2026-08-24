@@ -1,5 +1,6 @@
 import { buildWeekHours } from "@orch/api/routers/agency-ops/member-profile/member-profile-hr";
 import { expandLeaveDays } from "@orch/api/routers/agency-ops/member-profile/member-profile-heat";
+import { toFiscalCalendar } from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import { addDaysToDateKey } from "@orch/api/routers/agency-ops/time-tracking/local-week-bounds";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,6 +42,8 @@ import {
   getCurrentTenureQuarterMonths,
   resolveDefaultDashboardRangePreset,
   resolveDefaultTenureMonthIndexes,
+  resolveProfilePeriodMonth,
+  shiftTenureMonthStart,
   type TenureQuarterMonth,
 } from "@/features/resourcing/tenure-utils";
 import { useCurrentAgencyTeam } from "@/features/time-tracking/stores/agency-timer";
@@ -621,18 +624,34 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     body: "",
   });
   const [hrDraft, setHrDraftState] = useState(emptyHrDraft);
-  const [calendarMonthOverride, setCalendarMonthOverride] = useState<string | null>(null);
   const pendingFocusDateRef = useRef<string | null>(null);
   const [highlightedActivityDate, setHighlightedActivityDate] = useState<string | null>(null);
   const [selectedHeatDate, setSelectedHeatDate] = useState<string | null>(null);
   const [openGaugeKey, setOpenGaugeKey] = useState<StatPlateKey | null>(null);
   const [hrInactiveConfirmOpen, setHrInactiveConfirmOpen] = useState(false);
+  const fiscalCalendar = useMemo(
+    () =>
+      toFiscalCalendar({
+        fiscalYearStartMonth: tenurePolicy?.fiscalYearStartMonth ?? 1,
+        fiscalYearStartDay: tenurePolicy?.fiscalYearStartDay ?? 1,
+      }),
+    [tenurePolicy],
+  );
+  const tenureEnabled = tenurePolicy?.enabled ?? false;
+  const defaultPeriodMonthStart = useMemo(() => {
+    const anchorDateKey = todayKey(utcOffsetMinutes);
+    return resolveProfilePeriodMonth({
+      tenureEnabled,
+      calendar: fiscalCalendar,
+      anchorDateKey,
+    }).startKey;
+  }, [fiscalCalendar, tenureEnabled, utcOffsetMinutes]);
 
-  const defaultCalendarMonth = range.to.slice(0, 7);
-  const calendarMonth = calendarMonthOverride ?? defaultCalendarMonth;
+  const [periodMonthStartOverride, setPeriodMonthStartOverride] = useState<string | null>(null);
+  const periodMonthStart = periodMonthStartOverride ?? defaultPeriodMonthStart;
 
   useEffect(() => {
-    setCalendarMonthOverride(null);
+    setPeriodMonthStartOverride(null);
     setSelectedHeatDate(null);
   }, [range.from, range.to, subjectUserId]);
 
@@ -643,9 +662,9 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       utcOffsetMinutes,
       from: range.from,
       to: range.to,
-      calendarMonth,
+      periodMonthStart,
     }),
-    [calendarMonth, range.from, range.to, subjectUserId, teamId, utcOffsetMinutes],
+    [periodMonthStart, range.from, range.to, subjectUserId, teamId, utcOffsetMinutes],
   );
 
   const profileQuery = useQuery({
@@ -696,11 +715,18 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     setRangePreset("custom");
     setCustomFromDate(target.from);
     setCustomToDate(target.to);
-    setCalendarMonthOverride(focusDate.slice(0, 7));
+    setPeriodMonthStartOverride(
+      resolveProfilePeriodMonth({
+        tenureEnabled,
+        calendar: fiscalCalendar,
+        anchorDateKey: focusDate,
+        requestedStartKey: target.kind === "month" ? target.from : undefined,
+      }).startKey,
+    );
     pendingFocusDateRef.current = focusDate;
   }
 
-  const fiscalCalendar = tenurePolicy
+  const alertsFiscalCalendar = tenurePolicy
     ? {
         fiscalYearStartMonth: tenurePolicy.fiscalYearStartMonth,
         fiscalYearStartDay: tenurePolicy.fiscalYearStartDay,
@@ -711,7 +737,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     teamId,
     subjectUserId,
     utcOffsetMinutes,
-    fiscalCalendar,
+    fiscalCalendar: alertsFiscalCalendar,
     onOpenPeriod: openAlertPeriod,
   });
 
@@ -733,7 +759,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         dateKey: day ?? undefined,
         periodKey: periodKey ?? undefined,
       },
-      fiscalCalendar,
+      alertsFiscalCalendar,
     );
     if (target) {
       openAlertPeriod(target);
@@ -997,8 +1023,24 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
           { status: "weekend" as const, label: "weekend", count: calendarLegendCounts.weekend },
           { status: "empty" as const, label: "no hours", count: calendarLegendCounts.empty },
         ],
-        onPrevMonth: () => setCalendarMonthOverride(shiftMonthKey(calendarMonth, -1)),
-        onNextMonth: () => setCalendarMonthOverride(shiftMonthKey(calendarMonth, 1)),
+        onPrevMonth: () => {
+          if (tenureEnabled) {
+            setPeriodMonthStartOverride(
+              shiftTenureMonthStart(periodMonthStart, -1, fiscalCalendar).startKey,
+            );
+            return;
+          }
+          setPeriodMonthStartOverride(`${shiftMonthKey(periodMonthStart.slice(0, 7), -1)}-01`);
+        },
+        onNextMonth: () => {
+          if (tenureEnabled) {
+            setPeriodMonthStartOverride(
+              shiftTenureMonthStart(periodMonthStart, 1, fiscalCalendar).startKey,
+            );
+            return;
+          }
+          setPeriodMonthStartOverride(`${shiftMonthKey(periodMonthStart.slice(0, 7), 1)}-01`);
+        },
         todayDate: today,
       },
       timeline: data.timeline.map((day, index) => {
@@ -1075,15 +1117,17 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       }),
     };
   }, [
-    calendarMonth,
     departmentsQuery.data?.items,
     effectiveRangePreset,
     effectiveTenureMonthIndexes,
     expandedDays,
+    fiscalCalendar,
     periodLabel,
+    periodMonthStart,
     profileQuery.data,
     selectedHeatDate,
     serverUrl,
+    tenureEnabled,
     today,
     subjectUserId,
     weekStartsOn,
@@ -1162,15 +1206,18 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       }
     }
 
-    const todayMonthPrefix = today.slice(0, 7);
-    const monthStart = `${todayMonthPrefix}-01`;
-    const monthEndYear = Number(today.slice(0, 4));
-    const monthEndMonth = Number(today.slice(5, 7));
-    const monthEndNext =
-      monthEndMonth === 12
-        ? `${monthEndYear + 1}-01-01`
-        : `${monthEndYear}-${String(monthEndMonth + 1).padStart(2, "0")}-01`;
-    const monthEnd = addDaysToDateKey(monthEndNext, -1);
+    const periodStartKey =
+      data.calendarMonth.periodStart ??
+      `${data.calendarMonth.year}-${String(data.calendarMonth.month).padStart(2, "0")}-01`;
+    const periodEndKey =
+      data.calendarMonth.periodEnd ??
+      addDaysToDateKey(
+        data.calendarMonth.month === 12
+          ? `${data.calendarMonth.year + 1}-01-01`
+          : `${data.calendarMonth.year}-${String(data.calendarMonth.month + 1).padStart(2, "0")}-01`,
+        -1,
+      );
+    const periodContainsToday = today >= periodStartKey && today <= periodEndKey;
     const leaveByDate = expandLeaveDays(
       data.leave.map((entry) => ({
         id: entry.id,
@@ -1179,19 +1226,18 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         type: entry.type,
         reason: entry.reason,
       })),
-      monthStart,
-      monthEnd,
+      periodStartKey,
+      periodEndKey,
     );
     const offDayKeys = new Set(leaveByDate.keys());
 
-    const calendarMatchesToday =
-      data.calendarMonth.year === Number(today.slice(0, 4)) &&
-      data.calendarMonth.month === Number(today.slice(5, 7));
-    const monthPaceSource = calendarMatchesToday
+    const monthPaceSource = periodContainsToday
       ? data.calendarMonth.days
           .filter((day) => day.inMonth)
           .map((day) => ({ date: day.date, totalSeconds: day.totalSeconds }))
-      : data.heatMap.days.filter((day) => day.date.startsWith(todayMonthPrefix));
+      : data.heatMap.days.filter(
+          (day) => day.date >= periodStartKey && day.date <= periodEndKey,
+        );
 
     const monthPaceDayHours = monthPaceSource.map((day) => {
       const date = new Date(`${day.date}T12:00:00.000Z`);
@@ -1221,6 +1267,9 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       offDayReduceHours: tenurePolicy?.offDayReduceHours ?? 8,
       offDayKeys,
       todayKey: today,
+      periodStartKey,
+      periodEndKey,
+      periodLabel: data.calendarMonth.label,
     });
 
     return buildGaugeDetail({

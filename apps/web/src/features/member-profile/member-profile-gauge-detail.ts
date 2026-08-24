@@ -1,4 +1,3 @@
-import { addDaysToDateKey } from "@orch/api/routers/agency-ops/time-tracking/local-week-bounds";
 import {
   computeAdjustedExpectations,
   countOffDaysOnWeekdaysInRange,
@@ -222,16 +221,6 @@ function workingDaysInRange(
   return countWorkingDaysInRange(fromKey, toKey, schedule, offDayKeys);
 }
 
-function monthKeysFromDateKey(dateKey: string): { start: string; end: string; key: string } {
-  const year = Number(dateKey.slice(0, 4));
-  const month = Number(dateKey.slice(5, 7));
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const next =
-    month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
-  const end = addDaysToDateKey(next, -1);
-  return { start, end, key: start.slice(0, 7) };
-}
-
 /** Month pace dossier (mirrors alert month_pace math; target = required daily × working days). */
 export function computeMonthPaceVisual(input: {
   dayHours: GaugeDayHours[];
@@ -240,8 +229,12 @@ export function computeMonthPaceVisual(input: {
   offDayReduceHours: number;
   offDayKeys: ReadonlySet<string>;
   todayKey: string;
+  periodStartKey: string;
+  periodEndKey: string;
+  periodLabel: string;
 }): GaugeMonthPaceVisual | null {
-  const { start, end, key } = monthKeysFromDateKey(input.todayKey);
+  const start = input.periodStartKey;
+  const end = input.periodEndKey;
   const elapsedEnd = input.todayKey < end ? input.todayKey : end;
   const monthWorking = workingDaysInRange(start, end, input.schedule, input.offDayKeys);
   const elapsedWorking = workingDaysInRange(start, elapsedEnd, input.schedule, input.offDayKeys);
@@ -277,12 +270,7 @@ export function computeMonthPaceVisual(input: {
   const paceToTargetHoursPerDay =
     remainingWorking > 0 ? Math.max(0, monthTargetHours - loggedHours) / remainingWorking : 0;
 
-  const monthDate = new Date(`${key}-01T12:00:00.000Z`);
-  const monthLabel = monthDate.toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  const monthLabel = input.periodLabel;
 
   const scaleMaxHours =
     Math.max(monthTargetHours, monthMinHours, projectedHours, loggedHours, 1) * 1.08;

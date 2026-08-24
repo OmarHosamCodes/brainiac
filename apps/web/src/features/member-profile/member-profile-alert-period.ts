@@ -1,5 +1,6 @@
 import {
   getFiscalQuarterRange,
+  getTenureMonthByStartKey,
   toFiscalCalendar,
   type FiscalQuarter,
 } from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
@@ -68,6 +69,31 @@ export function resolveAlertPeriodTarget(
   }
 
   const periodKey = context.periodKey;
+  const tenureMonthMatch = periodKey ? /^tm:(\d{4}-\d{2}-\d{2})$/.exec(periodKey) : null;
+  if (tenureMonthMatch) {
+    const from = tenureMonthMatch[1]!;
+    if (fiscalCalendar) {
+      const month = getTenureMonthByStartKey(from, toFiscalCalendar(fiscalCalendar));
+      if (month) {
+        return {
+          kind: "month",
+          monthKey: from.slice(0, 7),
+          from: month.startKey,
+          to: month.endKey,
+          focusDate: month.startKey,
+        };
+      }
+    }
+    const monthKey = from.slice(0, 7);
+    return {
+      kind: "month",
+      monthKey,
+      from,
+      to: lastDateKeyOfMonth(monthKey),
+      focusDate: from,
+    };
+  }
+
   if (periodKey && /^\d{4}-\d{2}$/.test(periodKey)) {
     const from = `${periodKey}-01`;
     const to = lastDateKeyOfMonth(periodKey);
