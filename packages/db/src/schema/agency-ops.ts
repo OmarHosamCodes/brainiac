@@ -1000,6 +1000,7 @@ export const agencyOpsTenurePolicy = pgTable(
     /** Day of month when each fiscal month/year begins (e.g. 26 → periods run 26th–25th). */
     fiscalYearStartDay: integer("fiscal_year_start_day").notNull().default(1),
     quarterlyMinHours: integer("quarterly_min_hours").notNull().default(525),
+    monthlyMinHours: integer("monthly_min_hours").notNull().default(200),
     penaltyMonths: integer("penalty_months").notNull().default(6),
     internDurationMonths: integer("intern_duration_months").notNull().default(4),
     internDurationWeeks: integer("intern_duration_weeks").notNull().default(0),
