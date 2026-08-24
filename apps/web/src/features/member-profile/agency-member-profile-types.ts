@@ -189,6 +189,7 @@ export type AgencyMemberProfileViewModel = {
       >;
     }>;
   } | null;
+  profileImagePending: boolean;
   leaveDialogOpen: boolean;
   reviewDialogOpen: boolean;
   hrDialogOpen: boolean;
@@ -255,6 +256,7 @@ export type AgencyMemberProfileViewModel = {
   submitLeave: () => Promise<void>;
   submitReview: () => Promise<void>;
   submitHr: () => Promise<void>;
+  uploadProfileImage: (file: File) => Promise<void>;
 };
 
 export type MemberProfileViewData = NonNullable<AgencyMemberProfileViewModel["profile"]>;

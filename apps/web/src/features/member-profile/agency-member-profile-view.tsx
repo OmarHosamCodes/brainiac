@@ -1,7 +1,9 @@
 import {
   Calendar,
   CalendarOff,
+  Camera,
   ChevronRight,
+  Loader2,
   Mail,
   MapPin,
   Pencil,
@@ -328,14 +330,39 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
           <aside className="space-y-4 max-xl:order-1">
             <section className={cn(profilePanelClass, "p-4")}>
               <div className="flex items-start justify-between gap-2">
-                <AgencyMemberAvatar
-                  name={profile.userName}
-                  userId={viewModel.subjectUserId}
-                  avatarUrl={profile.userAvatarUrl}
-                  size="md"
-                  className="size-16 shrink-0 rounded-xl transition-transform duration-200 ease-out hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100"
-                  alt={profile.userName}
-                />
+                <div className="relative">
+                  <AgencyMemberAvatar
+                    name={profile.userName}
+                    userId={viewModel.subjectUserId}
+                    avatarUrl={profile.userAvatarUrl}
+                    size="md"
+                    className="size-16 shrink-0 rounded-xl transition-transform duration-200 ease-out hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100"
+                    alt={profile.userName}
+                  />
+                  {profile.isSelf ? (
+                    <label
+                      className="absolute -bottom-2 -right-2 inline-flex size-8 cursor-pointer items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition-colors hover:bg-muted has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2"
+                      aria-label="Change profile image"
+                    >
+                      {viewModel.profileImagePending ? (
+                        <Loader2 className="size-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Camera className="size-4" aria-hidden />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        disabled={viewModel.profileImagePending}
+                        onChange={(event) => {
+                          const file = event.currentTarget.files?.[0];
+                          event.currentTarget.value = "";
+                          if (file) void viewModel.uploadProfileImage(file);
+                        }}
+                      />
+                    </label>
+                  ) : null}
+                </div>
                 {(profile.canEditHr || profile.canManageLeave) && (
                   <div className="-mr-1.5 -mt-1.5 flex shrink-0 items-center">
                     {profile.canEditHr ? (

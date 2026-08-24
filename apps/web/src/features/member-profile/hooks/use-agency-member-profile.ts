@@ -65,6 +65,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const store = useAgencyMemberProfileStore();
   const now = useMemo(() => new Date(), []);
   const serverUrl = getServerUrl();
+  const [profileImagePending, setProfileImagePending] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("focus") !== "alerts") return;
@@ -536,6 +537,40 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     }
   }
 
+  async function uploadProfileImage(file: File) {
+    if (!profile?.isSelf || !serverUrl) return;
+
+    setProfileImagePending(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch(`${serverUrl}/uploads/user-avatar`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = (await response.json().catch(() => ({ error: "Upload failed" }))) as {
+          error?: string;
+        };
+        throw new Error(error.error ?? "Upload failed");
+      }
+
+      const result = (await response.json()) as { storageKey?: string };
+      if (!result.storageKey) throw new Error("Upload did not return an image.");
+      await authClient.updateUser({ image: result.storageKey });
+      await Promise.all([profileQuery.refetch(), membersQuery.refetch()]);
+      toast.success("Profile image updated");
+    } catch (error) {
+      toast.error("Couldn't update profile image", {
+        description: error instanceof Error ? error.message : "Try again.",
+      });
+    } finally {
+      setProfileImagePending(false);
+    }
+  }
+
   return {
     teamId,
     subjectUserId,
@@ -566,6 +601,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       label: periodLabel,
     },
     profile,
+    profileImagePending,
     leaveDialogOpen,
     reviewDialogOpen,
     hrDialogOpen,
@@ -777,6 +813,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     async submitHr() {
       await persistHrProfile();
     },
+    uploadProfileImage,
     requestSubmitHr() {
       if (!profile) return;
       if (profile.hr.status === "active" && hrDraft.status === "inactive") {
