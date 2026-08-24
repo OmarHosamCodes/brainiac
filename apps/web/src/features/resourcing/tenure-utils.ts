@@ -3,8 +3,23 @@ import {
   fiscalQuarterLabel,
   getFiscalQuarterForDate,
   getFiscalQuarterRange,
+  getTenureMonthForDate,
+  getTenureMonthByStartKey,
+  resolveProfilePeriodMonth,
+  shiftTenureMonthStart,
   toFiscalCalendar,
+  type ProfilePeriodMonth,
+  type TenureMonthRange,
 } from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
+
+export type { ProfilePeriodMonth, TenureMonthRange };
+export {
+  getTenureMonthForDate,
+  getTenureMonthByStartKey,
+  resolveProfilePeriodMonth,
+  shiftTenureMonthStart,
+  toFiscalCalendar,
+};
 
 export type TenurePolicyCalendar = {
   fiscalYearStartMonth: number;
