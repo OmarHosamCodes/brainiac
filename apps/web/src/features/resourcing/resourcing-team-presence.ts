@@ -106,6 +106,15 @@ export function monthLabelFromKey(monthKey: string): string {
   return date.toLocaleString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
+/** Calendar month step — avoids week-anchor month keys that can repeat (e.g. Aug 2026). */
+export function shiftMonthKey(monthKey: string, delta: -1 | 1): string {
+  const [yearStr, monthStr] = monthKey.split("-");
+  const date = new Date(Date.UTC(Number(yearStr), Number(monthStr) - 1 + delta, 1));
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
 export function monthsInRange(fromDate: string, toDate: string): string[] {
   if (fromDate > toDate) return [];
   const months: string[] = [];

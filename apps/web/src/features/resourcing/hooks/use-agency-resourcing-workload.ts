@@ -8,19 +8,15 @@ import type { MemberProfileHeatMapData } from "@/features/shared/heat/member-pro
 import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/agency-member-profile";
 import {
   buildPresenceCalendarDays,
-  focusMonthKeyFromAnchor,
   monthLabelFromKey,
   monthWindowDateKeys,
   presenceWeekdayLabels,
+  shiftMonthKey,
   shortDisplayName,
   type PresenceDayCell,
   type PresencePerson,
 } from "@/features/resourcing/resourcing-team-presence";
-import {
-  addDaysToDateKey,
-  periodAnchorUtc,
-  shiftPeriodAnchor,
-} from "@/features/resourcing/resourcing-workload-heat";
+import { addDaysToDateKey } from "@/features/resourcing/resourcing-workload-heat";
 import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
@@ -267,9 +263,7 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
   const session = authClient.useSession();
   const actorUserId = session.data?.user?.id ?? null;
 
-  const [anchor, setAnchor] = useState(() =>
-    periodAnchorUtc(new Date(), "month", workSchedule.weekStartsOn),
-  );
+  const [focusMonthKey, setFocusMonthKey] = useState(() => localDateKey().slice(0, 7));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [selectedOutExpanded, setSelectedOutExpanded] = useState(false);
@@ -285,7 +279,6 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
   const createLeave = useAgencyMemberProfileStore((state) => state.createLeave);
   const leaveRequestPending = useAgencyMemberProfileStore((state) => state.leavePending);
 
-  const focusMonthKey = useMemo(() => focusMonthKeyFromAnchor(anchor), [anchor]);
   const presenceWindow = useMemo(() => monthWindowDateKeys(focusMonthKey), [focusMonthKey]);
   const utcOffsetMinutes = new Date().getTimezoneOffset();
 
@@ -349,10 +342,6 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
       return defaultSelectedDate(focusMonthKey, calendarDays, isWeekend);
     });
   }, [calendarDays, focusMonthKey, workSchedule.weekStartsOn, workSchedule.weekendDurationDays]);
-
-  useEffect(() => {
-    setAnchor((current) => periodAnchorUtc(current, "month", workSchedule.weekStartsOn));
-  }, [workSchedule.weekStartsOn]);
 
   useEffect(() => {
     if (activityRows.length === 0) {
@@ -546,10 +535,8 @@ export function useAgencyResourcingWorkload(teamId: string): AgencyResourcingWor
     leaveRequestPending,
     leaveRequestError,
     leaveRequestDraft,
-    goPrevPeriod: () =>
-      setAnchor((current) => shiftPeriodAnchor(current, "month", -1, workSchedule.weekStartsOn)),
-    goNextPeriod: () =>
-      setAnchor((current) => shiftPeriodAnchor(current, "month", 1, workSchedule.weekStartsOn)),
+    goPrevPeriod: () => setFocusMonthKey((current) => shiftMonthKey(current, -1)),
+    goNextPeriod: () => setFocusMonthKey((current) => shiftMonthKey(current, 1)),
     selectDate: (date) => {
       if (isWeekend(date)) return;
       setSelectedDate(date);

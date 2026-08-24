@@ -7,6 +7,7 @@ import {
   formatPresenceSegmentLabel,
   monthsInRange,
   presenceModeForGrain,
+  shiftMonthKey,
   shortDisplayName,
 } from "@/features/resourcing/resourcing-team-presence";
 
@@ -38,6 +39,25 @@ describe("resourcing-team-presence", () => {
 
   test("monthsInRange lists inclusive months", () => {
     expect(monthsInRange("2026-08-15", "2026-10-02")).toEqual(["2026-08", "2026-09", "2026-10"]);
+  });
+
+  test("shiftMonthKey advances every calendar month including week-anchor gaps", () => {
+    let key = "2026-06";
+    const seen = [key];
+    for (let step = 0; step < 6; step++) {
+      key = shiftMonthKey(key, 1);
+      seen.push(key);
+    }
+    expect(seen).toEqual([
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09",
+      "2026-10",
+      "2026-11",
+      "2026-12",
+    ]);
+    expect(shiftMonthKey("2026-01", -1)).toBe("2025-12");
   });
 
   test("buildPresenceCalendarDays splits working vs out", () => {
