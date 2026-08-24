@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { ErrorState } from "@/components/elements/error-state";
 import {
+  ORCH_PRESENCE_COLLAPSED_RADIUS_PX,
+  ORCH_PRESENCE_EXPANDED_RADIUS_PX,
   ORCH_PRESENCE_LAYOUT_ID,
   orchPresenceMorphTransition,
 } from "@/features/shared/orch-presence-morph";
@@ -62,9 +64,16 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
               layout
               layoutId={expanded ? undefined : ORCH_PRESENCE_LAYOUT_ID}
               layoutDependency={expanded}
-              style={expanded ? undefined : { borderRadius: 9999 }}
+              style={{
+                borderRadius: expanded
+                  ? ORCH_PRESENCE_EXPANDED_RADIUS_PX
+                  : ORCH_PRESENCE_COLLAPSED_RADIUS_PX,
+              }}
               transition={{
                 layout: expanded ? shellLayout : orchPresenceMorphTransition,
+                borderRadius: expanded
+                  ? { duration: 0.22, ease: EASE_OUT_QUART }
+                  : orchPresenceMorphTransition,
               }}
               className={cn(
                 "pointer-events-auto origin-bottom overflow-hidden text-card-foreground",

@@ -3,6 +3,12 @@ import type { Transition } from "motion/react";
 /** Shared-element morph between global Orch dock and task-thread composer badge. */
 export const ORCH_PRESENCE_LAYOUT_ID = "orch-presence";
 
+/** Collapsed dock pill — fully round for shared layout morph. */
+export const ORCH_PRESENCE_COLLAPSED_RADIUS_PX = 9999;
+
+/** Expanded dock card — matches Tailwind `rounded-2xl`. */
+export const ORCH_PRESENCE_EXPANDED_RADIUS_PX = 16;
+
 /**
  * Spring settle budget for sequenced close (ms).
  * Slightly longer than the visual settle so the cover does not cut the morph short.
