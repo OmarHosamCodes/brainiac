@@ -8,9 +8,8 @@ import {
   Phone,
   UserRound,
 } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { shellStaggerItemClass } from "@/features/app-shell/app-shell-ui";
 import { RangePresetChooser } from "@/features/shared/command-bar/range-preset-chooser";
 import { MemberProfileActivityRails } from "@/features/member-profile/member-profile-activity-rails";
 import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
@@ -19,6 +18,7 @@ import {
   MemberProfileOffDayRangePanel,
 } from "@/features/shared/date/member-profile-leave-range-picker";
 import type { AgencyMemberProfileViewModel } from "@/features/member-profile/hooks/use-agency-member-profile";
+import { MemberProfileCalendarPanel } from "@/features/member-profile/member-profile-calendar-panel";
 import { MemberProfileAlertsPanel } from "@/features/member-profile/member-profile-alerts-view";
 import { MemberProfileGaugeDetailDialog } from "@/features/member-profile/member-profile-gauge-detail-dialog";
 import { memberProfileGaugeLayoutId } from "@/features/member-profile/member-profile-gauge-morph";
@@ -43,7 +43,6 @@ import {
 import { agencyCommandBarShellClass } from "@/features/shared/command-bar/agency-command-bar-ui";
 import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
-import { Checkbox } from "@/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -52,13 +51,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
@@ -127,13 +119,15 @@ function OrchAgentGlyph({ className }: { className?: string }) {
 function AskOrchRailCard({
   memberName,
   periodLabel,
+  isSelf,
   onAsk,
 }: {
   memberName: string;
   periodLabel: string;
+  isSelf: boolean;
   onAsk: () => void;
 }) {
-  const subject = memberName.trim() || "this member";
+  const subject = isSelf ? "your profile" : memberName.trim() || "this member";
 
   return (
     <button
@@ -146,7 +140,7 @@ function AskOrchRailCard({
         agencyFocusRingClass,
         "motion-reduce:transition-none",
       )}
-      aria-label={`Summarize ${subject}'s hours, attendance, and waste for ${periodLabel}`}
+      aria-label={`Open Orch with a draft summary for ${subject} (${periodLabel})`}
     >
       <span
         className="grid size-10 shrink-0 place-items-center rounded-lg text-chart-2"
@@ -156,11 +150,11 @@ function AskOrchRailCard({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-foreground">Summarize with Orch</span>
-        <span className={cn(agencyWorkMetaClass, "mt-0.5 block truncate tabular-nums")}>
-          {periodLabel}
+        <span className="block text-sm font-semibold text-foreground">Ask Orch</span>
+        <span className={cn(agencyWorkMetaClass, "mt-0.5 block text-pretty tabular-nums")}>
+          Opens a scoped draft for {subject}
           <span aria-hidden> · </span>
-          hours · attendance · waste
+          {periodLabel}
         </span>
       </span>
 
@@ -181,94 +175,6 @@ type Props = {
 };
 
 type LeaveGauge = NonNullable<AgencyMemberProfileViewModel["profile"]>["leaveGauges"][number];
-
-type CalendarDayStatus = AgencyMemberProfileViewModel["profile"] extends null
-  ? never
-  : NonNullable<AgencyMemberProfileViewModel["profile"]>["calendar"]["days"][number]["status"];
-
-function calendarDayStatusClass(status: CalendarDayStatus, inMonth: boolean): string {
-  if (!inMonth) return "text-foreground/30";
-  switch (status) {
-    case "present":
-      return "bg-success text-success-foreground";
-    case "leave":
-      return "bg-warning text-warning-foreground";
-    case "holiday":
-      return "border border-chart-1/35 bg-chart-1/18 text-foreground";
-    case "weekend":
-      return cn(
-        "bg-muted/60 text-muted-foreground",
-        "[background-image:repeating-linear-gradient(-45deg,transparent_0_2.5px,var(--border)_2.5px_3.5px)]",
-      );
-    case "empty":
-      return "text-foreground hover:bg-muted";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
-function calendarDayStatusSuffix(status: CalendarDayStatus): string {
-  switch (status) {
-    case "leave":
-      return ", off day";
-    case "holiday":
-      return ", team holiday";
-    case "present":
-      return ", present";
-    case "weekend":
-      return ", weekend";
-    case "empty":
-      return "";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
-function calendarLegendIndicatorClass(status: CalendarDayStatus): string {
-  switch (status) {
-    case "present":
-      return "bg-success";
-    case "leave":
-      return "bg-warning";
-    case "holiday":
-      return "border border-chart-1/40 bg-chart-1/20";
-    case "weekend":
-      return cn(
-        "bg-muted/70",
-        "[background-image:repeating-linear-gradient(-45deg,transparent_0_1px,var(--border)_1px_2px)]",
-      );
-    case "empty":
-      return "bg-transparent ring-1 ring-border";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
-function calendarLegendAriaLabel(status: CalendarDayStatus, count: number, label: string): string {
-  const unit = count === 1 ? "day" : "days";
-  switch (status) {
-    case "present":
-      return `${count} ${unit} logged`;
-    case "leave":
-      return `${count} off ${unit}`;
-    case "holiday":
-      return `${count} team holiday ${unit}`;
-    case "weekend":
-      return `${count} weekend ${unit}`;
-    case "empty":
-      return `${count} ${unit} with no hours logged`;
-    default: {
-      const _exhaustive: never = status;
-      return `${count} ${label}`;
-    }
-  }
-}
 
 function ProfileStatPlate({
   gauge,
@@ -317,17 +223,14 @@ function PersonalRow({
   const empty = display === "—";
 
   return (
-    <div
-      className="flex items-center gap-2.5 py-2"
-      role="group"
-      aria-label={`${label}: ${display}`}
-    >
+    <div className="flex items-center gap-2.5 py-2">
       <span className="shrink-0 text-muted-foreground" aria-hidden>
         {icon}
       </span>
+      <span className="w-[5.5rem] shrink-0 text-xs text-muted-foreground">{label}</span>
       <p
         className={cn(
-          "min-w-0 truncate text-sm",
+          "min-w-0 flex-1 truncate text-sm",
           empty ? "text-muted-foreground" : "text-foreground",
         )}
         title={empty ? undefined : display}
@@ -380,9 +283,20 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
     <TooltipProvider delayDuration={120}>
       <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         <div
-          className={cn(agencyCommandBarShellClass, shellStaggerItemClass, "w-full")}
-          style={{ "--stagger-i": 0 } as CSSProperties}
+          className={cn(agencyCommandBarShellClass, "relative w-full overflow-hidden")}
+          aria-busy={viewModel.refreshing || undefined}
         >
+          {viewModel.refreshing ? (
+            <>
+              <span
+                className="agency-command-bar-shimmer pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
+                aria-hidden
+              />
+              <span className="sr-only" role="status">
+                Refreshing profile
+              </span>
+            </>
+          ) : null}
           <RangePresetChooser
             value={period.rangePreset}
             onChange={period.onRangePresetChange}
@@ -410,11 +324,8 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
           <MemberProfileRosterSwitcher memberNav={viewModel.memberNav} />
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)_minmax(17.5rem,20rem)] lg:items-start">
-          <aside
-            className={cn("space-y-4", shellStaggerItemClass)}
-            style={{ "--stagger-i": 1 } as CSSProperties}
-          >
+        <div className="grid gap-5 xl:grid-cols-[240px_minmax(0,1fr)_minmax(17.5rem,20rem)] xl:items-start">
+          <aside className="space-y-4 max-xl:order-1">
             <section className={cn(profilePanelClass, "p-4")}>
               <div className="flex items-start justify-between gap-2">
                 <AgencyMemberAvatar
@@ -557,10 +468,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
             </section>
           </aside>
 
-          <main
-            className={cn("min-w-0 space-y-5", shellStaggerItemClass)}
-            style={{ "--stagger-i": 2 } as CSSProperties}
-          >
+          <main className="min-w-0 space-y-5 max-xl:order-3">
             <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
               {profile.leaveGauges.map((gauge) => (
                 <ProfileStatPlate
@@ -576,9 +484,24 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
 
             {profile.timeline.length === 0 ? (
               <section className={cn(profilePanelClass, "p-4 sm:p-5")}>
-                <h2 className={agencyWorkTitleClass}>Activity & reviews</h2>
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className={agencyWorkTitleClass}>Activity & reviews</h2>
+                  {profile.canAddReview ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className={agencyFocusRingClass}
+                      onClick={() => viewModel.setReviewDialogOpen(true)}
+                    >
+                      Add review
+                    </Button>
+                  ) : null}
+                </div>
                 <div className={cn(agencyEmptyPanelClass, "mt-4")}>
-                  No activity in this period yet. Log time in Tracker to populate this timeline.
+                  {profile.isSelf
+                    ? "No activity in this period yet. Log time in Tracker to populate this timeline."
+                    : "No activity recorded for this member in this period."}
                 </div>
               </section>
             ) : (
@@ -587,131 +510,26 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                 days={profile.timeline}
                 totalEventsLabel={`${profile.timeline.reduce((sum, day) => sum + day.items.length, 0)} events`}
                 highlightDate={viewModel.highlightedActivityDate}
+                canAddReview={profile.canAddReview}
+                onAddReview={() => viewModel.setReviewDialogOpen(true)}
               />
             )}
           </main>
 
-          <aside
-            className={cn("space-y-4", shellStaggerItemClass)}
-            style={{ "--stagger-i": 3 } as CSSProperties}
-          >
-            <section className={cn(profilePanelClass, "p-4")}>
-              <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
-                {profile.calendar.weekdayLabels.map((label, index) => (
-                  <span key={`${label}-${index}`}>{label}</span>
-                ))}
-              </div>
-              <div className="mt-1 grid grid-cols-7 gap-1">
-                {profile.calendar.days.map((day) => {
-                  const statusClass = calendarDayStatusClass(day.status, day.inMonth);
-                  const statusSuffix = calendarDayStatusSuffix(day.status);
-                  const dayButton = (
-                    <button
-                      type="button"
-                      disabled={!day.inMonth}
-                      className={cn(
-                        "member-profile-cal-day grid place-items-center rounded-md text-xs tabular-nums",
-                        "aspect-square w-full",
-                        agencyFocusRingClass,
-                        statusClass,
-                        day.inMonth &&
-                          day.status === "holiday" &&
-                          "member-profile-cal-day--holiday",
-                        day.inMonth &&
-                          day.status === "weekend" &&
-                          "member-profile-cal-day--weekend",
-                      )}
-                      onClick={
-                        day.inMonth && !profile.canManageLeave
-                          ? () => viewModel.focusDay(day.date)
-                          : undefined
-                      }
-                      aria-label={`${day.date}${statusSuffix}`}
-                    >
-                      <span className="leading-none">{day.dayOfMonth}</span>
-                      {day.inMonth && day.status === "holiday" ? (
-                        <span
-                          className="member-profile-cal-party pointer-events-none absolute end-0.5 top-0.5 grid size-3.5 place-items-center rounded-[4px] bg-chart-1/30 text-[0.45rem] leading-none"
-                          aria-hidden
-                        >
-                          🎉
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-
-                  if (!day.inMonth || !profile.canManageLeave) {
-                    return <div key={day.date}>{dayButton}</div>;
-                  }
-
-                  return (
-                    <DropdownMenu key={day.date}>
-                      <DropdownMenuTrigger asChild>{dayButton}</DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-44">
-                        <DropdownMenuItem
-                          onSelect={() => viewModel.openOffDayRangeSelect(day.date)}
-                        >
-                          Select
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => viewModel.openAddOffDay(day.date)}>
-                          Add off day
-                        </DropdownMenuItem>
-                        {(day.status === "leave" || day.status === "holiday") && day.leaveId ? (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onSelect={() => {
-                                const leaveId = day.leaveId;
-                                if (!leaveId) return;
-                                viewModel.openRemoveLeave(leaveId, day.date);
-                              }}
-                            >
-                              Remove off day
-                            </DropdownMenuItem>
-                          </>
-                        ) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  );
-                })}
-              </div>
-              {profile.calendar.legend.some((item) => item.count > 0) ? (
-                <div
-                  className={cn(
-                    agencyWorkMetaClass,
-                    "mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-border pt-3",
-                  )}
-                  role="list"
-                  aria-label={`${profile.calendar.label} summary`}
-                >
-                  {profile.calendar.legend
-                    .filter((item) => item.count > 0)
-                    .map((item) => (
-                      <span
-                        key={item.status}
-                        role="listitem"
-                        className="inline-flex items-center gap-1.5"
-                        aria-label={calendarLegendAriaLabel(item.status, item.count, item.label)}
-                      >
-                        <span
-                          className={cn(
-                            "size-1.5 shrink-0 rounded-full",
-                            calendarLegendIndicatorClass(item.status),
-                          )}
-                          aria-hidden
-                        />
-                        <span className="font-mono tabular-nums text-foreground">{item.count}</span>
-                        <span>{item.label}</span>
-                      </span>
-                    ))}
-                </div>
-              ) : null}
-            </section>
+          <aside className="space-y-4 max-xl:order-2">
+            <MemberProfileCalendarPanel
+              calendar={profile.calendar}
+              canManageLeave={profile.canManageLeave}
+              onFocusDay={viewModel.focusDay}
+              onOpenOffDayRangeSelect={viewModel.openOffDayRangeSelect}
+              onOpenAddOffDay={viewModel.openAddOffDay}
+              onOpenRemoveLeave={viewModel.openRemoveLeave}
+            />
 
             <AskOrchRailCard
               memberName={profile.userName}
               periodLabel={period.label}
+              isSelf={profile.isSelf}
               onAsk={viewModel.askOrchAboutMember}
             />
           </aside>
@@ -734,7 +552,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
           <DialogHeader className="border-b border-border px-4 py-3">
             <DialogTitle>Select off days</DialogTitle>
             <DialogDescription>
-              Range starts on the day you clicked. Choose the end day, then confirm.
+              Choose one day or a range. The start day is fixed from your calendar click.
             </DialogDescription>
           </DialogHeader>
           {viewModel.offDayRangeSelect ? (
@@ -755,7 +573,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
           <DialogHeader>
             <DialogTitle>Add off day</DialogTitle>
             <DialogDescription>
-              Connected off-day bands appear on the calendar for this range.
+              Choose one day or a range. Team holiday applies to everyone on the team.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
@@ -769,48 +587,55 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                 onRangeChange={(next) => viewModel.setLeaveDraft(next)}
               />
             </div>
-            <div className={agencyFormFieldClass}>
-              <Label htmlFor="leave-type" className={agencyFormLabelClass}>
-                Type
-              </Label>
-              <Select
-                value={viewModel.leaveDraft.type}
-                onValueChange={(value) =>
-                  viewModel.setLeaveDraft({
-                    type: value as typeof viewModel.leaveDraft.type,
-                    teamWide: value === "team_holiday",
-                  })
-                }
-              >
-                <SelectTrigger id="leave-type" className="w-full">
-                  <SelectValue placeholder="Off day type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pto">PTO</SelectItem>
-                  <SelectItem value="sick">Sick</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                  {profile.canAddReview ? (
-                    <SelectItem value="team_holiday">Team holiday</SelectItem>
-                  ) : null}
-                </SelectContent>
-              </Select>
-            </div>
             {profile.canAddReview ? (
-              <label className="flex items-center gap-2 text-sm text-foreground">
-                <Checkbox
-                  checked={
-                    viewModel.leaveDraft.teamWide || viewModel.leaveDraft.type === "team_holiday"
-                  }
-                  onCheckedChange={(checked) =>
+              <div className={agencyFormFieldClass}>
+                <Label htmlFor="leave-type" className={agencyFormLabelClass}>
+                  Type
+                </Label>
+                <Select
+                  value={viewModel.leaveDraft.type}
+                  onValueChange={(value) =>
                     viewModel.setLeaveDraft({
-                      teamWide: checked === true,
-                      type: checked === true ? "team_holiday" : "pto",
+                      type: value as typeof viewModel.leaveDraft.type,
+                      teamWide: value === "team_holiday",
                     })
                   }
-                />
-                Team-wide (all members)
-              </label>
-            ) : null}
+                >
+                  <SelectTrigger id="leave-type" className="w-full">
+                    <SelectValue placeholder="Off day type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pto">PTO</SelectItem>
+                    <SelectItem value="sick">Sick</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="team_holiday">Team holiday</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className={agencyFormFieldClass}>
+                <Label htmlFor="leave-type" className={agencyFormLabelClass}>
+                  Type
+                </Label>
+                <Select
+                  value={viewModel.leaveDraft.type}
+                  onValueChange={(value) =>
+                    viewModel.setLeaveDraft({
+                      type: value as typeof viewModel.leaveDraft.type,
+                    })
+                  }
+                >
+                  <SelectTrigger id="leave-type" className="w-full">
+                    <SelectValue placeholder="Off day type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pto">PTO</SelectItem>
+                    <SelectItem value="sick">Sick</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className={agencyFormFieldClass}>
               <Label htmlFor="leave-reason" className={agencyFormLabelClass}>
                 Reason
@@ -837,6 +662,52 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
               onClick={() => void viewModel.submitLeave()}
             >
               {viewModel.leavePending ? "Saving…" : "Save off day"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={viewModel.reviewDialogOpen} onOpenChange={viewModel.setReviewDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add review</DialogTitle>
+            <DialogDescription>Record a manager review for this period.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor="review-date" className={agencyFormLabelClass}>
+                Review date
+              </Label>
+              <MemberProfileDatePicker
+                id="review-date"
+                value={viewModel.reviewDraft.reviewDate}
+                onChange={(value) => viewModel.setReviewDraft({ reviewDate: value })}
+                aria-label="Review date"
+              />
+            </div>
+            <div className={agencyFormFieldClass}>
+              <Label htmlFor="review-body" className={agencyFormLabelClass}>
+                Review
+              </Label>
+              <Textarea
+                id="review-body"
+                rows={4}
+                value={viewModel.reviewDraft.body}
+                onChange={(event) => viewModel.setReviewDraft({ body: event.target.value })}
+                placeholder="What went well, what to improve, and next steps."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => viewModel.setReviewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={viewModel.reviewPending || !viewModel.reviewDraft.body.trim()}
+              onClick={() => void viewModel.submitReview()}
+            >
+              {viewModel.reviewPending ? "Saving…" : "Save review"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1040,9 +911,40 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
             <Button
               type="button"
               disabled={viewModel.hrPending}
-              onClick={() => void viewModel.submitHr()}
+              onClick={() => viewModel.requestSubmitHr()}
             >
               {viewModel.hrPending ? "Saving…" : "Save profile"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={viewModel.hrInactiveConfirmOpen}
+        onOpenChange={viewModel.setHrInactiveConfirmOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark member inactive?</DialogTitle>
+            <DialogDescription>
+              Inactive members stay on the roster but are treated as not currently working. You can
+              switch back to active later.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => viewModel.setHrInactiveConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={viewModel.hrPending}
+              onClick={() => viewModel.confirmHrInactive()}
+            >
+              {viewModel.hrPending ? "Saving…" : "Mark inactive"}
             </Button>
           </DialogFooter>
         </DialogContent>

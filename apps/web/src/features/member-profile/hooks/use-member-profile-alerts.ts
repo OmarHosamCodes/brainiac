@@ -1,5 +1,5 @@
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -8,6 +8,7 @@ import {
 } from "@/features/member-profile/member-profile-alert-plate";
 import {
   resolveAlertPeriodTarget,
+  type AlertPeriodFiscalCalendar,
   type AlertPeriodTarget,
 } from "@/features/member-profile/member-profile-alert-period";
 import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/agency-member-profile";
@@ -19,7 +20,10 @@ type AlertKind = "abnormal_day" | "month_pace" | "quarter_pace" | "waste_spike" 
 export type MemberProfileAlertsViewModel = {
   canManage: boolean;
   loading: boolean;
+  refreshing: boolean;
+  error: string | null;
   pending: boolean;
+  pendingLabel: string | null;
   countLabel: string | null;
   items: Array<{
     id: string;
@@ -47,6 +51,7 @@ export type MemberProfileAlertsViewModel = {
   setNoteDraft: (alertId: string, note: string) => void;
   openPeriod: (alertId: string) => void;
   refetch: () => void;
+  retry: () => void;
   submit: () => Promise<void>;
   send: (alertId: string) => Promise<void>;
   remove: (alertId: string) => Promise<void>;
@@ -89,10 +94,28 @@ function alertKindLabel(kind: AlertKind): string {
   }
 }
 
+function alertPendingLabel(
+  kind: ReturnType<typeof useAgencyMemberProfileStore.getState>["alertPendingKind"],
+): string | null {
+  switch (kind) {
+    case "create":
+      return "Saving…";
+    case "send":
+      return "Sending…";
+    case "remove":
+      return "Dismissing…";
+    case "snooze":
+      return "Snoozing…";
+    default:
+      return null;
+  }
+}
+
 export function useMemberProfileAlerts(input: {
   teamId: string;
   subjectUserId: string;
   utcOffsetMinutes: number;
+  fiscalCalendar?: AlertPeriodFiscalCalendar;
   onOpenPeriod: (target: AlertPeriodTarget) => void;
 }): MemberProfileAlertsViewModel {
   const session = authClient.useSession();
@@ -103,6 +126,13 @@ export function useMemberProfileAlerts(input: {
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [detailAlertId, setDetailAlertId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setDetailAlertId(null);
+    setNoteDrafts({});
+    setDialogOpen(false);
+    setDraftState({ title: "", note: "" });
+  }, [input.subjectUserId]);
+
   const alertsQuery = useQuery({
     ...orpc.agencyOps.memberProfile.alerts.list.queryOptions({
       input: {
@@ -112,7 +142,6 @@ export function useMemberProfileAlerts(input: {
       },
     }),
     enabled: Boolean(input.teamId && input.subjectUserId && session.data?.user),
-    placeholderData: keepPreviousData,
   });
 
   async function invalidateAlerts() {
@@ -121,6 +150,12 @@ export function useMemberProfileAlerts(input: {
     });
     await alertsQuery.refetch();
   }
+
+  const error = alertsQuery.error
+    ? alertsQuery.error instanceof Error
+      ? alertsQuery.error.message
+      : "Couldn't load alerts"
+    : store.error;
 
   const view = useMemo(() => {
     const data = alertsQuery.data;
@@ -148,24 +183,34 @@ export function useMemberProfileAlerts(input: {
             : null,
         severity: alertSeverity(item.kind),
         canSnooze: item.source === "system",
-        canOpenPeriod: resolveAlertPeriodTarget(context) !== null,
+        canOpenPeriod: resolveAlertPeriodTarget(context, input.fiscalCalendar) !== null,
         plate: buildAlertPlate(item.kind, context, { title: item.title }),
       };
     });
     const detailAlert = items.find((item) => item.id === detailAlertId) ?? null;
     return {
       canManage,
-      loading: alertsQuery.isLoading && !data,
+      loading: alertsQuery.isPending && !data,
+      refreshing: alertsQuery.isFetching && Boolean(data),
       countLabel: items.length > 0 ? String(items.length) : null,
       items,
       detailAlertId,
       detailAlert,
     };
-  }, [alertsQuery.data, alertsQuery.isLoading, detailAlertId, noteDrafts]);
+  }, [
+    alertsQuery.data,
+    alertsQuery.isFetching,
+    alertsQuery.isPending,
+    detailAlertId,
+    input.fiscalCalendar,
+    noteDrafts,
+  ]);
 
   return {
     ...view,
+    error,
     pending: store.alertPending,
+    pendingLabel: alertPendingLabel(store.alertPendingKind),
     dialogOpen,
     draft,
     setDialogOpen(open) {
@@ -187,11 +232,14 @@ export function useMemberProfileAlerts(input: {
     openPeriod(alertId) {
       const item = alertsQuery.data?.items.find((alert) => alert.id === alertId);
       if (!item) return;
-      const target = resolveAlertPeriodTarget(item.context ?? {});
+      const target = resolveAlertPeriodTarget(item.context ?? {}, input.fiscalCalendar);
       if (!target) return;
       input.onOpenPeriod(target);
     },
     refetch() {
+      void alertsQuery.refetch();
+    },
+    retry() {
       void alertsQuery.refetch();
     },
     async submit() {

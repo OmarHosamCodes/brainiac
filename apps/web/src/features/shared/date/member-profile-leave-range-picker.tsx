@@ -1,6 +1,6 @@
 import { CalendarRange } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { DateRange } from "react-day-picker";
 
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
@@ -63,11 +63,20 @@ export function MemberProfileOffDayRangePanel({
   onConfirm,
   onCancel,
   lockStart = false,
-  emptyLabel = "Select off day dates",
+  emptyLabel = "Choose one day or a range",
 }: MemberProfileOffDayRangePanelProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [draftStart, setDraftStart] = useState(startDate);
   const [draftEnd, setDraftEnd] = useState(endDate);
+  const [monthCount, setMonthCount] = useState(1);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 640px)");
+    const sync = () => setMonthCount(media.matches ? 2 : 1);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   const from = parseLocalDateKey(draftStart);
   const to = parseLocalDateKey(draftEnd);
@@ -76,10 +85,10 @@ export function MemberProfileOffDayRangePanel({
   const draftLabel = rangeLabel(draftStart, draftEnd, emptyLabel);
 
   return (
-    <div>
+    <div className="max-h-[min(85vh,34rem)] overflow-y-auto">
       <Calendar
         mode="range"
-        numberOfMonths={2}
+        numberOfMonths={monthCount}
         captionLayout="dropdown"
         selected={selected}
         defaultMonth={from ?? new Date()}

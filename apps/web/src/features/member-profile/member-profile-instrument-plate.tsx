@@ -39,11 +39,11 @@ export function instrumentPlateInkClass(tone: InstrumentPlateTone) {
 export function statPlateShortLabel(key: StatPlateKey): string {
   switch (key) {
     case "leaves":
-      return "Off";
+      return "Off days";
     case "period":
       return "Hours";
     case "present":
-      return "Streak";
+      return "Day streak";
     case "waste":
       return "Waste";
     default: {
@@ -75,7 +75,9 @@ function PaceBarGlyph({ ratio, className }: { ratio: number; className?: string 
   return (
     <svg viewBox="0 0 64 28" className={className} aria-hidden>
       <rect x="4" y="11" width="56" height="6" rx="1.5" className="fill-current opacity-20" />
-      <rect x="4" y="11" width={Math.max(4, 56 * r)} height="6" rx="1.5" className="fill-current" />
+      {r > 0 ? (
+        <rect x="4" y="11" width={56 * r} height="6" rx="1.5" className="fill-current" />
+      ) : null}
       <line
         x1={4 + 56 * 0.85}
         y1="7"
@@ -92,7 +94,7 @@ function PaceBarGlyph({ ratio, className }: { ratio: number; className?: string 
 function DonutGlyph({ ratio, className }: { ratio: number; className?: string }) {
   const r = Math.min(1, Math.max(0, ratio));
   const c = 2 * Math.PI * 9;
-  const dash = Math.max(2, c * r);
+  const dash = c * r;
   return (
     <svg viewBox="0 0 64 28" className={className} aria-hidden>
       <g transform="translate(32 14)">
@@ -103,15 +105,17 @@ function DonutGlyph({ ratio, className }: { ratio: number; className?: string })
           strokeWidth="2"
           strokeDasharray="2 2"
         />
-        <circle
-          r="9"
-          fill="none"
-          className="stroke-current"
-          strokeWidth="2.5"
-          strokeDasharray={`${dash} ${c}`}
-          strokeLinecap="round"
-          transform="rotate(-90)"
-        />
+        {r > 0 ? (
+          <circle
+            r="9"
+            fill="none"
+            className="stroke-current"
+            strokeWidth="2.5"
+            strokeDasharray={`${dash} ${c}`}
+            strokeLinecap="round"
+            transform="rotate(-90)"
+          />
+        ) : null}
       </g>
     </svg>
   );

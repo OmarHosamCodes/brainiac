@@ -1,6 +1,6 @@
 import { buildWeekHours } from "@orch/api/routers/agency-ops/member-profile/member-profile-hr";
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "@/lib/navigation";
 import { toast } from "sonner";
@@ -57,6 +57,7 @@ export type AgencyMemberProfileViewModel = {
   teamId: string;
   subjectUserId: string;
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
   memberNav: {
     members: MemberProfileRosterMember[];
@@ -178,6 +179,7 @@ export type AgencyMemberProfileViewModel = {
       }>;
       onPrevMonth: () => void;
       onNextMonth: () => void;
+      todayDate: string;
     };
     timeline: Array<{
       date: string;
@@ -240,6 +242,10 @@ export type AgencyMemberProfileViewModel = {
   leavePending: boolean;
   reviewPending: boolean;
   hrPending: boolean;
+  hrInactiveConfirmOpen: boolean;
+  setHrInactiveConfirmOpen: (open: boolean) => void;
+  requestSubmitHr: () => void;
+  confirmHrInactive: () => void;
   leaveDraft: {
     startDate: string;
     endDate: string;
@@ -615,6 +621,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const [highlightedActivityDate, setHighlightedActivityDate] = useState<string | null>(null);
   const [selectedHeatDate, setSelectedHeatDate] = useState<string | null>(null);
   const [openGaugeKey, setOpenGaugeKey] = useState<StatPlateKey | null>(null);
+  const [hrInactiveConfirmOpen, setHrInactiveConfirmOpen] = useState(false);
 
   const defaultCalendarMonth = range.to.slice(0, 7);
   const calendarMonth = calendarMonthOverride ?? defaultCalendarMonth;
@@ -641,7 +648,8 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       input: profileQueryInput,
     }),
     enabled: Boolean(teamId && subjectUserId && session.data?.user),
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData) =>
+      previousData?.userId === subjectUserId ? previousData : undefined,
   });
 
   const departmentsQuery = useQuery({
@@ -687,10 +695,18 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     pendingFocusDateRef.current = focusDate;
   }
 
+  const fiscalCalendar = tenurePolicy
+    ? {
+        fiscalYearStartMonth: tenurePolicy.fiscalYearStartMonth,
+        fiscalYearStartDay: tenurePolicy.fiscalYearStartDay,
+      }
+    : undefined;
+
   const alerts = useMemberProfileAlerts({
     teamId,
     subjectUserId,
     utcOffsetMinutes,
+    fiscalCalendar,
     onOpenPeriod: openAlertPeriod,
   });
 
@@ -707,10 +723,13 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     if (alertId) {
       alerts.openDetail(alertId);
     }
-    const target = resolveAlertPeriodTarget({
-      dateKey: day ?? undefined,
-      periodKey: periodKey ?? undefined,
-    });
+    const target = resolveAlertPeriodTarget(
+      {
+        dateKey: day ?? undefined,
+        periodKey: periodKey ?? undefined,
+      },
+      fiscalCalendar,
+    );
     if (target) {
       openAlertPeriod(target);
     }
@@ -760,7 +779,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
 
   const profile = useMemo(() => {
     const data = profileQuery.data;
-    if (!data) return null;
+    if (!data || data.userId !== subjectUserId) return null;
 
     const avatarUrl =
       data.userAvatar && serverUrl
@@ -865,10 +884,11 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         valueLabel: shortHours(data.periodWasteSeconds),
         secondary: "this period",
         ratio:
-          data.periodTotalSeconds <= 0
+          data.periodWasteSeconds <= 0
             ? 0
-            : Math.min(1, data.periodWasteSeconds / data.periodTotalSeconds),
-        tone: "warning" as const,
+            : Math.min(1, data.periodWasteSeconds / Math.max(data.periodTotalSeconds, 1)),
+        tone:
+          data.periodWasteSeconds <= 0 ? ("foreground" as const) : ("warning" as const),
       },
     ];
 
@@ -898,8 +918,9 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         days: data.heatMap.days.map((day, index, all) => {
           let offBand: "single" | "start" | "middle" | "end" | null = null;
           if (day.off) {
-            const hasPrev = Boolean(all[index - 1]?.off);
-            const hasNext = Boolean(all[index + 1]?.off);
+            const leaveId = day.off.leaveId;
+            const hasPrev = all[index - 1]?.off?.leaveId === leaveId;
+            const hasNext = all[index + 1]?.off?.leaveId === leaveId;
             if (!hasPrev && !hasNext) offBand = "single";
             else if (!hasPrev && hasNext) offBand = "start";
             else if (hasPrev && hasNext) offBand = "middle";
@@ -956,7 +977,13 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       calendar: {
         label: data.calendarMonth.label,
         weekdayLabels: data.calendarMonth.weekdayLabels,
-        days: data.calendarMonth.days,
+        days: data.calendarMonth.days.map((day) => ({
+          date: day.date,
+          dayOfMonth: day.dayOfMonth,
+          inMonth: day.inMonth,
+          status: day.status,
+          leaveId: day.leaveId,
+        })),
         legend: [
           { status: "present" as const, label: "logged", count: calendarLegendCounts.present },
           { status: "leave" as const, label: "off", count: calendarLegendCounts.leave },
@@ -966,6 +993,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         ],
         onPrevMonth: () => setCalendarMonthOverride(shiftMonthKey(calendarMonth, -1)),
         onNextMonth: () => setCalendarMonthOverride(shiftMonthKey(calendarMonth, 1)),
+        todayDate: today,
       },
       timeline: data.timeline.map((day, index) => {
         const defaultOpen =
@@ -1051,6 +1079,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     selectedHeatDate,
     serverUrl,
     today,
+    subjectUserId,
     weekStartsOn,
     weekendDurationDays,
     rangeStartKey,
@@ -1126,12 +1155,20 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       periodWasteLabel: shortHours(data.periodWasteSeconds),
       dayHours,
       calendarLabel: profile.calendar.label,
-      calendarDays: profile.calendar.days.map((day) => ({
-        date: day.date,
-        inMonth: day.inMonth,
-        status: day.status,
-        dayLabel: `${day.dayOfMonth}`,
-      })),
+      calendarDays: profile.calendar.days.map((day) => {
+        const date = new Date(`${day.date}T12:00:00.000Z`);
+        return {
+          date: day.date,
+          inMonth: day.inMonth,
+          status: day.status,
+          dayLabel: date.toLocaleDateString(undefined, {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            timeZone: "UTC",
+          }),
+        };
+      }),
       wasteDays,
       gauge: {
         key: gauge.key,
@@ -1145,6 +1182,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
               currentStreak: Number(gauge.valueLabel),
               bestInMonth: gauge.bestInMonth ?? 0,
               monthPresentDays: gauge.monthPresentDays ?? 0,
+              segments: gauge.streakSegments ?? [],
             }
           : undefined,
     });
@@ -1208,10 +1246,38 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     subjectUserId,
   ]);
 
+  async function persistHrProfile() {
+    if (!teamId || !profile) return;
+    try {
+      await store.upsertHrProfile({
+        teamId,
+        userId: subjectUserId,
+        status: hrDraft.status,
+        departmentId: hrDraft.departmentId || null,
+        employmentType: hrDraft.employmentType || null,
+        workModel: hrDraft.workModel || null,
+        gender: normalizeGenderDraft(hrDraft.gender) || null,
+        dateOfBirth: hrDraft.dateOfBirth || null,
+        phone: hrDraft.phone.trim() || null,
+        address: hrDraft.address.trim() || null,
+      });
+      toast.success("Profile saved");
+      setHrDialogOpen(false);
+      setHrInactiveConfirmOpen(false);
+      await invalidate.mutateAsync();
+      await profileQuery.refetch();
+    } catch {
+      toast.error("Couldn't save profile");
+    }
+  }
+
   return {
     teamId,
     subjectUserId,
     loading: profileQuery.isPending || tenurePolicyQuery.isPending,
+    refreshing:
+      (profileQuery.isFetching && Boolean(profileQuery.data?.userId === subjectUserId)) ||
+      (tenurePolicyQuery.isFetching && Boolean(tenurePolicyQuery.data)),
     error: profileQuery.error
       ? profileQuery.error instanceof Error
         ? profileQuery.error.message
@@ -1243,6 +1309,8 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     leavePending: store.leavePending,
     reviewPending: store.reviewPending,
     hrPending: store.hrPending,
+    hrInactiveConfirmOpen,
+    setHrInactiveConfirmOpen,
     leaveDraft,
     reviewDraft,
     hrDraft,
@@ -1355,6 +1423,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     openGaugeKey,
     gaugeDetail,
     openGauge(key) {
+      if (!profile || profileQuery.data?.userId !== subjectUserId) return;
       setOpenGaugeKey(key);
     },
     closeGauge() {
@@ -1377,15 +1446,23 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       scrollToActivityDay(action.date);
     },
     askOrchAboutMember() {
-      const name = profile?.userName?.trim() || "this member";
+      if (!profile) return;
       const agent = useWorkspaceAgentStore.getState();
       for (const chip of agent.scopeChips) {
         if (chip.kind === "member") agent.removeScopeChip(chip.id);
       }
-      agent.addScopeChip({ kind: "member", id: subjectUserId, label: name });
+      if (!profile.isSelf) {
+        agent.addScopeChip({
+          kind: "member",
+          id: subjectUserId,
+          label: profile.userName.trim() || "Member",
+        });
+      }
       agent.seedComposer({
         toolPreset: "ask",
-        text: `Review ${name}'s profile for ${periodLabel}. Summarize hours, attendance, off days, and waste. Flag anomalies or risks, cite the relevant dates and figures, and recommend next steps.`,
+        text: profile.isSelf
+          ? `Review my profile for ${periodLabel}. Summarize hours, attendance, off days, and waste. Flag anomalies or risks, cite the relevant dates and figures, and recommend next steps.`
+          : `Review ${profile.userName.trim() || "this member"}'s profile for ${periodLabel}. Summarize hours, attendance, off days, and waste. Flag anomalies or risks, cite the relevant dates and figures, and recommend next steps.`,
       });
     },
     retry() {
@@ -1430,28 +1507,19 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       }
     },
     async submitHr() {
-      if (!teamId || !profile) return;
-      try {
-        // Omit code/social/allowances so existing DB values stay intact.
-        await store.upsertHrProfile({
-          teamId,
-          userId: subjectUserId,
-          status: hrDraft.status,
-          departmentId: hrDraft.departmentId || null,
-          employmentType: hrDraft.employmentType || null,
-          workModel: hrDraft.workModel || null,
-          gender: normalizeGenderDraft(hrDraft.gender) || null,
-          dateOfBirth: hrDraft.dateOfBirth || null,
-          phone: hrDraft.phone.trim() || null,
-          address: hrDraft.address.trim() || null,
-        });
-        toast.success("Profile saved");
-        setHrDialogOpen(false);
-        await invalidate.mutateAsync();
-        await profileQuery.refetch();
-      } catch {
-        toast.error("Couldn't save profile");
+      await persistHrProfile();
+    },
+    requestSubmitHr() {
+      if (!profile) return;
+      if (profile.hr.status === "active" && hrDraft.status === "inactive") {
+        setHrInactiveConfirmOpen(true);
+        return;
       }
+      void persistHrProfile();
+    },
+    confirmHrInactive() {
+      setHrInactiveConfirmOpen(false);
+      void persistHrProfile();
     },
   };
 }

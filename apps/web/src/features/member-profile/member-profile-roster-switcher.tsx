@@ -153,7 +153,7 @@ export function MemberProfileRosterSwitcher({ memberNav }: { memberNav: MemberNa
                 agencyFocusRingClass,
               )}
               aria-label={`Current member: ${memberNav.current.userName}. Open member list`}
-              aria-haspopup="listbox"
+              aria-haspopup="dialog"
             >
               <RosterAvatar member={memberNav.current} size="md" className="size-7" />
               <span className="min-w-0 flex-1 truncate text-left text-xs">
@@ -187,11 +187,7 @@ export function MemberProfileRosterSwitcher({ memberNav }: { memberNav: MemberNa
                 </p>
               ) : null}
             </div>
-            <div
-              className="max-h-[18rem] overflow-y-auto p-1"
-              role="listbox"
-              aria-label="Team members"
-            >
+            <div className="max-h-[18rem] overflow-y-auto p-1" aria-label="Team members">
               {filtered.length === 0 ? (
                 <p className="px-3 py-6 text-center text-xs text-muted-foreground">
                   No members match.
@@ -203,8 +199,7 @@ export function MemberProfileRosterSwitcher({ memberNav }: { memberNav: MemberNa
                     <button
                       key={member.userId}
                       type="button"
-                      role="option"
-                      aria-selected={selected}
+                      aria-current={selected ? "true" : undefined}
                       className={cn(
                         "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors",
                         "hover:bg-muted/80",

@@ -4,6 +4,7 @@ import {
   type InstrumentPlateTone,
   statPlateShortLabel,
 } from "@/features/member-profile/member-profile-instrument-plate";
+import type { StreakSegmentState } from "@/features/member-profile/member-profile-attendance-streak";
 
 export type GaugeDetailRow = {
   label: string;
@@ -25,6 +26,7 @@ export type GaugeDetailModel = {
   rows: GaugeDetailRow[];
   emptyLabel: string | null;
   primaryAction: GaugeDetailPrimaryAction | null;
+  streakSegments?: StreakSegmentState[];
 };
 
 export type GaugeLeaveEntry = {
@@ -80,6 +82,7 @@ export type GaugeDetailContext = {
     currentStreak: number;
     bestInMonth: number;
     monthPresentDays: number;
+    segments: StreakSegmentState[];
   };
 };
 
@@ -167,7 +170,7 @@ export function buildGaugeDetail(context: GaugeDetailContext): GaugeDetailModel 
         rows,
         emptyLabel: rows.length === 0 ? "No time logged in this period yet." : null,
         primaryAction: focus
-          ? { kind: "focus_day", label: "View activity for this period", date: focus.date }
+          ? { kind: "focus_day", label: "View busiest day", date: focus.date }
           : null,
       };
     }
@@ -198,12 +201,13 @@ export function buildGaugeDetail(context: GaugeDetailContext): GaugeDetailModel 
         tone,
         ratio: gauge.ratio,
         rows: [...summaryRows, ...dayRows],
+        streakSegments: streak?.segments,
         emptyLabel:
           present.length === 0
             ? "No streak yet. Log time on a working day to start one."
             : null,
         primaryAction: latest
-          ? { kind: "focus_day", label: "View latest present day", date: latest.date }
+          ? { kind: "focus_day", label: "View latest logged day", date: latest.date }
           : null,
       };
     }

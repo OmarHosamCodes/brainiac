@@ -25,6 +25,7 @@ type AgencyMemberProfileStore = {
   reviewPending: boolean;
   hrPending: boolean;
   alertPending: boolean;
+  alertPendingKind: "create" | "send" | "remove" | "snooze" | null;
   error: string | null;
   createLeave: (input: {
     teamId: string;
@@ -71,10 +72,11 @@ type AgencyMemberProfileStore = {
 
 async function runAlertMutation(
   set: (partial: Partial<AgencyMemberProfileStore>) => void,
+  kind: NonNullable<AgencyMemberProfileStore["alertPendingKind"]>,
   fallback: string,
   run: () => Promise<unknown>,
 ) {
-  set({ alertPending: true, error: null });
+  set({ alertPending: true, alertPendingKind: kind, error: null });
   try {
     await run();
   } catch (error) {
@@ -83,7 +85,7 @@ async function runAlertMutation(
     });
     throw error;
   } finally {
-    set({ alertPending: false });
+    set({ alertPending: false, alertPendingKind: null });
   }
 }
 
@@ -92,6 +94,7 @@ export const useAgencyMemberProfileStore = create<AgencyMemberProfileStore>((set
   reviewPending: false,
   hrPending: false,
   alertPending: false,
+  alertPendingKind: null,
   error: null,
   async createLeave(input) {
     set({ leavePending: true, error: null });
@@ -146,22 +149,22 @@ export const useAgencyMemberProfileStore = create<AgencyMemberProfileStore>((set
     }
   },
   async createAlert(input) {
-    await runAlertMutation(set, "Couldn't create alert", () =>
+    await runAlertMutation(set, "create", "Couldn't create alert", () =>
       orpcClient.agencyOps.memberProfile.alerts.create(input),
     );
   },
   async sendAlert(input) {
-    await runAlertMutation(set, "Couldn't send alert", () =>
+    await runAlertMutation(set, "send", "Couldn't send alert", () =>
       orpcClient.agencyOps.memberProfile.alerts.send(input),
     );
   },
   async removeAlert(input) {
-    await runAlertMutation(set, "Couldn't remove alert", () =>
+    await runAlertMutation(set, "remove", "Couldn't remove alert", () =>
       orpcClient.agencyOps.memberProfile.alerts.remove(input),
     );
   },
   async snoozeAlert(input) {
-    await runAlertMutation(set, "Couldn't snooze alert", () =>
+    await runAlertMutation(set, "snooze", "Couldn't snooze alert", () =>
       orpcClient.agencyOps.memberProfile.alerts.snooze(input),
     );
   },

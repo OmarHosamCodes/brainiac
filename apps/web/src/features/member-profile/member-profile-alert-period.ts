@@ -1,6 +1,44 @@
+import {
+  getFiscalQuarterRange,
+  toFiscalCalendar,
+  type FiscalQuarter,
+} from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
+
 export type AlertPeriodTarget =
   | { kind: "day"; dateKey: string; from: string; to: string }
-  | { kind: "month"; monthKey: string; from: string; to: string; focusDate: string };
+  | { kind: "month"; monthKey: string; from: string; to: string; focusDate: string }
+  | { kind: "quarter"; periodKey: string; from: string; to: string; focusDate: string };
+
+export type AlertPeriodFiscalCalendar = {
+  fiscalYearStartMonth: number;
+  fiscalYearStartDay: number;
+};
+
+function formatUtcDateKey(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function quarterPeriodTarget(
+  periodKey: string,
+  fiscalCalendar: AlertPeriodFiscalCalendar,
+): AlertPeriodTarget | null {
+  const match = /^(\d{4})-Q([1-4])$/.exec(periodKey);
+  if (!match) return null;
+  const fiscalYear = Number(match[1]);
+  const fiscalQuarter = Number(match[2]) as FiscalQuarter;
+  const range = getFiscalQuarterRange(
+    toFiscalCalendar(fiscalCalendar),
+    fiscalYear,
+    fiscalQuarter,
+  );
+  const from = formatUtcDateKey(range.start);
+  const lastInclusive = new Date(range.end.getTime() - 86_400_000);
+  const to = formatUtcDateKey(lastInclusive);
+  return { kind: "quarter", periodKey, from, to, focusDate: from };
+}
 
 /** Last calendar day key for a YYYY-MM month key (UTC date math). */
 export function lastDateKeyOfMonth(monthKey: string): string {
@@ -17,10 +55,13 @@ export function lastDateKeyOfMonth(monthKey: string): string {
  * Map alert context to a profile period the UI can open.
  * Day alerts focus that date; month-keyed alerts open the full month.
  */
-export function resolveAlertPeriodTarget(context: {
-  dateKey?: string;
-  periodKey?: string;
-}): AlertPeriodTarget | null {
+export function resolveAlertPeriodTarget(
+  context: {
+    dateKey?: string;
+    periodKey?: string;
+  },
+  fiscalCalendar?: AlertPeriodFiscalCalendar,
+): AlertPeriodTarget | null {
   const dateKey = context.dateKey;
   if (dateKey && /^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
     return { kind: "day", dateKey, from: dateKey, to: dateKey };
@@ -31,6 +72,10 @@ export function resolveAlertPeriodTarget(context: {
     const from = `${periodKey}-01`;
     const to = lastDateKeyOfMonth(periodKey);
     return { kind: "month", monthKey: periodKey, from, to, focusDate: from };
+  }
+
+  if (periodKey && fiscalCalendar) {
+    return quarterPeriodTarget(periodKey, fiscalCalendar);
   }
 
   return null;

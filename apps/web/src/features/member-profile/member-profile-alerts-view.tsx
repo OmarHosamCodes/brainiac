@@ -3,7 +3,6 @@ import { AlertPlateGlyph } from "@/features/member-profile/member-profile-alert-
 import type { AlertPlateTone } from "@/features/member-profile/member-profile-alert-plate";
 import {
   instrumentPlateInkClass,
-  instrumentPlateSurfaceClass,
   type InstrumentPlateTone,
 } from "@/features/member-profile/member-profile-instrument-plate";
 import {
@@ -50,11 +49,11 @@ function AlertStripRow({ alert, onOpen }: { alert: AlertItem; onOpen: () => void
       type="button"
       onClick={onOpen}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-start",
-        "transition-[colors,transform] duration-150 ease-out",
-        "motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.995]",
+        "flex w-full items-center gap-3 px-0 py-3 text-start",
+        "border-b border-border last:border-b-0",
+        "transition-colors duration-150 ease-out hover:bg-muted/30",
         agencyFocusRingClass,
-        instrumentPlateSurfaceClass(),
+        "motion-reduce:transition-none",
       )}
       aria-label={`${alert.title}. ${alert.body}`}
     >
@@ -96,7 +95,11 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
 
   return (
     <>
-      <section className={cn(profilePanelClass, "p-4")} aria-labelledby="member-profile-alerts">
+      <section
+        className={cn(profilePanelClass, "p-4")}
+        aria-labelledby="member-profile-alerts"
+        aria-busy={alerts.loading || alerts.refreshing || undefined}
+      >
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <h2 id="member-profile-alerts" className={agencyWorkTitleClass}>
@@ -107,6 +110,9 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
                 {alerts.countLabel}
               </span>
             ) : null}
+            {alerts.refreshing ? (
+              <span className={cn(agencyWorkMetaClass, "hidden sm:inline")}>Refreshing…</span>
+            ) : null}
           </div>
           {alerts.canManage ? (
             <Button
@@ -114,6 +120,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
               size="sm"
               variant="ghost"
               className={cn(agencyFocusRingClass, "shrink-0")}
+              disabled={alerts.pending}
               onClick={() => alerts.setDialogOpen(true)}
             >
               Add alert
@@ -121,8 +128,15 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
           ) : null}
         </div>
 
-        {alerts.loading ? (
-          <div className="mt-3 space-y-2" aria-busy="true" aria-label="Loading alerts">
+        {alerts.error ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <p className="text-sm text-destructive">{alerts.error}</p>
+            <Button type="button" size="sm" variant="outline" onClick={alerts.retry}>
+              Retry
+            </Button>
+          </div>
+        ) : alerts.loading ? (
+          <div className="mt-3 space-y-2" aria-label="Loading alerts">
             <Skeleton className="h-[4.75rem] w-full rounded-xl" />
             <Skeleton className="h-[4.75rem] w-full rounded-xl" />
           </div>
@@ -136,7 +150,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
             </p>
           </div>
         ) : (
-          <ul className="mt-3 flex list-none flex-col gap-2 p-0">
+          <ul className="mt-1 flex list-none flex-col p-0">
             {alerts.items.map((alert) => (
               <li key={alert.id} className="min-w-0">
                 <AlertStripRow alert={alert} onOpen={() => alerts.openDetail(alert.id)} />
@@ -192,6 +206,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
                         placeholder="Explain what they should change or follow up on."
                         rows={2}
                         className="min-h-16 resize-none"
+                        disabled={alerts.pending}
                         onChange={(event) => alerts.setNoteDraft(detail.id, event.target.value)}
                       />
                     </div>
@@ -203,7 +218,9 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
                         disabled={alerts.pending || !detail.note.trim()}
                         onClick={() => void alerts.send(detail.id)}
                       >
-                        Send notification
+                        {alerts.pendingLabel === "Sending…"
+                          ? "Sending…"
+                          : "Send notification"}
                       </Button>
                       {detail.canSnooze ? (
                         <Button
@@ -214,7 +231,9 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
                           disabled={alerts.pending}
                           onClick={() => void alerts.snooze(detail.id)}
                         >
-                          Snooze for this period
+                          {alerts.pendingLabel === "Snoozing…"
+                            ? "Snoozing…"
+                            : "Snooze for this period"}
                         </Button>
                       ) : null}
                       <Button
@@ -225,7 +244,9 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
                         disabled={alerts.pending}
                         onClick={() => void alerts.remove(detail.id)}
                       >
-                        Dismiss alert
+                        {alerts.pendingLabel === "Dismissing…"
+                          ? "Dismissing…"
+                          : "Dismiss alert"}
                       </Button>
                     </div>
                   </div>
@@ -257,6 +278,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
               <Input
                 id="member-alert-title"
                 value={alerts.draft.title}
+                disabled={alerts.pending}
                 onChange={(e) => alerts.setDraft({ title: e.target.value })}
                 placeholder="Follow up on month pace"
                 autoFocus
@@ -269,6 +291,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
               <Textarea
                 id="member-alert-note"
                 value={alerts.draft.note}
+                disabled={alerts.pending}
                 onChange={(e) => alerts.setDraft({ note: e.target.value })}
                 rows={3}
                 placeholder="Add context for your team or the member."
@@ -284,7 +307,7 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
               disabled={alerts.pending || !alerts.draft.title.trim()}
               onClick={() => void alerts.submit()}
             >
-              Save alert
+              {alerts.pendingLabel === "Saving…" ? "Saving…" : "Save alert"}
             </Button>
           </DialogFooter>
         </DialogContent>

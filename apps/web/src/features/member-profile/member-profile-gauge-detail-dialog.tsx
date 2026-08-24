@@ -66,6 +66,7 @@ export function MemberProfileGaugeDetailDialog({ detail, onClose, onPrimaryActio
                     <StatPlateGlyph
                       plateKey={detail.key}
                       ratio={detail.ratio}
+                      segments={detail.streakSegments}
                       className="h-full w-full"
                     />
                   </div>

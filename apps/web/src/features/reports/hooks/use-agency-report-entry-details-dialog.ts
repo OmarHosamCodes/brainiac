@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ import {
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { orpc } from "@/lib/orpc";
 
 export function selectEntriesForDetailsRow(
   entries: AgencyReportEntry[],
@@ -113,11 +115,14 @@ export type AgencyReportEntryDetailsDialogViewModel = {
   onClose: () => void;
 };
 
-function invalidateReportsEntries(teamId: string) {
+function invalidateReportsEntries(teamId: string, queryClient: ReturnType<typeof useQueryClient>) {
   void Promise.all([
     invalidateAgencyEntriesQueries(teamId),
     invalidateAgencyReportsQueries(teamId),
     invalidateAgencyDashboardQueries(teamId),
+    queryClient.invalidateQueries({
+      queryKey: orpc.agencyOps.memberProfile.get.key(),
+    }),
   ]);
 }
 
@@ -129,6 +134,7 @@ export function useAgencyReportEntryDetailsDialog({
   onOpenChange,
 }: UseAgencyReportEntryDetailsDialogOptions): AgencyReportEntryDetailsDialogViewModel {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const queryClient = useQueryClient();
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const deletingEntryIds = useAgencyTimeTrackingStore((state) => state.deletingEntryIds);
   const updatingEntryIds = useAgencyTimeTrackingStore((state) => state.updatingEntryIds);
@@ -189,14 +195,14 @@ export function useAgencyReportEntryDetailsDialog({
     const entry = entries.find((item) => item.id === entryId);
     if (!teamId || !entry) return;
     await agencyTimeTrackingStore.deleteEntries({ teamId, entries: [entry] });
-    invalidateReportsEntries(teamId);
+    invalidateReportsEntries(teamId, queryClient);
   }
 
   async function deleteGroupEntries(entryIds: string[]) {
     const selectedEntries = entries.filter((entry) => entryIds.includes(entry.id));
     if (!teamId || selectedEntries.length === 0) return;
     await agencyTimeTrackingStore.deleteEntries({ teamId, entries: selectedEntries });
-    invalidateReportsEntries(teamId);
+    invalidateReportsEntries(teamId, queryClient);
   }
 
   async function restartEntry(group: CollapsedEntryGroup) {
@@ -267,14 +273,14 @@ export function useAgencyReportEntryDetailsDialog({
       tagIds: draft.tagIds,
       isBillable: draft.isBillable,
     });
-    invalidateReportsEntries(teamId);
+    invalidateReportsEntries(teamId, queryClient);
   }
 
   async function duplicateEntry(entryId: string) {
     const entry = entries.find((item) => item.id === entryId);
     if (!teamId || !entry) return;
     await agencyTimeTrackingStore.duplicateEntry({ teamId, entry });
-    invalidateReportsEntries(teamId);
+    invalidateReportsEntries(teamId, queryClient);
   }
 
   function toggleGroupExpand(collapseKey: string) {
@@ -386,7 +392,7 @@ export function useAgencyReportEntryDetailsDialog({
       previousEntries: entries.filter((entry) => entryIds.includes(entry.id)),
       patch,
     });
-    invalidateReportsEntries(teamId);
+    invalidateReportsEntries(teamId, queryClient);
   }
 
   async function applyBulkPatch() {

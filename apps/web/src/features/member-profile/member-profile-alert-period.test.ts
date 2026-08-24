@@ -25,7 +25,22 @@ describe("resolveAlertPeriodTarget", () => {
     });
   });
 
-  test("ignores quarter keys without a dateKey", () => {
+  test("maps fiscal quarter keys to the quarter date range", () => {
+    expect(
+      resolveAlertPeriodTarget(
+        { periodKey: "2026-Q3" },
+        { fiscalYearStartMonth: 1, fiscalYearStartDay: 1 },
+      ),
+    ).toEqual({
+      kind: "quarter",
+      periodKey: "2026-Q3",
+      from: "2026-07-01",
+      to: "2026-09-30",
+      focusDate: "2026-07-01",
+    });
+  });
+
+  test("ignores quarter keys without fiscal calendar", () => {
     expect(resolveAlertPeriodTarget({ periodKey: "2026-Q3" })).toBeNull();
   });
 });

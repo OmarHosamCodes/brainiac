@@ -90,7 +90,7 @@ describe("buildGaugeDetail", () => {
     expect(detail.rows).toHaveLength(2);
     expect(detail.primaryAction).toEqual({
       kind: "focus_day",
-      label: "View activity for this period",
+      label: "View busiest day",
       date: "2026-08-02",
     });
   });
@@ -127,6 +127,7 @@ describe("buildGaugeDetail", () => {
           currentStreak: 3,
           bestInMonth: 5,
           monthPresentDays: 9,
+          segments: ["present", "present", "present", "missed", "missed", "missed", "missed"],
         },
         gauge: { key: "present", valueLabel: "3", ratio: 3 / 7, tone: "success" },
       }),
@@ -138,7 +139,7 @@ describe("buildGaugeDetail", () => {
     expect(detail.rows).toHaveLength(3);
     expect(detail.primaryAction).toEqual({
       kind: "focus_day",
-      label: "View latest present day",
+      label: "View latest logged day",
       date: "2026-08-03",
     });
   });

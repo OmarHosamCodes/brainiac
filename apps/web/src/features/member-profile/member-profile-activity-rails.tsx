@@ -18,6 +18,7 @@ import {
 import { AgencyTimeEntryProjectLabel } from "@/features/time-tracking/entries/agency-time-entry-project-label";
 import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
+import { Button } from "@/ui/button";
 
 export type MemberProfileActivityRailsDay = {
   date: string;
@@ -49,6 +50,8 @@ type Props = {
   totalEventsLabel: string;
   /** Brief shimmer target after jumping here from an alert. */
   highlightDate?: string | null;
+  canAddReview?: boolean;
+  onAddReview?: () => void;
 };
 
 function dayRailParts(dateKey: string) {
@@ -161,6 +164,8 @@ export function MemberProfileActivityRails({
   days,
   totalEventsLabel,
   highlightDate = null,
+  canAddReview = false,
+  onAddReview,
 }: Props) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const feedRef = useRef<HTMLDivElement>(null);
@@ -284,16 +289,31 @@ export function MemberProfileActivityRails({
           <h2 className="text-sm font-semibold tracking-tight text-foreground">
             Activity & reviews
           </h2>
-          <span className="inline-flex h-5 min-w-6 items-center justify-center rounded-full border border-border px-2 font-mono text-[11px] text-muted-foreground">
-            {totalEventsLabel}
-          </span>
+          <div className="flex items-center gap-2">
+            {canAddReview && onAddReview ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className={cn("h-7 px-2 text-xs", agencyFocusRingClass)}
+                onClick={onAddReview}
+              >
+                Add review
+              </Button>
+            ) : null}
+            <span className="inline-flex h-5 min-w-6 items-center justify-center rounded-full border border-border px-2 font-mono text-[11px] text-muted-foreground">
+              {totalEventsLabel}
+            </span>
+          </div>
         </div>
 
         <div
           ref={feedRef}
           tabIndex={0}
           className={cn(
-            "relative min-w-0 max-h-[min(28rem,calc(100vh-12rem))] overflow-x-hidden overflow-y-auto overscroll-contain",
+            "relative min-w-0 overscroll-contain",
+            "max-xl:overflow-visible max-xl:pb-2",
+            "xl:max-h-[min(28rem,calc(100vh-12rem))] xl:overflow-x-hidden xl:overflow-y-auto",
             "scroll-smooth motion-reduce:scroll-auto",
             "[scrollbar-gutter:stable]",
           )}
@@ -347,7 +367,7 @@ export function MemberProfileActivityRails({
                               ? "border border-border bg-muted text-foreground"
                               : "border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                         )}
-                        aria-current={current || day.date === highlightDate ? "true" : undefined}
+                        aria-current={current ? "true" : undefined}
                         onClick={() => jumpToDay(day.date)}
                       >
                         {parts.tabLabel}
