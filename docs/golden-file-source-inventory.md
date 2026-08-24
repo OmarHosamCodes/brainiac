@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-08-20 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-08-24 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,17 +19,17 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 855 |
+| golden-feature | 869 |
 | server-operation | 16 |
-| shared-infrastructure | 455 |
+| shared-infrastructure | 456 |
 | static-presentation | 22 |
 
 ## Counts by domain
 
 | Domain | Artifacts |
 | --- | ---: |
-| agency-shared | 133 |
-| agent | 131 |
+| agency-shared | 134 |
+| agent | 132 |
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 14 |
@@ -43,7 +43,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | environment | 5 |
 | integrations | 2 |
 | marketing | 24 |
-| member-profile | 37 |
+| member-profile | 50 |
 | notifications | 35 |
 | performance | 8 |
 | projects | 24 |
@@ -365,17 +365,30 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/member-profile/member-profile-activity-merge.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/member-profile/member-profile-activity-merge.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/member-profile/member-profile-activity-rails.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/member-profile/member-profile-alert-glyphs.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/member-profile-alert-href.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/member-profile/member-profile-alert-href.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/member-profile/member-profile-alert-period.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/member-profile/member-profile-alert-period.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/member-profile/member-profile-alert-plate.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/member-profile/member-profile-alert-plate.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/member-profile/member-profile-alerts-view.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/member-profile/member-profile-attendance-streak.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/member-profile/member-profile-attendance-streak.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/member-profile/member-profile-calendar-day.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/member-profile/member-profile-calendar-day.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/member-profile/member-profile-calendar-panel.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/member-profile-date-picker.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/member-profile/member-profile-gauge-detail-dialog.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/member-profile/member-profile-gauge-detail.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/member-profile/member-profile-gauge-detail.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/member-profile/member-profile-gauge-morph.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/member-profile/member-profile-heat-layout.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/member-profile/member-profile-heat-layout.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/member-profile/member-profile-heat-map.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/member-profile-heat-strip-fill.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/member-profile/member-profile-heat-strip-fill.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/member-profile/member-profile-instrument-plate.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/member-profile-leave-range-picker.tsx` | member-profile | presentational-view | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/member-profile/member-profile-roster-nav.test.ts` | member-profile | test | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/member-profile/member-profile-roster-nav.ts` | member-profile | domain-logic | golden-feature | member-profile-domain | Feature-owned member-profile artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
@@ -474,7 +487,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/reports/export-agency-report-xlsx.ts` | reports | domain-logic | golden-feature | reports-domain | Feature-owned reports artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/reports/fetch-report-entries.ts` | reports | web-query | golden-feature | reports-domain | Feature-owned reports artifact in the canonical web-query layer. | content: oRPC procedures or clients, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/reports/hooks/use-agency-report-entry-details-dialog.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
-| `apps/web/src/features/reports/hooks/use-agency-report-entry-details-dialog.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/reports/hooks/use-agency-report-entry-details-dialog.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/reports/hooks/use-agency-reports-surface.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/reports/hooks/use-agency-saved-reports-list.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/reports/use-agency-report-autosave.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
@@ -575,6 +588,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/shared/live/agency-live-connection.ts` | agency-shared | web-query | shared-infrastructure | agency-platform | Cross-cutting agency-shared web-query support rather than a feature-owned business workflow. | content: feature query orchestration, React component or hook code, server runtime wiring; structure: source role and exported behavior |
 | `apps/web/src/features/shared/live/agency-live-handlers.test.ts` | agency-shared | test | shared-infrastructure | agency-platform | Cross-cutting agency-shared test support rather than a feature-owned business workflow. | content: Bun test declarations, TanStack Query orchestration; structure: test filename |
 | `apps/web/src/features/shared/live/agency-live-handlers.ts` | agency-shared | web-query | shared-infrastructure | agency-platform | Cross-cutting agency-shared web-query support rather than a feature-owned business workflow. | content: feature query orchestration, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/shared/orch-presence-morph.ts` | agency-shared | domain-logic | shared-infrastructure | agency-platform | Cross-cutting agency-shared domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/shared/project-palette.test.ts` | agency-shared | test | shared-infrastructure | agency-platform | Cross-cutting agency-shared test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/shared/project-palette.ts` | agency-shared | domain-logic | shared-infrastructure | agency-platform | Cross-cutting agency-shared domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/shared/stores/agency-favorites.ts` | agency-shared | client-state | shared-infrastructure | agency-platform | Cross-cutting agency-shared client-state support rather than a feature-owned business workflow. | content: oRPC procedures or clients, exported declarations; structure: source role and exported behavior |
@@ -795,6 +809,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/workspace-agent/scope-chip-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/sticky-dock.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/workspace-agent/sticky-dock.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/workspace-agent/stores/workspace-agent-orch-presence.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/workspace-agent/stores/workspace-agent-store.ts` | agent | client-state | golden-feature | agent-domain | Feature-owned agent artifact in the canonical client-state layer. | content: Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/thinking-activity-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/tool-menu-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
