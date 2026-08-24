@@ -15,6 +15,7 @@ import {
 const schedule = { requiredDailyHours: 8, weekStartsOn: 1, weekendDurationDays: 2 };
 const calendar = { fiscalYearStartMonth: 1, fiscalYearStartDay: 1 };
 const monthlyMinHours = 200;
+const offDayReduceHours = 8;
 
 describe("member-profile-alerts detectors", () => {
   test("member.alert is a registered notification type", () => {
@@ -45,7 +46,13 @@ describe("member-profile-alerts detectors", () => {
       { dateKey: "2026-08-03", totalSeconds: 3600, wasteSeconds: 0 },
       { dateKey: "2026-08-10", totalSeconds: 3600, wasteSeconds: 0 },
     ];
-    const alert = detectMonthPace({ days, schedule, monthlyMinHours, todayKey: "2026-08-20" });
+    const alert = detectMonthPace({
+      days,
+      schedule,
+      monthlyMinHours,
+      offDayReduceHours,
+      todayKey: "2026-08-20",
+    });
     expect(alert?.kind).toBe("month_pace");
     expect(alert?.fingerprint).toBe("month_pace:2026-08");
   });
@@ -59,6 +66,7 @@ describe("member-profile-alerts detectors", () => {
       days,
       schedule,
       monthlyMinHours: 175,
+      offDayReduceHours,
       todayKey: "2026-08-20",
     });
     expect(alert?.body).toContain("vs 175h month minimum");
@@ -70,6 +78,7 @@ describe("member-profile-alerts detectors", () => {
       days: [{ dateKey: "2026-08-03", totalSeconds: 0, wasteSeconds: 0 }],
       schedule,
       monthlyMinHours,
+      offDayReduceHours,
       todayKey: "2026-08-03",
     });
     expect(alert).toBeNull();
@@ -82,6 +91,7 @@ describe("member-profile-alerts detectors", () => {
       schedule,
       calendar,
       quarterlyMinHours: 525,
+      offDayReduceHours,
       todayKey: "2026-08-20",
     });
     expect(alert?.kind).toBe("quarter_pace");
@@ -104,6 +114,7 @@ describe("member-profile-alerts detectors", () => {
       calendar,
       monthlyMinHours,
       quarterlyMinHours: 525,
+      offDayReduceHours,
       suppressedFingerprints: new Set(["abnormal_day:2026-08-04"]),
       days: [{ dateKey: "2026-08-04", totalSeconds: 13 * 3600, wasteSeconds: 0 }],
     });
@@ -135,6 +146,7 @@ describe("member-profile-alerts detectors", () => {
       days,
       schedule,
       monthlyMinHours,
+      offDayReduceHours,
       todayKey: "2026-08-20",
       policy: { ...DEFAULT_ALERT_POLICY, monthPaceEnabled: false },
     });
@@ -148,6 +160,7 @@ describe("member-profile-alerts detectors", () => {
       schedule,
       calendar,
       quarterlyMinHours: 525,
+      offDayReduceHours,
       todayKey: "2026-08-20",
       policy: { ...DEFAULT_ALERT_POLICY, quarterPaceEnabled: false },
     });
@@ -187,6 +200,27 @@ describe("member-profile-alerts detectors", () => {
     expect(alert).toBeNull();
   });
 
+  test("detectMonthPace uses adjusted minimum when off days are present", () => {
+    const days = [
+      { dateKey: "2026-08-03", totalSeconds: 3600, wasteSeconds: 0 },
+      { dateKey: "2026-08-10", totalSeconds: 3600, wasteSeconds: 0 },
+    ];
+    const leaveByDate = new Map<string, unknown>([
+      ["2026-08-04", {}],
+      ["2026-08-05", {}],
+      ["2026-08-06", {}],
+    ]);
+    const alert = detectMonthPace({
+      days,
+      schedule,
+      monthlyMinHours: 200,
+      offDayReduceHours: 8,
+      leaveByDate,
+      todayKey: "2026-08-20",
+    });
+    expect(alert?.context.requiredHours).toBe(176);
+  });
+
   test("detectSystemAlerts skips disabled kinds", () => {
     const alerts = detectSystemAlerts({
       todayKey: "2026-08-05",
@@ -194,6 +228,7 @@ describe("member-profile-alerts detectors", () => {
       calendar,
       monthlyMinHours,
       quarterlyMinHours: 525,
+      offDayReduceHours,
       suppressedFingerprints: new Set(),
       policy: { ...DEFAULT_ALERT_POLICY, abnormalDayEnabled: false },
       days: [{ dateKey: "2026-08-04", totalSeconds: 13 * 3600, wasteSeconds: 0 }],

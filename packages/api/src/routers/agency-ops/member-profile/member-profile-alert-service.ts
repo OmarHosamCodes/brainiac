@@ -1,5 +1,6 @@
 import { db } from "@orch/db";
 import {
+  agencyOpsMemberLeave,
   agencyOpsMemberProfileAlert,
   agencyOpsMemberProfileAlertPolicy,
   agencyOpsTenurePolicy,
@@ -9,12 +10,14 @@ import {
 } from "@orch/db/schema";
 import { createWorkspaceId } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, eq, gte, isNull, lte, ne } from "drizzle-orm";
+import { and, eq, gte, isNull, lte, ne, or } from "drizzle-orm";
 
 import { fanOutNotification } from "../../notifications/service";
+import { getFiscalQuarterForDate, getFiscalQuarterRange } from "../resourcing/tenure-engine";
 import { resolveWorkSchedule } from "../resourcing/work-schedule";
 import { requireTeamMembership } from "../shared/membership";
 import { addDaysToDateKey, localDateKeyFromInstant } from "../time-tracking/local-week-bounds";
+import { expandLeaveDays } from "./member-profile-heat";
 import {
   DEFAULT_ALERT_POLICY,
   detectSystemAlerts,
@@ -127,6 +130,45 @@ async function loadDaySeconds(
     byDate.set(dateKey, current);
   }
   return [...byDate.values()];
+}
+
+function monthBoundsFromDateKey(dateKey: string): { start: string; end: string } {
+  const year = Number(dateKey.slice(0, 4));
+  const month = Number(dateKey.slice(5, 7));
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const next =
+    month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  return { start, end: addDaysToDateKey(next, -1) };
+}
+
+async function loadMemberLeaveByDate(
+  teamId: string,
+  userId: string,
+  fromKey: string,
+  toKey: string,
+): Promise<Map<string, unknown>> {
+  const rows = await db
+    .select()
+    .from(agencyOpsMemberLeave)
+    .where(
+      and(
+        eq(agencyOpsMemberLeave.teamId, teamId),
+        or(isNull(agencyOpsMemberLeave.userId), eq(agencyOpsMemberLeave.userId, userId)),
+        lte(agencyOpsMemberLeave.startDate, toKey),
+        gte(agencyOpsMemberLeave.endDate, fromKey),
+      ),
+    );
+  return expandLeaveDays(
+    rows.map((row) => ({
+      id: row.id,
+      startDate: row.startDate,
+      endDate: row.endDate,
+      type: row.type,
+      reason: row.reason,
+    })),
+    fromKey,
+    toKey,
+  );
 }
 
 async function upsertDetectedOpen(
@@ -270,14 +312,33 @@ export async function listMemberProfileAlerts(
   });
   const quarterlyMinHours = policyRow?.quarterlyMinHours ?? 525;
   const monthlyMinHours = policyRow?.monthlyMinHours ?? 200;
+  const offDayReduceHours = policyRow?.offDayReduceHours ?? 8;
   const alertPolicy = await loadAlertPolicy(input.teamId);
   const fromKey = addDaysToDateKey(todayKey, -100);
+  const { start: monthStart, end: monthEnd } = monthBoundsFromDateKey(todayKey);
+  const refDate = new Date(`${todayKey}T12:00:00.000Z`);
+  const quarterRef = getFiscalQuarterForDate(refDate, calendar);
+  const quarterRange = getFiscalQuarterRange(
+    calendar,
+    quarterRef.fiscalYear,
+    quarterRef.fiscalQuarter,
+  );
+  const quarterStart = quarterRange.start.toISOString().slice(0, 10);
+  const quarterEnd = addDaysToDateKey(quarterRange.end.toISOString().slice(0, 10), -1);
+  const leaveFrom = [fromKey, monthStart, quarterStart].sort()[0]!;
+  const leaveTo = [todayKey, monthEnd, quarterEnd].sort().at(-1)!;
   const days = await loadDaySeconds(
     input.teamId,
     input.userId,
     fromKey,
     todayKey,
     utcOffsetMinutes,
+  );
+  const leaveByDate = await loadMemberLeaveByDate(
+    input.teamId,
+    input.userId,
+    leaveFrom,
+    leaveTo,
   );
 
   const detected = detectSystemAlerts({
@@ -286,6 +347,8 @@ export async function listMemberProfileAlerts(
     calendar,
     monthlyMinHours,
     quarterlyMinHours,
+    offDayReduceHours,
+    leaveByDate,
     suppressedFingerprints: suppressed,
     todayKey,
     now,

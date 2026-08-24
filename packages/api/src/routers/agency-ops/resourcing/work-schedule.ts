@@ -1,5 +1,7 @@
 /** Team work-schedule helpers. weekStartsOn uses JS getDay(): 0=Sun … 6=Sat. */
 
+import { addDaysToDateKey } from "../time-tracking/local-week-bounds";
+
 export type WorkSchedule = {
   requiredDailyHours: number;
   weekStartsOn: number;
@@ -78,4 +80,84 @@ export function startOfWeekUtc(date: Date, weekStartsOn: number): Date {
 /** Leading empty cells before the 1st of the month in a weekStartsOn-aligned grid. */
 export function monthGridPad(utcDayOfWeek: number, weekStartsOn: number): number {
   return offsetFromWeekStart(utcDayOfWeek, weekStartsOn);
+}
+
+function isWeekdayDateKey(
+  dateKey: string,
+  weekStartsOn: number,
+  weekendDurationDays: number,
+): boolean {
+  return !isWeekendDateKey(dateKey, weekStartsOn, weekendDurationDays);
+}
+
+function iterateDateKeys(fromKey: string, toKey: string): string[] {
+  const keys: string[] = [];
+  let cursor = fromKey;
+  while (cursor <= toKey) {
+    keys.push(cursor);
+    cursor = addDaysToDateKey(cursor, 1);
+  }
+  return keys;
+}
+
+/** Non-weekend days in an inclusive YYYY-MM-DD range. */
+export function countWeekdaysInRange(
+  fromKey: string,
+  toKey: string,
+  schedule: Pick<WorkSchedule, "weekStartsOn" | "weekendDurationDays">,
+): number {
+  let count = 0;
+  for (const dateKey of iterateDateKeys(fromKey, toKey)) {
+    if (isWeekdayDateKey(dateKey, schedule.weekStartsOn, schedule.weekendDurationDays)) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/** Weekday off days (any recorded leave) in an inclusive range. */
+export function countOffDaysOnWeekdaysInRange(
+  fromKey: string,
+  toKey: string,
+  schedule: Pick<WorkSchedule, "weekStartsOn" | "weekendDurationDays">,
+  offDayKeys: ReadonlySet<string>,
+): number {
+  let count = 0;
+  for (const dateKey of iterateDateKeys(fromKey, toKey)) {
+    if (
+      isWeekdayDateKey(dateKey, schedule.weekStartsOn, schedule.weekendDurationDays) &&
+      offDayKeys.has(dateKey)
+    ) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/** Weekdays minus weekday off days in an inclusive range. */
+export function countWorkingDaysInRange(
+  fromKey: string,
+  toKey: string,
+  schedule: Pick<WorkSchedule, "weekStartsOn" | "weekendDurationDays">,
+  offDayKeys: ReadonlySet<string>,
+): number {
+  return countWeekdaysInRange(fromKey, toKey, schedule) -
+    countOffDaysOnWeekdaysInRange(fromKey, toKey, schedule, offDayKeys);
+}
+
+export function computeAdjustedExpectations(input: {
+  weekdaysInRange: number;
+  offDaysOnWeekdays: number;
+  baseMinHours: number;
+  requiredDailyHours: number;
+  offDayReduceHours: number;
+}): { adjustedMinHours: number; adjustedTargetHours: number } {
+  const reduction = input.offDaysOnWeekdays * input.offDayReduceHours;
+  return {
+    adjustedMinHours: Math.max(0, input.baseMinHours - reduction),
+    adjustedTargetHours: Math.max(
+      0,
+      input.weekdaysInRange * input.requiredDailyHours - reduction,
+    ),
+  };
 }

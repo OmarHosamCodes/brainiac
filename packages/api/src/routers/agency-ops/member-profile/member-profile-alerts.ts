@@ -6,7 +6,13 @@ import {
   toFiscalCalendar,
   type FiscalCalendar,
 } from "../resourcing/tenure-engine";
-import { isWeekendDateKey, type WorkSchedule } from "../resourcing/work-schedule";
+import {
+  computeAdjustedExpectations,
+  countOffDaysOnWeekdaysInRange,
+  countWeekdaysInRange,
+  countWorkingDaysInRange,
+  type WorkSchedule,
+} from "../resourcing/work-schedule";
 import { addDaysToDateKey } from "../time-tracking/local-week-bounds";
 
 export type DetectedAlert = {
@@ -67,16 +73,8 @@ function addUtcDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 86_400_000);
 }
 
-function workingDaysInRange(fromKey: string, toKey: string, schedule: WorkSchedule): number {
-  let count = 0;
-  let cursor = fromKey;
-  while (cursor <= toKey) {
-    if (!isWeekendDateKey(cursor, schedule.weekStartsOn, schedule.weekendDurationDays)) {
-      count += 1;
-    }
-    cursor = addDaysToDateKey(cursor, 1);
-  }
-  return count;
+function offDayKeysFromLeaveByDate(leaveByDate: ReadonlyMap<string, unknown>): ReadonlySet<string> {
+  return new Set(leaveByDate.keys());
 }
 
 function monthKeys(year: number, month: number): { start: string; end: string; key: string } {
@@ -141,6 +139,8 @@ export function detectMonthPace(input: {
   days: DaySeconds[];
   schedule: WorkSchedule;
   monthlyMinHours: number;
+  offDayReduceHours: number;
+  leaveByDate?: ReadonlyMap<string, unknown>;
   todayKey: string;
   policy?: MemberProfileAlertPolicy;
 }): DetectedAlert | null {
@@ -149,12 +149,22 @@ export function detectMonthPace(input: {
   const { year, month } = yearMonthFromDateKey(input.todayKey);
   const { start, end, key } = monthKeys(year, month);
   const elapsedEnd = input.todayKey < end ? input.todayKey : end;
+  const offDayKeys = offDayKeysFromLeaveByDate(input.leaveByDate ?? new Map());
 
-  const monthWorking = workingDaysInRange(start, end, input.schedule);
-  const elapsedWorking = workingDaysInRange(start, elapsedEnd, input.schedule);
+  const monthWorking = countWorkingDaysInRange(start, end, input.schedule, offDayKeys);
+  const elapsedWorking = countWorkingDaysInRange(start, elapsedEnd, input.schedule, offDayKeys);
   if (monthWorking <= 0 || elapsedWorking / monthWorking < PACE_ELAPSED_GATE) return null;
 
-  const monthMinHours = input.monthlyMinHours;
+  const weekdaysInMonth = countWeekdaysInRange(start, end, input.schedule);
+  const offDaysInMonth = countOffDaysOnWeekdaysInRange(start, end, input.schedule, offDayKeys);
+  const { adjustedMinHours } = computeAdjustedExpectations({
+    weekdaysInRange: weekdaysInMonth,
+    offDaysOnWeekdays: offDaysInMonth,
+    baseMinHours: input.monthlyMinHours,
+    requiredDailyHours: input.schedule.requiredDailyHours,
+    offDayReduceHours: input.offDayReduceHours,
+  });
+  const monthMinHours = adjustedMinHours;
   const { total } = secondsInRange(input.days, start, elapsedEnd);
   const loggedHours = total / 3600;
   const pacePerDay = elapsedWorking > 0 ? loggedHours / elapsedWorking : 0;
@@ -183,6 +193,8 @@ export function detectQuarterPace(input: {
   schedule: WorkSchedule;
   calendar: FiscalCalendar;
   quarterlyMinHours: number;
+  offDayReduceHours: number;
+  leaveByDate?: ReadonlyMap<string, unknown>;
   todayKey: string;
   policy?: MemberProfileAlertPolicy;
 }): DetectedAlert | null {
@@ -194,16 +206,32 @@ export function detectQuarterPace(input: {
   const startKey = range.start.toISOString().slice(0, 10);
   const endKey = addDaysToDateKey(range.end.toISOString().slice(0, 10), -1);
   const elapsedEnd = input.todayKey < endKey ? input.todayKey : endKey;
+  const offDayKeys = offDayKeysFromLeaveByDate(input.leaveByDate ?? new Map());
 
-  const quarterWorking = workingDaysInRange(startKey, endKey, input.schedule);
-  const elapsedWorking = workingDaysInRange(startKey, elapsedEnd, input.schedule);
+  const quarterWorking = countWorkingDaysInRange(startKey, endKey, input.schedule, offDayKeys);
+  const elapsedWorking = countWorkingDaysInRange(startKey, elapsedEnd, input.schedule, offDayKeys);
   if (quarterWorking <= 0 || elapsedWorking / quarterWorking < PACE_ELAPSED_GATE) return null;
+
+  const weekdaysInQuarter = countWeekdaysInRange(startKey, endKey, input.schedule);
+  const offDaysInQuarter = countOffDaysOnWeekdaysInRange(
+    startKey,
+    endKey,
+    input.schedule,
+    offDayKeys,
+  );
+  const { adjustedMinHours: quarterMinHours } = computeAdjustedExpectations({
+    weekdaysInRange: weekdaysInQuarter,
+    offDaysOnWeekdays: offDaysInQuarter,
+    baseMinHours: input.quarterlyMinHours,
+    requiredDailyHours: input.schedule.requiredDailyHours,
+    offDayReduceHours: input.offDayReduceHours,
+  });
 
   const { total } = secondsInRange(input.days, startKey, elapsedEnd);
   const loggedHours = total / 3600;
   const pacePerDay = elapsedWorking > 0 ? loggedHours / elapsedWorking : 0;
   const projectedHours = pacePerDay * quarterWorking;
-  if (projectedHours >= input.quarterlyMinHours * (policy.quarterPacePercent / 100)) return null;
+  if (projectedHours >= quarterMinHours * (policy.quarterPacePercent / 100)) return null;
 
   const periodKey = `${ref.fiscalYear}-Q${ref.fiscalQuarter}`;
   const defaultSnoozeUntil = new Date(range.end.getTime() - 1);
@@ -211,12 +239,12 @@ export function detectQuarterPace(input: {
     kind: "quarter_pace",
     fingerprint: `quarter_pace:${periodKey}`,
     title: "At risk of missing quarter minimum",
-    body: `Projected ${Math.round(projectedHours)}h vs ${input.quarterlyMinHours}h quarter minimum.`,
+    body: `Projected ${Math.round(projectedHours)}h vs ${quarterMinHours}h quarter minimum.`,
     context: {
       periodKey,
       loggedHours: Math.round(loggedHours * 10) / 10,
       projectedHours: Math.round(projectedHours * 10) / 10,
-      requiredHours: input.quarterlyMinHours,
+      requiredHours: quarterMinHours,
       defaultSnoozeUntil: defaultSnoozeUntil.toISOString(),
     },
     defaultSnoozeUntil,
@@ -261,6 +289,8 @@ export function detectSystemAlerts(input: {
   calendar: FiscalCalendar;
   monthlyMinHours: number;
   quarterlyMinHours: number;
+  offDayReduceHours: number;
+  leaveByDate?: ReadonlyMap<string, unknown>;
   suppressedFingerprints: ReadonlySet<string>;
   todayKey: string;
   now?: Date;
@@ -281,6 +311,8 @@ export function detectSystemAlerts(input: {
     days: input.days,
     schedule: input.schedule,
     monthlyMinHours: input.monthlyMinHours,
+    offDayReduceHours: input.offDayReduceHours,
+    leaveByDate: input.leaveByDate,
     todayKey: input.todayKey,
     policy,
   });
@@ -291,6 +323,8 @@ export function detectSystemAlerts(input: {
     schedule: input.schedule,
     calendar: input.calendar,
     quarterlyMinHours: input.quarterlyMinHours,
+    offDayReduceHours: input.offDayReduceHours,
+    leaveByDate: input.leaveByDate,
     todayKey: input.todayKey,
     policy,
   });
