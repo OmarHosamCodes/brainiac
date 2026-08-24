@@ -34,6 +34,7 @@ type AgencyMemberProfileStore = {
     type: LeaveType;
     reason?: string | null;
   }) => Promise<void>;
+  deleteLeave: (input: { teamId: string; leaveId: string }) => Promise<void>;
   createReview: (input: {
     teamId: string;
     subjectUserId: string;
@@ -99,6 +100,19 @@ export const useAgencyMemberProfileStore = create<AgencyMemberProfileStore>((set
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : "Couldn't save off day",
+      });
+      throw error;
+    } finally {
+      set({ leavePending: false });
+    }
+  },
+  async deleteLeave(input) {
+    set({ leavePending: true, error: null });
+    try {
+      await orpcClient.agencyOps.memberProfile.leave.delete(input);
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : "Couldn't remove off day",
       });
       throw error;
     } finally {

@@ -50,6 +50,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
@@ -538,7 +539,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                   return (
                     <DropdownMenu key={day.date}>
                       <DropdownMenuTrigger asChild>{dayButton}</DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-40">
+                      <DropdownMenuContent align="start" className="w-44">
                         <DropdownMenuItem
                           onSelect={() => viewModel.openOffDayRangeSelect(day.date)}
                         >
@@ -547,6 +548,21 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                         <DropdownMenuItem onSelect={() => viewModel.openAddOffDay(day.date)}>
                           Add off day
                         </DropdownMenuItem>
+                        {day.status === "leave" && day.leaveId ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onSelect={() => {
+                                const leaveId = day.leaveId;
+                                if (!leaveId) return;
+                                viewModel.openRemoveLeave(leaveId, day.date);
+                              }}
+                            >
+                              Remove off day
+                            </DropdownMenuItem>
+                          </>
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   );
@@ -707,6 +723,43 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
               onClick={() => void viewModel.submitLeave()}
             >
               {viewModel.leavePending ? "Saving…" : "Save off day"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={viewModel.leaveRemoveTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) viewModel.closeRemoveLeave();
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove off day</DialogTitle>
+            <DialogDescription>
+              {viewModel.leaveRemoveTarget ? (
+                <>
+                  Remove {viewModel.leaveRemoveTarget.typeLabel} for{" "}
+                  {viewModel.leaveRemoveTarget.rangeLabel}? Multi-day entries are removed as a
+                  whole.
+                </>
+              ) : (
+                "Remove this off day?"
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => viewModel.closeRemoveLeave()}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={viewModel.leavePending}
+              onClick={() => void viewModel.confirmRemoveLeave()}
+            >
+              {viewModel.leavePending ? "Removing…" : "Remove"}
             </Button>
           </DialogFooter>
         </DialogContent>

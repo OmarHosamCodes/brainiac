@@ -159,6 +159,7 @@ export type AgencyMemberProfileViewModel = {
         dayOfMonth: number;
         inMonth: boolean;
         status: "present" | "leave" | "empty";
+        leaveId: string | null;
       }>;
       legend: Array<{ status: "present" | "leave" | "empty"; label: string; count: number }>;
       onPrevMonth: () => void;
@@ -214,6 +215,14 @@ export type AgencyMemberProfileViewModel = {
   reviewDialogOpen: boolean;
   hrDialogOpen: boolean;
   offDayRangeSelect: { startDate: string; endDate: string } | null;
+  leaveRemoveTarget: {
+    leaveId: string;
+    startDate: string;
+    endDate: string;
+    type: LeaveType;
+    rangeLabel: string;
+    typeLabel: string;
+  } | null;
   leavePending: boolean;
   reviewPending: boolean;
   hrPending: boolean;
@@ -244,6 +253,9 @@ export type AgencyMemberProfileViewModel = {
   confirmOffDayRangeSelect: (next: { startDate: string; endDate: string }) => void;
   openAddOffDay: (date: string) => void;
   openAddOffDayDialog: () => void;
+  openRemoveLeave: (leaveId: string, clickedDate?: string) => void;
+  closeRemoveLeave: () => void;
+  confirmRemoveLeave: () => Promise<void>;
   setLeaveDraft: (patch: Partial<AgencyMemberProfileViewModel["leaveDraft"]>) => void;
   setReviewDraft: (patch: Partial<AgencyMemberProfileViewModel["reviewDraft"]>) => void;
   setHrDraft: (patch: Partial<AgencyMemberProfileViewModel["hrDraft"]>) => void;
@@ -258,6 +270,36 @@ export type AgencyMemberProfileViewModel = {
   submitReview: () => Promise<void>;
   submitHr: () => Promise<void>;
 };
+
+function leaveTypeLabel(type: LeaveType): string {
+  switch (type) {
+    case "pto":
+      return "PTO";
+    case "sick":
+      return "Sick";
+    case "team_holiday":
+      return "Team holiday";
+    case "other":
+      return "Other";
+    default: {
+      const _exhaustive: never = type;
+      return _exhaustive;
+    }
+  }
+}
+
+function leaveRangeLabel(startDate: string, endDate: string): string {
+  const start = new Date(`${startDate}T12:00:00.000Z`);
+  const end = new Date(`${endDate}T12:00:00.000Z`);
+  const opts: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  };
+  if (startDate === endDate) return start.toLocaleDateString(undefined, opts);
+  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
+}
 
 function todayKey(utcOffsetMinutes: number) {
   const localMs = Date.now() - utcOffsetMinutes * 60_000;
@@ -525,6 +567,14 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const [offDayRangeSelect, setOffDayRangeSelect] = useState<{
     startDate: string;
     endDate: string;
+  } | null>(null);
+  const [leaveRemoveTarget, setLeaveRemoveTarget] = useState<{
+    leaveId: string;
+    startDate: string;
+    endDate: string;
+    type: LeaveType;
+    rangeLabel: string;
+    typeLabel: string;
   } | null>(null);
   const [leaveDraft, setLeaveDraftState] = useState({
     startDate: today,
@@ -1044,6 +1094,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     reviewDialogOpen,
     hrDialogOpen,
     offDayRangeSelect,
+    leaveRemoveTarget,
     leavePending: store.leavePending,
     reviewPending: store.reviewPending,
     hrPending: store.hrPending,
@@ -1105,6 +1156,39 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         endDate: clampedDefaultDate,
       }));
       setLeaveDialogOpen(true);
+    },
+    openRemoveLeave(leaveId, clickedDate) {
+      const data = profileQuery.data;
+      if (!data) return;
+      const fromLeave = data.leave.find((row) => row.id === leaveId);
+      const fromHeat = data.heatMap.days.find((day) => day.off?.leaveId === leaveId)?.off;
+      const startDate = fromLeave?.startDate ?? fromHeat?.rangeStart ?? clickedDate ?? "";
+      const endDate = fromLeave?.endDate ?? fromHeat?.rangeEnd ?? clickedDate ?? "";
+      const type = (fromLeave?.type ?? fromHeat?.type ?? "other") as LeaveType;
+      const hasRange = Boolean(startDate && endDate);
+      setLeaveRemoveTarget({
+        leaveId,
+        startDate,
+        endDate,
+        type,
+        rangeLabel: hasRange ? leaveRangeLabel(startDate, endDate) : "this off day",
+        typeLabel: leaveTypeLabel(type),
+      });
+    },
+    closeRemoveLeave() {
+      setLeaveRemoveTarget(null);
+    },
+    async confirmRemoveLeave() {
+      if (!teamId || !leaveRemoveTarget) return;
+      try {
+        await store.deleteLeave({ teamId, leaveId: leaveRemoveTarget.leaveId });
+        toast.success("Off day removed");
+        setLeaveRemoveTarget(null);
+        await invalidate.mutateAsync();
+        await profileQuery.refetch();
+      } catch {
+        toast.error("Couldn't remove off day");
+      }
     },
     setLeaveDraft(patch) {
       setLeaveDraftState((prev) => ({ ...prev, ...patch }));
