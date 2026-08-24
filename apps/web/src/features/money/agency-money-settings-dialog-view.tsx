@@ -110,6 +110,7 @@ function MoneySettingsDialog({
             ) : editor?.kind === "formula" ? (
               <MoneyFormulaChipEditorView
                 formula={editor.formula}
+                ruleOptions={settings.ruleOptions}
                 validationError={settings.formulaValidationError}
                 previewLabel={settings.formulaPreviewLabel}
                 previewPending={settings.formulaPreviewPending}
@@ -405,7 +406,12 @@ function MoneySettingsDialog({
                             </span>
                             <span className="mt-1.5 inline-flex max-w-full items-center rounded-full bg-elevated px-2.5 py-0.5 text-xs text-muted">
                               <span className="truncate">
-                                {moneyFormulaDestinationSummary(formula)}
+                                {moneyFormulaDestinationSummary(
+                                  formula,
+                                  settings.ruleOptions.find(
+                                    (option) => option.id === formula.ruleId,
+                                  )?.label,
+                                )}
                               </span>
                             </span>
                           </span>

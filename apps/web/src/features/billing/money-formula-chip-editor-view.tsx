@@ -24,6 +24,7 @@ import {
 
 export type MoneyFormulaChipEditorViewProps = {
   formula: MoneyFormulaDef;
+  ruleOptions: Array<{ id: string; label: string }>;
   validationError: string | null;
   previewLabel: string;
   previewPending: boolean;
@@ -112,6 +113,7 @@ function PaletteSection({ title, children }: { title: string; children: ReactNod
 
 export function MoneyFormulaChipEditorView({
   formula,
+  ruleOptions,
   validationError,
   previewLabel,
   previewPending,
@@ -124,7 +126,8 @@ export function MoneyFormulaChipEditorView({
 }: MoneyFormulaChipEditorViewProps) {
   const periodVars = MONEY_FORMULA_VAR_PALETTE.filter((item) => item.group === "period");
   const memberVars = MONEY_FORMULA_VAR_PALETTE.filter((item) => item.group === "member");
-  const destination = moneyFormulaDestinationSummary(formula);
+  const ruleLabel = ruleOptions.find((option) => option.id === formula.ruleId)?.label ?? null;
+  const destination = moneyFormulaDestinationSummary(formula, ruleLabel);
 
   function appendToken(token: MoneyFormulaToken) {
     onChange({ ...formula, tokens: [...formula.tokens, token] });
@@ -335,6 +338,32 @@ export function MoneyFormulaChipEditorView({
             />
           ))}
         </PaletteSection>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="money-formula-rule">Rule</Label>
+          <Select
+            value={formula.ruleId ?? "__none"}
+            onValueChange={(value) =>
+              onChange({ ...formula, ruleId: value === "__none" ? null : value })
+            }
+            disabled={isSaving}
+          >
+            <SelectTrigger id="money-formula-rule" className="h-9">
+              <SelectValue placeholder="None" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none">None — whole team</SelectItem>
+              {ruleOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Who qualifies. Cohort size in the formula uses this list.
+          </p>
+        </div>
 
         {formula.locked ? null : (
           <div className="grid gap-3 sm:grid-cols-3">

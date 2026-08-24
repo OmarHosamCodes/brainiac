@@ -72,6 +72,12 @@ export const agencyOpsProject = pgTable(
       .references(() => agencyOpsClient.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
     colorHueId: integer("color_hue_id"),
+    /** Optional override; null inherits the client billable rate. */
+    billableRateAmount: integer("billable_rate_amount"),
+    currency: text("currency").notNull().default("USD"),
+    sourceBillableRateAmount: integer("source_billable_rate_amount"),
+    fxRate: text("fx_rate").notNull().default("1"),
+    fxAsOf: timestamp("fx_as_of"),
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -746,6 +752,8 @@ export type AgencyOpsMoneyFormulaDef = {
   output: AgencyOpsMoneyFormulaOutput;
   metricId: string | null;
   sectionKey: string | null;
+  /** Money Rules id that decides who qualifies. Null = no eligibility filter. */
+  ruleId: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -853,6 +861,72 @@ export const agencyOpsPayoutLine = pgTable(
     uniqueIndex("agency_ops_payout_line_section_label_unique")
       .on(table.sectionId, table.label)
       .where(sql`${table.payeeUserId} is null`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Team salary pool (manual period total + shared member payments)
+// ---------------------------------------------------------------------------
+
+export const agencyOpsSalaryPool = pgTable(
+  "agency_ops_salary_pool",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    runId: text("run_id")
+      .notNull()
+      .references(() => agencyOpsPayoutRun.id, { onDelete: "cascade" }),
+    /** Full Team salaries cost for formulas (agency minor units). */
+    totalAmount: integer("total_amount").notNull(),
+    currency: text("currency").notNull().default("USD"),
+    sourceAmount: integer("source_amount"),
+    fxRate: text("fx_rate").notNull().default("1"),
+    fxAsOf: timestamp("fx_as_of"),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_salary_pool_team_idx").on(table.teamId),
+    uniqueIndex("agency_ops_salary_pool_run_unique").on(table.runId),
+  ],
+);
+
+export const agencyOpsSalaryMemberSettlement = pgTable(
+  "agency_ops_salary_member_settlement",
+  {
+    id: text("id").primaryKey(),
+    poolId: text("pool_id")
+      .notNull()
+      .references(() => agencyOpsSalaryPool.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    paidAmount: integer("paid_amount").notNull().default(0),
+    finalizedAt: timestamp("finalized_at"),
+    finalizedByUserId: text("finalized_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_salary_member_settlement_pool_idx").on(table.poolId),
+    index("agency_ops_salary_member_settlement_user_idx").on(table.userId),
+    uniqueIndex("agency_ops_salary_member_settlement_pool_user_unique").on(
+      table.poolId,
+      table.userId,
+    ),
   ],
 );
 
@@ -981,6 +1055,34 @@ export const agencyOpsExpense = pgTable(
     index("agency_ops_expense_team_idx").on(table.teamId),
     index("agency_ops_expense_team_kind_idx").on(table.teamId, table.kind),
     index("agency_ops_expense_team_next_due_idx").on(table.teamId, table.nextDueAt),
+  ],
+);
+
+export const agencyOpsExpenseOccurrence = pgTable(
+  "agency_ops_expense_occurrence",
+  {
+    id: text("id").primaryKey(),
+    expenseId: text("expense_id")
+      .notNull()
+      .references(() => agencyOpsExpense.id, { onDelete: "cascade" }),
+    /** Subscription cycle due date; immutable accounting period ownership. */
+    dueAt: timestamp("due_at").notNull(),
+    /** Agency-currency amount snapshotted when the cycle receives a payment. */
+    amount: integer("amount").notNull(),
+    paidAmount: integer("paid_amount").notNull().default(0),
+    currency: text("currency").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agency_ops_expense_occurrence_expense_due_unique").on(
+      table.expenseId,
+      table.dueAt,
+    ),
+    index("agency_ops_expense_occurrence_due_idx").on(table.dueAt),
   ],
 );
 

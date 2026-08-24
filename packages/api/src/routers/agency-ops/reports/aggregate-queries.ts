@@ -8,14 +8,9 @@ import {
 } from "@orch/db/schema";
 import { db } from "@orch/db";
 import { type ReportEntityFilterInput, applyReportEntityFilters } from "../shared/report-helpers";
+import { reportEntryIsWasteSql } from "../shared/waste-helpers";
 
-/** Matches `isReportEntryWaste` in project-share-metrics.ts (flags + word-boundary "waste"). */
-export const reportEntryIsWasteSql = sql<boolean>`(
-  ${agencyOpsTimeEntry.isWaste} = true
-  OR COALESCE(${agencyOpsProjectTask.isWaste}, false) = true
-  OR COALESCE(${agencyOpsProjectTask.title}, '') ~* '\\ywaste\\y'
-  OR ${agencyOpsProject.name} ~* '\\ywaste\\y'
-)`;
+export { reportEntryIsWasteSql } from "../shared/waste-helpers";
 
 export function buildReportEntryFilters(
   teamId: string,

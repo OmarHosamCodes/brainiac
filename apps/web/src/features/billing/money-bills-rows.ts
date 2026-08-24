@@ -718,9 +718,10 @@ export function filterMoneyBillRowsByClientCategory(
 }
 
 export const MONEY_ADJUSTMENT_SECTION_OPTIONS: ReadonlyArray<{
-  id: Extract<MoneyBillPayoutSectionKey, "debt_discount" | "charity" | "pbc">;
+  id: Extract<MoneyBillPayoutSectionKey, "debt_discount" | "charity" | "pbc"> | "salary_pool";
   label: string;
 }> = [
+  { id: "salary_pool", label: "Team salaries total" },
   { id: "debt_discount", label: "Debt / Discount" },
   { id: "charity", label: "Charity" },
   { id: "pbc", label: "PBC" },
@@ -731,7 +732,8 @@ export function moneyBillsAdjustmentCreateValid(
   label: string,
   amount: string,
 ): boolean {
-  if (!sectionKey || !label.trim()) return false;
+  if (!sectionKey) return false;
+  if (sectionKey !== "salary_pool" && !label.trim()) return false;
   const parsed = Number(amount.trim());
   return Number.isFinite(parsed) && parsed > 0;
 }

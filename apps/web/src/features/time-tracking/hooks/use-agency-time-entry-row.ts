@@ -1,3 +1,5 @@
+import { resolveEntryWaste } from "@orch/api/routers/agency-ops/shared/waste-helpers";
+
 import type { FocusEvent, KeyboardEvent, MouseEvent, RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -500,8 +502,8 @@ export function useAgencyTimeEntryRow({
   const rowDuplicating = group.entries.some((entry) => duplicatingEntryIds.includes(entry.id));
   const rowWastePending = rowUpdating;
   const isWaste = isMulti
-    ? group.entries.every((entry) => entry.isWaste === true)
-    : primaryEntry.isWaste === true;
+    ? group.entries.every((entry) => resolveEntryWaste(entry))
+    : resolveEntryWaste(primaryEntry);
   const timeRange = isMulti
     ? formatGroupTimeRange(group)
     : formatTimeRange(primaryEntry.startedAt, primaryEntry.endedAt);

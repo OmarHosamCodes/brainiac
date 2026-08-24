@@ -32,7 +32,8 @@ export function buildMoneyFormulaContext(facts: MoneyFormulaPeriodFacts): MoneyF
     (facts.salariesAmount +
       facts.expensesAmount +
       facts.debtDiscountAmount +
-      facts.paidVacationAmount);
+      facts.paidVacationAmount +
+      facts.deviceCompAmount);
 
   return {
     total_income: facts.totalIncomeAmount,
@@ -138,12 +139,6 @@ export function applyFormulasToScoreboard(
     facts.pbcAmount = board.pbcAmount;
   }
 
-  const profitShare = read("profit-loss-share", context);
-  if (profitShare !== null) {
-    board.profitLossShareAmount = roundMoneyFormulaAmount(profitShare);
-    facts.teamLossAmount = board.profitLossShareAmount;
-  }
-
   context = buildMoneyFormulaContext(facts);
 
   const teamProfit = read("team-profit", context);
@@ -155,11 +150,23 @@ export function applyFormulasToScoreboard(
     context = { ...context, team_profit: board.teamProfitAmount };
   }
 
+  const profitShare = read("profit-loss-share", context);
+  if (profitShare !== null) {
+    board.profitLossShareAmount = roundMoneyFormulaAmount(profitShare);
+    facts.teamLossAmount = board.profitLossShareAmount;
+  }
+
   const roi = read("roi", context);
   if (roi !== null) {
     board.roi = Number.isFinite(roi) ? roi : 0;
   } else {
-    board.roi = board.totalIncomeAmount > 0 ? board.teamProfitAmount / board.totalIncomeAmount : 0;
+    const costAmount =
+      board.salariesAmount +
+      board.expensesAmount +
+      board.debtDiscountAmount +
+      board.deviceCompensationAmount +
+      board.paidVacationAmount;
+    board.roi = costAmount === 0 ? 0 : board.teamProfitAmount / costAmount;
   }
 
   return board;

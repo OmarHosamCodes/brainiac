@@ -38,6 +38,7 @@ export const MONEY_SYSTEM_FORMULA_TEMPLATES: AgencyOpsMoneyFormulaDef[] = [
     output: "amount",
     metricId: "remaining",
     sectionKey: null,
+    ruleId: null,
   },
   {
     id: "sys_team_profit",
@@ -55,12 +56,15 @@ export const MONEY_SYSTEM_FORMULA_TEMPLATES: AgencyOpsMoneyFormulaDef[] = [
       op("+"),
       v("debt_discount"),
       op("+"),
+      v("device_comp"),
+      op("+"),
       v("paid_vacation"),
       paren(")"),
     ),
     output: "amount",
     metricId: "team-profit",
     sectionKey: null,
+    ruleId: null,
   },
   {
     id: "sys_roi",
@@ -68,10 +72,25 @@ export const MONEY_SYSTEM_FORMULA_TEMPLATES: AgencyOpsMoneyFormulaDef[] = [
     label: "ROI",
     locked: true,
     enabled: true,
-    tokens: tokens(v("team_profit"), op("/"), v("total_income")),
+    tokens: tokens(
+      v("team_profit"),
+      op("/"),
+      paren("("),
+      v("salaries"),
+      op("+"),
+      v("expenses"),
+      op("+"),
+      v("debt_discount"),
+      op("+"),
+      v("device_comp"),
+      op("+"),
+      v("paid_vacation"),
+      paren(")"),
+    ),
     output: "ratio",
     metricId: "roi",
     sectionKey: null,
+    ruleId: null,
   },
   {
     id: "sys_profit_loss_share",
@@ -79,10 +98,11 @@ export const MONEY_SYSTEM_FORMULA_TEMPLATES: AgencyOpsMoneyFormulaDef[] = [
     label: "Profit share / Loss share",
     locked: true,
     enabled: true,
-    tokens: tokens(v("team_loss")),
+    tokens: tokens(paren("("), v("team_profit"), op("-"), v("charity"), paren(")"), op("/"), n(2)),
     output: "amount",
     metricId: "profit-loss-share",
     sectionKey: "team_loss",
+    ruleId: "profit-loss-share",
   },
   {
     id: "sys_paid_vacation",
@@ -94,6 +114,7 @@ export const MONEY_SYSTEM_FORMULA_TEMPLATES: AgencyOpsMoneyFormulaDef[] = [
     output: "amount",
     metricId: "paid-vacation",
     sectionKey: "paid_vacation",
+    ruleId: "paid-vacation",
   },
   {
     id: "sys_device_compensation",
@@ -105,6 +126,7 @@ export const MONEY_SYSTEM_FORMULA_TEMPLATES: AgencyOpsMoneyFormulaDef[] = [
     output: "amount",
     metricId: "device-compensation",
     sectionKey: "device_comp",
+    ruleId: "device-compensation",
   },
   {
     id: "sys_charity",
@@ -116,6 +138,7 @@ export const MONEY_SYSTEM_FORMULA_TEMPLATES: AgencyOpsMoneyFormulaDef[] = [
     output: "amount",
     metricId: "charity",
     sectionKey: "charity",
+    ruleId: null,
   },
   {
     id: "sys_pbc",
@@ -127,12 +150,14 @@ export const MONEY_SYSTEM_FORMULA_TEMPLATES: AgencyOpsMoneyFormulaDef[] = [
     output: "amount",
     metricId: "pbc",
     sectionKey: "pbc",
+    ruleId: null,
   },
 ];
 
 const TEMPLATE_BY_KEY = new Map(
   MONEY_SYSTEM_FORMULA_TEMPLATES.map((formula) => [formula.key, formula]),
 );
+const FIN_SHEET_LOCKSTEP_KEYS = new Set(["team_profit", "roi", "profit_loss_share"]);
 
 /** Legacy calc option id → system formula key. */
 const LEGACY_OPTION_TO_KEY: Record<string, string> = {
@@ -170,13 +195,17 @@ export function mergeMoneyFormulas(
         byKey.set(formula.key, {
           ...template,
           enabled: formula.enabled,
-          tokens: formula.tokens,
+          // Fin-Sheet system equations migrate in lockstep; owners can edit again after deploy.
+          tokens: FIN_SHEET_LOCKSTEP_KEYS.has(formula.key)
+            ? template.tokens.map((token) => ({ ...token }))
+            : formula.tokens,
           // System labels / binds stay locked.
           label: template.label,
           locked: true,
           output: template.output,
           metricId: template.metricId,
           sectionKey: template.sectionKey,
+          ruleId: formula.ruleId ?? template.ruleId,
           id: template.id,
         });
         continue;
@@ -232,6 +261,7 @@ export function createCustomMoneyFormula(input: {
   output?: AgencyOpsMoneyFormulaDef["output"];
   metricId?: string | null;
   sectionKey?: string | null;
+  ruleId?: string | null;
 }): AgencyOpsMoneyFormulaDef {
   return {
     id: input.id,
@@ -243,5 +273,6 @@ export function createCustomMoneyFormula(input: {
     output: input.output ?? "amount",
     metricId: input.metricId ?? null,
     sectionKey: input.sectionKey ?? null,
+    ruleId: input.ruleId ?? null,
   };
 }

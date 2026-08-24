@@ -20,6 +20,7 @@ import type { z } from "zod";
 import { loadTeamWorkSchedule } from "../resourcing/load-team-work-schedule";
 import { resolveProfilePeriodMonth, toFiscalCalendar } from "../resourcing/tenure-engine";
 import { requireTeamMembership } from "../shared/membership";
+import { resolveEntryWaste } from "../shared/waste-helpers";
 import {
   addDaysToDateKey,
   getLocalWeekBounds,
@@ -321,7 +322,7 @@ export async function getMemberProfile(
     secondsByDate.set(date, next);
     if (date >= startDate && date <= endDate) {
       periodTotalSeconds += entry.durationSeconds;
-      if (entry.isWaste) periodWasteSeconds += entry.durationSeconds;
+      if (resolveEntryWaste(entry)) periodWasteSeconds += entry.durationSeconds;
     }
   }
 

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 type AgencyReportCreatorRowActionsProps = {
   label: string;
   taskId: string | null;
-  taskIsWaste: boolean | null;
+  isWaste: boolean;
   disabled?: boolean;
   wastePending?: boolean;
   onEdit: () => void;
@@ -20,7 +20,7 @@ type AgencyReportCreatorRowActionsProps = {
 export function AgencyReportCreatorRowActions({
   label,
   taskId: _taskId,
-  taskIsWaste,
+  isWaste,
   disabled = false,
   wastePending = false,
   onEdit,
@@ -29,7 +29,6 @@ export function AgencyReportCreatorRowActions({
 }: AgencyReportCreatorRowActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const canToggleWaste = Boolean(onToggleWaste);
-  const isWaste = taskIsWaste === true;
 
   return (
     <Popover open={menuOpen} onOpenChange={setMenuOpen}>

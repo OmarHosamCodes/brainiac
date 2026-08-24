@@ -1,3 +1,5 @@
+import { resolveEntryWaste } from "../shared/waste-helpers";
+
 export type MemberProfileActivityEventType = "time_logged" | "waste_marked" | "leave";
 
 export type MemberProfileLeaveType = "pto" | "sick" | "team_holiday" | "other";
@@ -103,6 +105,7 @@ export function buildTimeEntryActivity(input: {
   const description = input.description.trim();
   const taskLabel = input.taskTitle?.trim() || null;
   const projectMeta = `Project · ${input.projectName}`;
+  const isWaste = resolveEntryWaste(input);
 
   const shared = {
     kind: "activity" as const,
@@ -117,7 +120,7 @@ export function buildTimeEntryActivity(input: {
     clientId: input.clientId,
     clientName: input.clientName,
     description: input.description,
-    isWaste: input.isWaste,
+    isWaste,
     taskIsWaste: input.taskIsWaste,
     startedAt: input.startedAt,
     endedAt: input.endedAt,
@@ -128,7 +131,7 @@ export function buildTimeEntryActivity(input: {
     isBillable: input.isBillable,
   };
 
-  if (input.isWaste) {
+  if (isWaste) {
     return {
       ...shared,
       eventType: "waste_marked",

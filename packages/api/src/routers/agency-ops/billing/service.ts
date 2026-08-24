@@ -7,6 +7,7 @@ import {
   agencyOpsClient,
   agencyOpsTimeEntry,
   agencyOpsProject,
+  agencyOpsProjectTask,
   agencyOpsInvoiceLineItem,
   type AgencyOpsInvoiceStatus,
 } from "@orch/db/schema";
@@ -26,6 +27,7 @@ import { invoicePeriodTotalsFromRows } from "./invoice-period-totals";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import {
   aggregateExternalBillableIncome,
+  priceClientInvoiceProjects,
   type ClientBillableIncomeRow,
 } from "./client-billable-income";
 import { aggregateMemberPayableIncome } from "./member-payable-income";
@@ -35,6 +37,7 @@ import {
 } from "./period-bill-activity";
 import { getAgencyCurrency, loadMoneyResolveContext } from "./money-fx-service";
 import { paginateItems, type PaginatedItems } from "./list-pagination";
+import { resolveEntryWaste } from "../shared/waste-helpers";
 
 type AgencyMemberRateRecord = {
   userId: string;
@@ -447,7 +450,11 @@ export async function createInvoice(
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const [clientRow] = await db
-    .select({ id: agencyOpsClient.id, name: agencyOpsClient.name })
+    .select({
+      id: agencyOpsClient.id,
+      name: agencyOpsClient.name,
+      billableRateAmount: agencyOpsClient.billableRateAmount,
+    })
     .from(agencyOpsClient)
     .where(and(eq(agencyOpsClient.id, input.clientId), eq(agencyOpsClient.teamId, input.teamId)))
     .limit(1);
@@ -463,16 +470,19 @@ export async function createInvoice(
     throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
   }
 
-  const entries = await db
+  const rawEntries = await db
     .select({
-      userId: agencyOpsTimeEntry.userId,
       projectId: agencyOpsTimeEntry.projectId,
       projectName: agencyOpsProject.name,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
       isWaste: agencyOpsTimeEntry.isWaste,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      taskTitle: agencyOpsProjectTask.title,
+      projectRateAmount: agencyOpsProject.billableRateAmount,
     })
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .where(
       and(
         eq(agencyOpsTimeEntry.teamId, input.teamId),
@@ -483,42 +493,19 @@ export async function createInvoice(
       ),
     );
 
-  // Waste is outside billable income — never invoice it.
-  const billableEntries = entries.filter((entry) => !entry.isWaste);
+  const entries = rawEntries.map((row) => ({
+    projectId: row.projectId,
+    projectName: row.projectName,
+    durationSeconds: row.durationSeconds,
+    isWaste: resolveEntryWaste(row),
+    projectRateAmount: row.projectRateAmount,
+  }));
 
-  // Fetch per-user billable rates so each user's work is priced correctly.
-  const memberRateRows = await db
-    .select({
-      userId: agencyOpsMemberRate.userId,
-      billableRateAmount: agencyOpsMemberRate.billableRateAmount,
-    })
-    .from(agencyOpsMemberRate)
-    .where(eq(agencyOpsMemberRate.teamId, input.teamId));
-
-  const rateByUserId = new Map(memberRateRows.map((r) => [r.userId, r.billableRateAmount]));
-
-  // Check that every user who logged billable time has a rate set.
-  const userIdsWithEntries = [...new Set(billableEntries.map((e) => e.userId))];
-  const usersWithoutRate = userIdsWithEntries.filter(
-    (uid) => (rateByUserId.get(uid) ?? null) === null,
-  );
-  if (usersWithoutRate.length > 0) {
+  const pricedProjects = priceClientInvoiceProjects(entries, clientRow.billableRateAmount);
+  if (!pricedProjects.ok) {
     throw new ORPCError("BAD_REQUEST", {
-      message: `The following team members have no billable rate set: ${usersWithoutRate.join(", ")}. Set rates before creating an invoice.`,
+      message: `${clientRow.name} has no billable rate set. Set the client rate before creating an invoice.`,
     });
-  }
-
-  type ProjectBucket = { projectName: string; seconds: number; rateAmount: number };
-  const byProject = new Map<string, ProjectBucket>();
-  for (const entry of billableEntries) {
-    const rateAmount = rateByUserId.get(entry.userId) ?? 0;
-    const existing = byProject.get(entry.projectId) ?? {
-      projectName: entry.projectName,
-      seconds: 0,
-      rateAmount,
-    };
-    existing.seconds += entry.durationSeconds;
-    byProject.set(entry.projectId, existing);
   }
 
   const now = new Date();
@@ -549,17 +536,16 @@ export async function createInvoice(
 
     let total = 0;
 
-    if (byProject.size > 0) {
-      const lineItems = [...byProject.entries()].map(
-        ([projectId, { projectName, seconds, rateAmount }]) => {
-          const amount = Math.round((seconds / 3600) * rateAmount);
+    if (pricedProjects.projects.length > 0) {
+      const lineItems = pricedProjects.projects.map(
+        ({ projectId, projectName, durationSeconds, rateAmount, amount }) => {
           total += amount;
           return {
             id: createWorkspaceId("agency-li"),
             invoiceId: inv.id,
             description: projectName,
             projectId,
-            durationSeconds: seconds,
+            durationSeconds,
             rateAmount,
             amount,
             fromTimeEntries: true,
@@ -716,21 +702,19 @@ async function loadPeriodClientBillableRows(
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
       category: agencyOpsClient.category,
-      userId: agencyOpsTimeEntry.userId,
+      projectId: agencyOpsProject.id,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
       isWaste: agencyOpsTimeEntry.isWaste,
-      billableRateAmount: agencyOpsMemberRate.billableRateAmount,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      taskTitle: agencyOpsProjectTask.title,
+      projectName: agencyOpsProject.name,
+      projectRateAmount: agencyOpsProject.billableRateAmount,
+      clientRateAmount: agencyOpsClient.billableRateAmount,
     })
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-    .leftJoin(
-      agencyOpsMemberRate,
-      and(
-        eq(agencyOpsMemberRate.teamId, agencyOpsTimeEntry.teamId),
-        eq(agencyOpsMemberRate.userId, agencyOpsTimeEntry.userId),
-      ),
-    )
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .where(
       and(
         eq(agencyOpsTimeEntry.teamId, teamId),
@@ -744,10 +728,11 @@ async function loadPeriodClientBillableRows(
     clientId: row.clientId,
     clientName: row.clientName,
     category: row.category,
-    userId: row.userId,
+    projectId: row.projectId,
     durationSeconds: row.durationSeconds,
-    isWaste: row.isWaste,
-    billableRateAmount: row.billableRateAmount,
+    isWaste: resolveEntryWaste(row),
+    projectRateAmount: row.projectRateAmount,
+    clientRateAmount: row.clientRateAmount,
   }));
 }
 
@@ -790,10 +775,15 @@ export async function listPeriodBillActivity(
         userAvatar: user.image,
         durationSeconds: agencyOpsTimeEntry.durationSeconds,
         isWaste: agencyOpsTimeEntry.isWaste,
+        taskIsWaste: agencyOpsProjectTask.isWaste,
+        taskTitle: agencyOpsProjectTask.title,
+        projectName: agencyOpsProject.name,
         costRateAmount: agencyOpsMemberRate.costRateAmount,
       })
       .from(agencyOpsTimeEntry)
       .innerJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+      .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+      .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
       .leftJoin(
         agencyOpsMemberRate,
         and(
@@ -826,7 +816,7 @@ export async function listPeriodBillActivity(
       userName: row.userName?.trim() || "Unknown",
       userAvatar: formatAvatarUrl(row.userAvatar),
       durationSeconds: row.durationSeconds,
-      isWaste: row.isWaste,
+      isWaste: resolveEntryWaste(row),
       costRateAmount: row.costRateAmount,
     })),
   );

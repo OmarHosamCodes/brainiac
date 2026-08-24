@@ -1,9 +1,7 @@
 import type { AgencyTimeEntry } from "@orch/api/schemas/agency-ops";
+import { isWasteLabel } from "@orch/api/routers/agency-ops/shared/waste-helpers";
 
-import {
-  isWasteLabel,
-  type AgencyReportShowWaste,
-} from "@/features/reports/agency-report-show-waste";
+import { type AgencyReportShowWaste } from "@/features/reports/agency-report-show-waste";
 
 export type AgencyReportEntry = AgencyTimeEntry;
 

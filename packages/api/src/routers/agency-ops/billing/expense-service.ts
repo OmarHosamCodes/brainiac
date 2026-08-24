@@ -1,11 +1,12 @@
 import { db } from "@orch/db";
 import {
   agencyOpsExpense,
+  agencyOpsExpenseOccurrence,
   type AgencyOpsExpenseKind,
   type AgencyOpsExpensePeriod,
   type AgencyOpsExpenseStatus,
 } from "@orch/db/schema";
-import { and, asc, desc, eq, gte, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { ORPCError } from "@orpc/server";
 import { createWorkspaceId } from "@orch/workspace";
 
@@ -13,7 +14,10 @@ import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import {
   advanceExpenseNextDueAt,
+  type AgencySubscriptionCycleRecord,
+  buildSubscriptionCycleRecords,
   defaultExpenseNextDueAt,
+  expensePeriodTotals,
   expenseRemainingAmount,
   expenseStatusAfterPaid,
   isSubscriptionVisibleInPeriod,
@@ -103,6 +107,70 @@ export async function listExpenses(
     .map(mapExpenseRow);
 
   return paginateItems(items, input);
+}
+
+export async function listSubscriptionCycles(
+  actorUserId: string,
+  input: { teamId: string; periodStart: string; periodEnd: string },
+): Promise<AgencySubscriptionCycleRecord[]> {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
+  const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
+  if (periodStart >= periodEnd) {
+    throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
+  }
+
+  const [subscriptionRows, occurrenceRows] = await Promise.all([
+    db
+      .select({
+        id: agencyOpsExpense.id,
+        name: agencyOpsExpense.name,
+        note: agencyOpsExpense.note,
+        amount: agencyOpsExpense.amount,
+        paidAmount: agencyOpsExpense.paidAmount,
+        currency: agencyOpsExpense.currency,
+        period: agencyOpsExpense.period,
+        nextDueAt: agencyOpsExpense.nextDueAt,
+      })
+      .from(agencyOpsExpense)
+      .where(
+        and(eq(agencyOpsExpense.teamId, input.teamId), eq(agencyOpsExpense.kind, "subscription")),
+      ),
+    db
+      .select({
+        id: agencyOpsExpenseOccurrence.id,
+        expenseId: agencyOpsExpenseOccurrence.expenseId,
+        name: agencyOpsExpense.name,
+        note: agencyOpsExpense.note,
+        amount: agencyOpsExpenseOccurrence.amount,
+        paidAmount: agencyOpsExpenseOccurrence.paidAmount,
+        currency: agencyOpsExpenseOccurrence.currency,
+        period: agencyOpsExpense.period,
+        dueAt: agencyOpsExpenseOccurrence.dueAt,
+      })
+      .from(agencyOpsExpenseOccurrence)
+      .innerJoin(agencyOpsExpense, eq(agencyOpsExpenseOccurrence.expenseId, agencyOpsExpense.id))
+      .where(
+        and(
+          eq(agencyOpsExpense.teamId, input.teamId),
+          eq(agencyOpsExpense.kind, "subscription"),
+          gte(agencyOpsExpenseOccurrence.dueAt, periodStart),
+          lt(agencyOpsExpenseOccurrence.dueAt, periodEnd),
+        ),
+      ),
+  ]);
+
+  return buildSubscriptionCycleRecords({
+    periodStart,
+    periodEnd,
+    subscriptions: subscriptionRows.flatMap((row) =>
+      row.period ? [{ ...row, period: row.period }] : [],
+    ),
+    occurrences: occurrenceRows.flatMap((row) =>
+      row.period ? [{ ...row, period: row.period }] : [],
+    ),
+  });
 }
 
 export async function createExpense(
@@ -335,25 +403,50 @@ export async function recordExpensePayment(
   let paidAmount = (existing.paidAmount ?? 0) + input.amount;
   let status = expenseStatusAfterPaid(existing.amount, paidAmount);
   let nextDueAt = existing.nextDueAt ?? existing.startsAt;
+  const occurrenceDueAt = existing.kind === "subscription" ? (nextDueAt ?? new Date()) : null;
 
   // Subscription fully paid → roll to next due cycle and clear this period's balance.
-  if (existing.kind === "subscription" && status === "paid" && existing.period) {
-    const from = nextDueAt ?? new Date();
-    nextDueAt = advanceExpenseNextDueAt(from, existing.period);
+  if (existing.kind === "subscription" && status === "paid" && existing.period && occurrenceDueAt) {
+    nextDueAt = advanceExpenseNextDueAt(occurrenceDueAt, existing.period);
     paidAmount = 0;
     status = "due";
   }
 
-  const [row] = await db
-    .update(agencyOpsExpense)
-    .set({
-      paidAmount,
-      status,
-      nextDueAt,
-      updatedAt: new Date(),
-    })
-    .where(eq(agencyOpsExpense.id, existing.id))
-    .returning();
+  const row = await db.transaction(async (tx) => {
+    if (occurrenceDueAt) {
+      await tx
+        .insert(agencyOpsExpenseOccurrence)
+        .values({
+          id: createWorkspaceId("expenseOccurrence"),
+          expenseId: existing.id,
+          dueAt: occurrenceDueAt,
+          amount: existing.amount,
+          paidAmount: (existing.paidAmount ?? 0) + input.amount,
+          currency: existing.currency,
+        })
+        .onConflictDoUpdate({
+          target: [agencyOpsExpenseOccurrence.expenseId, agencyOpsExpenseOccurrence.dueAt],
+          set: {
+            amount: existing.amount,
+            paidAmount: (existing.paidAmount ?? 0) + input.amount,
+            currency: existing.currency,
+            updatedAt: new Date(),
+          },
+        });
+    }
+
+    const [updated] = await tx
+      .update(agencyOpsExpense)
+      .set({
+        paidAmount,
+        status,
+        nextDueAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(agencyOpsExpense.id, existing.id))
+      .returning();
+    return updated;
+  });
 
   if (!row) {
     throw new ORPCError("INTERNAL_SERVER_ERROR", { message: "Failed to record payment." });
@@ -378,7 +471,7 @@ export async function removeExpense(
   return { id: input.expenseId };
 }
 
-/** Sum expense amounts whose nextDueAt or occurredAt falls in [periodStart, periodEnd). */
+/** Sum current and settled expense occurrences in [periodStart, periodEnd). */
 export async function sumExpensesInPeriod(
   actorUserId: string,
   input: { teamId: string; periodStart: string; periodEnd: string },
@@ -391,51 +484,38 @@ export async function sumExpensesInPeriod(
     throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
   }
 
-  const rows = await db
-    .select({
-      amount: agencyOpsExpense.amount,
-      paidAmount: agencyOpsExpense.paidAmount,
-      currency: agencyOpsExpense.currency,
-      kind: agencyOpsExpense.kind,
-      nextDueAt: agencyOpsExpense.nextDueAt,
-      occurredAt: agencyOpsExpense.occurredAt,
-      createdAt: agencyOpsExpense.createdAt,
-    })
-    .from(agencyOpsExpense)
-    .where(
-      and(
-        eq(agencyOpsExpense.teamId, input.teamId),
-        or(
-          and(
-            eq(agencyOpsExpense.kind, "subscription"),
-            gte(agencyOpsExpense.nextDueAt, periodStart),
-            lte(agencyOpsExpense.nextDueAt, periodEnd),
-          ),
-          and(
-            eq(agencyOpsExpense.kind, "one_time"),
-            or(
-              and(
-                gte(agencyOpsExpense.occurredAt, periodStart),
-                lte(agencyOpsExpense.occurredAt, periodEnd),
-              ),
-              and(
-                sql`${agencyOpsExpense.occurredAt} is null`,
-                gte(agencyOpsExpense.createdAt, periodStart),
-                lte(agencyOpsExpense.createdAt, periodEnd),
-              ),
-            ),
-          ),
+  const [expenses, occurrences] = await Promise.all([
+    db
+      .select({
+        id: agencyOpsExpense.id,
+        amount: agencyOpsExpense.amount,
+        paidAmount: agencyOpsExpense.paidAmount,
+        currency: agencyOpsExpense.currency,
+        kind: agencyOpsExpense.kind,
+        nextDueAt: agencyOpsExpense.nextDueAt,
+        occurredAt: agencyOpsExpense.occurredAt,
+        createdAt: agencyOpsExpense.createdAt,
+      })
+      .from(agencyOpsExpense)
+      .where(eq(agencyOpsExpense.teamId, input.teamId)),
+    db
+      .select({
+        expenseId: agencyOpsExpenseOccurrence.expenseId,
+        dueAt: agencyOpsExpenseOccurrence.dueAt,
+        amount: agencyOpsExpenseOccurrence.amount,
+        paidAmount: agencyOpsExpenseOccurrence.paidAmount,
+        currency: agencyOpsExpenseOccurrence.currency,
+      })
+      .from(agencyOpsExpenseOccurrence)
+      .innerJoin(agencyOpsExpense, eq(agencyOpsExpenseOccurrence.expenseId, agencyOpsExpense.id))
+      .where(
+        and(
+          eq(agencyOpsExpense.teamId, input.teamId),
+          gte(agencyOpsExpenseOccurrence.dueAt, periodStart),
+          lt(agencyOpsExpenseOccurrence.dueAt, periodEnd),
         ),
       ),
-    );
+  ]);
 
-  let amount = 0;
-  let paidAmount = 0;
-  let currency = "USD";
-  for (const row of rows) {
-    amount += row.amount;
-    paidAmount += row.paidAmount ?? 0;
-    currency = row.currency;
-  }
-  return { amount, paidAmount, currency };
+  return expensePeriodTotals({ periodStart, periodEnd, expenses, occurrences });
 }

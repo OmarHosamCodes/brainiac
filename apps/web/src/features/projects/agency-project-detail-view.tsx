@@ -29,8 +29,11 @@ import {
   agencyPanelClass,
 } from "@/features/shared/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
+import { formatRate } from "@/features/shared/format-rate";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
 import { type AgencyProjectDetailViewModel } from "./hooks/use-agency-project-detail";
 
 type AgencyProjectDetailViewProps = {
@@ -90,6 +93,10 @@ export function AgencyProjectDetailView({
     cancelTrashConfirm,
     confirmMoveToTrash,
     canvasNodeHref,
+    editBillableRateDraft,
+    onEditBillableRateDraftChange,
+    saveProjectRate,
+    canSaveProjectRate,
   } = viewModel;
 
   return (
@@ -347,6 +354,78 @@ export function AgencyProjectDetailView({
             </div>
 
             <aside className="flex flex-col gap-4">
+              <article className={cn(agencyPanelClass, "p-4")}>
+                <header className="mb-3">
+                  <p className={agencyLabelClass}>Commercial</p>
+                  <p className="mt-1 text-xs text-muted">
+                    Override the client catalog rate for this project, or leave blank to inherit.
+                  </p>
+                </header>
+                {isOwner && !isTrashed ? (
+                  <form
+                    className="space-y-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      saveProjectRate();
+                    }}
+                  >
+                    <div>
+                      <Label htmlFor={`project-rate-${project.id}`} className="text-[11px] font-bold">
+                        Project rate / hour
+                      </Label>
+                      <Input
+                        id={`project-rate-${project.id}`}
+                        value={editBillableRateDraft}
+                        onChange={(event) => onEditBillableRateDraftChange(event.target.value)}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Inherit client rate"
+                        className="mt-1"
+                      />
+                      <p className="mt-1 text-[11px] text-muted">
+                        Client default:{" "}
+                        {formatRate(
+                          project.clientBillableRateAmount,
+                          project.clientCurrency,
+                          { perHour: true },
+                        )}
+                      </p>
+                      <p className="mt-1 text-[11px] text-muted">
+                        Effective now:{" "}
+                        {formatRate(
+                          project.effectiveBillableRateAmount,
+                          project.clientCurrency,
+                          { perHour: true },
+                        )}
+                      </p>
+                    </div>
+                    <Button type="submit" size="sm" disabled={!canSaveProjectRate}>
+                      Save rate
+                    </Button>
+                  </form>
+                ) : (
+                  <dl className="space-y-2 text-xs">
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted">Project override</dt>
+                      <dd className="font-mono font-bold tabular-nums text-highlighted">
+                        {formatRate(project.billableRateAmount, project.currency, { perHour: true })}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-muted">Effective rate</dt>
+                      <dd className="font-mono font-bold tabular-nums text-highlighted">
+                        {formatRate(
+                          project.effectiveBillableRateAmount,
+                          project.clientCurrency,
+                          { perHour: true },
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                )}
+              </article>
+
               <article className={agencyPanelClass}>
                 <header className="border-b border-default px-4 py-3">
                   <p className={agencyLabelClass}>Hours by member · this week</p>

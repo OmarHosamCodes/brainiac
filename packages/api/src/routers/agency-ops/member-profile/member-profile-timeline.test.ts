@@ -51,6 +51,31 @@ describe("buildTimeEntryActivity", () => {
     expect(item.body).toBe("Polish rails");
     expect(item.taskId).toBe("task_1");
   });
+
+  test("maps waste-flagged tasks to waste_marked without entry flag", () => {
+    const item = buildTimeEntryActivity({
+      ...baseEntry,
+      description: "Research",
+      durationSeconds: 1800,
+      isWaste: false,
+      taskIsWaste: true,
+    });
+    expect(item.eventType).toBe("waste_marked");
+    expect(item.isWaste).toBe(true);
+  });
+
+  test("maps waste project names to waste_marked without entry flag", () => {
+    const item = buildTimeEntryActivity({
+      ...baseEntry,
+      projectName: "Internal waste",
+      description: "Admin",
+      durationSeconds: 900,
+      isWaste: false,
+      taskIsWaste: false,
+    });
+    expect(item.eventType).toBe("waste_marked");
+    expect(item.isWaste).toBe(true);
+  });
 });
 
 describe("buildLeaveActivity", () => {

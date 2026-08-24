@@ -297,10 +297,7 @@ export function AgencyReportsTable({
                               label={row.taskTitle || row.description || row.projectName}
                               entryCount={row.entryCount}
                               taskId={row.taskId}
-                              taskIsWaste={
-                                row.entries.every((entry) => entry.isWaste === true) ||
-                                row.taskIsWaste
-                              }
+                              isWaste={isReportEntryWaste(row)}
                               deleting={row.entries.some((entry) =>
                                 deletingEntryIdSet.has(entry.id),
                               )}

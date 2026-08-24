@@ -183,7 +183,10 @@ export function getCurrentTenurePeriodRange(
     selected[0]!.toExclusive,
   );
   const monthEnd = new Date(new Date(latestExclusive).getTime() - 1);
-  const to = new Date(Math.min(todayEnd.getTime(), monthEnd.getTime()));
+  const selectionStartsInFuture = new Date(from).getTime() > todayEnd.getTime();
+  const to = selectionStartsInFuture
+    ? monthEnd
+    : new Date(Math.min(todayEnd.getTime(), monthEnd.getTime()));
 
   return {
     from,

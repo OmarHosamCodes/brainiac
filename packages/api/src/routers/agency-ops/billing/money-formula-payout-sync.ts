@@ -26,16 +26,8 @@ import { getMoneySettings } from "./money-settings-service";
 import { sumExpensesInPeriod } from "./expense-service";
 import { ensurePayoutPeriod, getPayoutSectionTotals, getPayoutSummary } from "./payout-service";
 import { PAYOUT_SECTION_META } from "./payout-section-keys";
+import { resolveEligibleMemberIds, resolveRuleCohortKey } from "./money-formula-rule";
 import { getInvoiceSummary } from "./service";
-
-/** Formula sectionKey → Money Rules id used for eligibility. */
-const SECTION_RULE_ID: Partial<Record<AgencyOpsPayoutSectionKey, string>> = {
-  team_loss: "profit-loss-share",
-  device_comp: "device-compensation",
-  paid_vacation: "paid-vacation",
-};
-
-const MEMBER_SCOPED_SECTIONS = new Set<AgencyOpsPayoutSectionKey>(["paid_vacation", "device_comp"]);
 
 function formulaLineLabel(formula: AgencyOpsMoneyFormulaDef): string {
   return `Formula · ${formula.label}`;
@@ -67,25 +59,6 @@ async function ensureSection(
     sortOrder: meta.sortOrder,
   });
   return { id: sectionId, key: sectionKey, title: meta.title };
-}
-
-function resolveEligibleMemberIds(input: {
-  sectionKey: AgencyOpsPayoutSectionKey;
-  memberIdsByRuleId: Record<string, string[]> | undefined;
-  allMemberIds: string[];
-}): string[] | null {
-  /** null → pool-scoped (no per-member lines). */
-  if (!MEMBER_SCOPED_SECTIONS.has(input.sectionKey)) {
-    const ruleId = SECTION_RULE_ID[input.sectionKey];
-    const picked = ruleId ? input.memberIdsByRuleId?.[ruleId] : undefined;
-    if (picked && picked.length > 0) return picked;
-    return null;
-  }
-
-  const ruleId = SECTION_RULE_ID[input.sectionKey];
-  const picked = ruleId ? input.memberIdsByRuleId?.[ruleId] : undefined;
-  if (picked && picked.length > 0) return picked;
-  return input.allMemberIds;
 }
 
 export async function syncFormulaPayoutLines(
@@ -195,13 +168,16 @@ export async function syncFormulaPayoutLines(
     const sectionKey = formula.sectionKey as AgencyOpsPayoutSectionKey;
     const section = await ensureSection(run.id, sectionKey);
     const eligible = resolveEligibleMemberIds({
+      formula,
       sectionKey,
+      enabledRuleIds: settings.rules.enabledRuleIds,
       memberIdsByRuleId: settings.rules.memberIdsByRuleId,
       allMemberIds,
     });
-
-    const ruleId = SECTION_RULE_ID[sectionKey];
-    const cohortKey = (ruleId ? settings.rules.cohortByRuleId?.[ruleId]?.trim() : null) || null;
+    const cohortKey = resolveRuleCohortKey({
+      formula,
+      cohortByRuleId: settings.rules.cohortByRuleId,
+    });
 
     if (eligible === null) {
       const context = buildMoneyFormulaContext({

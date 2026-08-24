@@ -1,9 +1,29 @@
 import { describe, expect, test } from "bun:test";
 
-import { applyFormulasToScoreboard } from "./money-formula-context";
-import { evaluateMoneyFormulaTokens } from "./money-formula-eval";
+import { applyFormulasToScoreboard, buildMoneyFormulaContext } from "./money-formula-context";
+import { evaluateMoneyFormulaTokens, roundMoneyFormulaAmount } from "./money-formula-eval";
 import { validateMoneyFormulaTokens } from "./money-formula-tokens";
 import { defaultMoneyFormulas, mergeMoneyFormulas } from "./money-formula-templates";
+
+describe("buildMoneyFormulaContext", () => {
+  test("includes device compensation in team profit", () => {
+    expect(
+      buildMoneyFormulaContext({
+        totalIncomeAmount: 306_323,
+        receivedAmount: 0,
+        salariesAmount: 240_000,
+        expensesAmount: 139_646,
+        debtDiscountAmount: 20_000,
+        paidVacationAmount: 2_500,
+        deviceCompAmount: 24_000,
+        charityAmount: 0,
+        pbcAmount: 0,
+        teamLossAmount: 0,
+        paidVacationHours: 200,
+      }).team_profit,
+    ).toBe(-119_823);
+  });
+});
 
 describe("validateMoneyFormulaTokens", () => {
   test("accepts simple expression", () => {
@@ -72,6 +92,12 @@ describe("evaluateMoneyFormulaTokens", () => {
   });
 });
 
+describe("roundMoneyFormulaAmount", () => {
+  test("rounds negative half amounts away from zero", () => {
+    expect(roundMoneyFormulaAmount(-59_911.5)).toBe(-59_912);
+  });
+});
+
 describe("applyFormulasToScoreboard", () => {
   test("falls back when formula disabled", () => {
     const formulas = defaultMoneyFormulas().map((formula) =>
@@ -96,7 +122,7 @@ describe("applyFormulasToScoreboard", () => {
       200,
     );
     expect(board.remainingAmount).toBe(60_00);
-    expect(board.roi).toBeCloseTo(0.7);
+    expect(board.roi).toBeCloseTo(70_00 / 30_00);
   });
 
   test("applies custom remaining tokens", () => {
@@ -132,32 +158,99 @@ describe("applyFormulasToScoreboard", () => {
     );
     expect(board.remainingAmount).toBe(4000);
   });
+
+  test("evaluates profit before profit share and ROI", () => {
+    const formulas = defaultMoneyFormulas().map((formula) => {
+      if (formula.key === "paid_vacation") {
+        return { ...formula, tokens: [{ kind: "number" as const, value: 2_500 }] };
+      }
+      if (formula.key === "device_compensation") {
+        return { ...formula, tokens: [{ kind: "number" as const, value: 24_000 }] };
+      }
+      return formula;
+    });
+
+    const board = applyFormulasToScoreboard(
+      {
+        billablePoolAmount: 306_323,
+        receivedAmount: 0,
+        invoicedRemainingAmount: 0,
+        salariesDueAmount: 240_000,
+        expensesAmount: 139_646,
+        debtDiscountAmount: 20_000,
+        paidVacationAmount: 2_500,
+        deviceCompAmount: 0,
+        charityAmount: 0,
+        pbcAmount: 0,
+        teamLossAmount: 0,
+        currency: "EGP",
+      },
+      formulas,
+      200,
+    );
+
+    expect(board.teamProfitAmount).toBe(-119_823);
+    expect(board.profitLossShareAmount).toBe(-59_912);
+    expect(board.roi).toBeCloseTo(-119_823 / 426_146);
+  });
 });
 
 describe("mergeMoneyFormulas", () => {
   test("defaults to system templates", () => {
     const formulas = mergeMoneyFormulas(undefined);
     expect(formulas.every((f) => f.locked)).toBe(true);
-    expect(formulas.map((f) => f.key)).toContain("roi");
+    expect(formulas.find((f) => f.key === "team_profit")?.tokens).toEqual([
+      { kind: "var", id: "total_income" },
+      { kind: "op", op: "-" },
+      { kind: "paren", value: "(" },
+      { kind: "var", id: "salaries" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "expenses" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "debt_discount" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "device_comp" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "paid_vacation" },
+      { kind: "paren", value: ")" },
+    ]);
+    expect(formulas.find((f) => f.key === "roi")?.tokens).toEqual([
+      { kind: "var", id: "team_profit" },
+      { kind: "op", op: "/" },
+      { kind: "paren", value: "(" },
+      { kind: "var", id: "salaries" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "expenses" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "debt_discount" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "device_comp" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "paid_vacation" },
+      { kind: "paren", value: ")" },
+    ]);
+    expect(formulas.find((f) => f.key === "profit_loss_share")?.tokens).toEqual([
+      { kind: "paren", value: "(" },
+      { kind: "var", id: "team_profit" },
+      { kind: "op", op: "-" },
+      { kind: "var", id: "charity" },
+      { kind: "paren", value: ")" },
+      { kind: "op", op: "/" },
+      { kind: "number", value: 2 },
+    ]);
   });
 
   test("preserves custom and edited system enable", () => {
+    const lockstepKeys = new Set(["team_profit", "roi", "profit_loss_share"]);
+    const staleSystemFormulas = defaultMoneyFormulas()
+      .filter((formula) => lockstepKeys.has(formula.key))
+      .map((formula) => ({
+        ...formula,
+        enabled: formula.key === "roi" ? false : formula.enabled,
+        tokens: [{ kind: "number" as const, value: 1 }],
+      }));
     const formulas = mergeMoneyFormulas([
-      {
-        id: "sys_roi",
-        key: "roi",
-        label: "ROI",
-        locked: true,
-        enabled: false,
-        tokens: [
-          { kind: "var", id: "team_profit" },
-          { kind: "op", op: "/" },
-          { kind: "var", id: "total_income" },
-        ],
-        output: "ratio",
-        metricId: "roi",
-        sectionKey: null,
-      },
+      ...staleSystemFormulas,
       {
         id: "custom_1",
         key: "custom_bonus",
@@ -168,10 +261,17 @@ describe("mergeMoneyFormulas", () => {
         output: "amount",
         metricId: null,
         sectionKey: "pbc",
+        ruleId: "custom_transport",
       },
     ]);
     expect(formulas.find((f) => f.key === "roi")?.enabled).toBe(false);
+    for (const key of lockstepKeys) {
+      expect(formulas.find((f) => f.key === key)?.tokens).toEqual(
+        defaultMoneyFormulas().find((f) => f.key === key)?.tokens,
+      );
+    }
     expect(formulas.find((f) => f.key === "custom_bonus")?.label).toBe("Bonus pool");
+    expect(formulas.find((f) => f.key === "custom_bonus")?.ruleId).toBe("custom_transport");
   });
 
   test("migrates legacy enabledOptionIds", () => {

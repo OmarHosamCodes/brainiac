@@ -3,6 +3,8 @@ import {
   agencyOpsMemberLeave,
   agencyOpsMemberProfileAlert,
   agencyOpsMemberProfileAlertPolicy,
+  agencyOpsProject,
+  agencyOpsProjectTask,
   agencyOpsTenurePolicy,
   agencyOpsTimeEntry,
   workspaceTeamMember,
@@ -16,6 +18,7 @@ import { fanOutNotification } from "../../notifications/service";
 import { getFiscalQuarterForDate, getFiscalQuarterRange, resolveProfilePeriodMonth } from "../resourcing/tenure-engine";
 import { resolveWorkSchedule } from "../resourcing/work-schedule";
 import { requireTeamMembership } from "../shared/membership";
+import { resolveEntryWaste } from "../shared/waste-helpers";
 import { addDaysToDateKey, localDateKeyFromInstant } from "../time-tracking/local-week-bounds";
 import { expandLeaveDays } from "./member-profile-heat";
 import {
@@ -127,8 +130,13 @@ async function loadDaySeconds(
       startedAt: agencyOpsTimeEntry.startedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
       isWaste: agencyOpsTimeEntry.isWaste,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      taskTitle: agencyOpsProjectTask.title,
+      projectName: agencyOpsProject.name,
     })
     .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .where(
       and(
         eq(agencyOpsTimeEntry.teamId, teamId),
@@ -144,7 +152,7 @@ async function loadDaySeconds(
     const dateKey = localDateKeyFromInstant(row.startedAt, utcOffsetMinutes);
     const current = byDate.get(dateKey) ?? { dateKey, totalSeconds: 0, wasteSeconds: 0 };
     current.totalSeconds += row.durationSeconds;
-    if (row.isWaste) current.wasteSeconds += row.durationSeconds;
+    if (resolveEntryWaste(row)) current.wasteSeconds += row.durationSeconds;
     byDate.set(dateKey, current);
   }
   return [...byDate.values()];

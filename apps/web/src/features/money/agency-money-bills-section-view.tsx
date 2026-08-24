@@ -22,7 +22,6 @@ import {
   type MoneyBillsStatusFilter,
 } from "@/features/billing/money-bills-filters";
 import {
-  groupMoneyBillComposeDisplayRows,
   moneyBillComposeHueId,
   moneyBillComposeListInsight,
   type MoneyBillObligationLine,
@@ -357,6 +356,123 @@ function BillAdjustmentRow({
   );
 }
 
+function SalaryPoolPanel({
+  salaryPool,
+  isMutationPending,
+}: {
+  salaryPool: NonNullable<AgencyMoneySurfaceViewModel["bills"]["salaryPool"]>;
+  isMutationPending: boolean;
+}) {
+  if (!salaryPool.pool) return null;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-default">
+      <div className="border-b border-default bg-elevated/20 px-3 py-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-medium text-highlighted">Team salaries</h4>
+            <p className="text-xs text-muted">Manual total for formulas and shared payments</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-end">
+            <div>
+              <p className="text-[0.6875rem] font-medium text-muted">Total</p>
+              <p className="font-mono text-sm font-semibold tabular-nums text-highlighted">
+                {salaryPool.pool.totalLabel}
+              </p>
+            </div>
+            <div>
+              <p className="text-[0.6875rem] font-medium text-muted">Paid</p>
+              <p className="font-mono text-sm font-semibold tabular-nums text-highlighted">
+                {salaryPool.pool.paidLabel}
+              </p>
+            </div>
+            <div>
+              <p className="text-[0.6875rem] font-medium text-muted">Remaining</p>
+              <p className="font-mono text-sm font-semibold tabular-nums text-highlighted">
+                {salaryPool.pool.remainingLabel}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul className="divide-y divide-border">
+        {salaryPool.members.map((member) => (
+          <li
+            key={member.userId}
+            className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <AgencyMemberAvatar
+                name={member.userName}
+                userId={member.userId}
+                avatarUrl={member.userAvatar}
+                className="size-8"
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-highlighted">{member.userName}</p>
+                <p className="text-xs text-muted">{member.paidLabel} paid</p>
+              </div>
+              {member.isFinalized ? (
+                <Badge variant="secondary" className="rounded-md">
+                  Finalized
+                </Badge>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {member.canReopen ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 rounded-lg text-xs"
+                  disabled={member.isPending || isMutationPending}
+                  onClick={() => salaryPool.onMemberReopen(member.userId)}
+                >
+                  Reopen
+                </Button>
+              ) : null}
+              {member.canPay ? (
+                <>
+                  <Input
+                    inputMode="decimal"
+                    value={member.amount}
+                    onChange={(event) =>
+                      salaryPool.onMemberAmountChange(member.userId, event.target.value)
+                    }
+                    placeholder="Amount"
+                    aria-label={`Payment amount for ${member.userName}`}
+                    className="h-8 w-28 rounded-lg border-default bg-default text-sm"
+                    disabled={member.isPending || isMutationPending}
+                  />
+                  <label className="inline-flex items-center gap-2 text-xs text-muted">
+                    <Checkbox
+                      checked={member.finalize}
+                      onCheckedChange={(checked) =>
+                        salaryPool.onMemberFinalizeChange(member.userId, checked === true)
+                      }
+                      disabled={member.isPending || isMutationPending}
+                    />
+                    Final payment
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 rounded-lg"
+                    disabled={!member.canSubmitPay || member.isPending || isMutationPending}
+                    onClick={() => salaryPool.onMemberPay(member.userId)}
+                  >
+                    Pay
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function BillObligationLineRow({
   group,
   line,
@@ -679,8 +795,9 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
   const payment = bills.payment;
   const preview = bills.preview;
   const adjust = bills.adjust;
-  const showEmpty = !bills.isLoading && !bills.isError && bills.rows.length === 0;
-  const sections = groupMoneyBillComposeDisplayRows(bills.rows);
+  const showEmpty =
+    !bills.isLoading && !bills.isError && bills.rows.length === 0 && !bills.salaryPool.pool;
+  const sections = bills.displaySections;
   const insight = moneyBillComposeListInsight(bills.rows);
   const showSectionHeaders = sections.length > 1;
   const activeFilterChipCount =
@@ -871,7 +988,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
           </div>
         ) : null}
 
-        {!bills.isLoading && !bills.isError && bills.rows.length > 0 ? (
+        {!bills.isLoading && !bills.isError && (bills.rows.length > 0 || bills.salaryPool.pool) ? (
           <div className="flex flex-col gap-3 px-4 pt-4" aria-label="Bill list">
             {insight ? (
               <p className="px-1 text-xs text-muted" aria-live="polite">
@@ -917,7 +1034,15 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                       })}
                     </ul>
                   ) : (
-                    <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
+                    <>
+                      {section.id === "team" && bills.salaryPool.pool ? (
+                        <SalaryPoolPanel
+                          salaryPool={bills.salaryPool}
+                          isMutationPending={bills.isMutationPending}
+                        />
+                      ) : null}
+                      {section.rows.length > 0 ? (
+                        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
                       <li
                         className="grid grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto] items-center gap-3 border-b border-default bg-elevated/20 px-3 py-1.5"
                         aria-hidden
@@ -957,7 +1082,9 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                           />
                         );
                       })}
-                    </ul>
+                        </ul>
+                      ) : null}
+                    </>
                   )}
                 </section>
               );
@@ -1329,7 +1456,9 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
           <DialogHeader>
             <DialogTitle>Add adjustment</DialogTitle>
             <DialogDescription>
-              Create a Debt/Discount, Charity, or PBC line for this period.
+              {adjustmentCreate.isSalaryPool
+                ? "Set the manual Team salaries total for this period."
+                : "Create a Debt/Discount, Charity, or PBC line for this period."}
             </DialogDescription>
           </DialogHeader>
           <form
@@ -1367,18 +1496,20 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                 </SelectContent>
               </Select>
             </div>
-            <div className={agencyFormFieldClass}>
-              <Label htmlFor={`${adjustmentCreate.formId}-label`} className={agencyFormLabelClass}>
-                Label
-              </Label>
-              <Input
-                id={`${adjustmentCreate.formId}-label`}
-                value={adjustmentCreate.label}
-                onChange={(event) => adjustmentCreate.onLabelChange(event.target.value)}
-                placeholder="e.g. Client discount, donation"
-                className="h-9 rounded-xl border-default bg-default text-sm"
-              />
-            </div>
+            {!adjustmentCreate.isSalaryPool ? (
+              <div className={agencyFormFieldClass}>
+                <Label htmlFor={`${adjustmentCreate.formId}-label`} className={agencyFormLabelClass}>
+                  Label
+                </Label>
+                <Input
+                  id={`${adjustmentCreate.formId}-label`}
+                  value={adjustmentCreate.label}
+                  onChange={(event) => adjustmentCreate.onLabelChange(event.target.value)}
+                  placeholder="e.g. Client discount, donation"
+                  className="h-9 rounded-xl border-default bg-default text-sm"
+                />
+              </div>
+            ) : null}
             <div className={agencyFormFieldClass}>
               <Label htmlFor={`${adjustmentCreate.formId}-amount`} className={agencyFormLabelClass}>
                 Amount
@@ -1406,7 +1537,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
               form={adjustmentCreate.formId}
               disabled={!adjustmentCreate.canSubmit}
             >
-              Add
+              {adjustmentCreate.isSalaryPool ? "Save total" : "Add"}
             </Button>
           </DialogFooter>
         </DialogContent>

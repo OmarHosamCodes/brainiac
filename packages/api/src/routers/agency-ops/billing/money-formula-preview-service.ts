@@ -15,6 +15,7 @@ import {
   type MoneyFormulaPeriodFacts,
 } from "./money-formula-context";
 import { evaluateMoneyFormulaTokens } from "./money-formula-eval";
+import { resolveRuleCohortSize } from "./money-formula-rule";
 import { validateMoneyFormulaTokens } from "./money-formula-tokens";
 import { getMoneySettings } from "./money-settings-service";
 import { getPeriodScoreboard } from "./money-scoreboard-service";
@@ -38,6 +39,8 @@ export async function previewMoneyFormula(
     tokens: AgencyOpsMoneyFormulaToken[];
     output: AgencyOpsMoneyFormulaOutput;
     memberUserId?: string | null;
+    ruleId?: string | null;
+    sectionKey?: string | null;
   },
 ): Promise<{ value: number | null; error: string | null }> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -73,6 +76,13 @@ export async function previewMoneyFormula(
     pbcAmount: board.pbcAmount,
     teamLossAmount: board.profitLossShareAmount,
     paidVacationHours,
+    cohortSize: resolveRuleCohortSize({
+      formula: { ruleId: input.ruleId ?? null, sectionKey: input.sectionKey ?? null },
+      sectionKey: input.sectionKey ?? null,
+      enabledRuleIds: settings.rules.enabledRuleIds,
+      memberIdsByRuleId: settings.rules.memberIdsByRuleId,
+      allMemberIds: [],
+    }),
   };
 
   if (input.memberUserId) {
@@ -120,7 +130,8 @@ export async function previewMoneyFormula(
       tokens: input.tokens,
       output: input.output,
       metricId: null,
-      sectionKey: null,
+      sectionKey: input.sectionKey ?? null,
+      ruleId: input.ruleId ?? null,
     },
     context,
   );

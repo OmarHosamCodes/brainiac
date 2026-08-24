@@ -33,4 +33,20 @@ describe("aggregateMemberPayableIncome", () => {
       },
     ]);
   });
+
+  test("routes pre-resolved task or project waste to wasteAmount", () => {
+    const items = aggregateMemberPayableIncome([
+      {
+        userId: "u1",
+        userName: "Ada",
+        userAvatar: null,
+        durationSeconds: 3600,
+        isWaste: true,
+        costRateAmount: 8_000,
+      },
+    ]);
+    expect(items[0]?.payableAmount).toBe(0);
+    expect(items[0]?.wasteAmount).toBe(8_000);
+    expect(items[0]?.durationSeconds).toBe(0);
+  });
 });

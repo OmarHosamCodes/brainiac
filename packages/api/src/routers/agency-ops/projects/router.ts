@@ -156,6 +156,8 @@ export const projectsRouter = {
           clientId: z.string().min(1).optional(),
           name: z.string().trim().min(1).max(160).optional(),
           colorHueId: agencyProjectColorHueIdSchema.nullable().optional(),
+          billableRateAmount: z.number().int().nonnegative().nullable().optional(),
+          currency: z.string().length(3).optional(),
         }),
       )
       .handler(async ({ context, input }) => {

@@ -18,6 +18,7 @@ export type MoneyFormulaDef = {
   output: MoneyFormulaOutput;
   metricId: string | null;
   sectionKey: string | null;
+  ruleId: string | null;
 };
 
 export type MoneyFormulaVarMeta = {
@@ -124,18 +125,22 @@ export function validateMoneyFormulaTokensClient(
   return { ok: true };
 }
 
-export function createCustomMoneyFormulaDraft(): MoneyFormulaDef {
+export function createCustomMoneyFormulaDraft(input?: {
+  ruleId?: string | null;
+  label?: string;
+}): MoneyFormulaDef {
   const stamp = Date.now().toString(36);
   return {
     id: `custom_${stamp}`,
     key: `custom_${stamp}`,
-    label: "Custom formula",
+    label: input?.label?.trim() || "Custom formula",
     locked: false,
     enabled: true,
     tokens: [{ kind: "number", value: 0 }],
     output: "amount",
     metricId: null,
     sectionKey: null,
+    ruleId: input?.ruleId ?? null,
   };
 }
 
@@ -227,8 +232,12 @@ const OUTPUT_LABEL: Record<MoneyFormulaOutput, string> = {
 };
 
 /** Quiet destination line for list rows and locked template meta. */
-export function moneyFormulaDestinationSummary(formula: MoneyFormulaDef): string {
+export function moneyFormulaDestinationSummary(
+  formula: MoneyFormulaDef,
+  ruleLabel?: string | null,
+): string {
   const parts: string[] = [];
+  if (ruleLabel) parts.push(ruleLabel);
   if (formula.metricId) {
     const metric = MONEY_FORMULA_METRIC_OPTIONS.find((item) => item.id === formula.metricId);
     parts.push(metric?.label ?? formula.metricId);

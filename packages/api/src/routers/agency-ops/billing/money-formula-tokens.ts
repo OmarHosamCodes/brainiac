@@ -169,5 +169,9 @@ export function normalizeMoneyFormulaDef(value: unknown): AgencyOpsMoneyFormulaD
     output,
     metricId: typeof record.metricId === "string" ? record.metricId : null,
     sectionKey: typeof record.sectionKey === "string" ? record.sectionKey : null,
+    ruleId:
+      typeof record.ruleId === "string" && record.ruleId.trim().length > 0
+        ? record.ruleId.trim()
+        : null,
   };
 }

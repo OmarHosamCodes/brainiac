@@ -1,20 +1,6 @@
-/** True when a label contains "waste" as a word, any casing/format. */
-export function isWasteLabel(label: string | null | undefined): boolean {
-  if (!label) return false;
-  return /\bwaste\b/i.test(label);
-}
+import { isReportEntryWaste } from "../shared/waste-helpers";
 
-/** Waste = entry isWaste flag, task isWaste flag, or task/project name contains "waste". */
-export function isReportEntryWaste(
-  taskIsWaste: boolean | null | undefined,
-  taskTitle: string | null | undefined,
-  projectName: string | null | undefined,
-  entryIsWaste?: boolean | null,
-): boolean {
-  if (entryIsWaste === true) return true;
-  if (taskIsWaste === true) return true;
-  return isWasteLabel(taskTitle) || isWasteLabel(projectName);
-}
+export { isReportEntryWaste, isWasteLabel } from "../shared/waste-helpers";
 
 export type ProjectShareMetrics = {
   externalSeconds: number;

@@ -432,7 +432,7 @@ function ReportCreatorRow({
         <AgencyReportCreatorRowActions
           label={rowLabel}
           taskId={row.taskId}
-          taskIsWaste={isWaste}
+          isWaste={isWaste}
           disabled={isEditing || isSaving}
           wastePending={wastePending}
           onEdit={() => onEdit(primaryEntryId)}

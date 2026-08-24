@@ -4,13 +4,15 @@ import {
   agencyOpsPayoutLine,
   agencyOpsPayoutRun,
   agencyOpsPayoutSection,
+  agencyOpsProject,
+  agencyOpsProjectTask,
   agencyOpsTimeEntry,
   user,
   type AgencyOpsPayoutLineStatus,
   type AgencyOpsPayoutRunStatus,
   type AgencyOpsPayoutSectionKey,
 } from "@orch/db/schema";
-import { and, asc, eq, gte, ilike, inArray, isNull, lte, or, sum } from "drizzle-orm";
+import { and, asc, eq, gte, ilike, inArray, isNull, lte, or, sql, sum } from "drizzle-orm";
 import { ORPCError } from "@orpc/server";
 import { createWorkspaceId } from "@orch/workspace";
 
@@ -28,9 +30,11 @@ import {
   type PayoutBillStatus,
 } from "./payout-bill-status";
 import { payoutSalariesTotalsFromRows } from "./payout-period-totals";
+import { loadSalaryPoolPeriodTotals } from "./salary-pool-service";
 import { PAYOUT_SECTION_META, payoutSectionKeysForBillsParty } from "./payout-section-keys";
 import { enabledFormulasSnapshot } from "./money-formula-templates";
 import { getMoneySettings } from "./money-settings-service";
+import { reportEntryIsWasteSql } from "../shared/waste-helpers";
 
 export type AgencyPayoutLineRecord = {
   id: string;
@@ -327,6 +331,14 @@ export async function createPayoutLineFromMember(
     throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
   }
 
+  const existingPool = await loadSalaryPoolPeriodTotals(actorUserId, input);
+  if (existingPool) {
+    throw new ORPCError("CONFLICT", {
+      message:
+        "This period uses a manual Team salaries pool. Rate-derived salary lines are blocked.",
+    });
+  }
+
   const [member] = await db
     .select({ id: user.id, name: user.name, image: user.image })
     .from(user)
@@ -357,13 +369,18 @@ export async function createPayoutLineFromMember(
   }
 
   const [durationRow] = await db
-    .select({ total: sum(agencyOpsTimeEntry.durationSeconds) })
+    .select({
+      total: sum(
+        sql`case when not ${reportEntryIsWasteSql} then ${agencyOpsTimeEntry.durationSeconds} else 0 end`,
+      ),
+    })
     .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .where(
       and(
         eq(agencyOpsTimeEntry.teamId, input.teamId),
         eq(agencyOpsTimeEntry.userId, input.userId),
-        eq(agencyOpsTimeEntry.isWaste, false),
         isNull(agencyOpsTimeEntry.deletedAt),
         gte(agencyOpsTimeEntry.startedAt, periodStart),
         lte(agencyOpsTimeEntry.startedAt, periodEnd),
@@ -729,6 +746,16 @@ export async function getPayoutSummary(
   const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
   if (periodStart >= periodEnd) {
     throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
+  }
+
+  const poolTotals = await loadSalaryPoolPeriodTotals(actorUserId, input);
+  if (poolTotals) {
+    return {
+      salariesDueAmount: poolTotals.totalAmount,
+      salariesPaidAmount: poolTotals.paidAmount,
+      salariesRemainingAmount: poolTotals.remainingAmount,
+      currency: poolTotals.currency,
+    };
   }
 
   const rows = await db

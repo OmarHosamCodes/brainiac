@@ -47,8 +47,4 @@ export function serializeShowWasteParam(showWaste: AgencyReportShowWaste): strin
   return AGENCY_REPORT_SHOW_WASTE_SOURCES.filter((source) => showWaste[source]).join(",");
 }
 
-/** True when a label contains "waste" as a word, any casing. */
-export function isWasteLabel(label: string | null | undefined): boolean {
-  if (!label) return false;
-  return /\bwaste\b/i.test(label);
-}
+export { isWasteLabel } from "@orch/api/routers/agency-ops/shared/waste-helpers";

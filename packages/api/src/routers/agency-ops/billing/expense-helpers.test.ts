@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 
 import {
   advanceExpenseNextDueAt,
+  buildSubscriptionCycleRecords,
   defaultExpenseNextDueAt,
+  expensePeriodTotals,
   expenseRemainingAmount,
   expenseStatusAfterPaid,
   isSubscriptionVisibleInPeriod,
@@ -64,5 +66,196 @@ describe("isSubscriptionVisibleInPeriod", () => {
     expect(isSubscriptionVisibleInPeriod(new Date("2026-09-15T00:00:00.000Z"), null, null)).toBe(
       true,
     );
+  });
+});
+
+describe("expensePeriodTotals", () => {
+  test("keeps a paid subscription occurrence in its original period after next due advances", () => {
+    const totals = expensePeriodTotals({
+      periodStart: new Date("2026-08-01T00:00:00.000Z"),
+      periodEnd: new Date("2026-09-01T00:00:00.000Z"),
+      expenses: [
+        {
+          id: "subscription-1",
+          kind: "subscription",
+          amount: 178_000,
+          paidAmount: 0,
+          currency: "EGP",
+          nextDueAt: new Date("2026-09-24T00:00:00.000Z"),
+          occurredAt: null,
+          createdAt: new Date("2026-08-01T00:00:00.000Z"),
+        },
+      ],
+      occurrences: [
+        {
+          expenseId: "subscription-1",
+          dueAt: new Date("2026-08-24T00:00:00.000Z"),
+          amount: 178_000,
+          paidAmount: 178_000,
+          currency: "EGP",
+        },
+      ],
+    });
+
+    expect(totals).toEqual({
+      amount: 178_000,
+      paidAmount: 178_000,
+      currency: "EGP",
+    });
+  });
+
+  test("does not double-count a partially paid current subscription occurrence", () => {
+    const dueAt = new Date("2026-08-24T00:00:00.000Z");
+    const totals = expensePeriodTotals({
+      periodStart: new Date("2026-08-01T00:00:00.000Z"),
+      periodEnd: new Date("2026-09-01T00:00:00.000Z"),
+      expenses: [
+        {
+          id: "subscription-1",
+          kind: "subscription",
+          amount: 178_000,
+          paidAmount: 50_000,
+          currency: "EGP",
+          nextDueAt: dueAt,
+          occurredAt: null,
+          createdAt: new Date("2026-08-01T00:00:00.000Z"),
+        },
+      ],
+      occurrences: [
+        {
+          expenseId: "subscription-1",
+          dueAt,
+          amount: 178_000,
+          paidAmount: 50_000,
+          currency: "EGP",
+        },
+      ],
+    });
+
+    expect(totals).toEqual({
+      amount: 178_000,
+      paidAmount: 50_000,
+      currency: "EGP",
+    });
+  });
+});
+
+describe("buildSubscriptionCycleRecords", () => {
+  test("separates paid history from the current payable cycle", () => {
+    const records = buildSubscriptionCycleRecords({
+      periodStart: new Date("2026-08-01T00:00:00.000Z"),
+      periodEnd: new Date("2026-09-01T00:00:00.000Z"),
+      subscriptions: [
+        {
+          id: "expense-1",
+          name: "Adobe",
+          note: "",
+          amount: 178_000,
+          paidAmount: 0,
+          currency: "EGP",
+          period: "monthly",
+          nextDueAt: new Date("2026-09-24T00:00:00.000Z"),
+        },
+        {
+          id: "expense-2",
+          name: "Hosting",
+          note: "",
+          amount: 50_000,
+          paidAmount: 10_000,
+          currency: "EGP",
+          period: "monthly",
+          nextDueAt: new Date("2026-08-20T00:00:00.000Z"),
+        },
+      ],
+      occurrences: [
+        {
+          id: "occurrence-1",
+          expenseId: "expense-1",
+          name: "Adobe",
+          note: "",
+          amount: 178_000,
+          paidAmount: 178_000,
+          currency: "EGP",
+          period: "monthly",
+          dueAt: new Date("2026-08-24T00:00:00.000Z"),
+        },
+      ],
+    });
+
+    expect(records).toEqual([
+      {
+        id: "due:expense-2:2026-08-20T00:00:00.000Z",
+        expenseId: "expense-2",
+        state: "due",
+        name: "Hosting",
+        note: "",
+        amount: 50_000,
+        paidAmount: 10_000,
+        remainingAmount: 40_000,
+        currency: "EGP",
+        period: "monthly",
+        dueAt: "2026-08-20T00:00:00.000Z",
+        canRecordPayment: true,
+      },
+      {
+        id: "occurrence-1",
+        expenseId: "expense-1",
+        state: "paid",
+        name: "Adobe",
+        note: "",
+        amount: 178_000,
+        paidAmount: 178_000,
+        remainingAmount: 0,
+        currency: "EGP",
+        period: "monthly",
+        dueAt: "2026-08-24T00:00:00.000Z",
+        canRecordPayment: false,
+      },
+    ]);
+  });
+
+  test("keeps overdue due cycles and excludes paid cycles outside the selected period", () => {
+    const records = buildSubscriptionCycleRecords({
+      periodStart: new Date("2026-08-01T00:00:00.000Z"),
+      periodEnd: new Date("2026-09-01T00:00:00.000Z"),
+      subscriptions: [
+        {
+          id: "overdue",
+          name: "Overdue",
+          note: "",
+          amount: 10_000,
+          paidAmount: 0,
+          currency: "EGP",
+          period: "monthly",
+          nextDueAt: new Date("2026-07-20T00:00:00.000Z"),
+        },
+      ],
+      occurrences: [
+        {
+          id: "before",
+          expenseId: "overdue",
+          name: "Before",
+          note: "",
+          amount: 10_000,
+          paidAmount: 10_000,
+          currency: "EGP",
+          period: "monthly",
+          dueAt: new Date("2026-07-31T23:59:59.999Z"),
+        },
+        {
+          id: "at-end",
+          expenseId: "overdue",
+          name: "At end",
+          note: "",
+          amount: 10_000,
+          paidAmount: 10_000,
+          currency: "EGP",
+          period: "monthly",
+          dueAt: new Date("2026-09-01T00:00:00.000Z"),
+        },
+      ],
+    });
+
+    expect(records.map((record) => record.id)).toEqual(["due:overdue:2026-07-20T00:00:00.000Z"]);
   });
 });

@@ -27,6 +27,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
@@ -193,7 +201,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                                       variant="link"
                                       size="sm"
                                       className="h-auto min-h-0 px-0 py-0 text-[11px]"
-                                      onClick={() => expenses.onOpenPayment(item.id)}
+                                      onClick={() => expenses.onOpenPayment(item.expenseId)}
                                     >
                                       {item.kind === "subscription" ? "Pay" : "Record payment"}
                                     </Button>
@@ -519,23 +527,62 @@ function ExpensesGroup({
           <span className={cn(agencyMetricClass, "text-xs tabular-nums text-muted")}>
             {group.countLabel}
           </span>
-          <TooltipProvider delayDuration={120}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-7 rounded-lg text-muted transition-colors duration-150 hover:text-highlighted motion-reduce:transition-none"
-                  onClick={onOpenDetails}
-                  aria-label={`View all expenses from ${group.title}`}
+          {"visibility" in group ? (
+            <DropdownMenu>
+              <TooltipProvider delayDuration={120}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7 rounded-lg text-muted transition-colors duration-150 hover:text-highlighted motion-reduce:transition-none"
+                        aria-label="Subscription visibility"
+                      >
+                        <List className="size-3.5" aria-hidden />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Subscription visibility</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <DropdownMenuContent align="end">
+                <DropdownMenuCheckboxItem
+                  checked={group.visibility.due}
+                  onCheckedChange={(checked) => group.visibility.onDueChange(checked === true)}
                 >
-                  <List className="size-3.5" aria-hidden />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">All expenses</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                  Due
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={group.visibility.paid}
+                  onCheckedChange={(checked) => group.visibility.onPaidChange(checked === true)}
+                >
+                  Paid
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={onOpenDetails}>View all expenses</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <TooltipProvider delayDuration={120}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-7 rounded-lg text-muted transition-colors duration-150 hover:text-highlighted motion-reduce:transition-none"
+                    onClick={onOpenDetails}
+                    aria-label={`View all expenses from ${group.title}`}
+                  >
+                    <List className="size-3.5" aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">All expenses</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       </div>
 
@@ -564,7 +611,7 @@ function ExpensesGroup({
                         variant="link"
                         size="sm"
                         className="h-auto min-h-0 shrink-0 px-0 py-0 text-[11px]"
-                        onClick={() => onOpenPayment(item.id)}
+                        onClick={() => onOpenPayment(item.expenseId)}
                       >
                         {item.kind === "subscription" ? "Pay" : "Record payment"}
                       </Button>

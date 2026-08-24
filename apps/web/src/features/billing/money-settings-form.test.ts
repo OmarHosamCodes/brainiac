@@ -10,6 +10,7 @@ import {
   defaultCalcState,
   defaultRulesState,
   listCustomMoneyRuleIds,
+  listMoneyRuleOptions,
 } from "./money-settings-form";
 
 describe("money-settings-form", () => {
@@ -80,6 +81,29 @@ describe("money-settings-form", () => {
     expect(draft.formula.locked).toBe(false);
     expect(draft.formula.enabled).toBe(true);
     expect(draft.formula.tokens[0]).toEqual({ kind: "number", value: 0 });
+    expect(draft.formula.ruleId).toBeNull();
+  });
+
+  test("createNewCustomFormulaDraft can bind a rule", () => {
+    const draft = createNewCustomFormulaDraft({
+      ruleId: "custom_transport",
+      label: "Transportation",
+    });
+    expect(draft.formula.ruleId).toBe("custom_transport");
+    expect(draft.formula.label).toBe("Transportation");
+  });
+
+  test("listMoneyRuleOptions includes fixture, implicit, and custom rules", () => {
+    const rules = applyRuleDraft(defaultRulesState(), {
+      ...createNewCustomRuleDraft(),
+      label: "Transportation",
+      cohort: "TRANS",
+      memberIds: ["u1"],
+    });
+    const options = listMoneyRuleOptions(rules);
+    expect(options.map((option) => option.id)).toContain("profit-loss-share");
+    expect(options.map((option) => option.id)).toContain("paid-vacation");
+    expect(options.some((option) => option.label === "Transportation")).toBe(true);
   });
 
   test("applyFormulaDraft upserts formula and legacy vacation hours", () => {
@@ -97,6 +121,7 @@ describe("money-settings-form", () => {
       output: "amount",
       metricId: "paid-vacation",
       sectionKey: "paid_vacation",
+      ruleId: "paid-vacation",
     });
     const next = applyFormulaDraft(defaultCalcState(), draft);
     expect(next.formulas?.find((formula) => formula.key === "paid_vacation")?.tokens[0]).toEqual({

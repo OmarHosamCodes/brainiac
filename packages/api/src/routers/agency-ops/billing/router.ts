@@ -25,6 +25,7 @@ import {
 import {
   createExpense,
   listExpenses,
+  listSubscriptionCycles,
   recordExpensePayment,
   removeExpense,
   updateExpense,
@@ -56,6 +57,12 @@ import {
   listPeriodMoneyObligations,
   settleMoneyObligation,
 } from "./money-export-service";
+import {
+  getSalaryPool,
+  recordSalaryMemberPayment,
+  reopenSalaryMember,
+  upsertSalaryPoolTotal,
+} from "./salary-pool-service";
 
 const invoiceStatusSchema = z.enum(["draft", "sent", "partial", "paid", "refunded"]);
 const invoiceBillStatusSchema = z.enum(["outstanding", "partial", "paid", "refunded"]);
@@ -228,6 +235,21 @@ const expenseRecordSchema = z.object({
   occurredAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+});
+
+const subscriptionCycleRecordSchema = z.object({
+  id: z.string().min(1),
+  expenseId: z.string().min(1),
+  state: z.enum(["due", "paid"]),
+  name: z.string().min(1),
+  note: z.string(),
+  amount: z.number().int().nonnegative(),
+  paidAmount: z.number().int().nonnegative(),
+  remainingAmount: z.number().int().nonnegative(),
+  currency: z.string().min(1),
+  period: expensePeriodSchema,
+  dueAt: z.string().datetime(),
+  canRecordPayment: z.boolean(),
 });
 
 export const billingRouter = {
@@ -575,6 +597,115 @@ export const billingRouter = {
       }),
   },
 
+  salaryPool: {
+    get: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            pool: z
+              .object({
+                id: z.string().min(1),
+                teamId: z.string().min(1),
+                runId: z.string().min(1),
+                totalAmount: z.number().int().nonnegative(),
+                paidAmount: z.number().int().nonnegative(),
+                remainingAmount: z.number().int().nonnegative(),
+                currency: z.string().min(1),
+                periodStart: z.string().datetime(),
+                periodEnd: z.string().datetime(),
+                createdAt: z.string().datetime(),
+                updatedAt: z.string().datetime(),
+              })
+              .nullable(),
+            members: z.array(
+              z.object({
+                userId: z.string().min(1),
+                userName: z.string().min(1),
+                userAvatar: z.string().nullable(),
+                paidAmount: z.number().int().nonnegative(),
+                finalizedAt: z.string().datetime().nullable(),
+                isFinalized: z.boolean(),
+              }),
+            ),
+          })
+          .parse(await getSalaryPool(context.session.user.id, input));
+      }),
+    upsertTotal: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          totalAmount: z.number().int().positive(),
+          currency: z.string().length(3).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            id: z.string().min(1),
+            teamId: z.string().min(1),
+            runId: z.string().min(1),
+            totalAmount: z.number().int().nonnegative(),
+            paidAmount: z.number().int().nonnegative(),
+            remainingAmount: z.number().int().nonnegative(),
+            currency: z.string().min(1),
+            periodStart: z.string().datetime(),
+            periodEnd: z.string().datetime(),
+            createdAt: z.string().datetime(),
+            updatedAt: z.string().datetime(),
+          })
+          .parse(await upsertSalaryPoolTotal(context.session.user.id, input));
+      }),
+    recordPayment: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          userId: z.string().min(1),
+          amount: z.number().int().positive(),
+          finalize: z.boolean().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            userId: z.string().min(1),
+            userName: z.string().min(1),
+            userAvatar: z.string().nullable(),
+            paidAmount: z.number().int().nonnegative(),
+            finalizedAt: z.string().datetime().nullable(),
+            isFinalized: z.boolean(),
+          })
+          .parse(await recordSalaryMemberPayment(context.session.user.id, input));
+      }),
+    reopenMember: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          userId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            userId: z.string().min(1),
+            userName: z.string().min(1),
+            userAvatar: z.string().nullable(),
+            paidAmount: z.number().int().nonnegative(),
+            finalizedAt: z.string().datetime().nullable(),
+            isFinalized: z.boolean(),
+          })
+          .parse(await reopenSalaryMember(context.session.user.id, input));
+      }),
+  },
+
   expenses: {
     list: protectedProProcedure
       .input(
@@ -594,6 +725,18 @@ export const billingRouter = {
             total: z.number().int().nonnegative(),
           })
           .parse(await listExpenses(context.session.user.id, input));
+      }),
+    subscriptionCycles: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .array(subscriptionCycleRecordSchema)
+          .parse(await listSubscriptionCycles(context.session.user.id, input));
       }),
     create: protectedProProcedure
       .input(
@@ -842,6 +985,8 @@ export const billingRouter = {
           tokens: z.array(moneyFormulaTokenSchema).min(1),
           output: z.enum(["amount", "ratio", "hours"]),
           memberUserId: z.string().min(1).nullable().optional(),
+          ruleId: z.string().min(1).nullable().optional(),
+          sectionKey: z.string().min(1).nullable().optional(),
         }),
       )
       .handler(async ({ context, input }) => {

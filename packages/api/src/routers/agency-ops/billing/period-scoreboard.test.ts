@@ -25,8 +25,8 @@ describe("buildPeriodScoreboard", () => {
     // Uninvoiced 40k lives inside total; remaining is not total − received.
     expect(board.totalIncomeAmount).toBe(100_000);
     expect(board.remainingAmount).toBe(20_000);
-    expect(board.teamProfitAmount).toBe(50_000);
-    expect(board.roi).toBe(0.5);
+    expect(board.teamProfitAmount).toBe(49_000);
+    expect(board.roi).toBeCloseTo(49_000 / 51_000);
     expect(board.profitLossShareAmount).toBe(2_000);
   });
 

@@ -156,8 +156,34 @@ export function createFormulaDraft(formula: MoneyFormulaDef): MoneySettingsFormu
   };
 }
 
-export function createNewCustomFormulaDraft(): MoneySettingsFormulaDraft {
-  return createFormulaDraft(createCustomMoneyFormulaDraft());
+export function createNewCustomFormulaDraft(input?: {
+  ruleId?: string | null;
+  label?: string;
+}): MoneySettingsFormulaDraft {
+  return createFormulaDraft(createCustomMoneyFormulaDraft(input));
+}
+
+export type MoneyRuleOption = { id: string; label: string };
+
+const IMPLICIT_FORMULA_RULES: MoneyRuleOption[] = [
+  { id: "paid-vacation", label: "Paid vacation" },
+  { id: "device-compensation", label: "Device compensation" },
+];
+
+export function listMoneyRuleOptions(
+  rules: MoneySettingsRulesState | undefined,
+): MoneyRuleOption[] {
+  const rows: MoneyRuleOption[] = MONEY_COHORT_RULES_FIXTURE.map((rule) => ({
+    id: rule.id,
+    label: rule.benefit,
+  }));
+  for (const implicit of IMPLICIT_FORMULA_RULES) {
+    if (!rows.some((row) => row.id === implicit.id)) rows.push(implicit);
+  }
+  for (const ruleId of listCustomMoneyRuleIds(rules)) {
+    rows.push({ id: ruleId, label: resolveRuleLabel(rules, ruleId) });
+  }
+  return rows;
 }
 
 export function applyRuleDraft(

@@ -15,6 +15,7 @@ import { createWorkspaceId } from "@orch/workspace";
 
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { parseIsoDateTime } from "../shared/date-helpers";
+import { assertNoSalaryPoolForRateDerivedExport } from "./salary-pool-service";
 import { requireTeamMembership } from "../shared/membership";
 import { getAgencyCurrency } from "./money-fx-service";
 import {
@@ -229,6 +230,8 @@ async function softExportMemberReady(
     periodEnd: string;
   },
 ): Promise<{ id: string; remainingAmount: number }> {
+  await assertNoSalaryPoolForRateDerivedExport(actorUserId, input);
+
   await ensurePayoutPeriod(actorUserId, {
     teamId: input.teamId,
     periodStart: input.periodStart,

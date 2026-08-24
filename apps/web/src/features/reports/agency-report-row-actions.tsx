@@ -18,7 +18,7 @@ type AgencyReportRowActionsProps = {
   label: string;
   entryCount: number;
   taskId: string | null;
-  taskIsWaste: boolean | null;
+  isWaste: boolean;
   deleting?: boolean;
   wastePending?: boolean;
   /** Calm pending → saved tick after a successful row edit. */
@@ -34,7 +34,7 @@ export function AgencyReportRowActions({
   label,
   entryCount,
   taskId: _taskId,
-  taskIsWaste,
+  isWaste,
   deleting = false,
   wastePending = false,
   saving = false,
@@ -48,7 +48,6 @@ export function AgencyReportRowActions({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const canToggleWaste = Boolean(onToggleWaste);
   const canAskOrchWaste = entryCount === 1 && Boolean(onAskOrchWaste);
-  const isWaste = taskIsWaste === true;
   const pending = deleting || wastePending || saving;
   const entryLabel = entryCount === 1 ? "1 time entry" : `${entryCount} time entries`;
 

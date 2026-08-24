@@ -47,6 +47,10 @@ type AgencyProject = {
   clientName: string;
   name: string;
   colorHueId: number | null;
+  billableRateAmount: number | null;
+  currency: string;
+  clientBillableRateAmount: number | null;
+  clientCurrency: string;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -231,6 +235,13 @@ type RestoreProjectPayload = {
   teamId: string;
   projectId: string;
   projectName: string;
+};
+
+type UpdateProjectPayload = {
+  teamId: string;
+  projectId: string;
+  billableRateAmount?: number | null;
+  currency?: string;
 };
 
 type UpsertContactPayload = {
@@ -778,6 +789,10 @@ function createAgencyOpsActions(
       clientName: payload.clientName,
       name: payload.name.trim(),
       colorHueId: payload.colorHueId ?? null,
+      billableRateAmount: null,
+      currency: "USD",
+      clientBillableRateAmount: null,
+      clientCurrency: "USD",
       deletedAt: null,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -888,6 +903,10 @@ function createAgencyOpsActions(
       clientName: payload.clientName,
       name,
       colorHueId: null,
+      billableRateAmount: null,
+      currency: "USD",
+      clientBillableRateAmount: null,
+      clientCurrency: "USD",
       deletedAt: null,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -1341,6 +1360,45 @@ function createAgencyOpsActions(
       toast.success("Project restored", { description: payload.projectName });
     } catch (error) {
       toast.error("Couldn't restore project", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        projectMutationCount: Math.max(0, state.projectMutationCount - 1),
+      }));
+    }
+  }
+
+  async function updateProject(payload: UpdateProjectPayload) {
+    if (!payload.teamId || !payload.projectId) return;
+    if (payload.billableRateAmount === undefined && payload.currency === undefined) return;
+
+    set((state) => ({ ...state, projectMutationCount: state.projectMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.projects.update({
+        teamId: payload.teamId,
+        projectId: payload.projectId,
+        billableRateAmount: payload.billableRateAmount,
+        currency: payload.currency,
+      });
+
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.projects.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.invoices.periodActivity.key(),
+        }),
+      ]);
+
+      toast.success("Project rate updated");
+    } catch (error) {
+      toast.error("Couldn't update project rate", {
         description: getErrorMessage(error, "Try again."),
       });
     } finally {
@@ -1913,6 +1971,111 @@ function createAgencyOpsActions(
     }
   }
 
+  async function invalidateSalaryPoolQueries(teamId: string) {
+    await Promise.all([
+      getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.salaryPool.get.key(),
+      }),
+      getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.payouts.summary.key(),
+      }),
+      getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+      }),
+      getQueryClient().invalidateQueries({
+        queryKey: orpc.agencyOps.periodObligations.list.key(),
+      }),
+    ]);
+    void teamId;
+  }
+
+  async function upsertSalaryPoolTotal(
+    payload: {
+      teamId: string;
+      periodStart: string;
+      periodEnd: string;
+      totalAmount: number;
+      currency?: string;
+    },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.salaryPool.upsertTotal(payload);
+      await invalidateSalaryPoolQueries(payload.teamId);
+      callbacks?.onSuccess?.();
+      toast.success("Team salaries total saved");
+    } catch (error) {
+      toast.error("Couldn't save Team salaries total", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function recordSalaryPoolPayment(
+    payload: {
+      teamId: string;
+      periodStart: string;
+      periodEnd: string;
+      userId: string;
+      amount: number;
+      finalize?: boolean;
+    },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.salaryPool.recordPayment(payload);
+      await invalidateSalaryPoolQueries(payload.teamId);
+      callbacks?.onSuccess?.();
+      toast.success(payload.finalize ? "Final payment recorded" : "Salary payment recorded");
+    } catch (error) {
+      toast.error("Couldn't record salary payment", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function reopenSalaryPoolMember(
+    payload: {
+      teamId: string;
+      periodStart: string;
+      periodEnd: string;
+      userId: string;
+    },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.salaryPool.reopenMember(payload);
+      await invalidateSalaryPoolQueries(payload.teamId);
+      callbacks?.onSuccess?.();
+      toast.success("Member reopened for salary payments");
+    } catch (error) {
+      toast.error("Couldn't reopen member", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
   async function createExpense(
     payload: CreateExpensePayload,
     callbacks?: { onSuccess?: () => void },
@@ -1936,6 +2099,9 @@ function createAgencyOpsActions(
       await Promise.all([
         getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.expenses.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.expenses.subscriptionCycles.key(),
         }),
         getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.money.periodScoreboard.key(),
@@ -1963,9 +2129,17 @@ function createAgencyOpsActions(
     try {
       await orpcClient.agencyOps.expenses.recordPayment(payload);
 
-      await getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.expenses.list.key(),
-      });
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.expenses.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.expenses.subscriptionCycles.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+      ]);
 
       callbacks?.onSuccess?.();
       toast.success("Payment recorded");
@@ -1990,9 +2164,17 @@ function createAgencyOpsActions(
     try {
       await orpcClient.agencyOps.expenses.remove(payload);
 
-      await getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.expenses.list.key(),
-      });
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.expenses.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.expenses.subscriptionCycles.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+      ]);
 
       callbacks?.onSuccess?.();
       toast.success("Expense removed");
@@ -2036,6 +2218,7 @@ function createAgencyOpsActions(
           output: "amount" | "ratio" | "hours";
           metricId: string | null;
           sectionKey: string | null;
+          ruleId: string | null;
         }>;
       };
     },
@@ -2230,6 +2413,7 @@ function createAgencyOpsActions(
     createProjectWithJourney,
     deleteProject,
     restoreProject,
+    updateProject,
     toggleFavorite,
     createProjectTask,
     patchProjectTaskBlueprintDescription,
@@ -2247,6 +2431,9 @@ function createAgencyOpsActions(
     createPayoutLine,
     updatePayoutLineStatus,
     recordPayoutPayment,
+    upsertSalaryPoolTotal,
+    recordSalaryPoolPayment,
+    reopenSalaryPoolMember,
     createExpense,
     recordExpensePayment,
     removeExpense,

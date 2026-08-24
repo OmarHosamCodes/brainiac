@@ -41,13 +41,14 @@ export function buildPeriodScoreboard(input: PeriodScoreboardInput): PeriodScore
     Math.max(0, input.billablePoolAmount),
     receivedAmount + remainingAmount,
   );
-  const teamProfitAmount =
-    totalIncomeAmount -
-    (input.salariesDueAmount +
-      input.expensesAmount +
-      input.debtDiscountAmount +
-      input.paidVacationAmount);
-  const roi = totalIncomeAmount > 0 ? teamProfitAmount / totalIncomeAmount : 0;
+  const costAmount =
+    input.salariesDueAmount +
+    input.expensesAmount +
+    input.debtDiscountAmount +
+    input.paidVacationAmount +
+    input.deviceCompAmount;
+  const teamProfitAmount = totalIncomeAmount - costAmount;
+  const roi = costAmount === 0 ? 0 : teamProfitAmount / costAmount;
 
   return {
     currency: input.currency,

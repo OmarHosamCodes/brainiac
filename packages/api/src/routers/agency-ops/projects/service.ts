@@ -38,6 +38,7 @@ import {
 } from "../shared/journey-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import { getAgencyProjectTemplateForTeam } from "../project-templates/service";
+import { loadMoneyResolveContext } from "../billing/money-fx-service";
 
 type AgencyProjectRecord = {
   id: string;
@@ -46,6 +47,10 @@ type AgencyProjectRecord = {
   clientName: string;
   name: string;
   colorHueId: number | null;
+  billableRateAmount: number | null;
+  currency: string;
+  clientBillableRateAmount: number | null;
+  clientCurrency: string;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -82,6 +87,10 @@ function mapProjectRow(row: {
   clientName: string;
   name: string;
   colorHueId: number | null;
+  billableRateAmount: number | null;
+  currency: string;
+  clientBillableRateAmount: number | null;
+  clientCurrency: string;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -93,6 +102,10 @@ function mapProjectRow(row: {
     clientName: row.clientName,
     name: row.name,
     colorHueId: row.colorHueId,
+    billableRateAmount: row.billableRateAmount,
+    currency: row.currency,
+    clientBillableRateAmount: row.clientBillableRateAmount,
+    clientCurrency: row.clientCurrency,
     deletedAt: row.deletedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -142,6 +155,10 @@ export async function listAgencyProjects(
       clientName: agencyOpsClient.name,
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
+      billableRateAmount: agencyOpsProject.billableRateAmount,
+      currency: agencyOpsProject.currency,
+      clientBillableRateAmount: agencyOpsClient.billableRateAmount,
+      clientCurrency: agencyOpsClient.currency,
       deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
@@ -231,14 +248,22 @@ export async function createAgencyProject(
   }
 
   const [client] = await db
-    .select({ name: agencyOpsClient.name })
+    .select({
+      name: agencyOpsClient.name,
+      billableRateAmount: agencyOpsClient.billableRateAmount,
+      currency: agencyOpsClient.currency,
+    })
     .from(agencyOpsClient)
     .where(eq(agencyOpsClient.id, created.clientId))
     .limit(1);
 
   return mapProjectRow({
     ...created,
+    billableRateAmount: null,
+    currency: "USD",
     clientName: client?.name ?? "Unknown",
+    clientBillableRateAmount: client?.billableRateAmount ?? null,
+    clientCurrency: client?.currency ?? "USD",
   });
 }
 
@@ -519,7 +544,11 @@ export async function createAgencyProjectWithJourney(
   await applyJourneySyncNotifications(input.teamId, projectId, actorUserId, syncResult);
 
   const [client] = await db
-    .select({ name: agencyOpsClient.name })
+    .select({
+      name: agencyOpsClient.name,
+      billableRateAmount: agencyOpsClient.billableRateAmount,
+      currency: agencyOpsClient.currency,
+    })
     .from(agencyOpsClient)
     .where(eq(agencyOpsClient.id, input.clientId))
     .limit(1);
@@ -531,6 +560,8 @@ export async function createAgencyProjectWithJourney(
       clientId: agencyOpsProject.clientId,
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
+      billableRateAmount: agencyOpsProject.billableRateAmount,
+      currency: agencyOpsProject.currency,
       deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
@@ -547,6 +578,8 @@ export async function createAgencyProjectWithJourney(
     project: mapProjectRow({
       ...createdProject,
       clientName: client?.name ?? "Unknown",
+      clientBillableRateAmount: client?.billableRateAmount ?? null,
+      clientCurrency: client?.currency ?? "USD",
     }),
     journey: await buildAgencyProjectJourneyRecord(input.teamId, projectId, actorUserId),
   };
@@ -859,6 +892,8 @@ export async function updateAgencyProject(
     clientId?: string;
     name?: string;
     colorHueId?: number | null;
+    billableRateAmount?: number | null;
+    currency?: string;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -868,16 +903,69 @@ export async function updateAgencyProject(
     await getClientByIdForTeam(input.teamId, input.clientId);
   }
 
+  const [current] = await db
+    .select({
+      currency: agencyOpsProject.currency,
+      billableRateAmount: agencyOpsProject.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsProject.sourceBillableRateAmount,
+    })
+    .from(agencyOpsProject)
+    .where(
+      and(
+        eq(agencyOpsProject.teamId, input.teamId),
+        eq(agencyOpsProject.id, input.projectId),
+        isNull(agencyOpsProject.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!current) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
   const now = new Date();
   const patch: {
     clientId?: string;
     name?: string;
     colorHueId?: number | null;
+    billableRateAmount?: number | null;
+    currency?: string;
+    sourceBillableRateAmount?: number | null;
+    fxRate?: string;
+    fxAsOf?: Date | null;
     updatedAt: Date;
   } = { updatedAt: now };
   if (input.clientId !== undefined) patch.clientId = input.clientId;
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.colorHueId !== undefined) patch.colorHueId = normalizeColorHueId(input.colorHueId);
+
+  if (input.billableRateAmount !== undefined || input.currency !== undefined) {
+    if (input.billableRateAmount === null) {
+      patch.billableRateAmount = null;
+      patch.sourceBillableRateAmount = null;
+      patch.fxRate = "1";
+      patch.fxAsOf = null;
+    } else {
+      const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+      const sourceCurrency = (
+        input.currency ?? current.currency ?? moneyCtx.agencyCurrency
+      ).toUpperCase();
+      const sourceAmount =
+        input.billableRateAmount ??
+        current.sourceBillableRateAmount ??
+        current.billableRateAmount;
+      if (sourceAmount == null) {
+        throw new ORPCError("BAD_REQUEST", { message: "Project rate amount is required." });
+      }
+      const money = moneyCtx.resolve(sourceAmount, sourceCurrency);
+      await moneyCtx.lock();
+      patch.billableRateAmount = money.amount;
+      patch.currency = money.sourceCurrency;
+      patch.sourceBillableRateAmount = money.sourceAmount;
+      patch.fxRate = money.fxRate;
+      patch.fxAsOf = new Date(money.fxAsOf);
+    }
+  }
 
   const [updated] = await db
     .update(agencyOpsProject)
@@ -895,6 +983,8 @@ export async function updateAgencyProject(
       clientId: agencyOpsProject.clientId,
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
+      billableRateAmount: agencyOpsProject.billableRateAmount,
+      currency: agencyOpsProject.currency,
       deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
@@ -905,7 +995,11 @@ export async function updateAgencyProject(
   }
 
   const [client] = await db
-    .select({ name: agencyOpsClient.name })
+    .select({
+      name: agencyOpsClient.name,
+      billableRateAmount: agencyOpsClient.billableRateAmount,
+      currency: agencyOpsClient.currency,
+    })
     .from(agencyOpsClient)
     .where(eq(agencyOpsClient.id, updated.clientId))
     .limit(1);
@@ -913,6 +1007,8 @@ export async function updateAgencyProject(
   return mapProjectRow({
     ...updated,
     clientName: client?.name ?? "Unknown",
+    clientBillableRateAmount: client?.billableRateAmount ?? null,
+    clientCurrency: client?.currency ?? "USD",
   });
 }
 

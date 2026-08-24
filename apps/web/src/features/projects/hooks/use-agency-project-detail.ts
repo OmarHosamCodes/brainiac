@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { parseBillableRateAmount } from "@/features/shared/format-rate";
+import { resolveEffectiveBillableRate } from "@/features/billing/client-billable-rate";
 import { useAgencyProjectJourney } from "@/features/projects/use-agency-project-journey";
 import {
   selectIsProjectMutationPending,
@@ -30,6 +32,11 @@ export type AgencyProjectDetailViewModel = {
     clientId: string;
     clientName: string;
     deletedAt: string | null;
+    billableRateAmount: number | null;
+    currency: string;
+    clientBillableRateAmount: number | null;
+    clientCurrency: string;
+    effectiveBillableRateAmount: number | null;
   } | null;
   projectBudget: {
     projectId: string;
@@ -66,6 +73,10 @@ export type AgencyProjectDetailViewModel = {
   cancelTrashConfirm: () => void;
   confirmMoveToTrash: () => void;
   canvasNodeHref: string | null;
+  editBillableRateDraft: string;
+  onEditBillableRateDraftChange: (value: string) => void;
+  saveProjectRate: () => void;
+  canSaveProjectRate: boolean;
 };
 
 type UseAgencyProjectDetailOptions = {
@@ -98,6 +109,7 @@ export function useAgencyProjectDetail({
   const [activitySort, setActivitySort] = useState<ActivitySort>("newest");
   const [journeyExpandedMobile, setJourneyExpandedMobile] = useState(true);
   const [pendingTrashConfirm, setPendingTrashConfirm] = useState(false);
+  const [editBillableRateDraft, setEditBillableRateDraft] = useState("");
 
   const journeyState = useAgencyProjectJourney(teamId, projectId, {
     enabled: Boolean(teamId && projectId),
@@ -117,6 +129,43 @@ export function useAgencyProjectDetail({
   });
 
   const project = (projectsQuery.data?.items ?? []).find((entry) => entry.id === projectId) ?? null;
+
+  useEffect(() => {
+    if (!project) {
+      setEditBillableRateDraft("");
+      return;
+    }
+    if (project.billableRateAmount == null) {
+      setEditBillableRateDraft("");
+      return;
+    }
+    setEditBillableRateDraft(String(project.billableRateAmount / 100));
+  }, [project?.billableRateAmount, project?.id]);
+
+  const parsedProjectRate = parseBillableRateAmount(editBillableRateDraft);
+  const nextProjectRate =
+    editBillableRateDraft.trim() === "" ? null : parsedProjectRate;
+  const canSaveProjectRate =
+    Boolean(project) &&
+    isOwner &&
+    !isProjectMutationPending &&
+    (editBillableRateDraft.trim() === "" || parsedProjectRate !== null) &&
+    nextProjectRate !== (project?.billableRateAmount ?? null);
+
+  function saveProjectRate() {
+    if (!project || !teamId || !canSaveProjectRate) return;
+    const billableRateAmount =
+      editBillableRateDraft.trim() === "" ? null : parseBillableRateAmount(editBillableRateDraft);
+    if (editBillableRateDraft.trim() && billableRateAmount === null) return;
+    void agencyOps
+      .updateProject({
+        teamId,
+        projectId: project.id,
+        billableRateAmount,
+        currency: project.clientCurrency,
+      })
+      .then(() => void projectsQuery.refetch());
+  }
 
   const entriesQuery = useQuery({
     ...orpc.agencyOps.reports.listEntries.queryOptions({
@@ -263,6 +312,14 @@ export function useAgencyProjectDetail({
           clientId: project.clientId,
           clientName: project.clientName,
           deletedAt: project.deletedAt ?? null,
+          billableRateAmount: project.billableRateAmount,
+          currency: project.currency,
+          clientBillableRateAmount: project.clientBillableRateAmount,
+          clientCurrency: project.clientCurrency,
+          effectiveBillableRateAmount: resolveEffectiveBillableRate(
+            project.billableRateAmount,
+            project.clientBillableRateAmount,
+          ),
         }
       : null,
     projectBudget,
@@ -288,5 +345,9 @@ export function useAgencyProjectDetail({
     cancelTrashConfirm,
     confirmMoveToTrash,
     canvasNodeHref: linkedCanvasHref,
+    editBillableRateDraft,
+    onEditBillableRateDraftChange: setEditBillableRateDraft,
+    saveProjectRate,
+    canSaveProjectRate,
   };
 }

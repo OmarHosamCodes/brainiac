@@ -113,6 +113,18 @@ describe("getCurrentTenurePeriodRange", () => {
     expect(range?.simpleLabel).toBe("Jul 2026");
   });
 
+  test("returns valid bounds for a selected future fiscal month", () => {
+    const range = getCurrentTenurePeriodRange(
+      { fiscalYearStartMonth: 12, fiscalYearStartDay: 26, enabled: true },
+      new Date("2026-08-24T12:00:00.000Z"),
+      [2],
+    );
+
+    expect(range?.from).toBe("2026-08-26T00:00:00.000Z");
+    expect(range?.to).toBe("2026-09-25T23:59:59.999Z");
+    expect(new Date(range!.from).getTime()).toBeLessThan(new Date(range!.to).getTime());
+  });
+
   test("treats all three months as the full quarter", () => {
     const range = getCurrentTenurePeriodRange(
       { fiscalYearStartMonth: 1, fiscalYearStartDay: 1, enabled: true },

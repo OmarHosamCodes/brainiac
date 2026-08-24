@@ -20,6 +20,7 @@ export const moneyFormulaDefSchema = z.object({
   output: z.enum(["amount", "ratio", "hours"]),
   metricId: z.string().min(1).nullable(),
   sectionKey: z.string().min(1).nullable(),
+  ruleId: z.string().min(1).nullable(),
 });
 
 export const moneyCalcOptionsSchema = z.object({
