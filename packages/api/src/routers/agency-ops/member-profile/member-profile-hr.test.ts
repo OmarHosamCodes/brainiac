@@ -146,12 +146,42 @@ describe("buildCalendarMonth", () => {
     const weekend = month.days.find((d) => d.date === "2026-06-06");
     expect(present?.status).toBe("present");
     expect(present?.leaveId).toBeNull();
+    expect(present?.totalSeconds).toBe(1800);
     expect(leave?.status).toBe("leave");
     expect(leave?.leaveId).toBe("l1");
     expect(holiday?.status).toBe("holiday");
     expect(holiday?.leaveId).toBe("h1");
     expect(weekend?.status).toBe("weekend");
     expect(month.days[0]!.date <= "2026-06-01").toBe(true);
+  });
+
+  test("keeps logged seconds on leave and holiday days", () => {
+    const month = buildCalendarMonth({
+      monthDate: "2026-06-15",
+      secondsByDate: new Map([
+        ["2026-06-03", 3600],
+        ["2026-06-04", 7200],
+      ]),
+      leave: [
+        {
+          id: "l1",
+          startDate: "2026-06-03",
+          endDate: "2026-06-03",
+          type: "pto",
+          reason: null,
+        },
+        {
+          id: "h1",
+          startDate: "2026-06-04",
+          endDate: "2026-06-04",
+          type: "team_holiday",
+          reason: null,
+        },
+      ],
+    });
+
+    expect(month.days.find((d) => d.date === "2026-06-03")?.totalSeconds).toBe(3600);
+    expect(month.days.find((d) => d.date === "2026-06-04")?.totalSeconds).toBe(7200);
   });
 
   test("leave and present override weekend", () => {

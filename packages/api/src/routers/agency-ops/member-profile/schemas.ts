@@ -175,6 +175,7 @@ export const calendarMonthDaySchema = z.object({
   status: z.enum(["present", "leave", "holiday", "weekend", "empty"]),
   /** Present when status is leave or holiday — used to remove the off-day range. */
   leaveId: z.string().min(1).nullable(),
+  totalSeconds: z.number().int().nonnegative(),
 });
 
 export const calendarMonthSchema = z.object({
