@@ -1,39 +1,34 @@
 import type { ReactNode } from "react";
+import { motion } from "motion/react";
 
+import type { StreakSegmentState } from "@/features/member-profile/member-profile-attendance-streak";
+import { memberProfileGaugeMorphTransition } from "@/features/member-profile/member-profile-gauge-morph";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
+import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 
 export type InstrumentPlateTone = "warning" | "danger" | "info" | "success" | "neutral";
 
 export type StatPlateKey = "leaves" | "period" | "present" | "waste";
 
-export function instrumentPlateToneClass(tone: InstrumentPlateTone) {
+/** Neutral shadcn surface for plates/strips — color lives on glyphs only. */
+export function instrumentPlateSurfaceClass() {
+  return "border-border bg-card hover:bg-muted/40";
+}
+
+/** Semantic ink for glyphs/graphs only (not plate backgrounds or metric text). */
+export function instrumentPlateInkClass(tone: InstrumentPlateTone) {
   switch (tone) {
     case "danger":
-      return {
-        plate: "border-destructive/45 bg-destructive/8 hover:bg-destructive/12",
-        ink: "text-destructive",
-      };
+      return "text-destructive";
     case "warning":
-      return {
-        plate: "border-warning/45 bg-warning/8 hover:bg-warning/12",
-        ink: "text-warning",
-      };
+      return "text-warning";
     case "success":
-      return {
-        plate: "border-success/45 bg-success/8 hover:bg-success/12",
-        ink: "text-success",
-      };
+      return "text-success";
     case "info":
-      return {
-        plate: "border-muted-foreground/30 bg-muted/40 hover:bg-muted/55",
-        ink: "text-muted-foreground",
-      };
+      return "text-muted-foreground";
     case "neutral":
-      return {
-        plate: "border-border/80 bg-muted/20 hover:bg-muted/35",
-        ink: "text-foreground",
-      };
+      return "text-foreground";
     default: {
       const _exhaustive: never = tone;
       return _exhaustive;
@@ -48,7 +43,7 @@ export function statPlateShortLabel(key: StatPlateKey): string {
     case "period":
       return "Hours";
     case "present":
-      return "Days";
+      return "Streak";
     case "waste":
       return "Waste";
     default: {
@@ -58,7 +53,9 @@ export function statPlateShortLabel(key: StatPlateKey): string {
   }
 }
 
-export function gaugeToneToPlateTone(tone: "success" | "warning" | "foreground"): InstrumentPlateTone {
+export function gaugeToneToPlateTone(
+  tone: "success" | "warning" | "foreground",
+): InstrumentPlateTone {
   switch (tone) {
     case "success":
       return "success";
@@ -78,14 +75,7 @@ function PaceBarGlyph({ ratio, className }: { ratio: number; className?: string 
   return (
     <svg viewBox="0 0 64 28" className={className} aria-hidden>
       <rect x="4" y="11" width="56" height="6" rx="1.5" className="fill-current opacity-20" />
-      <rect
-        x="4"
-        y="11"
-        width={Math.max(4, 56 * r)}
-        height="6"
-        rx="1.5"
-        className="fill-current"
-      />
+      <rect x="4" y="11" width={Math.max(4, 56 * r)} height="6" rx="1.5" className="fill-current" />
       <line
         x1={4 + 56 * 0.85}
         y1="7"
@@ -145,19 +135,105 @@ function PeriodHoursGlyph({ className }: { className?: string }) {
   );
 }
 
+const STREAK_SEGMENT_COUNT = 7;
+const STREAK_SEGMENT_WIDTH = 6;
+const STREAK_SEGMENT_HEIGHT = 10;
+const STREAK_SEGMENT_GAP = 2;
+const STREAK_CHAIN_X = 4;
+
+function streakSegmentX(index: number): number {
+  return STREAK_CHAIN_X + index * (STREAK_SEGMENT_WIDTH + STREAK_SEGMENT_GAP);
+}
+
+function StreakChainGlyph({
+  segments,
+  className,
+}: {
+  segments: StreakSegmentState[];
+  className?: string;
+}) {
+  const chain = segments.slice(-STREAK_SEGMENT_COUNT);
+  while (chain.length < STREAK_SEGMENT_COUNT) {
+    chain.unshift("missed");
+  }
+
+  return (
+    <svg viewBox="0 0 64 28" className={className} aria-hidden>
+      {chain.map((state, index) => {
+        const x = streakSegmentX(index);
+        const y = 9;
+        const bridgeX = x - STREAK_SEGMENT_GAP;
+        return (
+          <g key={`${index}-${state}`}>
+            {index > 0 ? (
+              <rect
+                x={bridgeX}
+                y={y + STREAK_SEGMENT_HEIGHT / 2 - 0.5}
+                width={STREAK_SEGMENT_GAP}
+                height="1"
+                className="fill-current opacity-30"
+              />
+            ) : null}
+            <rect
+              x={x}
+              y={y}
+              width={STREAK_SEGMENT_WIDTH}
+              height={STREAK_SEGMENT_HEIGHT}
+              rx="1.5"
+              className={cn(
+                "fill-current",
+                state === "present" && "opacity-100",
+                state === "missed" && "opacity-20",
+                state === "off" && "opacity-10",
+                state === "future" && "opacity-5",
+              )}
+            />
+            {state === "missed" ? (
+              <rect
+                x={x}
+                y={y}
+                width={STREAK_SEGMENT_WIDTH}
+                height={STREAK_SEGMENT_HEIGHT}
+                rx="1.5"
+                fill="none"
+                className="stroke-current opacity-40"
+                strokeWidth="0.75"
+              />
+            ) : null}
+            {state === "off" ? (
+              <line
+                x1={x + 1}
+                y1={y + STREAK_SEGMENT_HEIGHT / 2}
+                x2={x + STREAK_SEGMENT_WIDTH - 1}
+                y2={y + STREAK_SEGMENT_HEIGHT / 2}
+                className="stroke-current opacity-50"
+                strokeWidth="1"
+                strokeDasharray="1.5 1.5"
+              />
+            ) : null}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 export function StatPlateGlyph({
   plateKey,
   ratio,
+  segments,
   className,
 }: {
   plateKey: StatPlateKey;
   ratio: number;
+  segments?: StreakSegmentState[];
   className?: string;
 }) {
   switch (plateKey) {
     case "leaves":
-    case "present":
       return <PaceBarGlyph ratio={ratio} className={className} />;
+    case "present":
+      return <StreakChainGlyph segments={segments ?? []} className={className} />;
     case "period":
       return <PeriodHoursGlyph className={className} />;
     case "waste":
@@ -176,6 +252,8 @@ type InstrumentPlateProps = {
   ariaLabel: string;
   glyph: ReactNode;
   onClick?: () => void;
+  /** Shared-layout morph id; omitted when reduced motion or plate is the morph source while open. */
+  layoutId?: string;
 };
 
 export function InstrumentPlate({
@@ -185,20 +263,22 @@ export function InstrumentPlate({
   ariaLabel,
   glyph,
   onClick,
+  layoutId,
 }: InstrumentPlateProps) {
-  const colors = instrumentPlateToneClass(tone);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const ink = instrumentPlateInkClass(tone);
   const body = (
     <>
-      <div className={cn("h-7 w-full", colors.ink)}>{glyph}</div>
+      <div className={cn("h-7 w-full", ink)}>{glyph}</div>
       <span
         className={cn(
-          "max-w-full font-mono font-semibold tracking-tight tabular-nums leading-none",
+          "max-w-full font-mono font-semibold tracking-tight tabular-nums leading-none text-foreground",
           metric.length > 8 ? "text-lg" : metric.length > 6 ? "text-xl" : "text-2xl",
         )}
       >
         {metric}
       </span>
-      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] opacity-90">
+      <span className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
         {shortLabel}
       </span>
     </>
@@ -208,15 +288,23 @@ export function InstrumentPlate({
     "motion-reduce:transition-none motion-reduce:active:scale-100",
     onClick && "active:scale-[0.985]",
     onClick && agencyFocusRingClass,
-    colors.plate,
-    colors.ink,
+    instrumentPlateSurfaceClass(),
   );
+
+  const sharedLayoutId = prefersReducedMotion ? undefined : layoutId;
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={className} aria-label={ariaLabel}>
+      <motion.button
+        type="button"
+        onClick={onClick}
+        className={className}
+        aria-label={ariaLabel}
+        layoutId={sharedLayoutId}
+        transition={memberProfileGaugeMorphTransition}
+      >
         {body}
-      </button>
+      </motion.button>
     );
   }
 

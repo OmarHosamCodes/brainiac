@@ -1,4 +1,5 @@
 import {
+  Calendar,
   CalendarOff,
   ChevronRight,
   Mail,
@@ -19,6 +20,8 @@ import {
 } from "@/features/shared/date/member-profile-leave-range-picker";
 import type { AgencyMemberProfileViewModel } from "@/features/member-profile/hooks/use-agency-member-profile";
 import { MemberProfileAlertsPanel } from "@/features/member-profile/member-profile-alerts-view";
+import { MemberProfileGaugeDetailDialog } from "@/features/member-profile/member-profile-gauge-detail-dialog";
+import { memberProfileGaugeLayoutId } from "@/features/member-profile/member-profile-gauge-morph";
 import {
   gaugeToneToPlateTone,
   InstrumentPlate,
@@ -139,21 +142,14 @@ function AskOrchRailCard({
       className={cn(
         profilePanelClass,
         "group flex w-full items-center gap-3 px-3 py-3 text-start",
-        "border-chart-2/20 bg-chart-2/[0.04]",
-        "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
-        "hover:border-chart-2/35 hover:bg-chart-2/10 hover:shadow-[0_0_0_1px_color-mix(in_oklch,var(--chart-2)_12%,transparent)]",
+        "transition-colors duration-150 ease-out hover:bg-muted/40",
         agencyFocusRingClass,
         "motion-reduce:transition-none",
       )}
       aria-label={`Summarize ${subject}'s hours, attendance, and waste for ${periodLabel}`}
     >
       <span
-        className={cn(
-          "grid size-10 shrink-0 place-items-center rounded-lg",
-          "bg-chart-2/12 text-chart-2 ring-1 ring-chart-2/25",
-          "transition-colors group-hover:bg-chart-2/18",
-          "motion-reduce:transition-none",
-        )}
+        className="grid size-10 shrink-0 place-items-center rounded-lg text-chart-2"
         aria-hidden
       >
         <OrchAgentGlyph className="size-5" />
@@ -171,7 +167,7 @@ function AskOrchRailCard({
       <ChevronRight
         className={cn(
           "size-4 shrink-0 text-muted-foreground/70",
-          "transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:text-chart-2",
+          "transition-transform duration-150 ease-out group-hover:translate-x-0.5 group-hover:text-foreground",
           "motion-reduce:transition-none motion-reduce:group-hover:translate-x-0",
         )}
         aria-hidden
@@ -186,21 +182,124 @@ type Props = {
 
 type LeaveGauge = NonNullable<AgencyMemberProfileViewModel["profile"]>["leaveGauges"][number];
 
-function ProfileStatPlate({ gauge }: { gauge: LeaveGauge }) {
+type CalendarDayStatus = AgencyMemberProfileViewModel["profile"] extends null
+  ? never
+  : NonNullable<AgencyMemberProfileViewModel["profile"]>["calendar"]["days"][number]["status"];
+
+function calendarDayStatusClass(status: CalendarDayStatus, inMonth: boolean): string {
+  if (!inMonth) return "text-foreground/30";
+  switch (status) {
+    case "present":
+      return "bg-success text-success-foreground";
+    case "leave":
+      return "bg-warning text-warning-foreground";
+    case "holiday":
+      return "border border-chart-1/35 bg-chart-1/18 text-foreground";
+    case "weekend":
+      return cn(
+        "bg-muted/60 text-muted-foreground",
+        "[background-image:repeating-linear-gradient(-45deg,transparent_0_2.5px,var(--border)_2.5px_3.5px)]",
+      );
+    case "empty":
+      return "text-foreground hover:bg-muted";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
+function calendarDayStatusSuffix(status: CalendarDayStatus): string {
+  switch (status) {
+    case "leave":
+      return ", off day";
+    case "holiday":
+      return ", team holiday";
+    case "present":
+      return ", present";
+    case "weekend":
+      return ", weekend";
+    case "empty":
+      return "";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
+function calendarLegendIndicatorClass(status: CalendarDayStatus): string {
+  switch (status) {
+    case "present":
+      return "bg-success";
+    case "leave":
+      return "bg-warning";
+    case "holiday":
+      return "border border-chart-1/40 bg-chart-1/20";
+    case "weekend":
+      return cn(
+        "bg-muted/70",
+        "[background-image:repeating-linear-gradient(-45deg,transparent_0_1px,var(--border)_1px_2px)]",
+      );
+    case "empty":
+      return "bg-transparent ring-1 ring-border";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
+function calendarLegendAriaLabel(status: CalendarDayStatus, count: number, label: string): string {
+  const unit = count === 1 ? "day" : "days";
+  switch (status) {
+    case "present":
+      return `${count} ${unit} logged`;
+    case "leave":
+      return `${count} off ${unit}`;
+    case "holiday":
+      return `${count} team holiday ${unit}`;
+    case "weekend":
+      return `${count} weekend ${unit}`;
+    case "empty":
+      return `${count} ${unit} with no hours logged`;
+    default: {
+      const _exhaustive: never = status;
+      return `${count} ${label}`;
+    }
+  }
+}
+
+function ProfileStatPlate({
+  gauge,
+  isOpen,
+  onOpen,
+}: {
+  gauge: LeaveGauge;
+  isOpen: boolean;
+  onOpen: () => void;
+}) {
   const plateTone = gaugeToneToPlateTone(gauge.tone);
+  const ariaLabel =
+    gauge.key === "present"
+      ? `Attendance streak: ${gauge.valueLabel} days. Best this month: ${gauge.bestInMonth ?? 0}. ${gauge.secondary}. Open details.`
+      : `${gauge.label}: ${gauge.valueLabel}. ${gauge.secondary}. Open details.`;
   return (
     <InstrumentPlate
       tone={plateTone}
       metric={gauge.valueLabel}
       shortLabel={statPlateShortLabel(gauge.key)}
-      ariaLabel={`${gauge.label}: ${gauge.valueLabel}. ${gauge.secondary}`}
+      ariaLabel={ariaLabel}
       glyph={
         <StatPlateGlyph
           plateKey={gauge.key}
           ratio={gauge.ratio}
+          segments={gauge.key === "present" ? gauge.streakSegments : undefined}
           className="h-full w-full"
         />
       }
+      onClick={onOpen}
+      layoutId={isOpen ? undefined : memberProfileGaugeLayoutId(gauge.key)}
     />
   );
 }
@@ -214,15 +313,27 @@ function PersonalRow({
   label: string;
   value: string | null;
 }) {
+  const display = value?.trim() || "—";
+  const empty = display === "—";
+
   return (
-    <div className="flex items-start gap-3 py-2.5">
-      <span className="mt-0.5 text-muted-foreground" aria-hidden>
+    <div
+      className="flex items-center gap-2.5 py-2"
+      role="group"
+      aria-label={`${label}: ${display}`}
+    >
+      <span className="shrink-0 text-muted-foreground" aria-hidden>
         {icon}
       </span>
-      <div className="min-w-0">
-        <p className="text-[11px] text-muted-foreground">{label}</p>
-        <p className="text-sm text-foreground">{value?.trim() || "—"}</p>
-      </div>
+      <p
+        className={cn(
+          "min-w-0 truncate text-sm",
+          empty ? "text-muted-foreground" : "text-foreground",
+        )}
+        title={empty ? undefined : display}
+      >
+        {display}
+      </p>
     </div>
   );
 }
@@ -423,7 +534,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                   value={profile.hr.gender}
                 />
                 <PersonalRow
-                  icon={<UserRound className="size-4" />}
+                  icon={<Calendar className="size-4" />}
                   label="Date of birth"
                   value={profile.hr.dateOfBirthLabel}
                 />
@@ -452,7 +563,12 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
           >
             <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
               {profile.leaveGauges.map((gauge) => (
-                <ProfileStatPlate key={gauge.key} gauge={gauge} />
+                <ProfileStatPlate
+                  key={gauge.key}
+                  gauge={gauge}
+                  isOpen={viewModel.openGaugeKey === gauge.key}
+                  onOpen={() => viewModel.openGauge(gauge.key)}
+                />
               ))}
             </div>
 
@@ -487,27 +603,23 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
               </div>
               <div className="mt-1 grid grid-cols-7 gap-1">
                 {profile.calendar.days.map((day) => {
-                  const statusClass = !day.inMonth
-                    ? "text-foreground/30"
-                    : day.status === "present"
-                      ? "bg-success text-success-foreground"
-                      : day.status === "leave"
-                        ? "bg-warning text-warning-foreground"
-                        : "hover:bg-muted";
-                  const statusSuffix =
-                    day.status === "leave"
-                      ? ", off day"
-                      : day.status === "present"
-                        ? ", present"
-                        : "";
+                  const statusClass = calendarDayStatusClass(day.status, day.inMonth);
+                  const statusSuffix = calendarDayStatusSuffix(day.status);
                   const dayButton = (
                     <button
                       type="button"
                       disabled={!day.inMonth}
                       className={cn(
-                        "aspect-square w-full rounded-md text-xs tabular-nums transition-colors",
+                        "member-profile-cal-day grid place-items-center rounded-md text-xs tabular-nums",
+                        "aspect-square w-full",
                         agencyFocusRingClass,
                         statusClass,
+                        day.inMonth &&
+                          day.status === "holiday" &&
+                          "member-profile-cal-day--holiday",
+                        day.inMonth &&
+                          day.status === "weekend" &&
+                          "member-profile-cal-day--weekend",
                       )}
                       onClick={
                         day.inMonth && !profile.canManageLeave
@@ -516,7 +628,15 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                       }
                       aria-label={`${day.date}${statusSuffix}`}
                     >
-                      {day.dayOfMonth}
+                      <span className="leading-none">{day.dayOfMonth}</span>
+                      {day.inMonth && day.status === "holiday" ? (
+                        <span
+                          className="member-profile-cal-party pointer-events-none absolute end-0.5 top-0.5 grid size-3.5 place-items-center rounded-[4px] bg-chart-1/30 text-[0.45rem] leading-none"
+                          aria-hidden
+                        >
+                          🎉
+                        </span>
+                      ) : null}
                     </button>
                   );
 
@@ -536,7 +656,7 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                         <DropdownMenuItem onSelect={() => viewModel.openAddOffDay(day.date)}>
                           Add off day
                         </DropdownMenuItem>
-                        {day.status === "leave" && day.leaveId ? (
+                        {(day.status === "leave" || day.status === "holiday") && day.leaveId ? (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -556,21 +676,37 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
                   );
                 })}
               </div>
-              <div className="mt-3 flex flex-wrap gap-3 border-t border-border pt-3 text-[11px] text-muted-foreground">
-                {profile.calendar.legend.map((item) => (
-                  <span key={item.status} className="inline-flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "size-2.5 rounded-[3px]",
-                        item.status === "present" && "bg-success",
-                        item.status === "leave" && "bg-warning",
-                        item.status === "empty" && "bg-muted ring-1 ring-border",
-                      )}
-                    />
-                    {item.label} {item.count}
-                  </span>
-                ))}
-              </div>
+              {profile.calendar.legend.some((item) => item.count > 0) ? (
+                <div
+                  className={cn(
+                    agencyWorkMetaClass,
+                    "mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-border pt-3",
+                  )}
+                  role="list"
+                  aria-label={`${profile.calendar.label} summary`}
+                >
+                  {profile.calendar.legend
+                    .filter((item) => item.count > 0)
+                    .map((item) => (
+                      <span
+                        key={item.status}
+                        role="listitem"
+                        className="inline-flex items-center gap-1.5"
+                        aria-label={calendarLegendAriaLabel(item.status, item.count, item.label)}
+                      >
+                        <span
+                          className={cn(
+                            "size-1.5 shrink-0 rounded-full",
+                            calendarLegendIndicatorClass(item.status),
+                          )}
+                          aria-hidden
+                        />
+                        <span className="font-mono tabular-nums text-foreground">{item.count}</span>
+                        <span>{item.label}</span>
+                      </span>
+                    ))}
+                </div>
+              ) : null}
             </section>
 
             <AskOrchRailCard
@@ -581,6 +717,12 @@ export function AgencyMemberProfileView({ viewModel }: Props) {
           </aside>
         </div>
       </div>
+
+      <MemberProfileGaugeDetailDialog
+        detail={viewModel.gaugeDetail}
+        onClose={viewModel.closeGauge}
+        onPrimaryAction={viewModel.runGaugePrimaryAction}
+      />
 
       <Dialog
         open={viewModel.offDayRangeSelect !== null}

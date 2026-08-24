@@ -99,18 +99,8 @@ function FeedActivityRow({
   );
 
   return (
-    <article
-      className={cn(
-        "grid grid-cols-[2.75rem_minmax(0,1fr)] gap-2 border-t border-border/60 py-3 first:border-t-0 sm:grid-cols-[2.75rem_minmax(0,1fr)_auto] sm:gap-3",
-        item.isWaste && "bg-warning/5",
-      )}
-    >
-      <time
-        className={cn(
-          "pt-0.5 font-mono text-[11px] tabular-nums",
-          item.eventType === "leave" ? "text-info" : "text-muted-foreground",
-        )}
-      >
+    <article className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-2 border-t border-border/60 py-3 first:border-t-0 sm:grid-cols-[2.75rem_minmax(0,1fr)_auto] sm:gap-3">
+      <time className="pt-0.5 font-mono text-[11px] tabular-nums text-muted-foreground">
         {item.timeLabel}
       </time>
       <div className="min-w-0">
@@ -352,7 +342,7 @@ export function MemberProfileActivityRails({
                           agencyFocusRingClass,
                           "motion-reduce:transition-none",
                           day.date === highlightDate
-                            ? "border border-primary/40 bg-primary/10 text-foreground"
+                            ? "border border-border bg-muted text-foreground ring-1 ring-border"
                             : current
                               ? "border border-border bg-muted text-foreground"
                               : "border border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
@@ -458,7 +448,7 @@ export function MemberProfileActivityRails({
                             {item.body}
                           </p>
                         </div>
-                        <span className="col-start-2 inline-flex h-[22px] items-center self-start justify-self-start rounded-full border border-primary/35 bg-primary/10 px-2 font-mono text-[11px] tracking-wide text-primary sm:col-start-auto sm:justify-self-end">
+                        <span className="col-start-2 inline-flex h-[22px] items-center self-start justify-self-start rounded-full border border-border bg-muted px-2 font-mono text-[11px] tracking-wide text-foreground sm:col-start-auto sm:justify-self-end">
                           review
                         </span>
                       </article>

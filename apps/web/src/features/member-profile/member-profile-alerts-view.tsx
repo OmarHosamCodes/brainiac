@@ -2,7 +2,8 @@ import type { MemberProfileAlertsViewModel } from "@/features/member-profile/hoo
 import { AlertPlateGlyph } from "@/features/member-profile/member-profile-alert-glyphs";
 import type { AlertPlateTone } from "@/features/member-profile/member-profile-alert-plate";
 import {
-  instrumentPlateToneClass,
+  instrumentPlateInkClass,
+  instrumentPlateSurfaceClass,
   type InstrumentPlateTone,
 } from "@/features/member-profile/member-profile-instrument-plate";
 import {
@@ -42,7 +43,7 @@ function alertToneToInstrument(tone: AlertPlateTone): InstrumentPlateTone {
 
 function AlertStripRow({ alert, onOpen }: { alert: AlertItem; onOpen: () => void }) {
   const { plate } = alert;
-  const colors = instrumentPlateToneClass(alertToneToInstrument(plate.tone));
+  const ink = instrumentPlateInkClass(alertToneToInstrument(plate.tone));
 
   return (
     <button
@@ -53,16 +54,12 @@ function AlertStripRow({ alert, onOpen }: { alert: AlertItem; onOpen: () => void
         "transition-[colors,transform] duration-150 ease-out",
         "motion-reduce:transition-none motion-reduce:active:scale-100 active:scale-[0.995]",
         agencyFocusRingClass,
-        colors.plate,
+        instrumentPlateSurfaceClass(),
       )}
       aria-label={`${alert.title}. ${alert.body}`}
     >
-      <div className={cn("h-7 w-14 shrink-0", colors.ink)}>
-        <AlertPlateGlyph
-          kind={alert.kind}
-          ratio={plate.chartRatio}
-          className="h-full w-full"
-        />
+      <div className={cn("h-7 w-14 shrink-0", ink)}>
+        <AlertPlateGlyph kind={alert.kind} ratio={plate.chartRatio} className="h-full w-full" />
       </div>
 
       <div className="min-w-0 flex-1">
@@ -77,7 +74,7 @@ function AlertStripRow({ alert, onOpen }: { alert: AlertItem; onOpen: () => void
         </p>
       </div>
 
-      <div className={cn("shrink-0 text-end leading-none", colors.ink)}>
+      <div className="shrink-0 text-end leading-none text-foreground">
         <span
           className={cn(
             "block font-mono font-semibold tracking-tight tabular-nums",
@@ -86,7 +83,7 @@ function AlertStripRow({ alert, onOpen }: { alert: AlertItem; onOpen: () => void
         >
           {plate.metric}
         </span>
-        <span className="mt-1 block max-w-[5.5rem] text-[0.625rem] font-semibold uppercase tracking-[0.12em] opacity-90">
+        <span className="mt-1 block max-w-[5.5rem] text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           {plate.shortLabel}
         </span>
       </div>
@@ -160,7 +157,9 @@ export function MemberProfileAlertsPanel({ alerts }: Props) {
             <>
               <DialogHeader>
                 <DialogTitle>{detail.title}</DialogTitle>
-                <DialogDescription className="text-pretty tabular-nums">{detail.body}</DialogDescription>
+                <DialogDescription className="text-pretty tabular-nums">
+                  {detail.body}
+                </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-3">

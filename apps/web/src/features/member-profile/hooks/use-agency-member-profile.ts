@@ -14,9 +14,16 @@ import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/ag
 import type { AlertPeriodTarget } from "@/features/member-profile/member-profile-alert-period";
 import { resolveAlertPeriodTarget } from "@/features/member-profile/member-profile-alert-period";
 import {
+  buildGaugeDetail,
+  type GaugeDetailModel,
+} from "@/features/member-profile/member-profile-gauge-detail";
+import {
   resolveMemberProfileHeatLayout,
   type MemberProfileHeatLayout,
 } from "@/features/member-profile/member-profile-heat-layout";
+import type { StatPlateKey } from "@/features/member-profile/member-profile-instrument-plate";
+import type { StreakSegmentState } from "@/features/member-profile/member-profile-attendance-streak";
+import { computeAttendanceStreak } from "@/features/member-profile/member-profile-attendance-streak";
 import {
   resolveMemberProfileRosterNav,
   type MemberProfileRosterMember,
@@ -143,6 +150,9 @@ export type AgencyMemberProfileViewModel = {
       secondary: string;
       ratio: number;
       tone: "success" | "warning" | "foreground";
+      streakSegments?: StreakSegmentState[];
+      bestInMonth?: number;
+      monthPresentDays?: number;
     }>;
     weekHours: Array<{
       date: string;
@@ -158,10 +168,14 @@ export type AgencyMemberProfileViewModel = {
         date: string;
         dayOfMonth: number;
         inMonth: boolean;
-        status: "present" | "leave" | "empty";
+        status: "present" | "leave" | "holiday" | "weekend" | "empty";
         leaveId: string | null;
       }>;
-      legend: Array<{ status: "present" | "leave" | "empty"; label: string; count: number }>;
+      legend: Array<{
+        status: "present" | "leave" | "holiday" | "weekend" | "empty";
+        label: string;
+        count: number;
+      }>;
       onPrevMonth: () => void;
       onNextMonth: () => void;
     };
@@ -263,6 +277,12 @@ export type AgencyMemberProfileViewModel = {
   focusDay: (date: string) => void;
   /** Activity day briefly shimmer-highlighted after an alert period jump. */
   highlightedActivityDate: string | null;
+  /** Open instrument plate detail (morph dialog). */
+  openGaugeKey: StatPlateKey | null;
+  gaugeDetail: GaugeDetailModel | null;
+  openGauge: (key: StatPlateKey) => void;
+  closeGauge: () => void;
+  runGaugePrimaryAction: () => void;
   /** Expand workspace agent with a member-scoped Ask prompt. */
   askOrchAboutMember: () => void;
   retry: () => void;
@@ -520,6 +540,8 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const [rangePreset, setRangePreset] = useState<RangePreset | null>(null);
   const effectiveRangePreset = rangePreset ?? defaultRangePreset;
   const weekStartsOn = tenurePolicy?.weekStartsOn ?? DEFAULT_WORK_SCHEDULE.weekStartsOn;
+  const weekendDurationDays =
+    tenurePolicy?.weekendDurationDays ?? DEFAULT_WORK_SCHEDULE.weekendDurationDays;
   const [customFromDate, setCustomFromDate] = useState(
     toDateInputValue(startOfWeekUtc(weekStartsOn)),
   );
@@ -592,6 +614,7 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
   const pendingFocusDateRef = useRef<string | null>(null);
   const [highlightedActivityDate, setHighlightedActivityDate] = useState<string | null>(null);
   const [selectedHeatDate, setSelectedHeatDate] = useState<string | null>(null);
+  const [openGaugeKey, setOpenGaugeKey] = useState<StatPlateKey | null>(null);
 
   const defaultCalendarMonth = range.to.slice(0, 7);
   const calendarMonth = calendarMonthOverride ?? defaultCalendarMonth;
@@ -775,15 +798,35 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     const maxWeekSeconds = Math.max(1, ...weekHoursSource.map((day) => day.totalSeconds));
     const weekHoursTotalSeconds = weekHoursSource.reduce((sum, day) => sum + day.totalSeconds, 0);
 
-    const calendarLegendCounts = { present: 0, leave: 0, empty: 0 };
-    let daysInMonth = 0;
+    const calendarLegendCounts = {
+      present: 0,
+      leave: 0,
+      holiday: 0,
+      weekend: 0,
+      empty: 0,
+    };
     for (const day of data.calendarMonth.days) {
       if (!day.inMonth) continue;
-      daysInMonth += 1;
       calendarLegendCounts[day.status] += 1;
     }
 
     const leaveAll = data.leaveBalances.all;
+    const streakAnchor =
+      today < rangeStartKey ? rangeStartKey : today > rangeEndKey ? rangeEndKey : today;
+    const attendanceStreak = computeAttendanceStreak({
+      anchorDate: streakAnchor,
+      schedule: { weekStartsOn, weekendDurationDays },
+      heatDays: data.heatMap.days.map((day) => ({
+        date: day.date,
+        totalSeconds: day.totalSeconds,
+        off: day.off,
+      })),
+      calendarDays: data.calendarMonth.days.map((day) => ({
+        date: day.date,
+        inMonth: day.inMonth,
+        status: day.status,
+      })),
+    });
     const leaveGauges = [
       {
         key: "leaves" as const,
@@ -802,18 +845,19 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         valueLabel: shortHours(data.periodTotalSeconds),
         secondary: periodLabel,
         ratio:
-          data.periodTotalSeconds > 0
-            ? Math.min(1, data.periodTotalSeconds / (160 * 3600))
-            : 0.08,
+          data.periodTotalSeconds > 0 ? Math.min(1, data.periodTotalSeconds / (160 * 3600)) : 0.08,
         tone: "foreground" as const,
       },
       {
         key: "present" as const,
-        label: "Present",
-        valueLabel: `${calendarLegendCounts.present}/${daysInMonth}`,
+        label: "Attendance streak",
+        valueLabel: String(attendanceStreak.currentStreak),
         secondary: data.calendarMonth.label,
-        ratio: daysInMonth <= 0 ? 0 : calendarLegendCounts.present / daysInMonth,
-        tone: "success" as const,
+        ratio: Math.min(1, attendanceStreak.currentStreak / 7),
+        tone: attendanceStreak.currentStreak > 0 ? ("success" as const) : ("foreground" as const),
+        streakSegments: attendanceStreak.segments,
+        bestInMonth: attendanceStreak.bestInMonth,
+        monthPresentDays: attendanceStreak.monthPresentDays,
       },
       {
         key: "waste" as const,
@@ -914,9 +958,11 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
         weekdayLabels: data.calendarMonth.weekdayLabels,
         days: data.calendarMonth.days,
         legend: [
-          { status: "present" as const, label: "Present", count: calendarLegendCounts.present },
-          { status: "leave" as const, label: "Off days", count: calendarLegendCounts.leave },
-          { status: "empty" as const, label: "No time", count: calendarLegendCounts.empty },
+          { status: "present" as const, label: "logged", count: calendarLegendCounts.present },
+          { status: "leave" as const, label: "off", count: calendarLegendCounts.leave },
+          { status: "holiday" as const, label: "holiday", count: calendarLegendCounts.holiday },
+          { status: "weekend" as const, label: "weekend", count: calendarLegendCounts.weekend },
+          { status: "empty" as const, label: "no hours", count: calendarLegendCounts.empty },
         ],
         onPrevMonth: () => setCalendarMonthOverride(shiftMonthKey(calendarMonth, -1)),
         onNextMonth: () => setCalendarMonthOverride(shiftMonthKey(calendarMonth, 1)),
@@ -1006,7 +1052,103 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     serverUrl,
     today,
     weekStartsOn,
+    weekendDurationDays,
+    rangeStartKey,
+    rangeEndKey,
   ]);
+
+  const gaugeDetail = useMemo((): GaugeDetailModel | null => {
+    if (!openGaugeKey || !profile || !profileQuery.data) return null;
+    const data = profileQuery.data;
+    const gauge = profile.leaveGauges.find((item) => item.key === openGaugeKey);
+    if (!gauge) return null;
+
+    const dayHours = data.timeline.map((day) => {
+      let totalSeconds = 0;
+      for (const item of day.items) {
+        if (item.kind === "activity" && item.durationSeconds != null) {
+          totalSeconds += item.durationSeconds;
+        }
+      }
+      const date = new Date(`${day.date}T12:00:00.000Z`);
+      const label = date.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC",
+      });
+      return {
+        date: day.date,
+        label,
+        hoursLabel: shortHours(totalSeconds),
+        totalSeconds,
+      };
+    });
+
+    const wasteDays: Array<{ date: string; label: string; hoursLabel: string }> = [];
+    for (const day of data.timeline) {
+      let wasteSeconds = 0;
+      for (const item of day.items) {
+        if (item.kind === "activity" && item.isWaste && item.durationSeconds != null) {
+          wasteSeconds += item.durationSeconds;
+        }
+      }
+      if (wasteSeconds <= 0) continue;
+      const date = new Date(`${day.date}T12:00:00.000Z`);
+      wasteDays.push({
+        date: day.date,
+        label: date.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC",
+        }),
+        hoursLabel: shortHours(wasteSeconds),
+      });
+    }
+
+    return buildGaugeDetail({
+      canManageLeave: profile.canManageLeave,
+      leavePeriodLabel: data.leaveBalances.period.label,
+      usedDays: data.leaveBalances.all.usedDays,
+      allowanceDays: data.leaveBalances.all.allowanceDays,
+      leaveEntries: data.leave.map((entry) => ({
+        id: entry.id,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        typeLabel: leaveTypeLabel(entry.type),
+        rangeLabel: leaveRangeLabel(entry.startDate, entry.endDate),
+      })),
+      periodLabel,
+      periodHoursLabel: shortHours(data.periodTotalSeconds),
+      periodTotalSeconds: data.periodTotalSeconds,
+      periodWasteSeconds: data.periodWasteSeconds,
+      periodWasteLabel: shortHours(data.periodWasteSeconds),
+      dayHours,
+      calendarLabel: profile.calendar.label,
+      calendarDays: profile.calendar.days.map((day) => ({
+        date: day.date,
+        inMonth: day.inMonth,
+        status: day.status,
+        dayLabel: `${day.dayOfMonth}`,
+      })),
+      wasteDays,
+      gauge: {
+        key: gauge.key,
+        valueLabel: gauge.valueLabel,
+        ratio: gauge.ratio,
+        tone: gauge.tone,
+      },
+      attendanceStreak:
+        gauge.key === "present"
+          ? {
+              currentStreak: Number(gauge.valueLabel),
+              bestInMonth: gauge.bestInMonth ?? 0,
+              monthPresentDays: gauge.monthPresentDays ?? 0,
+            }
+          : undefined,
+    });
+  }, [openGaugeKey, periodLabel, profile, profileQuery.data]);
 
   // Keep leave/review drafts inside the selected period when the range changes.
   const clampedDefaultDate =
@@ -1210,14 +1352,41 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       scrollToActivityDay(date);
     },
     highlightedActivityDate,
+    openGaugeKey,
+    gaugeDetail,
+    openGauge(key) {
+      setOpenGaugeKey(key);
+    },
+    closeGauge() {
+      setOpenGaugeKey(null);
+    },
+    runGaugePrimaryAction() {
+      const action = gaugeDetail?.primaryAction;
+      if (!action) return;
+      setOpenGaugeKey(null);
+      if (action.kind === "add_off_day") {
+        setLeaveDraftState((prev) => ({
+          ...prev,
+          startDate: clampedDefaultDate,
+          endDate: clampedDefaultDate,
+        }));
+        setLeaveDialogOpen(true);
+        return;
+      }
+      setSelectedHeatDate(action.date);
+      scrollToActivityDay(action.date);
+    },
     askOrchAboutMember() {
       const name = profile?.userName?.trim() || "this member";
-      useWorkspaceAgentStore
-        .getState()
-        .setDraft(
-          `Summarize ${name}'s hours, attendance, and waste for the current profile period. Call out anything that needs attention.`,
-        );
-      useWorkspaceAgentStore.getState().setExpanded(true);
+      const agent = useWorkspaceAgentStore.getState();
+      for (const chip of agent.scopeChips) {
+        if (chip.kind === "member") agent.removeScopeChip(chip.id);
+      }
+      agent.addScopeChip({ kind: "member", id: subjectUserId, label: name });
+      agent.seedComposer({
+        toolPreset: "ask",
+        text: `Review ${name}'s profile for ${periodLabel}. Summarize hours, attendance, off days, and waste. Flag anomalies or risks, cite the relevant dates and figures, and recommend next steps.`,
+      });
     },
     retry() {
       void profileQuery.refetch();
