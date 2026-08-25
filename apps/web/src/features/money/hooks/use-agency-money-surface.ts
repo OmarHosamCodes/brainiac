@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "@/lib/navigation";
 import { toast } from "sonner";
 
@@ -506,6 +506,38 @@ export function useAgencyMoneySurface(teamId: string) {
     if (currency) setCurrencyDraft(currency);
   }, [moneySettingsQuery.data?.currency]);
 
+  const formulaPayoutSyncKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!teamId || !isOwner || !moneySettingsQuery.isSuccess) return;
+
+    const formulas = (moneySettingsQuery.data.calcOptions.formulas ?? []) as MoneyFormulaDef[];
+    if (!formulas.some((formula) => formula.enabled && formula.sectionKey)) return;
+
+    const syncKey = `${periodRange.from}|${periodRange.to}|${moneySettingsQuery.dataUpdatedAt}`;
+    if (formulaPayoutSyncKeyRef.current === syncKey) return;
+    formulaPayoutSyncKeyRef.current = syncKey;
+
+    void agencyOps.syncFormulaPayoutLines(
+      {
+        teamId,
+        periodStart: periodRange.from,
+        periodEnd: periodRange.to,
+        refreshSnapshot: true,
+      },
+      { quiet: true },
+    );
+  }, [
+    agencyOps,
+    isOwner,
+    moneySettingsQuery.data?.calcOptions.formulas,
+    moneySettingsQuery.dataUpdatedAt,
+    moneySettingsQuery.isSuccess,
+    periodRange.from,
+    periodRange.to,
+    teamId,
+  ]);
+
   const teamMembersQuery = useQuery({
     ...orpc.team.members.list.queryOptions({ input: { teamId } }),
     enabled: Boolean(teamId) && isOwner && moneySettingsOpen,
@@ -983,6 +1015,19 @@ export function useAgencyMoneySurface(teamId: string) {
     const rules = current.rules;
     const calcOptions = current.calcOptions;
 
+    const syncFormulasAfterSave = () => {
+      formulaPayoutSyncKeyRef.current = null;
+      void agencyOps.syncFormulaPayoutLines(
+        {
+          teamId,
+          periodStart: periodRange.from,
+          periodEnd: periodRange.to,
+          refreshSnapshot: true,
+        },
+        { quiet: true },
+      );
+    };
+
     if (moneySettingsDraft.kind === "rule") {
       const isNewCustom =
         !moneySettingsDraft.locked &&
@@ -996,6 +1041,7 @@ export function useAgencyMoneySurface(teamId: string) {
         {
           onSuccess: () => {
             if (!isNewCustom) {
+              syncFormulasAfterSave();
               setMoneySettingsDraft(null);
               return;
             }
@@ -1024,7 +1070,12 @@ export function useAgencyMoneySurface(teamId: string) {
           moneySettingsDraft,
         ),
       },
-      { onSuccess: () => setMoneySettingsDraft(null) },
+      {
+        onSuccess: () => {
+          syncFormulasAfterSave();
+          setMoneySettingsDraft(null);
+        },
+      },
     );
   }
 

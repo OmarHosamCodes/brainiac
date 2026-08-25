@@ -2331,7 +2331,7 @@ function createAgencyOpsActions(
       periodEnd: string;
       refreshSnapshot?: boolean;
     },
-    callbacks?: { onSuccess?: () => void },
+    callbacks?: { onSuccess?: () => void; quiet?: boolean },
   ) {
     set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
 
@@ -2345,13 +2345,18 @@ function createAgencyOpsActions(
           queryKey: orpc.agencyOps.payouts.list.key(),
         }),
         getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.periodObligations.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
           queryKey: orpc.agencyOps.money.periodScoreboard.key(),
         }),
       ]);
       callbacks?.onSuccess?.();
-      toast.success("Formula lines synced", {
-        description: `${result.upserted} updated · ${result.skipped} skipped`,
-      });
+      if (!callbacks?.quiet) {
+        toast.success("Formula lines synced", {
+          description: `${result.upserted} updated · ${result.skipped} skipped`,
+        });
+      }
     } catch (error) {
       toast.error("Couldn't sync formula lines", {
         description: getErrorMessage(error, "Try again."),
