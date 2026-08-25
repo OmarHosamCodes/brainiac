@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test";
 
 import {
   buildExpenseStripItems,
+  expenseStripAmountLabel,
   expenseStripEmptyCopy,
+  expenseStripFilterFromSearch,
   expenseStripFilterVisibility,
   expenseStripInsight,
   expenseStripItemMatchesSearch,
@@ -12,7 +14,7 @@ import {
 
 const sources = {
   recent: {
-    count: 1,
+    count: 2,
     items: [
       {
         id: "one-1",
@@ -21,8 +23,21 @@ const sources = {
         kind: "one_time" as const,
         statusLabel: "Due",
         remainingAmount: 23000,
+        remainingLabel: "EGP 230",
         amountLabel: "EGP 230",
         canRecordPayment: true,
+        note: null,
+      },
+      {
+        id: "one-paid",
+        expenseId: "one-paid",
+        name: "Travel",
+        kind: "one_time" as const,
+        statusLabel: "Paid",
+        remainingAmount: 0,
+        remainingLabel: "EGP 0",
+        amountLabel: "EGP 500",
+        canRecordPayment: false,
         note: null,
       },
     ],
@@ -39,6 +54,7 @@ const sources = {
         kind: "subscription" as const,
         statusLabel: "Due",
         remainingAmount: 320000,
+        remainingLabel: "EGP 3,200",
         amountLabel: "EGP 3,200",
         canRecordPayment: true,
         note: null,
@@ -58,6 +74,7 @@ const sources = {
         kind: "subscription" as const,
         statusLabel: "Due",
         remainingAmount: 320000,
+        remainingLabel: "EGP 3,200",
         amountLabel: "EGP 3,200",
         canRecordPayment: true,
         note: null,
@@ -69,6 +86,7 @@ const sources = {
         kind: "subscription" as const,
         statusLabel: "Paid",
         remainingAmount: 0,
+        remainingLabel: "EGP 0",
         amountLabel: "EGP 500",
         canRecordPayment: false,
         note: null,
@@ -80,19 +98,32 @@ const sources = {
 describe("buildExpenseStripItems", () => {
   it("sorts one-time before subscriptions on all", () => {
     const items = buildExpenseStripItems("all", sources);
-    expect(items.map((item) => item.id)).toEqual(["one-1", "sub-due", "sub-paid"]);
+    expect(items.map((item) => item.id)).toEqual(["one-1", "one-paid", "sub-due", "sub-paid"]);
   });
 
-  it("shows paid subscriptions only on paid filter", () => {
+  it("shows paid one-time expenses and subscriptions on paid filter", () => {
     const items = buildExpenseStripItems("paid", sources);
-    expect(items).toHaveLength(1);
-    expect(items[0]?.id).toBe("sub-paid");
+    expect(items.map((item) => item.id)).toEqual(["one-paid", "sub-paid"]);
+  });
+
+  it("includes one-time expenses in the due filter", () => {
+    expect(buildExpenseStripItems("due", sources).map((item) => item.id)).toEqual([
+      "one-1",
+      "sub-due",
+    ]);
+  });
+});
+
+describe("expenseStripFilterFromSearch", () => {
+  it("accepts known values and falls back to all", () => {
+    expect(expenseStripFilterFromSearch("due")).toBe("due");
+    expect(expenseStripFilterFromSearch("unknown")).toBe("all");
   });
 });
 
 describe("expenseStripEmptyCopy", () => {
   it("returns paid empty copy when paid filter has no rows", () => {
-    expect(expenseStripEmptyCopy("paid", sources, 0)?.title).toBe("No paid subscriptions");
+    expect(expenseStripEmptyCopy("paid", sources, 0)?.title).toBe("No paid expenses");
   });
 });
 
@@ -125,15 +156,13 @@ describe("filterExpenseStripItems", () => {
 
 describe("expenseStripEmptyCopy", () => {
   it("returns search empty copy when filtered list is empty", () => {
-    expect(expenseStripEmptyCopy("all", sources, 0, "missing")?.title).toBe(
-      "No matching expenses",
-    );
+    expect(expenseStripEmptyCopy("all", sources, 0, "missing")?.title).toBe("No matching expenses");
   });
 });
 
 describe("expenseStripInsight", () => {
   it("summarizes due and paid counts", () => {
-    expect(expenseStripInsight(sources)).toBe("2 due · 1 paid");
+    expect(expenseStripInsight(sources)).toBe("2 due · 2 paid");
   });
 });
 
@@ -148,10 +177,27 @@ describe("expenseStripMeta", () => {
         meta: "Monthly · Next 15 Aug 2026",
         statusLabel: "Due",
         remainingAmount: 100,
+        remainingLabel: "EGP 1",
         amountLabel: "EGP 100",
         canRecordPayment: true,
         note: null,
       }),
     ).toBe("Monthly · Next 15 Aug 2026");
+  });
+});
+
+describe("expenseStripAmountLabel", () => {
+  it("shows the remaining balance for payable rows", () => {
+    expect(
+      expenseStripAmountLabel({
+        ...sources.recent.items[0]!,
+        amountLabel: "EGP 500",
+        remainingLabel: "EGP 230",
+      }),
+    ).toBe("EGP 230");
+  });
+
+  it("shows the recorded amount for settled rows", () => {
+    expect(expenseStripAmountLabel(sources.allSubscriptions.items[1]!)).toBe("EGP 500");
   });
 });

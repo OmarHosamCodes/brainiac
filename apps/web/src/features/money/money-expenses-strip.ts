@@ -10,6 +10,7 @@ export type ExpenseStripItem = {
   meta?: string;
   statusLabel: string;
   remainingAmount: number;
+  remainingLabel: string;
   amountLabel: string;
   canRecordPayment: boolean;
   note: string | null;
@@ -36,6 +37,12 @@ export const EXPENSE_STRIP_FILTERS: ReadonlyArray<{ id: ExpenseStripFilter; labe
   { id: "paid", label: "Paid" },
 ];
 
+export function expenseStripFilterFromSearch(value: string | null): ExpenseStripFilter {
+  return EXPENSE_STRIP_FILTERS.some((option) => option.id === value)
+    ? (value as ExpenseStripFilter)
+    : "all";
+}
+
 function compareExpenseStripItems(a: ExpenseStripItem, b: ExpenseStripItem): number {
   if (a.kind !== b.kind) {
     return a.kind === "one_time" ? -1 : 1;
@@ -54,11 +61,11 @@ export function buildExpenseStripItems(
 
   switch (filter) {
     case "due":
-      return allSubscriptions
+      return [...oneTime, ...allSubscriptions]
         .filter((item) => item.statusLabel !== "Paid")
         .sort(compareExpenseStripItems);
     case "paid":
-      return allSubscriptions
+      return [...oneTime, ...allSubscriptions]
         .filter((item) => item.statusLabel === "Paid")
         .sort(compareExpenseStripItems);
     case "all":
@@ -86,14 +93,14 @@ export function expenseStripEmptyCopy(
   }
   if (filter === "due") {
     return {
-      title: expenses.upcoming.emptyTitle,
-      body: expenses.upcoming.emptyBody,
+      title: "No due expenses",
+      body: "One-time expenses and subscription cycles due in this period will appear here.",
     };
   }
   if (filter === "paid") {
     return {
-      title: "No paid subscriptions",
-      body: "Paid subscription cycles this period will appear here.",
+      title: "No paid expenses",
+      body: "Paid one-time expenses and subscription cycles in this period will appear here.",
     };
   }
   if (
@@ -114,10 +121,11 @@ export function expenseStripMeta(item: ExpenseStripItem): string {
   return item.kind === "subscription" ? "Subscription" : "One-time";
 }
 
-export function expenseStripItemMatchesSearch(
-  item: ExpenseStripItem,
-  searchTerm: string,
-): boolean {
+export function expenseStripAmountLabel(item: ExpenseStripItem): string {
+  return item.canRecordPayment ? item.remainingLabel : item.amountLabel;
+}
+
+export function expenseStripItemMatchesSearch(item: ExpenseStripItem, searchTerm: string): boolean {
   return agencyListSearchMatches(
     searchTerm,
     item.name,
@@ -125,6 +133,7 @@ export function expenseStripItemMatchesSearch(
     item.note ?? "",
     item.statusLabel,
     item.amountLabel,
+    item.remainingLabel,
   );
 }
 
@@ -138,14 +147,9 @@ export function filterExpenseStripItems(
 }
 
 export function expenseStripInsight(expenses: ExpenseStripSources): string | null {
-  const subscriptionDueCount = expenses.allSubscriptions.items.filter(
-    (item) => item.statusLabel !== "Paid",
-  ).length;
-  const paidCount = expenses.allSubscriptions.items.filter(
-    (item) => item.statusLabel === "Paid",
-  ).length;
-  const oneTimeCount = expenses.recent.count;
-  const dueCount = subscriptionDueCount + oneTimeCount;
+  const allItems = [...expenses.recent.items, ...expenses.allSubscriptions.items];
+  const dueCount = allItems.filter((item) => item.statusLabel !== "Paid").length;
+  const paidCount = allItems.filter((item) => item.statusLabel === "Paid").length;
   const parts: string[] = [];
   if (dueCount > 0) parts.push(`${dueCount} due`);
   if (paidCount > 0) parts.push(`${paidCount} paid`);
@@ -153,9 +157,10 @@ export function expenseStripInsight(expenses: ExpenseStripSources): string | nul
   return parts.join(" · ");
 }
 
-export function expenseStripFilterVisibility(
-  filter: ExpenseStripFilter,
-): { due: boolean; paid: boolean } {
+export function expenseStripFilterVisibility(filter: ExpenseStripFilter): {
+  due: boolean;
+  paid: boolean;
+} {
   switch (filter) {
     case "due":
       return { due: true, paid: false };

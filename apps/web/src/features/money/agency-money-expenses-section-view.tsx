@@ -1,6 +1,5 @@
 import { type FormEvent } from "react";
-import { Plus, Search } from "lucide-react";
-import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 
 import {
   moneyExpensePeriodLabel,
@@ -16,25 +15,17 @@ import {
   agencyInputPlaceholderClass,
   agencyLabelClass,
   agencyMetricClass,
-  agencyPanelClass,
 } from "@/features/shared/agency-ui";
-import { expenseStripMeta, type ExpenseStripItem } from "@/features/money/money-expenses-strip";
+import {
+  expenseStripAmountLabel,
+  expenseStripMeta,
+  type ExpenseStripItem,
+} from "@/features/money/money-expenses-strip";
 import { ExpenseStripGlyph } from "@/features/money/money-expense-strip-glyphs";
-import {
-  moneyBaseTransition,
-  moneyExpenseStripItemVariants,
-} from "@/features/money/money-motion";
-import {
-  moneyPanelHeaderClass,
-  MoneyPanelCount,
-  MoneyPanelFilterPill,
-  MoneyPanelFilterRow,
-  MoneyPanelMetricBlock,
-  MoneyPanelTitleRow,
-} from "@/features/money/money-panel-chrome";
+import { moneyBaseTransition, moneyExpenseStripItemVariants } from "@/features/money/money-motion";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Card, CardContent, CardDescription, CardTitle } from "@/ui/card";
 import {
   Dialog,
   DialogClose,
@@ -50,7 +41,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/ui/separator";
 import { Skeleton } from "@/ui/skeleton";
 import { Textarea } from "@/ui/textarea";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
@@ -112,7 +102,7 @@ function ExpenseStripRow({
             type="button"
             variant="link"
             size="sm"
-            className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-start text-xs font-medium text-highlighted sm:text-sm"
+            className="-my-2 min-h-10 max-w-full truncate px-0 py-2 text-start text-xs font-medium text-highlighted sm:my-0 sm:min-h-0 sm:py-0 sm:text-sm"
             onClick={() => onOpenEdit(item.expenseId)}
             title={item.name}
           >
@@ -146,7 +136,7 @@ function ExpenseStripRow({
             expenseStripAmountClass(item),
           )}
         >
-          {item.amountLabel}
+          {expenseStripAmountLabel(item)}
         </span>
         {item.canRecordPayment ? (
           <Button
@@ -154,7 +144,7 @@ function ExpenseStripRow({
             variant="link"
             size="sm"
             className={cn(
-              "h-auto min-h-0 shrink-0 px-0 py-0 text-[11px] font-semibold text-muted",
+              "min-h-10 shrink-0 px-0 py-2 text-[11px] font-semibold text-muted sm:min-h-0 sm:py-0",
               "opacity-80 transition-opacity duration-150 hover:text-highlighted group-hover/row:opacity-100 group-focus-within/row:opacity-100",
               "motion-reduce:transition-none",
             )}
@@ -169,87 +159,27 @@ function ExpenseStripRow({
   );
 }
 
-function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["expenses"] }) {
-  const create = expenses.create;
-  const details = expenses.details;
-  const payment = expenses.payment;
-  const strip = expenses.strip;
-  const expenseCountLabel =
-    strip.itemCount === 1 ? "1 expense" : `${strip.itemCount} expenses`;
+function MoneyExpensesPanelContent({
+  panel,
+  searchTerm,
+}: {
+  panel: AgencyMoneySurfaceViewModel["bills"]["expensesPanel"];
+  searchTerm: string;
+}) {
+  const create = panel.create;
+  const details = panel.details;
+  const payment = panel.payment;
+  const strip = panel.strip;
 
   return (
-    <section
-      className={cn(agencyPanelClass, "flex h-full min-h-0 flex-col overflow-hidden")}
-      aria-label="Expenses"
-    >
-      <div className={moneyPanelHeaderClass}>
-        <MoneyPanelTitleRow title={expenses.title}>
-          <div className="relative min-w-48 flex-1 sm:max-w-56 sm:flex-none">
-            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-            <Input
-              value={expenses.searchTerm}
-              onChange={(event) => expenses.onSearchTermChange(event.target.value)}
-              placeholder="Search expenses"
-              aria-label="Search expenses"
-              className={cn(
-                "h-9 rounded-xl border-default bg-default pl-9 text-sm",
-                agencyInputPlaceholderClass,
-                expenses.searchTerm.trim() ? "text-highlighted" : undefined,
-              )}
-            />
-          </div>
-          {expenses.status === "ready" ? (
-            <MoneyPanelCount>{expenseCountLabel}</MoneyPanelCount>
-          ) : null}
-          <TooltipProvider delayDuration={120}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  className="shrink-0 rounded-xl"
-                  onClick={expenses.onOpenCreate}
-                  aria-label="Add expense"
-                >
-                  <Plus className="size-4" aria-hidden />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Add expense</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </MoneyPanelTitleRow>
-
-        {expenses.periodSpendLabel ? (
-          <MoneyPanelMetricBlock
-            label="Period spend"
-            value={expenses.periodSpendLabel}
-            hint={strip.insight}
-          />
-        ) : expenses.subtitle ? (
-          <p className="text-xs text-muted text-balance">{expenses.subtitle}</p>
-        ) : null}
-
-        {expenses.status === "ready" ? (
-          <LayoutGroup id="expense-strip-filters">
-            <MoneyPanelFilterRow label="Expense filters">
-              {strip.filterOptions.map((option) => (
-                <MoneyPanelFilterPill
-                  key={option.id}
-                  label={option.label}
-                  selected={strip.filter === option.id}
-                  onSelect={() => strip.onFilterChange(option.id)}
-                  layoutId="expense-strip-filter-bg"
-                />
-              ))}
-            </MoneyPanelFilterRow>
-          </LayoutGroup>
-        ) : null}
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {expenses.status === "loading" ? (
-          <div className="flex flex-col divide-y divide-default" aria-busy="true" aria-label="Loading expenses">
+    <>
+      <div className="flex flex-col">
+        {panel.status === "loading" ? (
+          <div
+            className="flex flex-col divide-y divide-default"
+            aria-busy="true"
+            aria-label="Loading expenses"
+          >
             {Array.from({ length: 4 }, (_, index) => (
               <div key={index} className="flex items-center gap-3 px-5 py-3">
                 <Skeleton className="size-9 shrink-0 rounded-xl" />
@@ -264,16 +194,16 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               </div>
             ))}
           </div>
-        ) : expenses.status === "error" ? (
+        ) : panel.status === "error" ? (
           <div className={cn(agencyErrorPanelClass, "m-5")} role="alert">
             <p className="text-sm font-medium text-highlighted">Couldn’t load expenses</p>
-            <p className="mt-1 text-xs text-muted">{expenses.errorMessage}</p>
+            <p className="mt-1 text-xs text-muted">{panel.errorMessage}</p>
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="mt-3"
-              onClick={expenses.onRetry}
+              onClick={panel.onRetry}
             >
               Retry
             </Button>
@@ -286,9 +216,9 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                   key={`${strip.filter}-${item.id}`}
                   item={item}
                   index={index}
-                  searchTerm={expenses.searchTerm}
-                  onOpenEdit={expenses.onOpenEdit}
-                  onOpenPayment={expenses.onOpenPayment}
+                  searchTerm={searchTerm}
+                  onOpenEdit={panel.onOpenEdit}
+                  onOpenPayment={panel.onOpenPayment}
                 />
               ))}
             </AnimatePresence>
@@ -302,17 +232,22 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
             className="mx-5 my-6 rounded-2xl border border-dashed border-default px-4 py-8 text-center"
           >
             <p className="text-sm font-semibold text-highlighted text-balance">
-              <AgencySearchHighlight text={strip.empty.title} query={expenses.searchTerm} />
+              <AgencySearchHighlight text={strip.empty.title} query={searchTerm} />
             </p>
             <p className="mt-1 text-xs text-muted text-balance">
-              <AgencySearchHighlight text={strip.empty.body} query={expenses.searchTerm} />
+              <AgencySearchHighlight text={strip.empty.body} query={searchTerm} />
             </p>
+            {!searchTerm.trim() && strip.filter === "all" ? (
+              <Button type="button" size="sm" className="mt-3" onClick={panel.onOpenCreate}>
+                Add expense
+              </Button>
+            ) : null}
           </motion.div>
         ) : null}
       </div>
 
       <Dialog open={details.open} onOpenChange={details.onOpenChange}>
-        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
           <DialogHeader className="space-y-1 border-b border-default px-5 py-4 pr-14 text-left">
             <DialogTitle className="text-base font-bold text-highlighted">
               {details.title}
@@ -324,46 +259,45 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
             </DialogDescription>
           </DialogHeader>
 
-          <div className="max-h-[min(70vh,32rem)] overflow-y-auto px-5 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             {details.totalCount === 0 ? (
-              <Card className="border-dashed shadow-none">
-                <CardContent className="py-8 text-center">
-                  <CardTitle className="text-sm font-semibold text-highlighted">
-                    <AgencySearchHighlight text={details.emptyTitle} query={expenses.searchTerm} />
-                  </CardTitle>
-                  <CardDescription className="mt-1 text-balance">
-                    <AgencySearchHighlight text={details.emptyBody} query={expenses.searchTerm} />
-                  </CardDescription>
-                </CardContent>
-              </Card>
+              <div className="border-y border-dashed border-default py-8 text-center">
+                <h3 className="text-sm font-semibold text-highlighted">
+                  <AgencySearchHighlight text={details.emptyTitle} query={searchTerm} />
+                </h3>
+                <p className="mt-1 text-sm text-muted text-balance">
+                  <AgencySearchHighlight text={details.emptyBody} query={searchTerm} />
+                </p>
+              </div>
             ) : (
-              <div className="flex flex-col gap-5">
+              <div className="flex flex-col">
                 {details.sections.map((section) => (
-                  <Card key={section.id} size="sm" className="shadow-none">
-                    <CardHeader className="flex-row items-baseline justify-between gap-2 pb-0">
-                      <CardTitle
+                  <section
+                    key={section.id}
+                    className="border-t border-default py-4 first:border-t-0 first:pt-0 last:pb-0"
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3
                         className={cn(
                           agencyLabelClass,
                           "text-xs font-medium tracking-wide text-muted uppercase",
                         )}
                       >
                         {section.title}
-                      </CardTitle>
-                      <Badge variant="outline" className="rounded-md font-mono tabular-nums">
+                      </h3>
+                      <span className="font-mono text-xs text-muted tabular-nums">
                         {section.items.length}
-                      </Badge>
-                    </CardHeader>
-                    <CardContent className="px-0 pt-2">
+                      </span>
+                    </div>
+                    <div className="pt-2">
                       {section.items.length === 0 ? (
-                        <CardDescription className="px-(--card-spacing) text-xs">
-                          None in this group.
-                        </CardDescription>
+                        <p className="text-xs text-muted">None in this group.</p>
                       ) : (
-                        <ul className="flex flex-col divide-y divide-default border-t border-default">
+                        <ul className="flex flex-col divide-y divide-default border-y border-default">
                           {section.items.map((item) => (
                             <li
                               key={item.id}
-                              className="flex items-center gap-3 px-(--card-spacing) py-2.5 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none"
+                              className="flex items-center gap-3 py-2.5 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none"
                             >
                               <ExpenseStripGlyph kind={item.kind} />
                               <div className="min-w-0 flex-1">
@@ -372,11 +306,11 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                                     type="button"
                                     variant="link"
                                     size="sm"
-                                    className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-xs font-medium text-highlighted sm:text-sm"
-                                    onClick={() => expenses.onOpenEdit(item.expenseId)}
+                                    className="-my-2 min-h-10 max-w-full truncate px-0 py-2 text-xs font-medium text-highlighted sm:my-0 sm:min-h-0 sm:py-0 sm:text-sm"
+                                    onClick={() => panel.onOpenEdit(item.expenseId)}
                                   >
                                     <span dir="auto">
-                                      <AgencySearchHighlight text={item.name} query={expenses.searchTerm} />
+                                      <AgencySearchHighlight text={item.name} query={searchTerm} />
                                     </span>
                                   </Button>
                                   <Badge
@@ -389,26 +323,26 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                                 <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
                                   <AgencySearchHighlight
                                     text={expenseStripMeta(item)}
-                                    query={expenses.searchTerm}
+                                    query={searchTerm}
                                   />
                                 </p>
                                 {item.note ? (
                                   <p className="truncate text-[11px] text-muted/80" dir="auto">
-                                    <AgencySearchHighlight text={item.note} query={expenses.searchTerm} />
+                                    <AgencySearchHighlight text={item.note} query={searchTerm} />
                                   </p>
                                 ) : null}
                               </div>
                               <div className="flex shrink-0 flex-col items-end gap-0.5 text-end">
                                 <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-highlighted">
-                                  {item.amountLabel}
+                                  {expenseStripAmountLabel(item)}
                                 </span>
                                 {item.canRecordPayment ? (
                                   <Button
                                     type="button"
                                     variant="link"
                                     size="sm"
-                                    className="h-auto min-h-0 px-0 py-0 text-[11px] font-semibold text-muted hover:text-highlighted"
-                                    onClick={() => expenses.onOpenPayment(item.expenseId)}
+                                    className="min-h-10 px-0 py-2 text-[11px] font-semibold text-muted hover:text-highlighted sm:min-h-0 sm:py-0"
+                                    onClick={() => panel.onOpenPayment(item.expenseId)}
                                     aria-label={`${item.kind === "subscription" ? "Pay" : "Record payment"} ${item.name}`}
                                   >
                                     {item.kind === "subscription" ? "Pay" : "Record"}
@@ -419,8 +353,8 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                           ))}
                         </ul>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </section>
                 ))}
               </div>
             )}
@@ -437,7 +371,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               size="sm"
               onClick={() => {
                 details.onOpenChange(false);
-                expenses.onOpenCreate();
+                panel.onOpenCreate();
               }}
             >
               Add expense
@@ -447,7 +381,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
       </Dialog>
 
       <Dialog open={create.open} onOpenChange={create.onOpenChange}>
-        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
           <DialogHeader className="space-y-2 border-b border-default px-5 py-4 pr-14 text-left">
             <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="text-base font-bold text-highlighted">
@@ -468,9 +402,11 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
 
           <form
             id={create.formId}
+            className="flex min-h-0 flex-1 flex-col"
+            noValidate
             onSubmit={(event: FormEvent<HTMLFormElement>) => create.onSubmit(event)}
           >
-            <div className="flex flex-col gap-4 px-5 py-4">
+            <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 py-4">
               <div className={agencyFormFieldClass}>
                 <Label htmlFor={`${create.formId}-name`} className={agencyFormLabelClass}>
                   Name
@@ -485,7 +421,19 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                     "h-9 rounded-xl border-default bg-default text-sm",
                     agencyInputPlaceholderClass,
                   )}
+                  required
+                  aria-invalid={Boolean(create.errors.name)}
+                  aria-describedby={create.errors.name ? `${create.formId}-name-error` : undefined}
                 />
+                {create.errors.name ? (
+                  <p
+                    id={`${create.formId}-name-error`}
+                    className="text-xs text-destructive"
+                    role="alert"
+                  >
+                    {create.errors.name}
+                  </p>
+                ) : null}
               </div>
 
               <div className={agencyFormFieldClass}>
@@ -516,7 +464,10 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               {create.kind === "subscription" ? (
                 <>
                   <div className={agencyFormFieldClass}>
-                    <Label htmlFor={`${create.formId}-amount-mode`} className={agencyFormLabelClass}>
+                    <Label
+                      htmlFor={`${create.formId}-amount-mode`}
+                      className={agencyFormLabelClass}
+                    >
                       Amount type
                     </Label>
                     <Select
@@ -571,6 +522,11 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                           ))}
                         </SelectContent>
                       </Select>
+                      {create.errors.period ? (
+                        <p className="text-xs text-destructive" role="alert">
+                          {create.errors.period}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className={agencyFormFieldClass}>
@@ -626,7 +582,21 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                       "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
                       agencyInputPlaceholderClass,
                     )}
+                    required
+                    aria-invalid={Boolean(create.errors.amount)}
+                    aria-describedby={
+                      create.errors.amount ? `${create.formId}-amount-error` : undefined
+                    }
                   />
+                  {create.errors.amount ? (
+                    <p
+                      id={`${create.formId}-amount-error`}
+                      className="text-xs text-destructive"
+                      role="alert"
+                    >
+                      {create.errors.amount}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -654,8 +624,12 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" size="sm" disabled={!create.canSubmit} form={create.formId}>
-                {create.submitLabel}
+              <Button type="submit" size="sm" disabled={create.isPending} form={create.formId}>
+                {create.isPending
+                  ? create.mode === "edit"
+                    ? "Saving…"
+                    : "Adding…"
+                  : create.submitLabel}
               </Button>
             </DialogFooter>
           </form>
@@ -663,7 +637,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
       </Dialog>
 
       <Dialog open={payment.open} onOpenChange={payment.onOpenChange}>
-        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
           <DialogHeader className="space-y-2 border-b border-default px-5 py-4 pr-14 text-left">
             <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="text-base font-bold text-highlighted">
@@ -677,9 +651,11 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
           </DialogHeader>
           <form
             id={payment.formId}
+            className="flex min-h-0 flex-1 flex-col"
+            noValidate
             onSubmit={(event: FormEvent<HTMLFormElement>) => payment.onSubmit(event)}
           >
-            <div className="flex flex-col gap-4 px-5 py-4">
+            <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 py-4">
               <Card size="sm" className="bg-muted/25 shadow-none">
                 <CardContent className="py-4 text-center">
                   <CardDescription>{payment.heroLabel}</CardDescription>
@@ -713,7 +689,21 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                     "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
                     agencyInputPlaceholderClass,
                   )}
+                  required
+                  aria-invalid={Boolean(payment.validationMessage)}
+                  aria-describedby={
+                    payment.validationMessage ? "money-expense-payment-amount-error" : undefined
+                  }
                 />
+                {payment.validationMessage ? (
+                  <p
+                    id="money-expense-payment-amount-error"
+                    className="text-xs text-destructive"
+                    role="alert"
+                  >
+                    {payment.validationMessage}
+                  </p>
+                ) : null}
               </div>
             </div>
             <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
@@ -722,15 +712,19 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                   Cancel
                 </Button>
               </DialogClose>
-              <Button type="submit" size="sm" disabled={!payment.canSubmit} form={payment.formId}>
-                {payment.kind === "subscription" ? "Pay" : "Record"}
+              <Button type="submit" size="sm" disabled={payment.isPending} form={payment.formId}>
+                {payment.isPending
+                  ? "Recording…"
+                  : payment.kind === "subscription"
+                    ? "Pay"
+                    : "Record"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-    </section>
+    </>
   );
 }
 
-export { ExpensesSection };
+export { MoneyExpensesPanelContent };

@@ -15,6 +15,7 @@ import {
 import { useAgencyPeriodState } from "@/features/shared/use-agency-period-state";
 import {
   formatMoneyExpenseAmount,
+  moneyExpenseAmountError,
   moneyExpenseAmountLabel,
   moneyExpenseCanSubmit,
   moneyExpensePaymentCanSubmit,
@@ -33,13 +34,13 @@ import {
 } from "@/features/billing/money-expense-form";
 import {
   filterSubscriptionCycles,
-  subscriptionCountLabel,
   type MoneySubscriptionVisibility,
 } from "@/features/billing/money-subscription-visibility";
 import {
   buildExpenseStripItems,
   EXPENSE_STRIP_FILTERS,
   expenseStripEmptyCopy,
+  expenseStripFilterFromSearch,
   expenseStripFilterVisibility,
   expenseStripInsight,
   filterExpenseStripItems,
@@ -49,7 +50,9 @@ import { dateInputToIso, toDateInputValue } from "@/features/shared/use-agency-t
 import {
   moneyBillsActiveFilterSummary,
   moneyBillsEmptyCopy,
+  moneyBillsPartyFilterFromSearch,
   moneyBillsStatusAllowed,
+  moneyBillsStatusFilterFromSearch,
   moneyBillsStatusOptionsForParty,
   MONEY_BILLS_PARTY_OPTIONS,
   type MoneyBillsClientCategoryFilter,
@@ -71,9 +74,11 @@ import {
   moneyBillRowFromAdjustmentLine,
   MONEY_ADJUSTMENT_SECTION_OPTIONS,
   moneyBillsAdjustmentCreateValid,
+  moneyBillsCanRefundObligation,
   moneyBillsCreateFormValid,
   moneyBillsPartyShowsAdjustments,
   moneyBillsPartyShowsClients,
+  moneyBillsPartyShowsExpenses,
   moneyBillsPartyShowsMembers,
   moneyBillsPaymentCanSubmit,
   parseMoneyBillPaymentAmount,
@@ -113,7 +118,7 @@ import {
   amountToMajor,
   type MoneyStatsCardWithSource,
 } from "@/features/billing/money-stats-live";
-import { moneyStatsPlateMeta } from "@/features/money/money-stats-plate-meta";
+import { moneyStatsMetricDestination } from "@/features/money/money-stats-plate-meta";
 import { formatMoneyStatsMetricValue } from "@/features/money/money-stats-plate-view";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { orpc, orpcClient } from "@/lib/orpc";
@@ -126,10 +131,6 @@ export type MoneyCohortAllocationsSelection =
   | { kind: "formula"; formulaId: string };
 
 const EXPENSE_CREATE_FORM_ID = "agency-money-expense-create";
-
-function expenseCountLabel(count: number, singular: string, plural: string): string {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
 
 function toExpenseRow(record: MoneyExpenseRecord) {
   const amountMode = record.amountMode ?? "fixed";
@@ -295,7 +296,7 @@ function buildCardViewModel(card: MoneyStatsCardWithSource): MoneyStatsCardViewM
 
 export function useAgencyMoneySurface(teamId: string) {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const initialPeriodSeed = useMemo(
     () => parseAgencyPeriodQuery(searchParams),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- seed once from the landing URL
@@ -326,20 +327,28 @@ export function useAgencyMoneySurface(teamId: string) {
     onTenureMonthIndexesChange: setTenureMonthIndexes,
   } = periodState;
 
-  const [partyFilter, setPartyFilter] = useState<MoneyBillsPartyFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<MoneyBillsStatusFilter | null>(null);
+  const partyFilter = moneyBillsPartyFilterFromSearch(searchParams.get("party"));
+  const parsedStatusFilter = moneyBillsStatusFilterFromSearch(searchParams.get("status"));
+  const statusFilter =
+    parsedStatusFilter && moneyBillsStatusAllowed(partyFilter, parsedStatusFilter)
+      ? parsedStatusFilter
+      : null;
+  const expenseStripFilter = expenseStripFilterFromSearch(searchParams.get("expense"));
+  const searchTerm = searchParams.get("q") ?? "";
+  const [remoteSearchTerm, setRemoteSearchTerm] = useState(searchTerm);
   const [clientCategoryFilter, setClientCategoryFilter] =
     useState<MoneyBillsClientCategoryFilter>("external");
-  const [searchTerm, setSearchTerm] = useState("");
   const [billCreateOpen, setBillCreateOpen] = useState(false);
   const [billCreateClientId, setBillCreateClientId] = useState("");
   const [billCreatePeriodStart, setBillCreatePeriodStart] = useState("");
   const [billCreatePeriodEnd, setBillCreatePeriodEnd] = useState("");
+  const [billCreateSubmitted, setBillCreateSubmitted] = useState(false);
   const [adjustmentCreateOpen, setAdjustmentCreateOpen] = useState(false);
   const [adjustmentSectionKey, setAdjustmentSectionKey] =
     useState<(typeof MONEY_ADJUSTMENT_SECTION_OPTIONS)[number]["id"]>("debt_discount");
   const [adjustmentLabel, setAdjustmentLabel] = useState("");
   const [adjustmentAmount, setAdjustmentAmount] = useState("");
+  const [adjustmentCreateSubmitted, setAdjustmentCreateSubmitted] = useState(false);
   const [salaryPoolPayAmount, setSalaryPoolPayAmount] = useState("");
   const [salaryPoolPayPending, setSalaryPoolPayPending] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<{
@@ -348,6 +357,7 @@ export function useAgencyMoneySurface(teamId: string) {
   } | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [pendingActionInvoiceId, setPendingActionInvoiceId] = useState<string | null>(null);
+  const [markPaidTargetId, setMarkPaidTargetId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewParty, setPreviewParty] = useState<MoneyPreviewParty | null>(null);
   const [selectedObligationIds, setSelectedObligationIds] = useState<string[]>([]);
@@ -358,6 +368,7 @@ export function useAgencyMoneySurface(teamId: string) {
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustKind, setAdjustKind] = useState<MoneyPendingAdjustKind>("discount");
   const [adjustNote, setAdjustNote] = useState("");
+  const [adjustSubmitted, setAdjustSubmitted] = useState(false);
   const [composeActionPending, setComposeActionPending] = useState(false);
   const [expenseCreateOpen, setExpenseCreateOpen] = useState(false);
   const [expenseEditorId, setExpenseEditorId] = useState<string | null>(null);
@@ -369,16 +380,13 @@ export function useAgencyMoneySurface(teamId: string) {
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseNote, setExpenseNote] = useState("");
   const [expenseStartsAt, setExpenseStartsAt] = useState("");
+  const [expenseCreateSubmitted, setExpenseCreateSubmitted] = useState(false);
   const [expensePaymentId, setExpensePaymentId] = useState<string | null>(null);
   const [expensePaymentAmount, setExpensePaymentAmount] = useState("");
+  const [expensePaymentSubmitted, setExpensePaymentSubmitted] = useState(false);
   const [subscriptionVisibility, setSubscriptionVisibility] = useState<MoneySubscriptionVisibility>(
-    {
-      due: true,
-      paid: true,
-    },
+    () => expenseStripFilterVisibility(expenseStripFilter),
   );
-  const [expenseStripFilter, setExpenseStripFilter] = useState<ExpenseStripFilter>("all");
-  const [expenseSearchTerm, setExpenseSearchTerm] = useState("");
   const [moneySettingsOpen, setMoneySettingsOpen] = useState(false);
   const [lastStatsMetricSelection, setLastStatsMetricSelection] =
     useState<MoneyStatsMetricSelection | null>(null);
@@ -391,6 +399,31 @@ export function useAgencyMoneySurface(teamId: string) {
   const [fxFromCurrency, setFxFromCurrency] = useState("USD");
   const [fxRateDraft, setFxRateDraft] = useState("");
   const [currencyDraft, setCurrencyDraft] = useState("USD");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setRemoteSearchTerm(searchTerm), 250);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setSubscriptionVisibility(expenseStripFilterVisibility(expenseStripFilter));
+  }, [expenseStripFilter]);
+
+  function updateMoneySearch(
+    updates: Partial<Record<"party" | "status" | "expense" | "q", string | null>>,
+    replace = true,
+  ) {
+    setSearchParams(
+      (current) => {
+        for (const [key, value] of Object.entries(updates)) {
+          if (value) current.set(key, value);
+          else current.delete(key);
+        }
+        return current;
+      },
+      { replace },
+    );
+  }
 
   const setAgencyCurrency = useAgencyOpsStore((s) => s.setAgencyCurrency);
   const upsertFxRate = useAgencyOpsStore((s) => s.upsertFxRate);
@@ -409,12 +442,15 @@ export function useAgencyMoneySurface(teamId: string) {
   });
   const isOwner = teamQuery.data?.role === "owner";
   const isRolePending = teamQuery.isPending;
+  const isRoleError = teamQuery.isError;
   const canManageMoney = isOwner;
 
   const showsClientBills = moneyBillsPartyShowsClients(partyFilter);
   const showsMemberBills = moneyBillsPartyShowsMembers(partyFilter);
   const showsAdjustmentBills = moneyBillsPartyShowsAdjustments(partyFilter);
-  const loadsPeriodBills = showsClientBills || showsMemberBills || showsAdjustmentBills;
+  const showsExpenses = moneyBillsPartyShowsExpenses(partyFilter);
+  const loadsPeriodBills =
+    !showsExpenses && (showsClientBills || showsMemberBills || showsAdjustmentBills);
   const loadsPayoutLines = showsMemberBills || showsAdjustmentBills;
   const loadsPeriodObligations = showsClientBills || showsMemberBills;
   const loadsSalaryPool = showsMemberBills || showsAdjustmentBills;
@@ -438,7 +474,7 @@ export function useAgencyMoneySurface(teamId: string) {
         periodStart: periodRange.from,
         periodEnd: periodRange.to,
         billStatus: statusFilter ?? undefined,
-        search: searchTerm.trim() || undefined,
+        search: remoteSearchTerm.trim() || undefined,
       },
     }),
     enabled: Boolean(teamId) && isOwner && showsClientBills,
@@ -451,7 +487,7 @@ export function useAgencyMoneySurface(teamId: string) {
         periodStart: periodRange.from,
         periodEnd: periodRange.to,
         billStatus: teamBillStatus,
-        search: searchTerm.trim() || undefined,
+        search: remoteSearchTerm.trim() || undefined,
         billsParty: payoutBillsParty,
       },
     }),
@@ -475,7 +511,7 @@ export function useAgencyMoneySurface(teamId: string) {
         teamId,
         periodStart: periodRange.from,
         periodEnd: periodRange.to,
-        search: searchTerm.trim() || undefined,
+        search: remoteSearchTerm.trim() || undefined,
       },
     }),
     enabled: Boolean(teamId) && isOwner && loadsPeriodObligations,
@@ -487,7 +523,7 @@ export function useAgencyMoneySurface(teamId: string) {
         teamId,
         periodStart: periodRange.from,
         periodEnd: periodRange.to,
-        search: searchTerm.trim() || undefined,
+        search: remoteSearchTerm.trim() || undefined,
       },
     }),
     enabled: Boolean(teamId) && isOwner && (showsClientBills || showsMemberBills),
@@ -730,7 +766,7 @@ export function useAgencyMoneySurface(teamId: string) {
     return {
       label: metric.label,
       value: formatMoneyStatsMetricValue(metric.kind, metric.amount, card.currency),
-      destination: moneyStatsPlateMeta(card.id).destinationHint,
+      destination: moneyStatsMetricDestination(metric.id),
     };
   }, [lastStatsMetricSelection, statsCards]);
 
@@ -910,6 +946,22 @@ export function useAgencyMoneySurface(teamId: string) {
     billCreatePeriodStart,
     billCreatePeriodEnd,
   );
+  const billCreateErrors = {
+    client: billCreateSubmitted && !billCreateClientId ? "Choose the client to invoice." : null,
+    period:
+      billCreateSubmitted && (!billCreatePeriodStart || !billCreatePeriodEnd)
+        ? "Choose the invoice period."
+        : billCreateSubmitted && billCreatePeriodEnd < billCreatePeriodStart
+          ? "The end date must be on or after the start date."
+          : null,
+  };
+  const adjustmentCreateErrors = {
+    label:
+      adjustmentCreateSubmitted && adjustmentSectionKey !== "salary_pool" && !adjustmentLabel.trim()
+        ? "Enter a label for this adjustment."
+        : null,
+    amount: adjustmentCreateSubmitted ? moneyExpenseAmountError(adjustmentAmount) : null,
+  };
   const paymentCanSubmit = paymentRow
     ? moneyBillsPaymentCanSubmit(paymentAmount, paymentRow.remainingAmount)
     : false;
@@ -917,21 +969,26 @@ export function useAgencyMoneySurface(teamId: string) {
     paymentAmount.trim().length > 0 && paymentRow && !paymentCanSubmit
       ? `Enter an amount greater than zero and no more than ${paymentRow.remainingLabel}.`
       : null;
+  const markPaidTarget = markPaidTargetId ? resolvePaymentTarget(markPaidTargetId) : null;
 
-  const billsIsLoading =
-    loadsPeriodBills &&
-    ((loadsPeriodObligations && periodObligationsQuery.isPending) ||
-      (showsAdjustmentBills && payoutsQuery.isPending) ||
-      (loadsSalaryPool && salaryPoolQuery.isPending));
-  const billsIsError =
-    loadsPeriodBills &&
-    ((loadsPeriodObligations && periodObligationsQuery.isError) ||
-      (showsAdjustmentBills && payoutsQuery.isError) ||
-      (loadsSalaryPool && salaryPoolQuery.isError));
-  const billsErrorMessage = getErrorMessage(
-    periodObligationsQuery.error ?? payoutsQuery.error ?? salaryPoolQuery.error,
-    "Try refreshing.",
-  );
+  const billsIsLoading = showsExpenses
+    ? expensesStatus === "loading"
+    : loadsPeriodBills &&
+      ((loadsPeriodObligations && periodObligationsQuery.isPending) ||
+        (showsAdjustmentBills && payoutsQuery.isPending) ||
+        (loadsSalaryPool && salaryPoolQuery.isPending));
+  const billsIsError = showsExpenses
+    ? expensesStatus === "error"
+    : loadsPeriodBills &&
+      ((loadsPeriodObligations && periodObligationsQuery.isError) ||
+        (showsAdjustmentBills && payoutsQuery.isError) ||
+        (loadsSalaryPool && salaryPoolQuery.isError));
+  const billsErrorMessage = showsExpenses
+    ? expensesErrorMessage
+    : getErrorMessage(
+        periodObligationsQuery.error ?? payoutsQuery.error ?? salaryPoolQuery.error,
+        "Try refreshing.",
+      );
 
   const upcomingExpenses = useMemo(
     () =>
@@ -1021,8 +1078,8 @@ export function useAgencyMoneySurface(teamId: string) {
   );
 
   const expenseStripVisibleItems = useMemo(
-    () => filterExpenseStripItems(expenseStripItems, expenseSearchTerm),
-    [expenseSearchTerm, expenseStripItems],
+    () => filterExpenseStripItems(expenseStripItems, searchTerm),
+    [expenseStripItems, searchTerm],
   );
 
   const expenseStripEmpty = useMemo(
@@ -1031,19 +1088,13 @@ export function useAgencyMoneySurface(teamId: string) {
         expenseStripFilter,
         expenseStripSources,
         expenseStripVisibleItems.length,
-        expenseSearchTerm,
+        searchTerm,
       ),
-    [
-      expenseSearchTerm,
-      expenseStripFilter,
-      expenseStripSources,
-      expenseStripVisibleItems.length,
-    ],
+    [expenseStripFilter, expenseStripSources, expenseStripVisibleItems.length, searchTerm],
   );
 
   const expenseStripInsightLabel = useMemo(
-    () =>
-      expensesStatus === "ready" ? expenseStripInsight(expenseStripSources) : null,
+    () => (expensesStatus === "ready" ? expenseStripInsight(expenseStripSources) : null),
     [expenseStripSources, expensesStatus],
   );
 
@@ -1054,22 +1105,20 @@ export function useAgencyMoneySurface(teamId: string) {
             {
               id: "upcoming" as const,
               title: "Subscriptions",
-              items: filterExpenseStripItems(upcomingExpenses, expenseSearchTerm),
+              items: filterExpenseStripItems(upcomingExpenses, searchTerm),
             },
             {
               id: "recent" as const,
               title: "One-time expenses",
-              items: filterExpenseStripItems(recentExpenses, expenseSearchTerm),
+              items: filterExpenseStripItems(recentExpenses, searchTerm),
             },
           ]
         : [],
-    [expenseSearchTerm, expensesStatus, recentExpenses, upcomingExpenses],
+    [expensesStatus, recentExpenses, searchTerm, upcomingExpenses],
   );
 
   function onExpenseStripFilterChange(next: ExpenseStripFilter) {
-    setExpenseStripFilter(next);
-    const visibility = expenseStripFilterVisibility(next);
-    setSubscriptionVisibility(visibility);
+    updateMoneySearch({ expense: next === "all" ? null : next }, false);
   }
 
   const canSubmitExpense = moneyExpenseCanSubmit(
@@ -1079,6 +1128,16 @@ export function useAgencyMoneySurface(teamId: string) {
     expenseAmount,
     expenseAmountMode,
   );
+  const expenseNeedsAmount = expenseKind !== "subscription" || expenseAmountMode === "fixed";
+  const expenseCreateErrors = {
+    name: expenseCreateSubmitted && !expenseName.trim() ? "Enter an expense name." : null,
+    period:
+      expenseCreateSubmitted && expenseKind === "subscription" && expensePeriod === null
+        ? "Choose how often this subscription repeats."
+        : null,
+    amount:
+      expenseCreateSubmitted && expenseNeedsAmount ? moneyExpenseAmountError(expenseAmount) : null,
+  };
 
   const expensePaymentRow = useMemo(() => {
     const record = expenseRecords.find((item) => item.id === expensePaymentId);
@@ -1097,47 +1156,49 @@ export function useAgencyMoneySurface(teamId: string) {
     setLastStatsMetricSelection(selection);
     switch (selection.metricId) {
       case "total-income":
-        setPartyFilter("client");
-        setStatusFilter(null);
+        updateMoneySearch({ party: "client", status: null }, false);
         break;
       case "received":
-        setPartyFilter("client");
-        setStatusFilter("paid");
+        updateMoneySearch({ party: "client", status: "paid" }, false);
         break;
       case "remaining":
-        setPartyFilter("client");
-        setStatusFilter("outstanding");
+        updateMoneySearch({ party: "client", status: "outstanding" }, false);
         break;
       case "salaries":
       case "paid-vacation":
       case "device-compensation":
-        setPartyFilter("team");
-        setStatusFilter(null);
+        updateMoneySearch({ party: "team", status: null }, false);
         break;
       case "expenses":
-        setExpenseDetailsOpen(true);
+        updateMoneySearch({ party: "expenses", status: null, expense: null }, false);
         break;
       case "debt-discount":
       case "charity":
       case "pbc":
-        setPartyFilter("adjustments");
-        setStatusFilter(null);
+        updateMoneySearch({ party: "adjustments", status: null }, false);
         break;
       case "profit-loss-share":
         setMoneySettingsDraft(null);
         setCohortPane("formulas");
         setMoneySettingsOpen(true);
-        break;
+        return;
       case "team-profit":
       case "roi":
-        setPartyFilter("adjustments");
-        setStatusFilter(null);
+        updateMoneySearch({ party: "adjustments", status: null }, false);
         break;
       default: {
         const _exhaustive: never = selection.metricId;
         void _exhaustive;
       }
     }
+    window.requestAnimationFrame(() => {
+      const panelHeading = document.getElementById("money-bills-panel-heading");
+      panelHeading?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "start",
+      });
+      panelHeading?.focus({ preventScroll: true });
+    });
   }
 
   function onMoneySettingsOpenChange(open: boolean) {
@@ -1256,9 +1317,12 @@ export function useAgencyMoneySurface(teamId: string) {
   }
 
   function onPartyFilterChange(next: MoneyBillsPartyFilter) {
-    setPartyFilter(next);
-    setStatusFilter((current) =>
-      current && moneyBillsStatusAllowed(next, current) ? current : null,
+    updateMoneySearch(
+      {
+        party: next === "all" ? null : next,
+        status: statusFilter && moneyBillsStatusAllowed(next, statusFilter) ? statusFilter : null,
+      },
+      false,
     );
     if (next === "all" || next === "client") {
       setClientCategoryFilter("external");
@@ -1266,11 +1330,11 @@ export function useAgencyMoneySurface(teamId: string) {
   }
 
   function onStatusFilterChange(next: MoneyBillsStatusFilter) {
-    setStatusFilter((current) => (current === next ? null : next));
+    updateMoneySearch({ status: statusFilter === next ? null : next }, false);
   }
 
   function onClearStatusFilter() {
-    setStatusFilter(null);
+    updateMoneySearch({ status: null }, false);
   }
 
   function onClearClientCategoryFilter() {
@@ -1278,8 +1342,7 @@ export function useAgencyMoneySurface(teamId: string) {
   }
 
   function onClearAllFilters() {
-    setPartyFilter("all");
-    setStatusFilter(null);
+    updateMoneySearch({ party: null, status: null, expense: null, q: null }, false);
     setClientCategoryFilter(null);
   }
 
@@ -1287,6 +1350,7 @@ export function useAgencyMoneySurface(teamId: string) {
     setBillCreateClientId("");
     setBillCreatePeriodStart("");
     setBillCreatePeriodEnd("");
+    setBillCreateSubmitted(false);
   }
 
   function openBillCreate(clientId = "") {
@@ -1416,6 +1480,7 @@ export function useAgencyMoneySurface(teamId: string) {
     setAdjustAmount((line.openCents / 100).toFixed(2));
     setAdjustKind("discount");
     setAdjustNote("");
+    setAdjustSubmitted(false);
     setAdjustOpen(true);
   }
 
@@ -1433,6 +1498,7 @@ export function useAgencyMoneySurface(teamId: string) {
       setAdjustAmount("");
       setAdjustKind("discount");
       setAdjustNote("");
+      setAdjustSubmitted(false);
     }
   }
 
@@ -1509,6 +1575,7 @@ export function useAgencyMoneySurface(teamId: string) {
 
   async function onAdjustSubmit() {
     if (!adjustTarget) return;
+    setAdjustSubmitted(true);
     switch (adjustTab) {
       case "pay": {
         await onSettle({ action: "pay", amount: adjustTarget.line.openCents });
@@ -1521,7 +1588,6 @@ export function useAgencyMoneySurface(teamId: string) {
         return;
       }
       case "refund": {
-        if (!window.confirm("Refund this obligation? This changes its bill status.")) return;
         await onSettle({ action: "refund", amount: 0 });
         return;
       }
@@ -1560,6 +1626,7 @@ export function useAgencyMoneySurface(teamId: string) {
 
   async function onBillCreateSubmit(event: { preventDefault: () => void }) {
     event.preventDefault();
+    setBillCreateSubmitted(true);
     if (!createFormValid) return;
     const client = clients.find((item) => item.id === billCreateClientId);
     await agencyOps.createInvoice(
@@ -1628,11 +1695,13 @@ export function useAgencyMoneySurface(teamId: string) {
       setAdjustmentSectionKey("debt_discount");
       setAdjustmentLabel("");
       setAdjustmentAmount("");
+      setAdjustmentCreateSubmitted(false);
     }
   }
 
   async function onAdjustmentCreateSubmit(event: { preventDefault: () => void }) {
     event.preventDefault();
+    setAdjustmentCreateSubmitted(true);
     if (!adjustmentCreateValid) return;
     const amount = parseMoneyExpenseAmount(adjustmentAmount);
     if (amount === null) return;
@@ -1671,10 +1740,16 @@ export function useAgencyMoneySurface(teamId: string) {
     setPendingActionInvoiceId(null);
   }
 
-  async function onMarkBillPaid(rowId: string) {
+  function onRequestMarkBillPaid(rowId: string) {
+    setMarkPaidTargetId(rowId);
+  }
+
+  async function onConfirmMarkBillPaid() {
+    const rowId = markPaidTargetId;
+    if (!rowId) return;
     const target = resolvePaymentTarget(rowId);
-    if (!target) return;
-    if (!window.confirm(`Mark ${target.remainingLabel} for ${target.partyName} as fully paid?`)) {
+    if (!target) {
+      setMarkPaidTargetId(null);
       return;
     }
     setPendingActionInvoiceId(rowId);
@@ -1690,16 +1765,7 @@ export function useAgencyMoneySurface(teamId: string) {
       );
     }
     setPendingActionInvoiceId(null);
-  }
-
-  async function onRefundBill(invoiceId: string) {
-    if (!window.confirm("Refund this invoice? This changes its bill status.")) return;
-    setPendingActionInvoiceId(invoiceId);
-    await agencyOps.updateInvoiceStatus(
-      { teamId, invoiceId, status: "refunded" },
-      { onSuccess: () => setPendingActionInvoiceId(null) },
-    );
-    setPendingActionInvoiceId(null);
+    setMarkPaidTargetId(null);
   }
 
   function resetExpenseCreateForm() {
@@ -1711,6 +1777,7 @@ export function useAgencyMoneySurface(teamId: string) {
     setExpenseAmount("");
     setExpenseNote("");
     setExpenseStartsAt("");
+    setExpenseCreateSubmitted(false);
   }
 
   function onExpenseCreateOpenChange(open: boolean) {
@@ -1731,6 +1798,7 @@ export function useAgencyMoneySurface(teamId: string) {
     if (!open) {
       setExpensePaymentId(null);
       setExpensePaymentAmount("");
+      setExpensePaymentSubmitted(false);
     }
   }
 
@@ -1752,9 +1820,7 @@ export function useAgencyMoneySurface(teamId: string) {
     setExpenseKind(record.kind);
     setExpensePeriod(record.period);
     setExpenseAmountMode(record.amountMode ?? "fixed");
-    setExpenseAmount(
-      record.amountMode === "variable" ? "" : (record.amount / 100).toFixed(2),
-    );
+    setExpenseAmount(record.amountMode === "variable" ? "" : (record.amount / 100).toFixed(2));
     setExpenseNote(record.note);
     setExpenseStartsAt(record.startsAt ? toDateInputValue(new Date(record.startsAt)) : "");
     setExpenseCreateOpen(true);
@@ -1762,6 +1828,7 @@ export function useAgencyMoneySurface(teamId: string) {
 
   async function onExpenseCreateSubmit(event: { preventDefault: () => void }) {
     event.preventDefault();
+    setExpenseCreateSubmitted(true);
     if (
       !moneyExpenseCanSubmit(
         expenseName,
@@ -1819,6 +1886,7 @@ export function useAgencyMoneySurface(teamId: string) {
 
   async function onExpensePaymentSubmit(event: { preventDefault: () => void }) {
     event.preventDefault();
+    setExpensePaymentSubmitted(true);
     if (!expensePaymentRow) return;
     const amount = parseMoneyExpensePaymentAmount(
       expensePaymentAmount,
@@ -1854,7 +1922,7 @@ export function useAgencyMoneySurface(teamId: string) {
       case "partial":
         return moneyBillsPaymentCanSubmit(adjustAmount, adjustTarget.line.openCents);
       case "refund":
-        return true;
+        return moneyBillsCanRefundObligation(adjustTarget.line.obligationKind);
       case "adjustments":
         return parseMoneyExpenseAmount(adjustAmount) !== null;
       default: {
@@ -1863,6 +1931,14 @@ export function useAgencyMoneySurface(teamId: string) {
       }
     }
   })();
+  const adjustAmountError =
+    adjustSubmitted && adjustTarget && (adjustTab === "partial" || adjustTab === "adjustments")
+      ? adjustTab === "partial"
+        ? moneyBillsPaymentCanSubmit(adjustAmount, adjustTarget.line.openCents)
+          ? null
+          : `Enter an amount greater than zero and no more than ${adjustTarget.line.openLabel}.`
+        : moneyExpenseAmountError(adjustAmount)
+      : null;
 
   async function onSalaryPoolPay() {
     const pool = salaryPoolQuery.data?.pool;
@@ -1905,6 +1981,10 @@ export function useAgencyMoneySurface(teamId: string) {
       payAmount: salaryPoolPayAmount,
       canPay,
       canSubmitPay: canPay && payAmount !== null,
+      validationMessage:
+        salaryPoolPayAmount.trim() && pool && payAmount === null
+          ? `Enter an amount greater than zero and no more than ${formatMoneyAmount(pool.remainingAmount, currency)}.`
+          : null,
       isPending: salaryPoolPayPending,
       onPayAmountChange: setSalaryPoolPayAmount,
       onPay: () => void onSalaryPoolPay(),
@@ -1942,6 +2022,10 @@ export function useAgencyMoneySurface(teamId: string) {
     teamId,
     isOwner,
     isRolePending,
+    isRoleError,
+    roleErrorMessage: getErrorMessage(teamQuery.error, "Try again."),
+    onRetryRole: () => void teamQuery.refetch(),
+    onOpenPeople: () => navigate("/agency/management/people"),
     canManageMoney,
     title: agencyManagementPaneLabel("money"),
     subtitle: agencyManagementPaneSubtitle("money"),
@@ -2107,7 +2191,7 @@ export function useAgencyMoneySurface(teamId: string) {
       onClearClientCategoryFilter,
       onClearAllFilters,
       searchTerm,
-      onSearchTermChange: setSearchTerm,
+      onSearchTermChange: (next: string) => updateMoneySearch({ q: next.trim() ? next : null }),
       activeFilterSummary: billsActiveFilterSummary,
       emptyCopy: billsEmptyCopy,
       billCount: billRows.length,
@@ -2118,6 +2202,10 @@ export function useAgencyMoneySurface(teamId: string) {
       isError: billsIsError,
       errorMessage: billsErrorMessage,
       onRetry: () => {
+        if (showsExpenses) {
+          void Promise.all([expensesQuery.refetch(), subscriptionCyclesQuery.refetch()]);
+          return;
+        }
         void periodObligationsQuery.refetch();
         void payoutsQuery.refetch();
         void salaryPoolQuery.refetch();
@@ -2125,8 +2213,11 @@ export function useAgencyMoneySurface(teamId: string) {
       isMutationPending: isInvoiceMutationPending || composeActionPending,
       pendingActionInvoiceId,
       periodLabel,
-      onOpenCreate: () =>
-        partyFilter === "adjustments" ? onAdjustmentCreateOpenChange(true) : openBillCreate(),
+      createMenu: {
+        onOpenInvoice: () => openBillCreate(),
+        onOpenAdjustment: () => onAdjustmentCreateOpenChange(true),
+        onOpenExpense: () => onExpenseCreateOpenChange(true),
+      },
       onOpenClient,
       onOpenMember,
       onOpenPreview,
@@ -2136,9 +2227,18 @@ export function useAgencyMoneySurface(teamId: string) {
       onCreateInvoiceForClient,
       onCreatePayoutForMember,
       onSend: onSendBill,
-      onMarkPaid: onMarkBillPaid,
-      onRefund: onRefundBill,
+      onMarkPaid: onRequestMarkBillPaid,
       onOpenPayment,
+      markPaidConfirm: {
+        open: Boolean(markPaidTarget),
+        onOpenChange: (open: boolean) => {
+          if (!open) setMarkPaidTargetId(null);
+        },
+        partyName: markPaidTarget?.partyName ?? "",
+        amountLabel: markPaidTarget?.remainingLabel ?? "",
+        isPending: isInvoiceMutationPending,
+        onConfirm: () => void onConfirmMarkBillPaid(),
+      },
       salaryPool: salaryPoolViewModel,
       preview: {
         open: previewOpen,
@@ -2187,6 +2287,9 @@ export function useAgencyMoneySurface(teamId: string) {
         lineSubtitle: adjustTarget?.line.subtitle ?? "",
         statusLabel: adjustTarget?.line.statusLabel ?? "",
         isReady: adjustTarget?.line.obligationKind === "ready",
+        canRefund: adjustTarget
+          ? moneyBillsCanRefundObligation(adjustTarget.line.obligationKind)
+          : false,
         remainingLabel: adjustTarget?.line.openLabel ?? "",
         currency: adjustTarget?.line.currency ?? "USD",
         tab: adjustTab,
@@ -2197,7 +2300,9 @@ export function useAgencyMoneySurface(teamId: string) {
         onKindChange: setAdjustKind,
         note: adjustNote,
         onNoteChange: setAdjustNote,
+        amountError: adjustAmountError,
         canSubmit: adjustCanSubmit,
+        isPending: composeActionPending || isInvoiceMutationPending,
         onSubmit: () => void onAdjustSubmit(),
         onSettle,
         onUpsertPendingAdjustment,
@@ -2213,7 +2318,9 @@ export function useAgencyMoneySurface(teamId: string) {
         onPeriodStartChange: setBillCreatePeriodStart,
         periodEnd: billCreatePeriodEnd,
         onPeriodEndChange: setBillCreatePeriodEnd,
+        errors: billCreateErrors,
         canSubmit: createFormValid && !isInvoiceMutationPending,
+        isPending: isInvoiceMutationPending,
         onSubmit: onBillCreateSubmit,
       },
       adjustmentCreate: {
@@ -2228,7 +2335,9 @@ export function useAgencyMoneySurface(teamId: string) {
         onLabelChange: setAdjustmentLabel,
         amount: adjustmentAmount,
         onAmountChange: setAdjustmentAmount,
+        errors: adjustmentCreateErrors,
         canSubmit: adjustmentCreateValid && !isInvoiceMutationPending,
+        isPending: isInvoiceMutationPending,
         onSubmit: onAdjustmentCreateSubmit,
       },
       payment: {
@@ -2245,134 +2354,100 @@ export function useAgencyMoneySurface(teamId: string) {
         canSubmit: paymentCanSubmit && !isInvoiceMutationPending,
         onSubmit: onPaymentSubmit,
       },
-    },
-    expenses: {
-      title: "Expenses",
-      subtitle: "Subscriptions and ops spend",
-      periodSpendLabel: expensesPeriodSpendLabel,
-      searchTerm: expenseSearchTerm,
-      onSearchTermChange: setExpenseSearchTerm,
-      status: expensesStatus,
-      errorMessage: expensesErrorMessage,
-      onRetry: () => void Promise.all([expensesQuery.refetch(), subscriptionCyclesQuery.refetch()]),
-      onOpenCreate: () => onExpenseCreateOpenChange(true),
-      onOpenEdit: onOpenExpenseEdit,
-      strip: {
-        filter: expenseStripFilter,
-        filterOptions: EXPENSE_STRIP_FILTERS,
-        onFilterChange: onExpenseStripFilterChange,
-        items: expenseStripVisibleItems,
-        itemCount: expenseStripVisibleItems.length,
-        insight: expenseStripInsightLabel,
-        empty: expenseStripEmpty,
-      },
-      details: {
-        open: expenseDetailsOpen,
-        onOpenChange: setExpenseDetailsOpen,
-        title: "All expenses",
-        emptyTitle: expenseSearchTerm.trim()
-          ? "No matching expenses"
-          : "No expenses yet",
-        emptyBody: expenseSearchTerm.trim()
-          ? `Nothing matches “${expenseSearchTerm.trim()}” in this view.`
-          : "Add a one-time expense or subscription to see it here.",
-        sections: expenseDetailsSections,
-        totalCount:
-          expensesStatus === "ready"
-            ? expenseDetailsSections.reduce((sum, section) => sum + section.items.length, 0)
-            : 0,
-      },
-      create: {
-        open: expenseCreateOpen,
-        onOpenChange: onExpenseCreateOpenChange,
-        formId: EXPENSE_CREATE_FORM_ID,
-        mode: expenseEditorId ? ("edit" as const) : ("create" as const),
-        title: expenseEditorId ? "Edit expense" : "Add expense",
-        submitLabel: expenseEditorId ? "Save" : "Add",
-        kindLocked: Boolean(expenseEditorId),
-        name: expenseName,
-        onNameChange: setExpenseName,
-        kind: expenseKind,
-        kindOptions: MONEY_EXPENSE_KIND_OPTIONS,
-        onKindChange: onExpenseKindChange,
-        period: expensePeriod,
-        periodOptions: MONEY_EXPENSE_PERIOD_OPTIONS,
-        onPeriodChange: setExpensePeriod,
-        amountMode: expenseAmountMode,
-        amountModeOptions: MONEY_EXPENSE_AMOUNT_MODE_OPTIONS,
-        onAmountModeChange: setExpenseAmountMode,
-        startsAt: expenseStartsAt,
-        onStartsAtChange: setExpenseStartsAt,
-        amount: expenseAmount,
-        onAmountChange: setExpenseAmount,
-        note: expenseNote,
-        onNoteChange: setExpenseNote,
-        canSubmit: canSubmitExpense && !isInvoiceMutationPending,
-        onSubmit: onExpenseCreateSubmit,
-      },
-      payment: {
-        open: Boolean(expensePaymentRow),
-        onOpenChange: onExpensePaymentOpenChange,
-        formId: "agency-money-expense-payment",
-        kind: expensePaymentRow?.kind ?? "one_time",
-        name: expensePaymentRow?.name ?? "",
-        amountMode: expensePaymentRow?.amountMode ?? "fixed",
-        heroLabel: expensePaymentRow?.amountMode === "variable" ? "This cycle" : "Remaining",
-        heroValue:
-          expensePaymentRow?.amountMode === "variable"
-            ? "Variable"
-            : (expensePaymentRow?.remainingLabel ?? "—"),
-        heroHint:
-          expensePaymentRow?.kind === "subscription"
-            ? expensePaymentRow.amountMode === "variable"
-              ? "Enter this cycle's amount. Paying records it and rolls the next due forward."
-              : "Paying in full rolls the next due forward and hides this row until then."
-            : "",
-        remainingLabel: expensePaymentRow?.remainingLabel ?? "",
-        currency: expensePaymentRow?.currency ?? "USD",
-        amount: expensePaymentAmount,
-        onAmountChange: setExpensePaymentAmount,
-        canSubmit: expensePaymentCanSubmit && !isInvoiceMutationPending,
-        onSubmit: onExpensePaymentSubmit,
-      },
-      onOpenPayment: onOpenExpensePayment,
-      upcoming: {
-        id: "upcoming" as const,
-        title: "Subscriptions",
-        hint: "This period",
-        emptyTitle:
-          !subscriptionVisibility.due && !subscriptionVisibility.paid
-            ? "No visibility selected"
-            : subscriptionVisibility.paid && !subscriptionVisibility.due
-              ? "No paid subscriptions this period"
-              : "Nothing due soon",
-        emptyBody:
-          !subscriptionVisibility.due && !subscriptionVisibility.paid
-            ? "Choose Due or Paid from visibility."
-            : "Change visibility to inspect other subscription cycles.",
-        count: upcomingExpenses.length,
-        countLabel: subscriptionCountLabel(upcomingExpenses.length, subscriptionVisibility),
-        items: upcomingExpenses,
-        visibility: {
-          ...subscriptionVisibility,
-          onDueChange: (due: boolean) =>
-            setSubscriptionVisibility((current) => ({ ...current, due })),
-          onPaidChange: (paid: boolean) =>
-            setSubscriptionVisibility((current) => ({ ...current, paid })),
+      expensesPanel: {
+        periodSpendLabel: expensesPeriodSpendLabel,
+        status: expensesStatus,
+        errorMessage: expensesErrorMessage,
+        onRetry: () =>
+          void Promise.all([expensesQuery.refetch(), subscriptionCyclesQuery.refetch()]),
+        onOpenCreate: () => onExpenseCreateOpenChange(true),
+        onOpenEdit: onOpenExpenseEdit,
+        onOpenPayment: onOpenExpensePayment,
+        strip: {
+          filter: expenseStripFilter,
+          filterOptions: EXPENSE_STRIP_FILTERS,
+          onFilterChange: onExpenseStripFilterChange,
+          items: expenseStripVisibleItems,
+          itemCount: expenseStripVisibleItems.length,
+          insight: expenseStripInsightLabel,
+          empty: expenseStripEmpty,
         },
-      },
-      recent: {
-        id: "recent" as const,
-        title: "One-time expenses",
-        hint: "This period",
-        emptyTitle: "No recent spend",
-        emptyBody: "One-time expenses this period will appear here.",
-        count: recentExpenses.length,
-        countLabel: expenseCountLabel(recentExpenses.length, "this period", "this period"),
-        items: recentExpenses,
-      },
-      allSubscriptions: {
-        items: allSubscriptionExpenses,
+        details: {
+          open: expenseDetailsOpen,
+          onOpenChange: setExpenseDetailsOpen,
+          title: "All expenses",
+          emptyTitle: searchTerm.trim() ? "No matching expenses" : "No expenses yet",
+          emptyBody: searchTerm.trim()
+            ? `Nothing matches “${searchTerm.trim()}” in this view.`
+            : "Add a one-time expense or subscription to see it here.",
+          sections: expenseDetailsSections,
+          totalCount:
+            expensesStatus === "ready"
+              ? expenseDetailsSections.reduce((sum, section) => sum + section.items.length, 0)
+              : 0,
+        },
+        create: {
+          open: expenseCreateOpen,
+          onOpenChange: onExpenseCreateOpenChange,
+          formId: EXPENSE_CREATE_FORM_ID,
+          mode: expenseEditorId ? ("edit" as const) : ("create" as const),
+          title: expenseEditorId ? "Edit expense" : "Add expense",
+          submitLabel: expenseEditorId ? "Save" : "Add",
+          kindLocked: Boolean(expenseEditorId),
+          name: expenseName,
+          onNameChange: setExpenseName,
+          kind: expenseKind,
+          kindOptions: MONEY_EXPENSE_KIND_OPTIONS,
+          onKindChange: onExpenseKindChange,
+          period: expensePeriod,
+          periodOptions: MONEY_EXPENSE_PERIOD_OPTIONS,
+          onPeriodChange: setExpensePeriod,
+          amountMode: expenseAmountMode,
+          amountModeOptions: MONEY_EXPENSE_AMOUNT_MODE_OPTIONS,
+          onAmountModeChange: setExpenseAmountMode,
+          startsAt: expenseStartsAt,
+          onStartsAtChange: setExpenseStartsAt,
+          amount: expenseAmount,
+          onAmountChange: setExpenseAmount,
+          note: expenseNote,
+          onNoteChange: setExpenseNote,
+          errors: expenseCreateErrors,
+          canSubmit: canSubmitExpense && !isInvoiceMutationPending,
+          isPending: isInvoiceMutationPending,
+          onSubmit: onExpenseCreateSubmit,
+        },
+        payment: {
+          open: Boolean(expensePaymentRow),
+          onOpenChange: onExpensePaymentOpenChange,
+          formId: "agency-money-expense-payment",
+          kind: expensePaymentRow?.kind ?? "one_time",
+          name: expensePaymentRow?.name ?? "",
+          amountMode: expensePaymentRow?.amountMode ?? "fixed",
+          heroLabel: expensePaymentRow?.amountMode === "variable" ? "This cycle" : "Remaining",
+          heroValue:
+            expensePaymentRow?.amountMode === "variable"
+              ? "Variable"
+              : (expensePaymentRow?.remainingLabel ?? "—"),
+          heroHint:
+            expensePaymentRow?.kind === "subscription"
+              ? expensePaymentRow.amountMode === "variable"
+                ? "Enter this cycle's amount. Paying records it and rolls the next due forward."
+                : "Paying in full rolls the next due forward and hides this row until then."
+              : "",
+          remainingLabel: expensePaymentRow?.remainingLabel ?? "",
+          currency: expensePaymentRow?.currency ?? "USD",
+          amount: expensePaymentAmount,
+          onAmountChange: setExpensePaymentAmount,
+          validationMessage:
+            expensePaymentSubmitted && !expensePaymentCanSubmit
+              ? expensePaymentRow?.amountMode === "variable"
+                ? "Use a positive amount with up to two decimal places."
+                : `Enter an amount greater than zero and no more than ${expensePaymentRow?.remainingLabel ?? "the remaining balance"}.`
+              : null,
+          canSubmit: expensePaymentCanSubmit && !isInvoiceMutationPending,
+          isPending: isInvoiceMutationPending,
+          onSubmit: onExpensePaymentSubmit,
+        },
       },
     },
   };

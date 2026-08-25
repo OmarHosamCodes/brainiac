@@ -10,10 +10,6 @@ export const MONEY_MS = {
   panel: 0.22,
 } as const;
 
-/** Page body sections: stats → payout → bills|expenses. */
-export const MONEY_SECTION_STAGGER_CAP = 3;
-export const MONEY_SECTION_STAGGER_STEP = 0.04;
-
 /** Nested invoice cards under a multi-line bill group. */
 export const MONEY_NEST_STAGGER_CAP = 4;
 export const MONEY_NEST_STAGGER_STEP = 0.04;
@@ -34,18 +30,6 @@ export const moneyCollapseTransition: Transition = {
   type: "tween",
   duration: MONEY_MS.base,
   ease: MONEY_EASE,
-};
-
-export const moneySectionItemVariants: Variants = {
-  hidden: { opacity: 0, y: 4 },
-  show: (index: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      ...moneyBaseTransition,
-      delay: moneySectionStaggerIndex(index) * MONEY_SECTION_STAGGER_STEP,
-    },
-  }),
 };
 
 export const moneyNestItemVariants: Variants = {
@@ -80,10 +64,6 @@ export const moneyCollapseVariants: Variants = {
     transition: moneyCollapseTransition,
   },
 };
-
-export function moneySectionStaggerIndex(index: number): number {
-  return Math.min(index, MONEY_SECTION_STAGGER_CAP - 1);
-}
 
 export function moneyNestStaggerIndex(index: number): number {
   return Math.min(index, MONEY_NEST_STAGGER_CAP - 1);

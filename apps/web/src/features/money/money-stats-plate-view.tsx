@@ -13,7 +13,7 @@ import { agencyFocusRingClass, agencyMetricClass } from "@/features/shared/agenc
 import { cn } from "@/lib/utils";
 
 import { MoneyStatsPlateGlyph } from "./money-stats-plate-glyphs";
-import { moneyStatsPlateMeta } from "./money-stats-plate-meta";
+import { moneyStatsMetricDestination, moneyStatsPlateMeta } from "./money-stats-plate-meta";
 import {
   type AgencyMoneySurfaceViewModel,
   type MoneyStatsCardViewModel,
@@ -85,7 +85,7 @@ export function MoneyStatsMetricRow({
         agencyFocusRingClass,
       )}
       onClick={() => onSelect({ cardId: card.id, metricId: metric.id })}
-      aria-label={`${metric.label}: ${value}. Open details.`}
+      aria-label={`${metric.label}: ${value}. Show ${moneyStatsMetricDestination(metric.id)}.`}
     >
       <span className={metricLabelClass}>{metric.label}</span>
       <span className="flex min-w-0 items-baseline gap-1.5">
@@ -99,7 +99,7 @@ export function MoneyStatsMetricRow({
           {value}
         </span>
         <ChevronRight
-          className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/metric:opacity-100 group-focus-visible/metric:opacity-100"
+          className="size-3 shrink-0 text-muted-foreground opacity-100 transition-opacity sm:opacity-0 sm:group-hover/metric:opacity-100 sm:group-focus-visible/metric:opacity-100"
           aria-hidden
         />
       </span>
@@ -146,7 +146,9 @@ export function MoneyStatsPlate({
           <div className="space-y-1.5">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-[10px] leading-snug text-muted-foreground">Collection</span>
-              <span className={cn("font-mono text-[11px] font-medium tabular-nums", collectionTone)}>
+              <span
+                className={cn("font-mono text-[11px] font-medium tabular-nums", collectionTone)}
+              >
                 {card.collectedLabel}
               </span>
             </div>
@@ -205,7 +207,7 @@ export function MoneyStatsMetricHintStrip({ hint }: { hint: MoneyStatsMetricHint
       <span aria-hidden> · </span>
       <span className={cn(agencyMetricClass, "font-medium tracking-tight")}>{hint.value}</span>
       <span aria-hidden> · </span>
-      <span>Opens {hint.destination}</span>
+      <span>Showing {hint.destination}</span>
     </p>
   );
 }

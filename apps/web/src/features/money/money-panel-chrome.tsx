@@ -10,13 +10,21 @@ export const moneyPanelHeaderClass = "flex flex-col gap-3 border-b border-defaul
 export function MoneyPanelTitleRow({
   title,
   children,
+  headingId,
+  headingTabIndex,
 }: {
   title: ReactNode;
   children?: ReactNode;
+  headingId?: string;
+  headingTabIndex?: number;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-      <h2 className="min-w-0 text-sm font-semibold leading-snug text-balance text-highlighted">
+      <h2
+        id={headingId}
+        tabIndex={headingTabIndex}
+        className="min-w-0 text-sm font-semibold leading-snug text-balance text-highlighted"
+      >
         {title}
       </h2>
       {children ? (
@@ -85,7 +93,7 @@ export function MoneyPanelFilterPill({
       type="button"
       aria-pressed={selected}
       className={cn(
-        "relative inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors duration-150",
+        "relative inline-flex h-10 items-center rounded-full px-3 text-xs font-medium transition-colors duration-150 sm:h-7 sm:px-2.5",
         agencyFocusRingClass,
         selected ? "text-highlighted" : "text-muted hover:bg-elevated/70 hover:text-highlighted",
         "motion-reduce:transition-none",
@@ -105,13 +113,7 @@ export function MoneyPanelFilterPill({
   );
 }
 
-export function MoneyPanelFilterRow({
-  label,
-  children,
-}: {
-  label?: string;
-  children: ReactNode;
-}) {
+export function MoneyPanelFilterRow({ label, children }: { label?: string; children: ReactNode }) {
   return (
     <div
       className="flex flex-wrap items-center gap-1.5"

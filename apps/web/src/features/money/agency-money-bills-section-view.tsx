@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { FileText, Plus, Receipt, Search, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, FileText, Plus, Receipt, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { MemberProfileLeaveRangePicker } from "@/features/shared/date/member-profile-leave-range-picker";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
@@ -49,12 +49,19 @@ import { Separator } from "@/ui/separator";
 import { Skeleton } from "@/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Textarea } from "@/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import { instrumentPlateSurfaceClass } from "@/features/member-profile/member-profile-instrument-plate";
 
 import { MoneyListGhostPreview } from "./agency-money-shared-view";
+import { MoneyExpensesPanelContent } from "./agency-money-expenses-section-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 import { moneyNestItemVariants } from "./money-motion";
 import {
@@ -67,7 +74,7 @@ import {
 } from "./money-panel-chrome";
 
 const billInstrumentRowClass =
-  "group/instrument grid items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]";
+  "group/instrument grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]";
 
 function BillClientMark({ title, hueId }: { title: string; hueId: string }) {
   return (
@@ -170,7 +177,7 @@ function BillRemainingHero({
 }) {
   const urgent = remainingAmount > 0;
   return (
-    <div className="bill-remaining-hero min-w-[5.5rem] shrink-0 text-end sm:justify-self-end">
+    <div className="bill-remaining-hero col-start-3 row-start-1 min-w-[5.5rem] shrink-0 text-end sm:justify-self-end">
       <div className="text-[0.625rem] font-medium tracking-[0.06em] text-muted uppercase">
         Remaining
       </div>
@@ -241,7 +248,7 @@ function BillIconAction({
             variant="ghost"
             size="icon-sm"
             className={cn(
-              "size-8 rounded-lg text-muted transition-[opacity,color,background-color] duration-150 ease-out",
+              "size-10 rounded-lg text-muted transition-[opacity,color,background-color] duration-150 ease-out sm:size-8",
               "hover:bg-elevated hover:text-highlighted",
               "motion-reduce:transition-none",
               quiet &&
@@ -311,7 +318,7 @@ function BillAdjustmentRow({
               type="button"
               size="sm"
               variant="outline"
-              className="h-8 min-w-11 rounded-lg"
+              className="h-10 min-w-11 rounded-lg sm:h-8"
               disabled={pending || isMutationPending}
               onClick={() => onOpenPayment(row.id)}
             >
@@ -323,7 +330,7 @@ function BillAdjustmentRow({
               type="button"
               size="sm"
               variant="outline"
-              className="h-8 min-w-11 rounded-lg"
+              className="h-10 min-w-11 rounded-lg sm:h-8"
               disabled={pending || isMutationPending}
               onClick={() => void onMarkPaid(row.id)}
             >
@@ -377,25 +384,38 @@ function SalaryPoolPanel({
       </div>
       {salaryPool.canPay ? (
         <div className="flex flex-wrap items-center justify-end gap-2 px-3 py-3">
-          <Input
-            inputMode="decimal"
-            value={salaryPool.payAmount}
-            onChange={(event) => salaryPool.onPayAmountChange(event.target.value)}
-            placeholder="Amount"
-            aria-label="Team salaries payment amount"
-            className="h-8 w-32 rounded-lg border-default bg-default text-sm tabular-nums"
-            disabled={salaryPool.isPending || isMutationPending}
-          />
+          <div className="flex flex-col items-end gap-1">
+            <Input
+              inputMode="decimal"
+              value={salaryPool.payAmount}
+              onChange={(event) => salaryPool.onPayAmountChange(event.target.value)}
+              placeholder="Amount"
+              aria-label="Team salaries payment amount"
+              aria-invalid={Boolean(salaryPool.validationMessage)}
+              aria-describedby={
+                salaryPool.validationMessage ? "money-salary-pool-payment-error" : undefined
+              }
+              className="h-8 w-32 rounded-lg border-default bg-default text-sm tabular-nums"
+              disabled={salaryPool.isPending || isMutationPending}
+            />
+            {salaryPool.validationMessage ? (
+              <p
+                id="money-salary-pool-payment-error"
+                className="text-xs text-destructive"
+                role="alert"
+              >
+                {salaryPool.validationMessage}
+              </p>
+            ) : null}
+          </div>
           <Button
             type="button"
             size="sm"
             className="h-8 rounded-lg"
-            disabled={
-              !salaryPool.canSubmitPay || salaryPool.isPending || isMutationPending
-            }
+            disabled={!salaryPool.canSubmitPay || salaryPool.isPending || isMutationPending}
             onClick={() => salaryPool.onPay()}
           >
-            Pay
+            {salaryPool.isPending ? "Paying…" : "Pay"}
           </Button>
         </div>
       ) : null}
@@ -486,7 +506,7 @@ function BillObligationLineRow({
         receivedLabel={line.receivedLabel}
         showReceivedSub={showReceivedSub}
       />
-      <div className="flex shrink-0 items-center justify-end gap-0.5 sm:col-start-4">
+      <div className="col-span-2 col-start-2 row-start-2 flex shrink-0 items-center justify-end gap-0.5 sm:col-span-1 sm:col-start-4 sm:row-start-1">
         <BillIconAction
           label={previewLabel}
           disabled={isMutationPending}
@@ -495,7 +515,7 @@ function BillObligationLineRow({
           <FileText className="size-3.5" aria-hidden />
         </BillIconAction>
         <BillIconAction
-          label="Adjust"
+          label="Settle or adjust"
           disabled={isMutationPending}
           quiet
           onClick={() => onOpenAdjustLine(group, line)}
@@ -579,17 +599,14 @@ function BillPersonGroupCard({
     </button>
   );
 
-  function renderInstrumentActions(
-    onPreview: () => void,
-    onAdjustClick: () => void,
-  ) {
+  function renderInstrumentActions(onPreview: () => void, onAdjustClick: () => void) {
     return (
-      <div className="flex shrink-0 items-center justify-end gap-0.5 sm:col-start-4">
+      <div className="col-span-2 col-start-2 row-start-2 flex shrink-0 items-center justify-end gap-0.5 sm:col-span-1 sm:col-start-4 sm:row-start-1">
         <BillIconAction label={previewLabel} disabled={isMutationPending} onClick={onPreview}>
           <FileText className="size-4" aria-hidden />
         </BillIconAction>
         <BillIconAction
-          label="Adjust"
+          label="Settle or adjust"
           disabled={isMutationPending}
           quiet
           onClick={onAdjustClick}
@@ -671,8 +688,7 @@ function BillPersonGroupCard({
     showWaste: showWasteInMeta,
     pendingSuffix,
   });
-  const showGroupReceivedSub =
-    group.receivedAmount > 0 && group.remainingAmount > 0;
+  const showGroupReceivedSub = group.receivedAmount > 0 && group.remainingAmount > 0;
 
   return (
     <li className="group/card overflow-hidden">
@@ -722,34 +738,98 @@ function BillPersonGroupCard({
   );
 }
 
+function MoneyBillsCreateMenu({
+  onOpenInvoice,
+  onOpenAdjustment,
+  onOpenExpense,
+}: {
+  onOpenInvoice: () => void;
+  onOpenAdjustment: () => void;
+  onOpenExpense: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-10 rounded-xl px-3 sm:h-9"
+          aria-label="Add"
+        >
+          <Plus className="size-4" aria-hidden />
+          <span>Add</span>
+          <ChevronDown className="size-3.5 text-muted" aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onSelect={() => window.setTimeout(onOpenInvoice, 0)}>
+          <FileText className="size-4" aria-hidden />
+          Invoice
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => window.setTimeout(onOpenAdjustment, 0)}>
+          <SlidersHorizontal className="size-4" aria-hidden />
+          Adjustment
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => window.setTimeout(onOpenExpense, 0)}>
+          <Receipt className="size-4" aria-hidden />
+          Expense
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }) {
+  const isExpensesParty = bills.partyFilter === "expenses";
+  const panelTitle = isExpensesParty ? "Expenses" : "Bills";
+  const expensesPanel = bills.expensesPanel;
+  const expenseCountLabel =
+    expensesPanel.strip.itemCount === 1 ? "1 expense" : `${expensesPanel.strip.itemCount} expenses`;
   const billCountLabel = `${bills.billCount} ${bills.billCount === 1 ? "bill" : "bills"}`;
-  const hasStatusFilters = bills.statusOptions.length > 0;
+  const countLabel = isExpensesParty ? expenseCountLabel : billCountLabel;
+  const hasStatusFilters = !isExpensesParty && bills.statusOptions.length > 0;
+  const hasExpenseFilters = isExpensesParty && expensesPanel.status === "ready";
   const create = bills.create;
   const adjustmentCreate = bills.adjustmentCreate;
   const payment = bills.payment;
+  const markPaidConfirm = bills.markPaidConfirm;
   const preview = bills.preview;
   const adjust = bills.adjust;
   const showEmpty =
-    !bills.isLoading && !bills.isError && bills.rows.length === 0 && !bills.salaryPool.pool;
+    !isExpensesParty &&
+    !bills.isLoading &&
+    !bills.isError &&
+    bills.rows.length === 0 &&
+    !bills.salaryPool.pool;
+  const emptyAction =
+    bills.partyFilter === "adjustments" || bills.partyFilter === "team"
+      ? { label: "Add adjustment or cost", onClick: bills.createMenu.onOpenAdjustment }
+      : { label: "Create invoice", onClick: bills.createMenu.onOpenInvoice };
   const sections = bills.displaySections;
-  const insight = moneyBillComposeListInsight(bills.rows);
+  const insight = isExpensesParty
+    ? expensesPanel.strip.insight
+    : moneyBillComposeListInsight(bills.rows);
   const showSectionHeaders = sections.length > 1;
 
   return (
     <section
-      className={cn(agencyPanelClass, "flex h-full min-h-0 flex-col overflow-hidden")}
-      aria-label="Bills"
+      className={cn(agencyPanelClass, "flex shrink-0 flex-col overflow-hidden")}
+      aria-labelledby="money-bills-panel-heading"
     >
       <div className={moneyPanelHeaderClass}>
-        <MoneyPanelTitleRow title="Bills">
+        <MoneyPanelTitleRow
+          title={panelTitle}
+          headingId="money-bills-panel-heading"
+          headingTabIndex={-1}
+        >
           <div className="relative min-w-48 flex-1 sm:max-w-72 sm:flex-none">
             <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
             <Input
               value={bills.searchTerm}
               onChange={(event) => bills.onSearchTermChange(event.target.value)}
-              placeholder="Search bills"
-              aria-label="Search bills"
+              placeholder={isExpensesParty ? "Search expenses" : "Search bills"}
+              aria-label={isExpensesParty ? "Search expenses" : "Search bills"}
               className={cn(
                 "h-9 rounded-xl border-default bg-default pl-9 text-sm",
                 agencyInputPlaceholderClass,
@@ -757,32 +837,34 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
               )}
             />
           </div>
-          <MoneyPanelCount>{billCountLabel}</MoneyPanelCount>
-          <TooltipProvider delayDuration={120}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  className="rounded-xl"
-                  onClick={bills.onOpenCreate}
-                  aria-label="Create invoice"
-                >
-                  <Plus className="size-4" aria-hidden />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Create invoice</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {isExpensesParty ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-10 rounded-lg px-2 text-xs text-muted sm:h-8"
+              onClick={() => expensesPanel.details.onOpenChange(true)}
+            >
+              All expenses
+            </Button>
+          ) : (
+            <MoneyPanelCount>{countLabel}</MoneyPanelCount>
+          )}
+          <MoneyBillsCreateMenu
+            onOpenInvoice={bills.createMenu.onOpenInvoice}
+            onOpenAdjustment={bills.createMenu.onOpenAdjustment}
+            onOpenExpense={bills.createMenu.onOpenExpense}
+          />
         </MoneyPanelTitleRow>
 
-        {bills.remainingLabel ? (
+        {isExpensesParty && expensesPanel.periodSpendLabel ? (
           <MoneyPanelMetricBlock
-            label="Remaining"
-            value={bills.remainingLabel}
+            label="Period spend"
+            value={expensesPanel.periodSpendLabel}
             hint={insight}
           />
+        ) : !isExpensesParty && bills.remainingLabel ? (
+          <MoneyPanelMetricBlock label="Remaining" value={bills.remainingLabel} hint={insight} />
         ) : insight ? (
           <p className="text-xs text-muted text-balance" aria-live="polite">
             {insight}
@@ -803,7 +885,23 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
           </MoneyPanelFilterRow>
         </LayoutGroup>
 
-        {hasStatusFilters || bills.clientCategoryFilter === "external" ? (
+        {hasExpenseFilters ? (
+          <LayoutGroup id="expense-strip-filters">
+            <MoneyPanelFilterRow label="Expense filters">
+              {expensesPanel.strip.filterOptions.map((option) => (
+                <MoneyPanelFilterPill
+                  key={option.id}
+                  label={option.label}
+                  selected={expensesPanel.strip.filter === option.id}
+                  onSelect={() => expensesPanel.strip.onFilterChange(option.id)}
+                  layoutId="expense-strip-filter-bg"
+                />
+              ))}
+            </MoneyPanelFilterRow>
+          </LayoutGroup>
+        ) : null}
+
+        {hasStatusFilters || (!isExpensesParty && bills.clientCategoryFilter === "external") ? (
           <div className="flex flex-col gap-2">
             {hasStatusFilters ? (
               <LayoutGroup id="bills-status-filters">
@@ -823,7 +921,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
               </LayoutGroup>
             ) : null}
 
-            {bills.clientCategoryFilter === "external" ? (
+            {!isExpensesParty && bills.clientCategoryFilter === "external" ? (
               <div className="flex flex-wrap items-center gap-1.5">
                 <ActiveBillFilterChip
                   label="External"
@@ -836,8 +934,12 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
         ) : null}
       </div>
 
-      <div className="relative flex flex-1 flex-col pb-5">
-        {bills.isLoading ? (
+      <div className="relative flex flex-col pb-5">
+        {isExpensesParty ? (
+          <MoneyExpensesPanelContent panel={expensesPanel} searchTerm={bills.searchTerm} />
+        ) : null}
+
+        {!isExpensesParty && bills.isLoading ? (
           <ul
             className="mx-4 mt-4 divide-y divide-border overflow-hidden rounded-xl border border-default"
             aria-busy="true"
@@ -849,7 +951,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
           </ul>
         ) : null}
 
-        {bills.isError ? (
+        {!isExpensesParty && bills.isError ? (
           <div className={cn(agencyErrorPanelClass, "m-4")} role="alert">
             <p className="text-sm font-medium text-highlighted">Couldn’t load bills</p>
             <p className="mt-1 text-xs text-muted">{bills.errorMessage}</p>
@@ -865,7 +967,10 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
           </div>
         ) : null}
 
-        {!bills.isLoading && !bills.isError && (bills.rows.length > 0 || bills.salaryPool.pool) ? (
+        {!isExpensesParty &&
+        !bills.isLoading &&
+        !bills.isError &&
+        (bills.rows.length > 0 || bills.salaryPool.pool) ? (
           <div className="flex flex-col gap-3 px-4 pt-4" aria-label="Bill list">
             {sections.map((section) => {
               const showWasteInMeta = section.rows.some((row) => {
@@ -914,24 +1019,24 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                       ) : null}
                       {section.rows.length > 0 ? (
                         <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
-                      {section.rows.map((row) => {
-                        if (row.kind !== "person-group") return null;
-                        return (
-                          <BillPersonGroupCard
-                            key={row.id}
-                            group={row}
-                            searchTerm={bills.searchTerm}
-                            isMutationPending={bills.isMutationPending}
-                            showWasteInMeta={showWasteInMeta}
-                            onOpenClient={bills.onOpenClient}
-                            onOpenMember={bills.onOpenMember}
-                            onOpenPreview={bills.onOpenPreview}
-                            onOpenPreviewLine={bills.onOpenPreviewLine}
-                            onOpenAdjust={bills.onOpenAdjust}
-                            onOpenAdjustLine={bills.onOpenAdjustLine}
-                          />
-                        );
-                      })}
+                          {section.rows.map((row) => {
+                            if (row.kind !== "person-group") return null;
+                            return (
+                              <BillPersonGroupCard
+                                key={row.id}
+                                group={row}
+                                searchTerm={bills.searchTerm}
+                                isMutationPending={bills.isMutationPending}
+                                showWasteInMeta={showWasteInMeta}
+                                onOpenClient={bills.onOpenClient}
+                                onOpenMember={bills.onOpenMember}
+                                onOpenPreview={bills.onOpenPreview}
+                                onOpenPreviewLine={bills.onOpenPreviewLine}
+                                onOpenAdjust={bills.onOpenAdjust}
+                                onOpenAdjustLine={bills.onOpenAdjustLine}
+                              />
+                            );
+                          })}
                         </ul>
                       ) : null}
                     </>
@@ -956,10 +1061,44 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
               <p className="max-w-sm text-xs text-muted text-balance">
                 <AgencySearchHighlight text={bills.emptyCopy.body} query={bills.searchTerm} />
               </p>
+              {!bills.searchTerm.trim() ? (
+                <Button type="button" size="sm" className="mt-1" onClick={emptyAction.onClick}>
+                  {emptyAction.label}
+                </Button>
+              ) : null}
             </div>
           </>
         ) : null}
       </div>
+
+      <Dialog open={markPaidConfirm.open} onOpenChange={markPaidConfirm.onOpenChange}>
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark as fully paid?</DialogTitle>
+            <DialogDescription>
+              Record {markPaidConfirm.amountLabel} for {markPaidConfirm.partyName} as paid. This
+              updates the bill status immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={markPaidConfirm.isPending}
+              onClick={() => markPaidConfirm.onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={markPaidConfirm.isPending}
+              onClick={markPaidConfirm.onConfirm}
+            >
+              {markPaidConfirm.isPending ? "Recording…" : "Mark paid"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={preview.open} onOpenChange={preview.onOpenChange}>
         <DialogContent className="sm:max-w-lg">
@@ -1066,7 +1205,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
       </Dialog>
 
       <Dialog open={adjust.open} onOpenChange={adjust.onOpenChange}>
-        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
           <DialogHeader className="space-y-2 border-b border-default px-5 py-4 pr-14 text-left">
             <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="text-base font-bold text-highlighted">
@@ -1083,180 +1222,226 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-4 px-5 py-4">
-            {adjust.isReady ? (
-              <div className="rounded-xl border border-default bg-muted/30 px-3 py-2.5 text-xs text-muted text-pretty">
-                Ready lines export the original-period document first, then{" "}
-                {adjust.partyType === "client" ? "record the collection" : "record the payment"}.
-              </div>
-            ) : null}
-
-            <Tabs
-              value={adjust.tab}
-              onValueChange={(value) => adjust.onTabChange(value as typeof adjust.tab)}
-            >
-              <TabsList className="h-9 w-full">
-                <TabsTrigger value="pay" className="flex-1">
-                  {adjust.partyType === "client" ? "Collect" : "Pay"}
-                </TabsTrigger>
-                <TabsTrigger value="partial" className="flex-1">
-                  Partial
-                </TabsTrigger>
-                <TabsTrigger value="refund" className="flex-1">
-                  Refund
-                </TabsTrigger>
-                <TabsTrigger value="adjustments" className="flex-1">
-                  Adjust
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="pay" className="mt-4">
-                <div className="rounded-xl border border-default bg-muted/25 px-4 py-5 text-center">
-                  <p className="text-xs text-muted">
-                    {adjust.partyType === "client" ? "Amount to collect" : "Amount to pay"}
-                  </p>
-                  <p
-                    className={cn(
-                      agencyMetricClass,
-                      "mt-1 font-mono text-2xl font-semibold tabular-nums text-highlighted",
-                    )}
-                  >
-                    {adjust.remainingLabel}
-                  </p>
-                  <p className="mt-2 text-[11px] text-muted">
-                    Settles the full open balance in one step.
-                  </p>
+          <form
+            className="flex min-h-0 flex-1 flex-col"
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              adjust.onSubmit();
+            }}
+          >
+            <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-5 py-4">
+              {adjust.isReady ? (
+                <div className="rounded-xl border border-default bg-muted/30 px-3 py-2.5 text-xs text-muted text-pretty">
+                  Ready lines export the original-period document first, then{" "}
+                  {adjust.partyType === "client" ? "record the collection" : "record the payment"}.
+                  Refund is available only after the document exists.
                 </div>
-              </TabsContent>
+              ) : null}
 
-              <TabsContent value="partial" className="mt-4 flex flex-col gap-3">
-                <div className="flex items-baseline justify-between gap-2 text-xs text-muted">
-                  <span>{adjust.partyType === "client" ? "Still to collect" : "Still to pay"}</span>
-                  <span className="font-mono tabular-nums text-highlighted">
-                    {adjust.remainingLabel}
-                  </span>
-                </div>
-                <Separator />
-                <div className={agencyFormFieldClass}>
-                  <Label htmlFor="money-adjust-amount" className={agencyFormLabelClass}>
-                    Amount ({adjust.currency})
-                  </Label>
-                  <Input
-                    id="money-adjust-amount"
-                    inputMode="decimal"
-                    value={adjust.amount}
-                    onChange={(event) => adjust.onAmountChange(event.target.value)}
-                    className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
-                    autoFocus
-                  />
-                </div>
-              </TabsContent>
+              <Tabs
+                value={adjust.tab}
+                onValueChange={(value) => adjust.onTabChange(value as typeof adjust.tab)}
+              >
+                <TabsList className="h-9 w-full">
+                  <TabsTrigger value="pay" className="flex-1">
+                    {adjust.partyType === "client" ? "Collect" : "Pay"}
+                  </TabsTrigger>
+                  <TabsTrigger value="partial" className="flex-1">
+                    Partial
+                  </TabsTrigger>
+                  {adjust.canRefund ? (
+                    <TabsTrigger value="refund" className="flex-1">
+                      Refund
+                    </TabsTrigger>
+                  ) : null}
+                  <TabsTrigger value="adjustments" className="flex-1">
+                    Adjust
+                  </TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="refund" className="mt-4">
-                <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-pretty">
-                  <p className="font-medium text-highlighted">Refund this obligation</p>
-                  <p className="mt-1 text-xs text-muted">
-                    Marks the line refunded and updates bill status. This cannot be undone from
-                    here.
-                  </p>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="adjustments" className="mt-4 flex flex-col gap-3">
-                <div className={agencyFormFieldClass}>
-                  <Label htmlFor="money-adjust-kind" className={agencyFormLabelClass}>
-                    Kind
-                  </Label>
-                  <Select
-                    value={adjust.kind}
-                    onValueChange={(value) => adjust.onKindChange(value as typeof adjust.kind)}
-                  >
-                    <SelectTrigger
-                      id="money-adjust-kind"
-                      className="h-9 w-full rounded-xl border-default bg-default"
+                <TabsContent value="pay" className="mt-4">
+                  <div className="rounded-xl border border-default bg-muted/25 px-4 py-5 text-center">
+                    <p className="text-xs text-muted">
+                      {adjust.partyType === "client" ? "Amount to collect" : "Amount to pay"}
+                    </p>
+                    <p
+                      className={cn(
+                        agencyMetricClass,
+                        "mt-1 font-mono text-2xl font-semibold tabular-nums text-highlighted",
+                      )}
                     >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="discount">Discount</SelectItem>
-                      <SelectItem value="surcharge">Surcharge</SelectItem>
-                      <SelectItem value="debt">Debt</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className={agencyFormFieldClass}>
-                  <Label htmlFor="money-adjust-adj-amount" className={agencyFormLabelClass}>
-                    Amount ({adjust.currency})
-                  </Label>
-                  <Input
-                    id="money-adjust-adj-amount"
-                    inputMode="decimal"
-                    value={adjust.amount}
-                    onChange={(event) => adjust.onAmountChange(event.target.value)}
-                    placeholder="0.00"
-                    className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
-                  />
-                </div>
-                <div className={agencyFormFieldClass}>
-                  <Label htmlFor="money-adjust-note" className={agencyFormLabelClass}>
-                    Note <span className="font-normal text-muted">(optional)</span>
-                  </Label>
-                  <Textarea
-                    id="money-adjust-note"
-                    value={adjust.note}
-                    onChange={(event) => adjust.onNoteChange(event.target.value)}
-                    placeholder="Shown on the next export"
-                    className="min-h-20 rounded-xl border-default bg-default text-sm"
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
+                      {adjust.remainingLabel}
+                    </p>
+                    <p className="mt-2 text-[11px] text-muted">
+                      Settles the full open balance in one step.
+                    </p>
+                  </div>
+                </TabsContent>
 
-          <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => adjust.onOpenChange(false)}
-              disabled={bills.isMutationPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={adjust.tab === "refund" ? "destructive" : "default"}
-              disabled={!adjust.canSubmit || bills.isMutationPending}
-              onClick={adjust.onSubmit}
-            >
-              {bills.isMutationPending
-                ? "Working…"
-                : adjust.tab === "adjustments"
-                  ? "Save"
-                  : adjust.tab === "refund"
-                    ? "Confirm refund"
-                    : adjust.tab === "pay"
-                      ? adjust.partyType === "client"
-                        ? "Collect"
-                        : "Pay"
-                      : adjust.partyType === "client"
-                        ? "Collect partial"
-                        : "Record partial"}
-            </Button>
-          </DialogFooter>
+                <TabsContent value="partial" className="mt-4 flex flex-col gap-3">
+                  <div className="flex items-baseline justify-between gap-2 text-xs text-muted">
+                    <span>
+                      {adjust.partyType === "client" ? "Still to collect" : "Still to pay"}
+                    </span>
+                    <span className="font-mono tabular-nums text-highlighted">
+                      {adjust.remainingLabel}
+                    </span>
+                  </div>
+                  <Separator />
+                  <div className={agencyFormFieldClass}>
+                    <Label htmlFor="money-adjust-amount" className={agencyFormLabelClass}>
+                      Amount ({adjust.currency})
+                    </Label>
+                    <Input
+                      id="money-adjust-amount"
+                      inputMode="decimal"
+                      value={adjust.amount}
+                      onChange={(event) => adjust.onAmountChange(event.target.value)}
+                      className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
+                      required
+                      aria-invalid={Boolean(adjust.amountError)}
+                      aria-describedby={
+                        adjust.amountError ? "money-adjust-amount-error" : undefined
+                      }
+                      autoFocus
+                    />
+                    {adjust.amountError ? (
+                      <p
+                        id="money-adjust-amount-error"
+                        className="text-xs text-destructive"
+                        role="alert"
+                      >
+                        {adjust.amountError}
+                      </p>
+                    ) : null}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="refund" className="mt-4">
+                  <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-pretty">
+                    <p className="font-medium text-highlighted">Refund this obligation</p>
+                    <p className="mt-1 text-xs text-muted">
+                      Marks the line refunded and updates bill status. This cannot be undone from
+                      here.
+                    </p>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="adjustments" className="mt-4 flex flex-col gap-3">
+                  <div className={agencyFormFieldClass}>
+                    <Label htmlFor="money-adjust-kind" className={agencyFormLabelClass}>
+                      Kind
+                    </Label>
+                    <Select
+                      value={adjust.kind}
+                      onValueChange={(value) => adjust.onKindChange(value as typeof adjust.kind)}
+                    >
+                      <SelectTrigger
+                        id="money-adjust-kind"
+                        className="h-9 w-full rounded-xl border-default bg-default"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="discount">Discount</SelectItem>
+                        <SelectItem value="surcharge">Surcharge</SelectItem>
+                        <SelectItem value="debt">Debt</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className={agencyFormFieldClass}>
+                    <Label htmlFor="money-adjust-adj-amount" className={agencyFormLabelClass}>
+                      Amount ({adjust.currency})
+                    </Label>
+                    <Input
+                      id="money-adjust-adj-amount"
+                      inputMode="decimal"
+                      value={adjust.amount}
+                      onChange={(event) => adjust.onAmountChange(event.target.value)}
+                      placeholder="0.00"
+                      className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
+                      required
+                      aria-invalid={Boolean(adjust.amountError)}
+                      aria-describedby={
+                        adjust.amountError ? "money-adjust-adj-amount-error" : undefined
+                      }
+                    />
+                    {adjust.amountError ? (
+                      <p
+                        id="money-adjust-adj-amount-error"
+                        className="text-xs text-destructive"
+                        role="alert"
+                      >
+                        {adjust.amountError}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className={agencyFormFieldClass}>
+                    <Label htmlFor="money-adjust-note" className={agencyFormLabelClass}>
+                      Note <span className="font-normal text-muted">(optional)</span>
+                    </Label>
+                    <Textarea
+                      id="money-adjust-note"
+                      value={adjust.note}
+                      onChange={(event) => adjust.onNoteChange(event.target.value)}
+                      placeholder="Shown on the next export"
+                      className="min-h-20 rounded-xl border-default bg-default text-sm"
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => adjust.onOpenChange(false)}
+                disabled={adjust.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                variant={adjust.tab === "refund" ? "destructive" : "default"}
+                disabled={adjust.isPending}
+              >
+                {adjust.isPending
+                  ? "Working…"
+                  : adjust.tab === "adjustments"
+                    ? "Save adjustment"
+                    : adjust.tab === "refund"
+                      ? "Confirm refund"
+                      : adjust.tab === "pay"
+                        ? adjust.partyType === "client"
+                          ? "Collect"
+                          : "Pay"
+                        : adjust.partyType === "client"
+                          ? "Collect partial"
+                          : "Record partial"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
       <Dialog open={create.open} onOpenChange={create.onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create invoice</DialogTitle>
             <DialogDescription>
               Draft a client invoice from tracked time in the selected period.
             </DialogDescription>
           </DialogHeader>
-          <form id={create.formId} className="flex flex-col gap-4" onSubmit={create.onSubmit}>
+          <form
+            id={create.formId}
+            className="flex min-h-0 flex-col gap-4 overflow-y-auto"
+            noValidate
+            onSubmit={create.onSubmit}
+          >
             <div className="flex flex-col gap-1.5">
               <Label className={agencyFormLabelClass}>Client</Label>
               <AgencyMultiSelectFilter
@@ -1270,8 +1455,13 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                 onValuesChange={(ids) => create.onClientIdChange(ids[0] ?? "")}
                 searchPlaceholder="Search clients"
                 triggerClassName="h-10 max-w-none w-full rounded-xl text-sm"
-                contentClassName="w-[var(--radix-popover-trigger-width)] min-w-[22rem]"
+                contentClassName="w-[var(--radix-popover-trigger-width)]"
               />
+              {create.errors.client ? (
+                <p className="text-xs text-destructive" role="alert">
+                  {create.errors.client}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="money-bill-period" className={agencyFormLabelClass}>
@@ -1288,32 +1478,38 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                   create.onPeriodEndChange(next.endDate);
                 }}
               />
+              {create.errors.period ? (
+                <p className="text-xs text-destructive" role="alert">
+                  {create.errors.period}
+                </p>
+              ) : null}
             </div>
           </form>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => create.onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" form={create.formId} disabled={!create.canSubmit}>
-              Create draft
+            <Button type="submit" form={create.formId} disabled={create.isPending}>
+              {create.isPending ? "Creating…" : "Create draft"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={adjustmentCreate.open} onOpenChange={adjustmentCreate.onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add adjustment</DialogTitle>
+            <DialogTitle>Add adjustment or cost</DialogTitle>
             <DialogDescription>
               {adjustmentCreate.isSalaryPool
                 ? "Set the manual Team salaries total for this period."
-                : "Create a Debt/Discount, Charity, or PBC line for this period."}
+                : "Create a Debt / Discount, Charity, or formula-driven PBC line for this period."}
             </DialogDescription>
           </DialogHeader>
           <form
             id={adjustmentCreate.formId}
-            className="flex flex-col gap-4"
+            className="flex min-h-0 flex-col gap-4 overflow-y-auto"
+            noValidate
             onSubmit={adjustmentCreate.onSubmit}
           >
             <div className={agencyFormFieldClass}>
@@ -1348,7 +1544,10 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             </div>
             {!adjustmentCreate.isSalaryPool ? (
               <div className={agencyFormFieldClass}>
-                <Label htmlFor={`${adjustmentCreate.formId}-label`} className={agencyFormLabelClass}>
+                <Label
+                  htmlFor={`${adjustmentCreate.formId}-label`}
+                  className={agencyFormLabelClass}
+                >
                   Label
                 </Label>
                 <Input
@@ -1357,7 +1556,23 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                   onChange={(event) => adjustmentCreate.onLabelChange(event.target.value)}
                   placeholder="e.g. Client discount, donation"
                   className="h-9 rounded-xl border-default bg-default text-sm"
+                  required
+                  aria-invalid={Boolean(adjustmentCreate.errors.label)}
+                  aria-describedby={
+                    adjustmentCreate.errors.label
+                      ? `${adjustmentCreate.formId}-label-error`
+                      : undefined
+                  }
                 />
+                {adjustmentCreate.errors.label ? (
+                  <p
+                    id={`${adjustmentCreate.formId}-label-error`}
+                    className="text-xs text-destructive"
+                    role="alert"
+                  >
+                    {adjustmentCreate.errors.label}
+                  </p>
+                ) : null}
               </div>
             ) : null}
             <div className={agencyFormFieldClass}>
@@ -1371,7 +1586,23 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                 onChange={(event) => adjustmentCreate.onAmountChange(event.target.value)}
                 placeholder="0.00"
                 className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
+                required
+                aria-invalid={Boolean(adjustmentCreate.errors.amount)}
+                aria-describedby={
+                  adjustmentCreate.errors.amount
+                    ? `${adjustmentCreate.formId}-amount-error`
+                    : undefined
+                }
               />
+              {adjustmentCreate.errors.amount ? (
+                <p
+                  id={`${adjustmentCreate.formId}-amount-error`}
+                  className="text-xs text-destructive"
+                  role="alert"
+                >
+                  {adjustmentCreate.errors.amount}
+                </p>
+              ) : null}
             </div>
           </form>
           <DialogFooter>
@@ -1385,9 +1616,13 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             <Button
               type="submit"
               form={adjustmentCreate.formId}
-              disabled={!adjustmentCreate.canSubmit}
+              disabled={adjustmentCreate.isPending}
             >
-              {adjustmentCreate.isSalaryPool ? "Save total" : "Add"}
+              {adjustmentCreate.isPending
+                ? "Saving…"
+                : adjustmentCreate.isSalaryPool
+                  ? "Save total"
+                  : "Add"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1415,6 +1650,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                 value={payment.amount}
                 onChange={(event) => payment.onAmountChange(event.target.value)}
                 className={agencyFormFieldClass}
+                required
                 aria-invalid={Boolean(payment.validationMessage)}
                 aria-describedby={
                   payment.validationMessage ? "money-bill-payment-amount-error" : undefined
@@ -1435,8 +1671,8 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             <Button type="button" variant="ghost" onClick={() => payment.onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" form={payment.formId} disabled={!payment.canSubmit}>
-              Record
+            <Button type="submit" form={payment.formId} disabled={bills.isMutationPending}>
+              {bills.isMutationPending ? "Recording…" : "Record"}
             </Button>
           </DialogFooter>
         </DialogContent>

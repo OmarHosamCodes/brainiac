@@ -1,9 +1,9 @@
-import { MotionConfig, motion } from "motion/react";
 import { Settings } from "lucide-react";
 
 import { RangePresetChooser } from "@/features/shared/command-bar/range-preset-chooser";
 import { MemberProfileLeaveRangePicker } from "@/features/shared/date/member-profile-leave-range-picker";
 import {
+  agencyErrorPanelClass,
   agencyLabelClass,
   agencyPanelClass,
   agencySectionTitleClass,
@@ -14,10 +14,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/t
 import { cn } from "@/lib/utils";
 
 import { BillsSection } from "./agency-money-bills-section-view";
-import { ExpensesSection } from "./agency-money-expenses-section-view";
 import { MoneySettingsDialog } from "./agency-money-settings-dialog-view";
 import { MoneyStatsSection } from "./agency-money-stats-section-view";
-import { moneySectionItemVariants } from "./money-motion";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 
 type AgencyMoneySurfaceViewProps = {
@@ -34,9 +32,12 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
     onSelectMetric,
     moneySettings,
     bills,
-    expenses,
     isOwner,
     isRolePending,
+    isRoleError,
+    roleErrorMessage,
+    onRetryRole,
+    onOpenPeople,
     scoreboardStatus,
     scoreboardErrorMessage,
     onRetryScoreboard,
@@ -66,94 +67,89 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
             </p>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {isOwner && moneySettings.onOpen ? (
-            <TooltipProvider delayDuration={120}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    className="rounded-xl"
-                    onClick={moneySettings.onOpen}
-                    aria-label="Money settings"
-                  >
-                    <Settings className="size-4" aria-hidden />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Money settings</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : null}
-          <RangePresetChooser
-            value={period.rangePreset}
-            onChange={period.onRangePresetChange}
-            tenureAvailable={period.tenureAvailable}
-            tenurePeriodLabel={period.tenurePeriodLabel}
-            tenureQuarterLabel={period.tenureQuarterLabel}
-            tenureQuarterMonths={period.tenureQuarterMonths}
-            tenureMonthIndexes={period.tenureMonthIndexes}
-            onTenureMonthIndexesChange={period.onTenureMonthIndexesChange}
-          />
-          {period.rangePreset === "custom" ? (
-            <MemberProfileLeaveRangePicker
-              triggerId="money-period-custom-range"
-              startDate={period.customFromDate}
-              endDate={period.customToDate}
-              emptyLabel="Select period dates"
-              ariaLabel="Custom period date range"
-              triggerClassName="h-9 min-h-9 w-auto max-w-[22rem] py-1.5 text-xs"
-              onRangeChange={(next) => {
-                period.onCustomFromChange(next.startDate);
-                period.onCustomToChange(next.endDate);
-              }}
+        {isOwner ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {moneySettings.onOpen ? (
+              <TooltipProvider delayDuration={120}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      className="rounded-xl"
+                      onClick={moneySettings.onOpen}
+                      aria-label="Money settings"
+                    >
+                      <Settings className="size-4" aria-hidden />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Money settings</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : null}
+            <RangePresetChooser
+              value={period.rangePreset}
+              onChange={period.onRangePresetChange}
+              tenureAvailable={period.tenureAvailable}
+              tenurePeriodLabel={period.tenurePeriodLabel}
+              tenureQuarterLabel={period.tenureQuarterLabel}
+              tenureQuarterMonths={period.tenureQuarterMonths}
+              tenureMonthIndexes={period.tenureMonthIndexes}
+              onTenureMonthIndexesChange={period.onTenureMonthIndexesChange}
             />
-          ) : null}
-        </div>
+            {period.rangePreset === "custom" ? (
+              <MemberProfileLeaveRangePicker
+                triggerId="money-period-custom-range"
+                startDate={period.customFromDate}
+                endDate={period.customToDate}
+                emptyLabel="Select period dates"
+                ariaLabel="Custom period date range"
+                triggerClassName="h-9 min-h-9 w-auto max-w-[22rem] py-1.5 text-xs"
+                onRangeChange={(next) => {
+                  period.onCustomFromChange(next.startDate);
+                  period.onCustomToChange(next.endDate);
+                }}
+              />
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
-      {!isOwner ? (
+      {isRoleError ? (
+        <section className={agencyErrorPanelClass} role="alert">
+          <h2 className="text-base font-semibold text-highlighted">Couldn’t check Money access</h2>
+          <p className="mt-1 text-sm text-muted">{roleErrorMessage}</p>
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onRetryRole}>
+            Retry
+          </Button>
+        </section>
+      ) : !isOwner ? (
         <section
-          className={cn(agencyPanelClass, "flex flex-col gap-1 p-6")}
+          className={cn(agencyPanelClass, "flex flex-col items-start gap-1 p-6")}
           aria-label="Money access"
         >
           <h2 className="text-base font-semibold text-highlighted">Owners manage Money</h2>
           <p className="text-sm text-muted">
             Ask a team owner to review bills, payouts, expenses, and Money settings.
           </p>
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onOpenPeople}>
+            Open People
+          </Button>
         </section>
       ) : (
-        <MotionConfig reducedMotion="user">
-          <motion.div
-            custom={0}
-            variants={moneySectionItemVariants}
-            initial="hidden"
-            animate="show"
-          >
-            <MoneyStatsSection
-              status={scoreboardStatus}
-              errorMessage={scoreboardErrorMessage}
-              statsCards={statsCards}
-              onSelectMetric={onSelectMetric}
-              onRetry={onRetryScoreboard}
-              metricHint={lastStatsMetricHint}
-            />
-          </motion.div>
-
-          <motion.div
-            custom={1}
-            variants={moneySectionItemVariants}
-            initial="hidden"
-            animate="show"
-            className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,1fr)]"
-          >
-            <BillsSection bills={bills} />
-            <ExpensesSection expenses={expenses} />
-          </motion.div>
-
+        <>
+          <MoneyStatsSection
+            status={scoreboardStatus}
+            errorMessage={scoreboardErrorMessage}
+            statsCards={statsCards}
+            onSelectMetric={onSelectMetric}
+            onRetry={onRetryScoreboard}
+            metricHint={lastStatsMetricHint}
+          />
+          <BillsSection bills={bills} />
           <MoneySettingsDialog settings={moneySettings} />
-        </MotionConfig>
+        </>
       )}
     </div>
   );
