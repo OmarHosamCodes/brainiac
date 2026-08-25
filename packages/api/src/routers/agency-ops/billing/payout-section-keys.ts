@@ -31,7 +31,7 @@ export function payoutSectionKeysForBillsParty(
 ): AgencyOpsPayoutSectionKey[] | null {
   switch (party) {
     case "team":
-      return ["salaries"];
+      return TEAM_SECTION_KEYS;
     case "adjustments":
       return ADJUSTMENT_SECTION_KEYS;
     case "all":

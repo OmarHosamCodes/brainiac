@@ -17,6 +17,29 @@ export type PeriodScoreboardInput = {
   currency: string;
 };
 
+export function profitabilityCostAmount(
+  facts: Pick<
+    PeriodScoreboardInput,
+    | "salariesDueAmount"
+    | "expensesAmount"
+    | "debtDiscountAmount"
+    | "paidVacationAmount"
+    | "deviceCompAmount"
+    | "charityAmount"
+    | "pbcAmount"
+  >,
+): number {
+  return (
+    facts.salariesDueAmount +
+    facts.expensesAmount +
+    facts.debtDiscountAmount +
+    facts.paidVacationAmount +
+    facts.deviceCompAmount +
+    facts.charityAmount +
+    facts.pbcAmount
+  );
+}
+
 export type PeriodScoreboard = {
   currency: string;
   totalIncomeAmount: number;
@@ -41,12 +64,15 @@ export function buildPeriodScoreboard(input: PeriodScoreboardInput): PeriodScore
     Math.max(0, input.billablePoolAmount),
     receivedAmount + remainingAmount,
   );
-  const costAmount =
-    input.salariesDueAmount +
-    input.expensesAmount +
-    input.debtDiscountAmount +
-    input.paidVacationAmount +
-    input.deviceCompAmount;
+  const costAmount = profitabilityCostAmount({
+    salariesDueAmount: input.salariesDueAmount,
+    expensesAmount: input.expensesAmount,
+    debtDiscountAmount: input.debtDiscountAmount,
+    paidVacationAmount: input.paidVacationAmount,
+    deviceCompAmount: input.deviceCompAmount,
+    charityAmount: input.charityAmount,
+    pbcAmount: input.pbcAmount,
+  });
   const teamProfitAmount = totalIncomeAmount - costAmount;
   const roi = costAmount === 0 ? 0 : teamProfitAmount / costAmount;
 

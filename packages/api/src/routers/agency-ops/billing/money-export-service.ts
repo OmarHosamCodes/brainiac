@@ -9,7 +9,7 @@ import {
   user,
   type AgencyOpsMoneyPendingPartyType,
 } from "@orch/db/schema";
-import { and, desc, eq, gte, lt, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, lte, or, sql } from "drizzle-orm";
 import { ORPCError } from "@orpc/server";
 import { createWorkspaceId } from "@orch/workspace";
 
@@ -32,6 +32,7 @@ import {
   type MoneyPendingAdjustmentRecord,
 } from "./money-pending-adjustment-service";
 import { payoutRemainingAmount } from "./payout-bill-status";
+import { TEAM_SECTION_KEYS } from "./payout-section-keys";
 import {
   createPayoutLineFromMember,
   ensurePayoutPeriod,
@@ -810,7 +811,7 @@ export async function listPeriodMoneyObligations(
       .where(
         and(
           eq(agencyOpsPayoutRun.teamId, input.teamId),
-          eq(agencyOpsPayoutSection.key, "salaries"),
+          inArray(agencyOpsPayoutSection.key, TEAM_SECTION_KEYS),
           or(
             and(
               gte(agencyOpsPayoutRun.periodEnd, lookbackStart),
@@ -863,7 +864,7 @@ export async function listPeriodMoneyObligations(
       return {
         id: row.line.id,
         userId: row.line.payeeUserId!,
-        userName: row.userName?.trim() || "Unknown",
+        userName: row.line.label?.trim() || row.userName?.trim() || "Unknown",
         userAvatar: formatAvatarUrl(row.userAvatar),
         periodStart: row.run.periodStart.toISOString(),
         periodEnd: row.run.periodEnd.toISOString(),

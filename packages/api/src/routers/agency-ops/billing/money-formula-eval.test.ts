@@ -193,6 +193,31 @@ describe("applyFormulasToScoreboard", () => {
     expect(board.profitLossShareAmount).toBe(-59_912);
     expect(board.roi).toBeCloseTo(-119_823 / 426_146);
   });
+
+  test("uses synced payout section totals for allocation metrics and profitability", () => {
+    const board = applyFormulasToScoreboard(
+      {
+        billablePoolAmount: 500_000,
+        receivedAmount: 0,
+        invoicedRemainingAmount: 0,
+        salariesDueAmount: 200_000,
+        expensesAmount: 50_000,
+        debtDiscountAmount: 0,
+        paidVacationAmount: 0,
+        deviceCompAmount: 0,
+        charityAmount: 0,
+        pbcAmount: 50_000,
+        teamLossAmount: 0,
+        currency: "EGP",
+      },
+      defaultMoneyFormulas(),
+      200,
+    );
+
+    expect(board.pbcAmount).toBe(50_000);
+    expect(board.teamProfitAmount).toBe(200_000);
+    expect(board.roi).toBeCloseTo(200_000 / 300_000);
+  });
 });
 
 describe("mergeMoneyFormulas", () => {
@@ -212,6 +237,10 @@ describe("mergeMoneyFormulas", () => {
       { kind: "var", id: "device_comp" },
       { kind: "op", op: "+" },
       { kind: "var", id: "paid_vacation" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "charity" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "pbc" },
       { kind: "paren", value: ")" },
     ]);
     expect(formulas.find((f) => f.key === "roi")?.tokens).toEqual([
@@ -227,14 +256,14 @@ describe("mergeMoneyFormulas", () => {
       { kind: "var", id: "device_comp" },
       { kind: "op", op: "+" },
       { kind: "var", id: "paid_vacation" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "charity" },
+      { kind: "op", op: "+" },
+      { kind: "var", id: "pbc" },
       { kind: "paren", value: ")" },
     ]);
     expect(formulas.find((f) => f.key === "profit_loss_share")?.tokens).toEqual([
-      { kind: "paren", value: "(" },
       { kind: "var", id: "team_profit" },
-      { kind: "op", op: "-" },
-      { kind: "var", id: "charity" },
-      { kind: "paren", value: ")" },
       { kind: "op", op: "/" },
       { kind: "number", value: 2 },
     ]);
