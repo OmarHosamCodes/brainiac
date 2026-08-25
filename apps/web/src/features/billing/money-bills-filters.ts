@@ -2,7 +2,7 @@
 
 export type MoneyBillsClientCategoryFilter = "external" | null;
 
-export type MoneyBillsPartyFilter = "all" | "client" | "team" | "adjustments";
+export type MoneyBillsPartyFilter = "all" | "client" | "team" | "adjustments" | "expenses";
 
 export type MoneyBillsStatusFilter = "outstanding" | "partial" | "paid" | "refunded";
 
@@ -19,6 +19,7 @@ export const MONEY_BILLS_PARTY_OPTIONS: ReadonlyArray<{
   { id: "client", label: "Clients" },
   { id: "team", label: "Team" },
   { id: "adjustments", label: "Adjustments" },
+  { id: "expenses", label: "Expenses" },
 ];
 
 const MONEY_BILLS_STATUS_LABELS: Record<MoneyBillsStatusFilter, string> = {
@@ -27,6 +28,18 @@ const MONEY_BILLS_STATUS_LABELS: Record<MoneyBillsStatusFilter, string> = {
   paid: "Paid",
   refunded: "Refunded",
 };
+
+export function moneyBillsPartyFilterFromSearch(value: string | null): MoneyBillsPartyFilter {
+  return MONEY_BILLS_PARTY_OPTIONS.some((option) => option.id === value)
+    ? (value as MoneyBillsPartyFilter)
+    : "all";
+}
+
+export function moneyBillsStatusFilterFromSearch(
+  value: string | null,
+): MoneyBillsStatusFilter | null {
+  return value && value in MONEY_BILLS_STATUS_LABELS ? (value as MoneyBillsStatusFilter) : null;
+}
 
 const TEAM_STATUS_OPTIONS: ReadonlyArray<MoneyBillsStatusOption> = [
   { id: "outstanding", label: MONEY_BILLS_STATUS_LABELS.outstanding },
@@ -52,6 +65,8 @@ export function moneyBillsStatusOptionsForParty(
     case "adjustments":
       // Adjustments reuse Team status chips (Outstanding / Partial / Paid).
       return TEAM_STATUS_OPTIONS;
+    case "expenses":
+      return [];
     default: {
       const _exhaustive: never = party;
       return _exhaustive;
@@ -101,6 +116,8 @@ function partyNoun(party: MoneyBillsPartyFilter): string | null {
       return "team";
     case "adjustments":
       return "adjustment";
+    case "expenses":
+      return "expense";
     default: {
       const _exhaustive: never = party;
       return _exhaustive;
@@ -156,6 +173,15 @@ export function moneyBillsEmptyCopy(
 
   if (party === "adjustments") {
     return { title: "No adjustments", body: EMPTY_BODY };
+  }
+
+  if (party === "expenses") {
+    return {
+      title: normalizedSearch ? "No matching expenses" : "No expenses in this period",
+      body: normalizedSearch
+        ? `Nothing matches “${normalizedSearch}” in this view.`
+        : "Add a one-time expense or subscription to see it here.",
+    };
   }
 
   if (!partyPart && !statusPart) {

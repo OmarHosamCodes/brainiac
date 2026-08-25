@@ -3,9 +3,20 @@ import { describe, expect, test } from "bun:test";
 import {
   moneyBillsActiveFilterSummary,
   moneyBillsEmptyCopy,
+  moneyBillsPartyFilterFromSearch,
   moneyBillsStatusAllowed,
+  moneyBillsStatusFilterFromSearch,
   moneyBillsStatusOptionsForParty,
 } from "./money-bills-filters";
+
+describe("Money bill URL filters", () => {
+  test("accepts known values and falls back safely", () => {
+    expect(moneyBillsPartyFilterFromSearch("expenses")).toBe("expenses");
+    expect(moneyBillsPartyFilterFromSearch("unknown")).toBe("all");
+    expect(moneyBillsStatusFilterFromSearch("paid")).toBe("paid");
+    expect(moneyBillsStatusFilterFromSearch("unknown")).toBeNull();
+  });
+});
 
 describe("moneyBillsStatusOptionsForParty", () => {
   test("all has no status chips", () => {
@@ -34,6 +45,10 @@ describe("moneyBillsStatusOptionsForParty", () => {
     ]);
   });
 
+  test("expenses has no status chips", () => {
+    expect(moneyBillsStatusOptionsForParty("expenses")).toEqual([]);
+  });
+
   test("refunded only allowed on clients", () => {
     expect(moneyBillsStatusAllowed("client", "refunded")).toBe(true);
     expect(moneyBillsStatusAllowed("team", "refunded")).toBe(false);
@@ -50,6 +65,7 @@ describe("moneyBillsEmptyCopy", () => {
   test("party only", () => {
     expect(moneyBillsEmptyCopy("client", null).title).toBe("No client bills");
     expect(moneyBillsEmptyCopy("adjustments", null).title).toBe("No adjustments");
+    expect(moneyBillsEmptyCopy("expenses", null).title).toBe("No expenses in this period");
   });
 
   test("party + status", () => {

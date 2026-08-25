@@ -9,6 +9,7 @@ import {
   allocationFromReadyMember,
   type MoneyBillAllocationView,
 } from "./money-bill-allocation";
+import { parseMoneyExpenseAmount } from "./money-expense-form";
 
 export type MoneyBillInvoiceStatus = "draft" | "sent" | "partial" | "paid" | "refunded";
 export type MoneyBillPayoutStatus = "draft" | "partial" | "paid";
@@ -200,6 +201,10 @@ export function moneyBillsPartyShowsAdjustments(party: MoneyBillsPartyFilter): b
   return party === "all" || party === "adjustments";
 }
 
+export function moneyBillsPartyShowsExpenses(party: MoneyBillsPartyFilter): boolean {
+  return party === "expenses";
+}
+
 export function moneyBillStatusLabel(billStatus: MoneyBillStatus): string {
   switch (billStatus) {
     case "outstanding":
@@ -221,7 +226,8 @@ export function formatMoneyAmount(amount: number, currency: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(amount / 100);
 }
 
@@ -734,8 +740,13 @@ export function moneyBillsAdjustmentCreateValid(
 ): boolean {
   if (!sectionKey) return false;
   if (sectionKey !== "salary_pool" && !label.trim()) return false;
-  const parsed = Number(amount.trim());
-  return Number.isFinite(parsed) && parsed > 0;
+  return parseMoneyExpenseAmount(amount) !== null;
+}
+
+export function moneyBillsCanRefundObligation(
+  obligationKind: "ready" | "invoice" | "payout",
+): boolean {
+  return obligationKind !== "ready";
 }
 
 export function moneyBillsCreateFormValid(

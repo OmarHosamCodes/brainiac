@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   formatMoneyExpenseAmount,
+  moneyExpenseAmountError,
   moneyExpenseAmountLabel,
   moneyExpenseCanSubmit,
   moneyExpensePeriodLabel,
@@ -42,15 +43,15 @@ describe("moneyExpenseCanSubmit", () => {
 
 describe("moneyExpenseAmountLabel", () => {
   test("variable unpaid shows Variable, paid snapshot shows amount", () => {
-    expect(
-      moneyExpenseAmountLabel({ amountMode: "variable", amount: 0, currency: "EGP" }),
-    ).toBe("Variable");
+    expect(moneyExpenseAmountLabel({ amountMode: "variable", amount: 0, currency: "EGP" })).toBe(
+      "Variable",
+    );
     expect(
       moneyExpenseAmountLabel({ amountMode: "variable", amount: 178_000, currency: "EGP" }),
     ).toBe(formatMoneyExpenseAmount(178_000, "EGP"));
-    expect(
-      moneyExpenseAmountLabel({ amountMode: "fixed", amount: 0, currency: "EGP" }),
-    ).toBe(formatMoneyExpenseAmount(0, "EGP"));
+    expect(moneyExpenseAmountLabel({ amountMode: "fixed", amount: 0, currency: "EGP" })).toBe(
+      formatMoneyExpenseAmount(0, "EGP"),
+    );
   });
 });
 
@@ -73,6 +74,28 @@ describe("parseMoneyExpenseAmount", () => {
     expect(parseMoneyExpenseAmount("100")).toBe(10_000);
     expect(parseMoneyExpenseAmount("0")).toBeNull();
     expect(parseMoneyExpenseAmount("abc")).toBeNull();
+  });
+
+  test("rejects exponent notation and more than two decimals", () => {
+    expect(parseMoneyExpenseAmount("1e2")).toBeNull();
+    expect(parseMoneyExpenseAmount("1.234")).toBeNull();
+  });
+});
+
+describe("moneyExpenseAmountError", () => {
+  test("explains missing and malformed amounts", () => {
+    expect(moneyExpenseAmountError("")).toBe("Enter an amount.");
+    expect(moneyExpenseAmountError("1.234")).toBe(
+      "Use a positive amount with up to two decimal places.",
+    );
+    expect(moneyExpenseAmountError("12.50")).toBeNull();
+  });
+});
+
+describe("formatMoneyExpenseAmount", () => {
+  test("preserves non-zero minor units without forcing trailing zeroes", () => {
+    expect(formatMoneyExpenseAmount(1205, "USD")).toContain("12.05");
+    expect(formatMoneyExpenseAmount(1200, "USD")).not.toContain("12.00");
   });
 });
 

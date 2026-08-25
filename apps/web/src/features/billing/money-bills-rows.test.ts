@@ -3,12 +3,15 @@ import { describe, expect, test } from "bun:test";
 import {
   buildMoneyBillRows,
   filterMoneyBillRowsByClientCategory,
+  formatMoneyAmount,
   groupMoneyBillRows,
   moneyBillInitials,
   moneyBillListInsight,
   moneyBillPartyHref,
   moneyBillRowFromInvoice,
   moneyBillRowFromPayoutLine,
+  moneyBillsAdjustmentCreateValid,
+  moneyBillsCanRefundObligation,
   moneyBillsCreateFormValid,
   moneyBillsPartyShowsClients,
   moneyBillsPartyShowsMembers,
@@ -403,6 +406,27 @@ describe("payment parse", () => {
     expect(parseMoneyBillPaymentAmount("25", 10_000)).toBe(2500);
     expect(moneyBillsPaymentCanSubmit("25", 10_000)).toBe(true);
     expect(moneyBillsPaymentCanSubmit("200", 10_000)).toBe(false);
+  });
+});
+
+describe("transactional amount rules", () => {
+  test("uses strict two-decimal adjustment validation", () => {
+    expect(moneyBillsAdjustmentCreateValid("charity", "Donation", "12.50")).toBe(true);
+    expect(moneyBillsAdjustmentCreateValid("charity", "Donation", "1.234")).toBe(false);
+    expect(moneyBillsAdjustmentCreateValid("charity", "Donation", "1e2")).toBe(false);
+  });
+
+  test("preserves non-zero minor units without forcing trailing zeroes", () => {
+    expect(formatMoneyAmount(1205, "USD")).toContain("12.05");
+    expect(formatMoneyAmount(1200, "USD")).not.toContain("12.00");
+  });
+});
+
+describe("moneyBillsCanRefundObligation", () => {
+  test("allows persisted documents and rejects Ready obligations", () => {
+    expect(moneyBillsCanRefundObligation("invoice")).toBe(true);
+    expect(moneyBillsCanRefundObligation("payout")).toBe(true);
+    expect(moneyBillsCanRefundObligation("ready")).toBe(false);
   });
 });
 

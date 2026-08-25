@@ -68,6 +68,13 @@ export function parseMoneyExpenseAmount(value: string): number | null {
   return Math.round(major * 100);
 }
 
+export function moneyExpenseAmountError(value: string): string | null {
+  if (!value.trim()) return "Enter an amount.";
+  return parseMoneyExpenseAmount(value) === null
+    ? "Use a positive amount with up to two decimal places."
+    : null;
+}
+
 export function moneyExpenseCanSubmit(
   name: string,
   kind: MoneyExpenseKind,
@@ -113,7 +120,8 @@ export function formatMoneyExpenseAmount(amount: number, currency: string): stri
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(amount / 100);
 }
 
