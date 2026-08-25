@@ -146,6 +146,8 @@ function FilterSingleOption({
     <button
       type="button"
       onClick={onSelect}
+      role="option"
+      aria-selected={selected}
       className={cn(
         "flex w-full min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold transition-colors hover:bg-default/80",
         agencyFocusRingClass,
@@ -304,6 +306,7 @@ export function AgencyMultiSelectFilter({
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
             <Input
               autoFocus
+              aria-label={`Search ${label.toLowerCase()} options`}
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder={searchPlaceholder ?? `Search ${label.toLowerCase()}`}
@@ -347,7 +350,11 @@ export function AgencyMultiSelectFilter({
           </div>
         ) : null}
 
-        <div className="max-h-72 overflow-x-hidden overflow-y-auto px-1 py-1">
+        <div
+          className="max-h-72 overflow-x-hidden overflow-y-auto px-1 py-1"
+          role={isSingle ? "listbox" : undefined}
+          aria-label={isSingle ? label : undefined}
+        >
           {!isSingle ? (
             <FilterCheckbox
               checked={allVisibleSelected}

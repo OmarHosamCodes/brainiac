@@ -18,6 +18,31 @@ export function validatePeriodSearch(search: Record<string, unknown>): {
   };
 }
 
+const MONEY_PARTIES = ["all", "client", "team", "adjustments", "expenses"] as const;
+const MONEY_STATUSES = ["outstanding", "partial", "paid", "refunded"] as const;
+const MONEY_EXPENSE_FILTERS = ["all", "due", "paid"] as const;
+
+function optionalMember<T extends string>(value: unknown, values: readonly T[]): T | undefined {
+  return typeof value === "string" && values.includes(value as T) ? (value as T) : undefined;
+}
+
+export function validateMoneySearch(search: Record<string, unknown>): {
+  from?: string;
+  to?: string;
+  party?: (typeof MONEY_PARTIES)[number];
+  status?: (typeof MONEY_STATUSES)[number];
+  expense?: (typeof MONEY_EXPENSE_FILTERS)[number];
+  q?: string;
+} {
+  return {
+    ...validatePeriodSearch(search),
+    party: optionalMember(search.party, MONEY_PARTIES),
+    status: optionalMember(search.status, MONEY_STATUSES),
+    expense: optionalMember(search.expense, MONEY_EXPENSE_FILTERS),
+    q: optionalString(search.q),
+  };
+}
+
 export function validateReportSearch(search: Record<string, unknown>): {
   from?: string;
   to?: string;
