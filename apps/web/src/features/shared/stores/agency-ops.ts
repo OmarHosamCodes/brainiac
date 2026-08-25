@@ -2023,9 +2023,7 @@ function createAgencyOpsActions(
       teamId: string;
       periodStart: string;
       periodEnd: string;
-      userId: string;
       amount: number;
-      finalize?: boolean;
     },
     callbacks?: { onSuccess?: () => void },
   ) {
@@ -2035,37 +2033,9 @@ function createAgencyOpsActions(
       await orpcClient.agencyOps.salaryPool.recordPayment(payload);
       await invalidateSalaryPoolQueries(payload.teamId);
       callbacks?.onSuccess?.();
-      toast.success(payload.finalize ? "Final payment recorded" : "Salary payment recorded");
+      toast.success("Salary payment recorded");
     } catch (error) {
       toast.error("Couldn't record salary payment", {
-        description: getErrorMessage(error, "Try again."),
-      });
-    } finally {
-      set((state) => ({
-        ...state,
-        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
-      }));
-    }
-  }
-
-  async function reopenSalaryPoolMember(
-    payload: {
-      teamId: string;
-      periodStart: string;
-      periodEnd: string;
-      userId: string;
-    },
-    callbacks?: { onSuccess?: () => void },
-  ) {
-    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
-
-    try {
-      await orpcClient.agencyOps.salaryPool.reopenMember(payload);
-      await invalidateSalaryPoolQueries(payload.teamId);
-      callbacks?.onSuccess?.();
-      toast.success("Member reopened for salary payments");
-    } catch (error) {
-      toast.error("Couldn't reopen member", {
         description: getErrorMessage(error, "Try again."),
       });
     } finally {
@@ -2433,7 +2403,6 @@ function createAgencyOpsActions(
     recordPayoutPayment,
     upsertSalaryPoolTotal,
     recordSalaryPoolPayment,
-    reopenSalaryPoolMember,
     createExpense,
     recordExpensePayment,
     removeExpense,

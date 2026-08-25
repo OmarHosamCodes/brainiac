@@ -395,80 +395,30 @@ function SalaryPoolPanel({
           </div>
         </div>
       </div>
-      <ul className="divide-y divide-border">
-        {salaryPool.members.map((member) => (
-          <li
-            key={member.userId}
-            className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+      {salaryPool.canPay ? (
+        <div className="flex flex-wrap items-center justify-end gap-2 px-3 py-3">
+          <Input
+            inputMode="decimal"
+            value={salaryPool.payAmount}
+            onChange={(event) => salaryPool.onPayAmountChange(event.target.value)}
+            placeholder="Amount"
+            aria-label="Team salaries payment amount"
+            className="h-8 w-32 rounded-lg border-default bg-default text-sm tabular-nums"
+            disabled={salaryPool.isPending || isMutationPending}
+          />
+          <Button
+            type="button"
+            size="sm"
+            className="h-8 rounded-lg"
+            disabled={
+              !salaryPool.canSubmitPay || salaryPool.isPending || isMutationPending
+            }
+            onClick={() => salaryPool.onPay()}
           >
-            <div className="flex min-w-0 items-center gap-2.5">
-              <AgencyMemberAvatar
-                name={member.userName}
-                userId={member.userId}
-                avatarUrl={member.userAvatar}
-                className="size-8"
-              />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-highlighted">{member.userName}</p>
-                <p className="text-xs text-muted">{member.paidLabel} paid</p>
-              </div>
-              {member.isFinalized ? (
-                <Badge variant="secondary" className="rounded-md">
-                  Finalized
-                </Badge>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {member.canReopen ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 rounded-lg text-xs"
-                  disabled={member.isPending || isMutationPending}
-                  onClick={() => salaryPool.onMemberReopen(member.userId)}
-                >
-                  Reopen
-                </Button>
-              ) : null}
-              {member.canPay ? (
-                <>
-                  <Input
-                    inputMode="decimal"
-                    value={member.amount}
-                    onChange={(event) =>
-                      salaryPool.onMemberAmountChange(member.userId, event.target.value)
-                    }
-                    placeholder="Amount"
-                    aria-label={`Payment amount for ${member.userName}`}
-                    className="h-8 w-28 rounded-lg border-default bg-default text-sm"
-                    disabled={member.isPending || isMutationPending}
-                  />
-                  <label className="inline-flex items-center gap-2 text-xs text-muted">
-                    <Checkbox
-                      checked={member.finalize}
-                      onCheckedChange={(checked) =>
-                        salaryPool.onMemberFinalizeChange(member.userId, checked === true)
-                      }
-                      disabled={member.isPending || isMutationPending}
-                    />
-                    Final payment
-                  </label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 rounded-lg"
-                    disabled={!member.canSubmitPay || member.isPending || isMutationPending}
-                    onClick={() => salaryPool.onMemberPay(member.userId)}
-                  >
-                    Pay
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          </li>
-        ))}
-      </ul>
+            Pay
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

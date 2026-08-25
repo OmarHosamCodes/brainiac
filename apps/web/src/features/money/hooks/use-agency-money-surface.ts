@@ -311,10 +311,8 @@ export function useAgencyMoneySurface(teamId: string) {
     useState<(typeof MONEY_ADJUSTMENT_SECTION_OPTIONS)[number]["id"]>("debt_discount");
   const [adjustmentLabel, setAdjustmentLabel] = useState("");
   const [adjustmentAmount, setAdjustmentAmount] = useState("");
-  const [salaryMemberDrafts, setSalaryMemberDrafts] = useState<
-    Record<string, { amount: string; finalize: boolean }>
-  >({});
-  const [pendingSalaryMemberUserId, setPendingSalaryMemberUserId] = useState<string | null>(null);
+  const [salaryPoolPayAmount, setSalaryPoolPayAmount] = useState("");
+  const [salaryPoolPayPending, setSalaryPoolPayPending] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<{
     kind: "invoice" | "payout" | "adjustment";
     id: string;
@@ -1580,70 +1578,34 @@ export function useAgencyMoneySurface(teamId: string) {
     }
   })();
 
-  function onSalaryMemberAmountChange(userId: string, amount: string) {
-    setSalaryMemberDrafts((current) => ({
-      ...current,
-      [userId]: {
-        amount,
-        finalize: current[userId]?.finalize ?? false,
-      },
-    }));
-  }
-
-  function onSalaryMemberFinalizeChange(userId: string, finalize: boolean) {
-    setSalaryMemberDrafts((current) => ({
-      ...current,
-      [userId]: {
-        amount: current[userId]?.amount ?? "",
-        finalize,
-      },
-    }));
-  }
-
-  async function onSalaryMemberPay(userId: string) {
+  async function onSalaryPoolPay() {
     const pool = salaryPoolQuery.data?.pool;
     if (!pool) return;
-    const draft = salaryMemberDrafts[userId] ?? { amount: "", finalize: false };
-    const amount = parseMoneyBillPaymentAmount(draft.amount, pool.remainingAmount);
+    const amount = parseMoneyBillPaymentAmount(salaryPoolPayAmount, pool.remainingAmount);
     if (amount === null) return;
 
-    setPendingSalaryMemberUserId(userId);
+    setSalaryPoolPayPending(true);
     await agencyOps.recordSalaryPoolPayment(
       {
         teamId,
         periodStart: periodRange.from,
         periodEnd: periodRange.to,
-        userId,
         amount,
-        finalize: draft.finalize,
       },
       {
-        onSuccess: () => {
-          setSalaryMemberDrafts((current) => {
-            const next = { ...current };
-            delete next[userId];
-            return next;
-          });
-        },
+        onSuccess: () => setSalaryPoolPayAmount(""),
       },
     );
-    setPendingSalaryMemberUserId(null);
-  }
-
-  async function onSalaryMemberReopen(userId: string) {
-    setPendingSalaryMemberUserId(userId);
-    await agencyOps.reopenSalaryPoolMember({
-      teamId,
-      periodStart: periodRange.from,
-      periodEnd: periodRange.to,
-      userId,
-    });
-    setPendingSalaryMemberUserId(null);
+    setSalaryPoolPayPending(false);
   }
 
   const salaryPoolViewModel = useMemo(() => {
     const pool = salaryPoolQuery.data?.pool ?? null;
     const currency = pool?.currency ?? periodScoreboardQuery.data?.currency ?? "USD";
+    const canPay = Boolean(pool) && pool!.remainingAmount > 0 && canManageMoney;
+    const payAmount = pool
+      ? parseMoneyBillPaymentAmount(salaryPoolPayAmount, pool.remainingAmount)
+      : null;
     return {
       pool: pool
         ? {
@@ -1654,34 +1616,18 @@ export function useAgencyMoneySurface(teamId: string) {
             currency,
           }
         : null,
-      members: (salaryPoolQuery.data?.members ?? []).map((member) => {
-        const draft = salaryMemberDrafts[member.userId] ?? { amount: "", finalize: false };
-        const canPay =
-          Boolean(pool) && !member.isFinalized && pool!.remainingAmount > 0 && canManageMoney;
-        const payAmount = pool
-          ? parseMoneyBillPaymentAmount(draft.amount, pool.remainingAmount)
-          : null;
-        return {
-          userId: member.userId,
-          userName: member.userName,
-          userAvatar: member.userAvatar,
-          paidLabel: formatMoneyAmount(member.paidAmount, currency),
-          isFinalized: member.isFinalized,
-          canPay,
-          canReopen: member.isFinalized && canManageMoney,
-          amount: draft.amount,
-          finalize: draft.finalize,
-          canSubmitPay: canPay && payAmount !== null,
-          isPending: pendingSalaryMemberUserId === member.userId,
-        };
-      }),
+      payAmount: salaryPoolPayAmount,
+      canPay,
+      canSubmitPay: canPay && payAmount !== null,
+      isPending: salaryPoolPayPending,
+      onPayAmountChange: setSalaryPoolPayAmount,
+      onPay: () => void onSalaryPoolPay(),
     };
   }, [
     canManageMoney,
-    pendingSalaryMemberUserId,
     periodScoreboardQuery.data?.currency,
-    salaryMemberDrafts,
-    salaryPoolQuery.data?.members,
+    salaryPoolPayAmount,
+    salaryPoolPayPending,
     salaryPoolQuery.data?.pool,
   ]);
 
@@ -1905,13 +1851,7 @@ export function useAgencyMoneySurface(teamId: string) {
       onMarkPaid: onMarkBillPaid,
       onRefund: onRefundBill,
       onOpenPayment,
-      salaryPool: {
-        ...salaryPoolViewModel,
-        onMemberAmountChange: onSalaryMemberAmountChange,
-        onMemberFinalizeChange: onSalaryMemberFinalizeChange,
-        onMemberPay: (userId: string) => void onSalaryMemberPay(userId),
-        onMemberReopen: (userId: string) => void onSalaryMemberReopen(userId),
-      },
+      salaryPool: salaryPoolViewModel,
       preview: {
         open: previewOpen,
         onOpenChange: onPreviewOpenChange,
