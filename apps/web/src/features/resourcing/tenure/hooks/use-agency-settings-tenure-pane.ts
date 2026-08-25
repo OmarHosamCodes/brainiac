@@ -558,7 +558,7 @@ export function useAgencySettingsTenurePane({ teamId, active }: UseAgencySetting
         internDurationMonths: Number.parseInt(policyDraft.internDurationMonths, 10),
         internDurationWeeks: Number.parseInt(policyDraft.internDurationWeeks, 10),
         requiredDailyHours: Number.parseInt(policyDraft.requiredDailyHours, 10),
-        offDayReduceHours: Number.parseInt(policyDraft.offDayReduceHours, 10),
+        offDayReduceHours: Number.parseFloat(policyDraft.offDayReduceHours),
         weekStartsOn: Number.parseInt(policyDraft.weekStartsOn, 10),
         weekendDurationDays: Number.parseInt(policyDraft.weekendDurationDays, 10),
         policyEffectiveFrom: dateKeyToUtcIso(policyDraft.policyEffectiveFrom),

@@ -482,9 +482,15 @@ export async function upsertTenurePolicy(
     throw new ORPCError("BAD_REQUEST", { message: "weekendDurationDays must be 1–3." });
   }
 
-  if (input.offDayReduceHours < 0 || input.offDayReduceHours > 24) {
+  if (
+    !Number.isFinite(input.offDayReduceHours) ||
+    input.offDayReduceHours < 0 ||
+    input.offDayReduceHours > 24
+  ) {
     throw new ORPCError("BAD_REQUEST", { message: "offDayReduceHours must be 0–24." });
   }
+  // Minute precision — 6h 45m → 6.75
+  const offDayReduceHours = Math.round(input.offDayReduceHours * 60) / 60;
 
   const policyEffectiveFrom = new Date(input.policyEffectiveFrom);
   if (Number.isNaN(policyEffectiveFrom.getTime())) {
@@ -509,7 +515,7 @@ export async function upsertTenurePolicy(
       requiredDailyHours: input.requiredDailyHours,
       weekStartsOn: input.weekStartsOn,
       weekendDurationDays: input.weekendDurationDays,
-      offDayReduceHours: input.offDayReduceHours,
+      offDayReduceHours,
       policyEffectiveFrom,
       enabled: input.enabled,
       createdAt: existing?.createdAt ?? now,
@@ -528,7 +534,7 @@ export async function upsertTenurePolicy(
         requiredDailyHours: input.requiredDailyHours,
         weekStartsOn: input.weekStartsOn,
         weekendDurationDays: input.weekendDurationDays,
-        offDayReduceHours: input.offDayReduceHours,
+        offDayReduceHours,
         policyEffectiveFrom,
         enabled: input.enabled,
         updatedAt: now,

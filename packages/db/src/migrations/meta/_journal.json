@@ -407,6 +407,13 @@
       "when": 1787900000034,
       "tag": "0059_agency_expense_amount_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1787900000035,
+      "tag": "0060_agency_tenure_off_day_reduce_hours_fractional",
+      "breakpoints": true
     }
   ]
 }

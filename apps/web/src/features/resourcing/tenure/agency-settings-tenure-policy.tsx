@@ -58,6 +58,26 @@ function weekStartLabel(value: string): string {
   return WEEK_START_OPTIONS.find((option) => option.value === day)?.label ?? "—";
 }
 
+/** Split decimal hours into whole hours + minutes for the off-day reduce control. */
+function splitOffDayReduceHours(totalHours: string): { hours: string; minutes: string } {
+  const value = Number.parseFloat(totalHours);
+  if (!Number.isFinite(value) || value < 0) return { hours: "0", minutes: "0" };
+  const totalMinutes = Math.round(value * 60);
+  return {
+    hours: String(Math.floor(totalMinutes / 60)),
+    minutes: String(totalMinutes % 60),
+  };
+}
+
+function combineOffDayReduceHours(hours: string, minutes: string): string {
+  const h = Number.parseInt(hours, 10);
+  const m = Number.parseInt(minutes, 10);
+  const safeH = Number.isFinite(h) && h >= 0 ? Math.min(h, 24) : 0;
+  const safeM = Number.isFinite(m) && m >= 0 ? Math.min(m, 59) : 0;
+  const total = safeH + safeM / 60;
+  return String(Math.min(total, 24));
+}
+
 export function AgencySettingsTenurePolicy({
   policyDraft,
   onPolicyDraftChange,
@@ -79,8 +99,10 @@ export function AgencySettingsTenurePolicy({
   const penaltyId = `${idPrefix}-penalty-months`;
   const dailyHoursId = `${idPrefix}-daily-hours`;
   const offDayReduceHoursId = `${idPrefix}-off-day-reduce-hours`;
+  const offDayReduceMinutesId = `${idPrefix}-off-day-reduce-minutes`;
   const weekStartsId = `${idPrefix}-week-starts`;
   const weekendDaysId = `${idPrefix}-weekend-days`;
+  const offDayReduceParts = splitOffDayReduceHours(policyDraft.offDayReduceHours);
 
   if (!isOwner) {
     const monthLabel =
@@ -118,6 +140,12 @@ export function AgencySettingsTenurePolicy({
               <dt className="text-muted">Required daily hours</dt>
               <dd className="text-highlighted font-mono tabular-nums">
                 {policyDraft.requiredDailyHours}h
+              </dd>
+            </div>
+            <div className="flex flex-wrap justify-between gap-2">
+              <dt className="text-muted">Hours reduced per off day</dt>
+              <dd className="text-highlighted font-mono tabular-nums">
+                {offDayReduceParts.hours}h {offDayReduceParts.minutes}m
               </dd>
             </div>
             <div className="flex flex-wrap justify-between gap-2">
@@ -274,17 +302,48 @@ export function AgencySettingsTenurePolicy({
               <Label htmlFor={offDayReduceHoursId} className={agencyFormLabelClass}>
                 Hours reduced per off day
               </Label>
-              <Input
-                id={offDayReduceHoursId}
-                type="number"
-                min={0}
-                max={24}
-                value={policyDraft.offDayReduceHours}
-                className="w-full max-w-[10rem]"
-                onChange={(event) =>
-                  onPolicyDraftChange({ ...policyDraft, offDayReduceHours: event.target.value })
-                }
-              />
+              <div className="flex max-w-[14rem] items-center gap-2">
+                <Input
+                  id={offDayReduceHoursId}
+                  type="number"
+                  min={0}
+                  max={24}
+                  step={1}
+                  value={offDayReduceParts.hours}
+                  className="w-full min-w-0"
+                  aria-label="Hours reduced per off day"
+                  onChange={(event) =>
+                    onPolicyDraftChange({
+                      ...policyDraft,
+                      offDayReduceHours: combineOffDayReduceHours(
+                        event.target.value,
+                        offDayReduceParts.minutes,
+                      ),
+                    })
+                  }
+                />
+                <span className="text-muted shrink-0 text-xs">h</span>
+                <Input
+                  id={offDayReduceMinutesId}
+                  type="number"
+                  min={0}
+                  max={59}
+                  step={1}
+                  value={offDayReduceParts.minutes}
+                  className="w-full min-w-0"
+                  aria-label="Minutes reduced per off day"
+                  onChange={(event) =>
+                    onPolicyDraftChange({
+                      ...policyDraft,
+                      offDayReduceHours: combineOffDayReduceHours(
+                        offDayReduceParts.hours,
+                        event.target.value,
+                      ),
+                    })
+                  }
+                />
+                <span className="text-muted shrink-0 text-xs">m</span>
+              </div>
               <p className="text-muted mt-1 text-xs">
                 Lowers month and quarter minimum and target for each weekday off day or holiday.
               </p>

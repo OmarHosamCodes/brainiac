@@ -7,6 +7,7 @@ import {
   agencySectionTitleClass,
   agencyWorkMetaClass,
 } from "@/features/shared/agency-ui";
+import { formatHoursMinutes } from "@/features/resourcing/tenure-utils";
 import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
 
@@ -188,7 +189,9 @@ export function AgencyPeopleDirectory({
                   {requiredDailyHours != null || offDayReduceHours != null || weekStartLabel
                     ? [
                         requiredDailyHours != null ? `${requiredDailyHours}h/day` : null,
-                        offDayReduceHours != null ? `${offDayReduceHours}h/off day` : null,
+                        offDayReduceHours != null
+                          ? `${formatHoursMinutes(offDayReduceHours)}/off day`
+                          : null,
                         weekStartLabel ? `starts ${weekStartLabel}` : null,
                       ]
                         .filter(Boolean)

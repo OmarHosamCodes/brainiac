@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -1116,8 +1117,8 @@ export const agencyOpsTenurePolicy = pgTable(
     weekStartsOn: integer("week_starts_on").notNull().default(1),
     /** Trailing weekend length within the team week (1–3). */
     weekendDurationDays: integer("weekend_duration_days").notNull().default(2),
-    /** Hours credited per weekday off day when lowering month/quarter min and target. */
-    offDayReduceHours: integer("off_day_reduce_hours").notNull().default(8),
+    /** Hours credited per weekday off day when lowering month/quarter min and target (minute precision). */
+    offDayReduceHours: doublePrecision("off_day_reduce_hours").notNull().default(8),
     policyEffectiveFrom: timestamp("policy_effective_from").notNull(),
     enabled: boolean("enabled").notNull().default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),

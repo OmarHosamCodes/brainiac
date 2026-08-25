@@ -228,6 +228,16 @@ export function formatTenureHours(hours: number): string {
   return hours.toFixed(1);
 }
 
+/** e.g. 6 → `6h`, 6.75 → `6h 45m` */
+export function formatHoursMinutes(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (m <= 0) return `${h}h`;
+  if (h <= 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+
 export function formatUtcDate(dateIso: string): string {
   return new Date(dateIso).toLocaleDateString(undefined, { timeZone: "UTC" });
 }
