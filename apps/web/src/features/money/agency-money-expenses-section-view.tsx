@@ -19,7 +19,7 @@ import {
   agencyPanelClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
-import { expenseStripMeta, expenseStripStatusChipClass, type ExpenseStripItem } from "@/features/money/money-expenses-strip";
+import { expenseStripMeta, type ExpenseStripItem } from "@/features/money/money-expenses-strip";
 import { ExpenseStripGlyph } from "@/features/money/money-expense-strip-glyphs";
 import {
   moneyBaseTransition,
@@ -27,8 +27,10 @@ import {
 } from "@/features/money/money-motion";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -141,14 +143,9 @@ function ExpenseStripRow({
           >
             <span dir="auto">{item.name}</span>
           </Button>
-          <span
-            className={cn(
-              "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
-              expenseStripStatusChipClass,
-            )}
-          >
+          <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[0.6875rem]">
             {item.statusLabel}
-          </span>
+          </Badge>
         </div>
         <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
           {expenseStripMeta(item)}
@@ -336,106 +333,114 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
             <DialogTitle className="text-base font-bold text-highlighted">
               {details.title}
             </DialogTitle>
-            <p className="text-xs text-muted">
+            <DialogDescription className="text-xs text-muted">
               {details.totalCount === 0
                 ? "Nothing logged yet"
                 : `${details.totalCount} ${details.totalCount === 1 ? "expense" : "expenses"}`}
-            </p>
+            </DialogDescription>
           </DialogHeader>
 
           <div className="max-h-[min(70vh,32rem)] overflow-y-auto px-5 py-4">
             {details.totalCount === 0 ? (
-              <div className="rounded-2xl border border-dashed border-default px-4 py-8 text-center">
-                <p className="text-sm font-semibold text-highlighted">{details.emptyTitle}</p>
-                <p className="mt-1 text-xs text-muted text-balance">{details.emptyBody}</p>
-              </div>
+              <Card className="border-dashed shadow-none">
+                <CardContent className="py-8 text-center">
+                  <CardTitle className="text-sm font-semibold text-highlighted">
+                    {details.emptyTitle}
+                  </CardTitle>
+                  <CardDescription className="mt-1 text-balance">{details.emptyBody}</CardDescription>
+                </CardContent>
+              </Card>
             ) : (
               <div className="flex flex-col gap-5">
                 {details.sections.map((section) => (
-                  <div key={section.id} className="flex flex-col gap-2">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <h3 className={cn(agencyLabelClass, "text-muted tracking-wide uppercase")}>
+                  <Card key={section.id} size="sm" className="shadow-none">
+                    <CardHeader className="flex-row items-baseline justify-between gap-2 pb-0">
+                      <CardTitle
+                        className={cn(
+                          agencyLabelClass,
+                          "text-xs font-medium tracking-wide text-muted uppercase",
+                        )}
+                      >
                         {section.title}
-                      </h3>
-                      <span className={cn(agencyMetricClass, "text-xs tabular-nums text-muted")}>
+                      </CardTitle>
+                      <Badge variant="outline" className="rounded-md font-mono tabular-nums">
                         {section.items.length}
-                      </span>
-                    </div>
-                    {section.items.length === 0 ? (
-                      <p className="text-xs text-muted">None in this group.</p>
-                    ) : (
-                      <ul className="flex flex-col divide-y divide-default rounded-xl border border-default">
-                        {section.items.map((item) => (
-                          <li
-                            key={item.id}
-                            className="flex items-center gap-3 px-3 py-2.5 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none"
-                          >
-                            <ExpenseStripGlyph kind={item.kind} />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                                <Button
-                                  type="button"
-                                  variant="link"
-                                  size="sm"
-                                  className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-xs font-medium text-highlighted sm:text-sm"
-                                  onClick={() => expenses.onOpenEdit(item.expenseId)}
-                                >
-                                  <span dir="auto">{item.name}</span>
-                                </Button>
-                                <span
-                                  className={cn(
-                                    "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
-                                    expenseStripStatusChipClass,
-                                  )}
-                                >
-                                  {item.statusLabel}
-                                </span>
-                              </div>
-                              <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
-                                {item.meta}
-                              </p>
-                              {item.note ? (
-                                <p className="truncate text-[11px] text-muted/80" dir="auto">
-                                  {item.note}
+                      </Badge>
+                    </CardHeader>
+                    <CardContent className="px-0 pt-2">
+                      {section.items.length === 0 ? (
+                        <CardDescription className="px-(--card-spacing) text-xs">
+                          None in this group.
+                        </CardDescription>
+                      ) : (
+                        <ul className="flex flex-col divide-y divide-default border-t border-default">
+                          {section.items.map((item) => (
+                            <li
+                              key={item.id}
+                              className="flex items-center gap-3 px-(--card-spacing) py-2.5 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none"
+                            >
+                              <ExpenseStripGlyph kind={item.kind} />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                                  <Button
+                                    type="button"
+                                    variant="link"
+                                    size="sm"
+                                    className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-xs font-medium text-highlighted sm:text-sm"
+                                    onClick={() => expenses.onOpenEdit(item.expenseId)}
+                                  >
+                                    <span dir="auto">{item.name}</span>
+                                  </Button>
+                                  <Badge
+                                    variant="secondary"
+                                    className="h-5 rounded-md px-1.5 text-[0.6875rem]"
+                                  >
+                                    {item.statusLabel}
+                                  </Badge>
+                                </div>
+                                <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
+                                  {item.meta}
                                 </p>
-                              ) : null}
-                            </div>
-                            <div className="flex shrink-0 flex-col items-end gap-0.5 text-end">
-                              <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-highlighted">
-                                {item.amountLabel}
-                              </span>
-                              {item.canRecordPayment ? (
-                                <Button
-                                  type="button"
-                                  variant="link"
-                                  size="sm"
-                                  className="h-auto min-h-0 px-0 py-0 text-[11px] font-semibold text-muted hover:text-highlighted"
-                                  onClick={() => expenses.onOpenPayment(item.expenseId)}
-                                  aria-label={`${item.kind === "subscription" ? "Pay" : "Record payment"} ${item.name}`}
-                                >
-                                  {item.kind === "subscription" ? "Pay" : "Record"}
-                                </Button>
-                              ) : null}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                                {item.note ? (
+                                  <p className="truncate text-[11px] text-muted/80" dir="auto">
+                                    {item.note}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <div className="flex shrink-0 flex-col items-end gap-0.5 text-end">
+                                <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-highlighted">
+                                  {item.amountLabel}
+                                </span>
+                                {item.canRecordPayment ? (
+                                  <Button
+                                    type="button"
+                                    variant="link"
+                                    size="sm"
+                                    className="h-auto min-h-0 px-0 py-0 text-[11px] font-semibold text-muted hover:text-highlighted"
+                                    onClick={() => expenses.onOpenPayment(item.expenseId)}
+                                    aria-label={`${item.kind === "subscription" ? "Pay" : "Record payment"} ${item.name}`}
+                                  >
+                                    {item.kind === "subscription" ? "Pay" : "Record"}
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
           </div>
 
           <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => details.onOpenChange(false)}
-            >
-              Close
-            </Button>
+            <DialogClose asChild>
+              <Button type="button" variant="ghost" size="sm">
+                Close
+              </Button>
+            </DialogClose>
             <Button
               type="button"
               size="sm"
@@ -544,9 +549,9 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                       </SelectContent>
                     </Select>
                     {create.amountMode === "variable" ? (
-                      <p className="text-[11px] text-muted text-pretty">
+                      <CardDescription className="text-[11px] text-pretty">
                         Enter this cycle&apos;s amount when you Pay.
-                      </p>
+                      </CardDescription>
                     ) : null}
                   </div>
 
@@ -594,21 +599,23 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                     </div>
                   </div>
                   {create.startsAt ? (
-                    <div className="rounded-xl border border-default bg-muted/25 px-3 py-2.5 text-[11px] text-muted text-pretty">
-                      First due{" "}
-                      <span className="font-medium text-highlighted">
-                        {formatExpenseStartPreview(create.startsAt)}
-                      </span>
-                      {create.period ? (
-                        <> · then {moneyExpensePeriodLabel(create.period)?.toLowerCase()}</>
-                      ) : null}
-                      . After Pay, it stays hidden until the next due.
-                    </div>
+                    <Card size="sm" className="bg-muted/25 shadow-none">
+                      <CardContent className="py-2.5 text-[11px] text-muted text-pretty">
+                        First due{" "}
+                        <span className="font-medium text-highlighted">
+                          {formatExpenseStartPreview(create.startsAt)}
+                        </span>
+                        {create.period ? (
+                          <> · then {moneyExpensePeriodLabel(create.period)?.toLowerCase()}</>
+                        ) : null}
+                        . After Pay, it stays hidden until the next due.
+                      </CardContent>
+                    </Card>
                   ) : (
-                    <p className="text-[11px] text-muted text-pretty">
+                    <CardDescription className="text-[11px] text-pretty">
                       Add a start date to pin the first due date. Without one, the next due is one
                       period from now.
-                    </p>
+                    </CardDescription>
                   )}
                 </>
               ) : null}
@@ -651,14 +658,11 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
             </div>
 
             <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => create.onOpenChange(false)}
-              >
-                Cancel
-              </Button>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost" size="sm">
+                  Cancel
+                </Button>
+              </DialogClose>
               <Button type="submit" size="sm" disabled={!create.canSubmit} form={create.formId}>
                 {create.submitLabel}
               </Button>
@@ -685,20 +689,24 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
             onSubmit={(event: FormEvent<HTMLFormElement>) => payment.onSubmit(event)}
           >
             <div className="flex flex-col gap-4 px-5 py-4">
-              <div className="rounded-xl border border-default bg-muted/25 px-4 py-4 text-center">
-                <p className="text-xs text-muted">{payment.heroLabel}</p>
-                <p
-                  className={cn(
-                    agencyMetricClass,
-                    "mt-1 font-mono text-2xl font-semibold tabular-nums text-highlighted",
-                  )}
-                >
-                  {payment.heroValue || "—"}
-                </p>
-                {payment.heroHint ? (
-                  <p className="mt-2 text-[11px] text-muted text-pretty">{payment.heroHint}</p>
-                ) : null}
-              </div>
+              <Card size="sm" className="bg-muted/25 shadow-none">
+                <CardContent className="py-4 text-center">
+                  <CardDescription>{payment.heroLabel}</CardDescription>
+                  <CardTitle
+                    className={cn(
+                      agencyMetricClass,
+                      "mt-1 font-mono text-2xl font-semibold tabular-nums text-highlighted",
+                    )}
+                  >
+                    {payment.heroValue || "—"}
+                  </CardTitle>
+                  {payment.heroHint ? (
+                    <CardDescription className="mt-2 text-[11px] text-pretty">
+                      {payment.heroHint}
+                    </CardDescription>
+                  ) : null}
+                </CardContent>
+              </Card>
               <Separator />
               <div className={agencyFormFieldClass}>
                 <Label htmlFor="money-expense-payment-amount" className={agencyFormLabelClass}>
@@ -718,14 +726,11 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               </div>
             </div>
             <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => payment.onOpenChange(false)}
-              >
-                Cancel
-              </Button>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost" size="sm">
+                  Cancel
+                </Button>
+              </DialogClose>
               <Button type="submit" size="sm" disabled={!payment.canSubmit} form={payment.formId}>
                 {payment.kind === "subscription" ? "Pay" : "Record"}
               </Button>

@@ -13,8 +13,6 @@ export type ExpenseStripItem = {
   note: string | null;
 };
 
-export const expenseStripStatusChipClass = "bg-elevated text-muted";
-
 export type ExpenseStripSources = {
   recent: { items: ExpenseStripItem[]; count: number };
   upcoming: {
