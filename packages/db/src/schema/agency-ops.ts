@@ -865,7 +865,7 @@ export const agencyOpsPayoutLine = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// Team salary pool (manual period total + shared member payments)
+// Team salary pool (manual period total + pool-level payments)
 // ---------------------------------------------------------------------------
 
 export const agencyOpsSalaryPool = pgTable(
@@ -880,6 +880,8 @@ export const agencyOpsSalaryPool = pgTable(
       .references(() => agencyOpsPayoutRun.id, { onDelete: "cascade" }),
     /** Full Team salaries cost for formulas (agency minor units). */
     totalAmount: integer("total_amount").notNull(),
+    /** Cumulative pool payments recorded (agency minor units). */
+    paidAmount: integer("paid_amount").notNull().default(0),
     currency: text("currency").notNull().default("USD"),
     sourceAmount: integer("source_amount"),
     fxRate: text("fx_rate").notNull().default("1"),

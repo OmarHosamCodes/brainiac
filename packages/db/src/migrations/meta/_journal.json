@@ -393,6 +393,13 @@
       "when": 1787900000032,
       "tag": "0057_agency_expense_occurrence",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1787900000033,
+      "tag": "0058_agency_salary_pool_paid_amount",
+      "breakpoints": true
     }
   ]
 }
