@@ -30,7 +30,7 @@ export function MoneyStatsSection({
     return (
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-busy="true">
         {[1, 2, 3, 4].map((item) => (
-          <Skeleton key={item} className="min-h-[12rem] rounded-xl" />
+          <Skeleton key={item} className="min-h-[15.5rem] rounded-xl" />
         ))}
       </section>
     );

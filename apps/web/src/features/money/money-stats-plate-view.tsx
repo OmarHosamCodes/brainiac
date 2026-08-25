@@ -20,6 +20,15 @@ import {
   type MoneyStatsMetricSelection,
 } from "./hooks/use-agency-money-surface";
 
+const plateTitleClass = "text-sm font-semibold tracking-tight text-foreground";
+const plateHintClass =
+  "shrink-0 font-mono text-[0.625rem] font-medium tracking-[0.04em] text-muted-foreground";
+const metricLabelClass = "min-w-0 truncate text-[10px] leading-snug text-muted-foreground";
+const metricValueClass = cn(
+  agencyMetricClass,
+  "text-xs font-medium tracking-tight tabular-nums leading-none sm:text-sm",
+);
+
 export function formatMoneyStatsMetricValue(
   kind: MoneyStatsMetricKind,
   amount: number,
@@ -59,40 +68,42 @@ export function MoneyStatsMetricRow({
   metric,
   value,
   onSelect,
+  emphasized,
 }: {
   card: MoneyStatsCardViewModel;
   metric: MoneyStatsMetricFixture & { source: "live" | "fixture" };
   value: string;
   onSelect: (selection: MoneyStatsMetricSelection) => void;
+  emphasized?: boolean;
 }) {
   return (
-    <li>
-      <button
-        type="button"
-        className={cn(
-          "group/metric flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors",
-          "hover:bg-muted/40",
-          agencyFocusRingClass,
-        )}
-        onClick={() => onSelect({ cardId: card.id, metricId: metric.id })}
-        aria-label={`${metric.label}: ${value}. Open details.`}
-      >
-        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{metric.label}</span>
+    <button
+      type="button"
+      className={cn(
+        "group/metric flex min-w-0 flex-col gap-0.5 rounded-md px-1.5 py-1.5 text-left transition-colors",
+        "hover:bg-muted/40",
+        agencyFocusRingClass,
+      )}
+      onClick={() => onSelect({ cardId: card.id, metricId: metric.id })}
+      aria-label={`${metric.label}: ${value}. Open details.`}
+    >
+      <span className={metricLabelClass}>{metric.label}</span>
+      <span className="flex min-w-0 items-baseline gap-1.5">
         <span
           className={cn(
-            agencyMetricClass,
-            "shrink-0 font-mono text-xs font-semibold tabular-nums",
+            metricValueClass,
+            emphasized && "font-semibold",
             toneValueClass(metric.tone),
           )}
         >
           {value}
         </span>
         <ChevronRight
-          className="size-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/metric:opacity-100 group-focus-visible/metric:opacity-100"
+          className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/metric:opacity-100 group-focus-visible/metric:opacity-100"
           aria-hidden
         />
-      </button>
-    </li>
+      </span>
+    </button>
   );
 }
 
@@ -107,62 +118,69 @@ export function MoneyStatsPlate({
   const ink = instrumentPlateInkClass(tone);
   const collectedPct = card.collectedRatio === null ? null : Math.round(card.collectedRatio * 100);
   const allMetrics = [card.primary, ...card.secondary];
+  const collectionTone =
+    collectedPct !== null && collectedPct < 100 ? "text-warning" : "text-muted-foreground";
 
   return (
     <article
       className={cn(
         instrumentPlateSurfaceClass(),
-        "flex flex-col gap-3 rounded-xl border p-4 transition-colors",
+        "flex min-h-[15.5rem] flex-col gap-2 rounded-xl border px-4 py-3.5 transition-colors",
       )}
     >
-      <header className="flex items-start justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">{shortTitle}</h2>
-        <span className="shrink-0 text-[0.625rem] font-medium text-muted-foreground">
-          {destinationHint}
-        </span>
+      <header className="flex shrink-0 items-start justify-between gap-3">
+        <h2 className={plateTitleClass}>{shortTitle}</h2>
+        <span className={plateHintClass}>{destinationHint}</span>
       </header>
 
-      <div className={cn("h-7 w-full", ink)}>
-        <MoneyStatsPlateGlyph
-          plateId={card.id}
-          collectedRatio={card.collectedRatio ?? 0}
-          className="h-full w-full"
-        />
+      <div className="flex min-h-[5.5rem] flex-1 flex-col justify-center gap-2.5 rounded-lg bg-muted/15 px-3 py-4">
+        <div className={cn("h-14 w-full shrink-0 sm:h-16", ink)}>
+          <MoneyStatsPlateGlyph
+            plateId={card.id}
+            collectedRatio={card.collectedRatio ?? 0}
+            className="h-full w-full"
+          />
+        </div>
+
+        {collectedPct !== null ? (
+          <div className="space-y-1.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[10px] leading-snug text-muted-foreground">Collection</span>
+              <span className={cn("font-mono text-[11px] font-medium tabular-nums", collectionTone)}>
+                {card.collectedLabel}
+              </span>
+            </div>
+            <div
+              className="h-[5px] overflow-hidden rounded-full bg-muted/80"
+              role="meter"
+              aria-label="Share of total income received"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={collectedPct}
+            >
+              <div
+                className={cn(
+                  "h-full rounded-full transition-[width] duration-300 ease-out motion-reduce:transition-none",
+                  collectedPct > 0 ? "bg-success/80" : "bg-warning/70",
+                )}
+                style={{ width: `${collectedPct}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      {collectedPct !== null ? (
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-2 text-[11px]">
-            <span className="text-muted-foreground">Collection</span>
-            <span className={cn("font-mono font-semibold tabular-nums", toneValueClass("caution"))}>
-              {card.collectedLabel}
-            </span>
-          </div>
-          <div
-            className="h-1.5 overflow-hidden rounded-full bg-muted"
-            role="meter"
-            aria-label="Share of total income received"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={collectedPct}
-          >
-            <div
-              className="h-full rounded-full bg-success/80 transition-[width] duration-300 ease-out motion-reduce:transition-none"
-              style={{ width: `${collectedPct}%` }}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      <ul className="flex flex-col gap-0.5 border-t border-border pt-2">
+      <ul className="grid shrink-0 grid-cols-1 gap-0.5 border-t border-border pt-2.5 sm:grid-cols-2 sm:gap-x-1.5 sm:gap-y-0.5">
         {allMetrics.map((metric) => (
-          <MoneyStatsMetricRow
-            key={metric.id}
-            card={card}
-            metric={metric}
-            value={formatMoneyStatsMetricValue(metric.kind, metric.amount, card.currency)}
-            onSelect={onSelectMetric}
-          />
+          <li key={metric.id} className="min-w-0">
+            <MoneyStatsMetricRow
+              card={card}
+              metric={metric}
+              value={formatMoneyStatsMetricValue(metric.kind, metric.amount, card.currency)}
+              onSelect={onSelectMetric}
+              emphasized={metric.id === card.primary.id}
+            />
+          </li>
         ))}
       </ul>
     </article>
@@ -180,13 +198,14 @@ export function MoneyStatsMetricHintStrip({ hint }: { hint: MoneyStatsMetricHint
 
   return (
     <p
-      className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+      className="rounded-xl border border-border bg-muted/20 px-3.5 py-2.5 text-sm leading-snug text-muted-foreground"
       aria-live="polite"
     >
       <span className="font-medium text-foreground">{hint.label}</span>
-      <span className="text-muted-foreground"> · </span>
-      <span className="font-mono tabular-nums text-foreground">{hint.value}</span>
-      <span className="text-muted-foreground"> · Opens {hint.destination}</span>
+      <span aria-hidden> · </span>
+      <span className={cn(agencyMetricClass, "font-medium tracking-tight")}>{hint.value}</span>
+      <span aria-hidden> · </span>
+      <span>Opens {hint.destination}</span>
     </p>
   );
 }
