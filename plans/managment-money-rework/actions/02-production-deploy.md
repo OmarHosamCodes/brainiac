@@ -8,6 +8,18 @@ classification (`waste-helpers`), and related API/web changes. It does **not**
 include Fin-Sheet input reconciliation (slice 02) — deploy code first, reconcile
 totals after.
 
+## Execution result — 2026-08-24
+
+- Railway project/environment: `Internal Tools` → `Orch`
+- Active deployment: commit `b674e0c8`, status `SUCCESS`
+- Service topology: the `web` service starts both the API and TanStack Start web
+  process
+- Pre-deploy `drizzle-kit push` applied the schema; 0055–0057 tables, columns,
+  indexes, and foreign keys were verified directly in production Postgres
+- Both production domains returned HTTP 200
+- The guarded EGP currency migration and read-only input audit are recorded in
+  [`../steps/09-production-currency-and-input-audit.md`](../steps/09-production-currency-and-input-audit.md)
+
 ## Pre-flight
 
 ```bash

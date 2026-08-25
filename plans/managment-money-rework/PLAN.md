@@ -2,10 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **Status:** ready for production deploy (2026-08-24). Steps 01–08 implemented
-> on `dev`. Run [`actions/02-production-deploy.md`](./actions/02-production-deploy.md)
-> to ship migrations 0055–0057 and smoke-test. Slice 02 (input reconciliation)
-> remains post-deploy.
+> **Status:** complete through production deploy, guarded EGP migration, and slice
+> 02 read-only Fin-Sheet July input audit (2026-08-24).
 
 **Goal:** Make Agency Money a reliable compose-on-demand ledger whose
 scoreboard follows the Fin-Sheet equations while preserving auditable payment
@@ -67,6 +65,7 @@ Actual local execution is recorded in [`steps/`](./steps/README.md).
 - [`steps/06-period-range-bounds.md`](./steps/06-period-range-bounds.md) — valid future tenure-period bounds for scoreboard reads
 - [`steps/07-subscription-expense-occurrences.md`](./steps/07-subscription-expense-occurrences.md) — paid subscription history, stable scoreboard totals, Due/Paid visibility
 - [`steps/08-formula-rule-binding.md`](./steps/08-formula-rule-binding.md) — formulas bind Money Rules for eligibility and cohort size
+- [`steps/09-production-currency-and-input-audit.md`](./steps/09-production-currency-and-input-audit.md) — production deploy/schema verification, EGP migration, and read-only input audit
 
 ## Sources
 
@@ -107,5 +106,6 @@ Task knowledge base lives next to this plan:
 - [x] Preserve paid subscription cycles in totals and add Due/Paid visibility
 - [x] Bind formulas to Money Rules (`ruleId`) for payout eligibility
 - [x] Unified waste helpers across reports, Money, and payouts
-- [ ] Run production deploy ([`actions/02-production-deploy.md`](./actions/02-production-deploy.md))
-- [ ] Execute [`slices/02-money-input-reconciliation.md`](./slices/02-money-input-reconciliation.md)
+- [x] Run production deploy and verify migrations 0055–0057
+- [x] Apply guarded production EGP relabel/client FX migration
+- [x] Complete slice 02 read-only production input audit

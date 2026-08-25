@@ -28,8 +28,11 @@ execution log, not a replacement for:
    visibility.
 8. [`08-formula-rule-binding.md`](./08-formula-rule-binding.md) — formula
    `ruleId`, payout eligibility from rules, formula editor Rule picker.
+9. [`09-production-currency-and-input-audit.md`](./09-production-currency-and-input-audit.md) —
+   Railway deploy verification, guarded production EGP migration, and read-only
+   Fin-Sheet July input reconciliation.
 
 **Production:** see [`../actions/02-production-deploy.md`](../actions/02-production-deploy.md).
 
-These steps did not modify Railway or production until the production deploy
-action is executed.
+Steps 01–08 were implemented locally before the production deploy. Step 09
+records the production deployment, currency migration, and read-only input audit.

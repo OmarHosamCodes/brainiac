@@ -1,6 +1,8 @@
 # Slice 02 — Money input reconciliation
 
-> **Status:** next; not started.
+> **Status:** in progress. Production read-only fact audit completed 2026-08-24;
+> see
+> [`../steps/09-production-currency-and-input-audit.md`](../steps/09-production-currency-and-input-audit.md).
 >
 > **Prerequisite:** executed steps 01–08 and migrations 0055–0057 applied in
 > production. Deploy via [`../actions/02-production-deploy.md`](../actions/02-production-deploy.md).
@@ -47,13 +49,13 @@ the next risk is the facts supplied to those formulas.
 - `packages/api/src/routers/agency-ops/billing/expense-service.ts`
 - `packages/api/src/routers/agency-ops/billing/payout-service.ts`
 
-- [ ] Select and record the exact Orch/Fin-Sheet period bounds and currency.
-- [ ] Capture each raw scoreboard fact before formulas.
-- [ ] Break income down by client/project/effective-rate source.
-- [ ] Break salaries, expenses, and payout sections down by persisted source.
-- [ ] Classify every delta as missing source data, currency/range mismatch,
+- [x] Select and record the exact Orch/Fin-Sheet period bounds and currency.
+- [x] Capture each raw scoreboard fact before formulas.
+- [x] Break income down by client/project/effective-rate source.
+- [x] Break salaries, expenses, and payout sections down by persisted source.
+- [x] Classify every delta as missing source data, currency/range mismatch,
   rounding mismatch, or aggregation defect.
-- [ ] Do not mutate data during this task.
+- [x] Do not mutate data during this task.
 
 **Output:** a compact reconciliation report with evidence for every nonzero
 delta and a proposed fix owner (data or code).
