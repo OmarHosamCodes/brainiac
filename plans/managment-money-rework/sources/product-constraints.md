@@ -31,8 +31,8 @@ Spec: `docs/superpowers/specs/2026-08-06-money-compose-on-demand-design.md`
   and Paid cycles; paid rows are read-only.
 - Payout formulas/rules apply from Money settings (rules + chip/token formulas).
 - A manual Team salary pool takes precedence over rate-derived member salary
-  lines for that period. Partial/final member settlements reduce the pool’s
-  shared remaining amount; the scoreboard uses the full pool total.
+  lines for that period. Pool-level partial payments reduce the shared remaining
+  amount; the scoreboard uses the full pool total.
 - Effective client income/invoice rate is project override → client rate.
   Projects with no override inherit automatically.
 - Money cohort **Rules** define who qualifies; **Formulas** calculate amounts.
