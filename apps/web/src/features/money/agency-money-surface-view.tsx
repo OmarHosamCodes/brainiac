@@ -13,6 +13,7 @@ import { Skeleton } from "@/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+import { MoneyPayoutRunView } from "@/features/billing/money-payout-run-view";
 import { BillsSection } from "./agency-money-bills-section-view";
 import { ExpensesSection } from "./agency-money-expenses-section-view";
 import { MoneySettingsDialog } from "./agency-money-settings-dialog-view";
@@ -30,6 +31,8 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
     subtitle,
     period,
     statsCards,
+    lastStatsMetricHint,
+    payoutRun,
     onSelectMetric,
     moneySettings,
     bills,
@@ -45,9 +48,9 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
     return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-6" aria-busy="true">
         <Skeleton className="h-8 w-36" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((item) => (
-            <Skeleton key={item} className="h-48 rounded-2xl" />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => (
+            <Skeleton key={item} className="min-h-[12rem] rounded-xl" />
           ))}
         </div>
       </div>
@@ -136,11 +139,21 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
               statsCards={statsCards}
               onSelectMetric={onSelectMetric}
               onRetry={onRetryScoreboard}
+              metricHint={lastStatsMetricHint}
             />
           </motion.div>
 
           <motion.div
             custom={1}
+            variants={moneySectionItemVariants}
+            initial="hidden"
+            animate="show"
+          >
+            <MoneyPayoutRunView viewModel={payoutRun} />
+          </motion.div>
+
+          <motion.div
+            custom={2}
             variants={moneySectionItemVariants}
             initial="hidden"
             animate="show"
