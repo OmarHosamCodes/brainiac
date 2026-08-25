@@ -12,6 +12,6 @@ describe("moneyStatsPlateMeta", () => {
   });
 
   test("maps profitability plate", () => {
-    expect(moneyStatsPlateMeta("profitability").destinationHint).toBe("Payout run");
+    expect(moneyStatsPlateMeta("profitability").destinationHint).toBe("Adjustments");
   });
 });

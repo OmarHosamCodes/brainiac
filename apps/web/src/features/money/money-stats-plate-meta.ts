@@ -12,7 +12,7 @@ export function moneyStatsPlateMeta(cardId: MoneyStatsCardId): {
     case "deductions":
       return { shortTitle: "Deductions", destinationHint: "Outgoing", tone: "neutral" };
     case "profitability":
-      return { shortTitle: "Profitability", destinationHint: "Payout run", tone: "success" };
+      return { shortTitle: "Profitability", destinationHint: "Adjustments", tone: "success" };
     case "allocations":
       return { shortTitle: "Allocations", destinationHint: "Formulas", tone: "info" };
     default: {

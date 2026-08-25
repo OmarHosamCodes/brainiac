@@ -13,7 +13,6 @@ import { Skeleton } from "@/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-import { MoneyPayoutRunView } from "@/features/billing/money-payout-run-view";
 import { BillsSection } from "./agency-money-bills-section-view";
 import { ExpensesSection } from "./agency-money-expenses-section-view";
 import { MoneySettingsDialog } from "./agency-money-settings-dialog-view";
@@ -32,7 +31,6 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
     period,
     statsCards,
     lastStatsMetricHint,
-    payoutRun,
     onSelectMetric,
     moneySettings,
     bills,
@@ -145,15 +143,6 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
 
           <motion.div
             custom={1}
-            variants={moneySectionItemVariants}
-            initial="hidden"
-            animate="show"
-          >
-            <MoneyPayoutRunView viewModel={payoutRun} />
-          </motion.div>
-
-          <motion.div
-            custom={2}
             variants={moneySectionItemVariants}
             initial="hidden"
             animate="show"
