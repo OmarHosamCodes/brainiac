@@ -15,7 +15,10 @@ import {
   MONEY_FORMULA_OPS,
   MONEY_FORMULA_SECTION_OPTIONS,
   MONEY_FORMULA_VAR_PALETTE,
+  amountToFormulaMajor,
+  majorToFormulaAmount,
   moneyFormulaDestinationSummary,
+  moneyFormulaNumberChipUnit,
   moneyFormulaTokenLabel,
   type MoneyFormulaDef,
   type MoneyFormulaOutput,
@@ -24,6 +27,7 @@ import {
 
 export type MoneyFormulaChipEditorViewProps = {
   formula: MoneyFormulaDef;
+  currency: string;
   ruleOptions: Array<{ id: string; label: string }>;
   validationError: string | null;
   previewLabel: string;
@@ -40,13 +44,21 @@ function Chip({
   token,
   onRemove,
   disabled,
+  labelContext,
 }: {
   token: MoneyFormulaToken;
   onRemove: () => void;
   disabled: boolean;
+  labelContext?: {
+    tokens: MoneyFormulaToken[];
+    index: number;
+    output: MoneyFormulaOutput;
+    currency: string;
+  };
 }) {
   const isVar = token.kind === "var";
   const isOp = token.kind === "op" || token.kind === "paren";
+  const label = moneyFormulaTokenLabel(token, labelContext);
   return (
     <span
       className={cn(
@@ -57,13 +69,13 @@ function Chip({
         !isVar && !isOp && "bg-muted/70 text-muted-foreground",
       )}
     >
-      {moneyFormulaTokenLabel(token)}
+      {label}
       <button
         type="button"
         className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground opacity-50 transition-opacity duration-150 ease-out hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 motion-reduce:transition-none sm:opacity-0 sm:group-hover/chip:opacity-70 sm:group-focus-within/chip:opacity-70"
         onClick={onRemove}
         disabled={disabled}
-        aria-label={`Remove ${moneyFormulaTokenLabel(token)}`}
+        aria-label={`Remove ${label}`}
       >
         <X className="size-3" aria-hidden />
       </button>
@@ -111,8 +123,69 @@ function PaletteSection({ title, children }: { title: string; children: ReactNod
   );
 }
 
+function NumberChip({
+  token,
+  index,
+  formula,
+  currency,
+  isSaving,
+  onUpdate,
+  onRemove,
+}: {
+  token: Extract<MoneyFormulaToken, { kind: "number" }>;
+  index: number;
+  formula: MoneyFormulaDef;
+  currency: string;
+  isSaving: boolean;
+  onUpdate: (index: number, rawMajorOrScalar: number) => void;
+  onRemove: (index: number) => void;
+}) {
+  const unit = moneyFormulaNumberChipUnit(formula.tokens, index, formula.output);
+  const displayValue = unit === "amount" ? amountToFormulaMajor(token.value) : token.value;
+  const displayLabel = moneyFormulaTokenLabel(token, {
+    tokens: formula.tokens,
+    index,
+    output: formula.output,
+    currency,
+  });
+
+  return (
+    <span
+      role="listitem"
+      className="group/chip inline-flex items-center gap-0.5 rounded-md border border-border/70 bg-muted/50 py-0.5 pr-0.5 pl-1.5 font-mono text-xs"
+    >
+      <Input
+        type="number"
+        value={displayValue}
+        step={unit === "amount" ? "0.01" : "1"}
+        onChange={(event) => onUpdate(index, Number(event.target.value) || 0)}
+        disabled={isSaving}
+        className="h-6 w-24 border-0 bg-transparent px-1 py-0 font-mono text-xs shadow-none focus-visible:ring-0"
+        aria-label={
+          unit === "amount"
+            ? `Amount chip ${index + 1} in ${currency}`
+            : `Number chip ${index + 1}`
+        }
+      />
+      {unit === "amount" ? (
+        <span className="pr-0.5 text-[10px] text-muted-foreground">{currency}</span>
+      ) : null}
+      <button
+        type="button"
+        className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground opacity-50 transition-opacity duration-150 ease-out hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:opacity-0 sm:group-hover/chip:opacity-70 sm:group-focus-within/chip:opacity-70"
+        onClick={() => onRemove(index)}
+        disabled={isSaving}
+        aria-label={`Remove ${displayLabel}`}
+      >
+        <X className="size-3" aria-hidden />
+      </button>
+    </span>
+  );
+}
+
 export function MoneyFormulaChipEditorView({
   formula,
+  currency,
   ruleOptions,
   validationError,
   previewLabel,
@@ -140,11 +213,16 @@ export function MoneyFormulaChipEditorView({
     });
   }
 
-  function updateNumberAt(index: number, value: number) {
+  function updateNumberAt(index: number, rawMajorOrScalar: number) {
+    const token = formula.tokens[index];
+    if (!token || token.kind !== "number") return;
+    const unit = moneyFormulaNumberChipUnit(formula.tokens, index, formula.output);
+    const value =
+      unit === "amount" ? majorToFormulaAmount(rawMajorOrScalar) : rawMajorOrScalar;
     onChange({
       ...formula,
-      tokens: formula.tokens.map((token, tokenIndex) =>
-        tokenIndex === index && token.kind === "number" ? { kind: "number", value } : token,
+      tokens: formula.tokens.map((entry, tokenIndex) =>
+        tokenIndex === index && entry.kind === "number" ? { kind: "number", value } : entry,
       ),
     });
   }
@@ -231,32 +309,29 @@ export function MoneyFormulaChipEditorView({
           ) : (
             formula.tokens.map((token, index) =>
               token.kind === "number" ? (
-                <span
+                <NumberChip
                   key={`${token.kind}-${index}`}
-                  role="listitem"
-                  className="group/chip inline-flex items-center gap-0.5 rounded-md border border-border/70 bg-muted/50 py-0.5 pr-0.5 pl-1.5 font-mono text-xs"
-                >
-                  <Input
-                    type="number"
-                    value={token.value}
-                    onChange={(event) => updateNumberAt(index, Number(event.target.value) || 0)}
-                    disabled={isSaving}
-                    className="h-6 w-20 border-0 bg-transparent px-1 py-0 font-mono text-xs shadow-none focus-visible:ring-0"
-                    aria-label={`Number chip ${index + 1}`}
-                  />
-                  <button
-                    type="button"
-                    className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground opacity-50 transition-opacity duration-150 ease-out hover:text-foreground hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none sm:opacity-0 sm:group-hover/chip:opacity-70 sm:group-focus-within/chip:opacity-70"
-                    onClick={() => removeTokenAt(index)}
-                    disabled={isSaving}
-                    aria-label={`Remove number ${token.value}`}
-                  >
-                    <X className="size-3" aria-hidden />
-                  </button>
-                </span>
+                  token={token}
+                  index={index}
+                  formula={formula}
+                  currency={currency}
+                  isSaving={isSaving}
+                  onUpdate={updateNumberAt}
+                  onRemove={removeTokenAt}
+                />
               ) : (
                 <span key={`${token.kind}-${index}`} role="listitem">
-                  <Chip token={token} onRemove={() => removeTokenAt(index)} disabled={isSaving} />
+                  <Chip
+                    token={token}
+                    onRemove={() => removeTokenAt(index)}
+                    disabled={isSaving}
+                    labelContext={{
+                      tokens: formula.tokens,
+                      index,
+                      output: formula.output,
+                      currency,
+                    }}
+                  />
                 </span>
               ),
             )

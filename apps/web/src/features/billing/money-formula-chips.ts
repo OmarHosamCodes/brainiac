@@ -55,13 +55,114 @@ export const MONEY_FORMULA_OPS: Array<{ op: "+" | "-" | "*" | "/"; label: string
 ];
 
 const VAR_LABEL = new Map(MONEY_FORMULA_VAR_PALETTE.map((item) => [item.id, item.label]));
+const VAR_UNIT = new Map(MONEY_FORMULA_VAR_PALETTE.map((item) => [item.id, item.unit]));
 
-export function moneyFormulaTokenLabel(token: MoneyFormulaToken): string {
+export type MoneyFormulaTokenLabelContext = {
+  tokens: MoneyFormulaToken[];
+  index: number;
+  output: MoneyFormulaOutput;
+  currency?: string;
+};
+
+/** Major (UI) → integer minor units. */
+export function majorToFormulaAmount(major: number): number {
+  return Math.round(major * 100);
+}
+
+/** Integer minor → major for display/forms. */
+export function amountToFormulaMajor(amount: number): number {
+  return amount / 100;
+}
+
+type MoneyFormulaNumberChipUnit = "amount" | "scalar";
+
+function varUnit(id: string): MoneyFormulaVarMeta["unit"] | null {
+  return VAR_UNIT.get(id) ?? null;
+}
+
+function neighborVarUnit(
+  tokens: MoneyFormulaToken[],
+  index: number,
+  direction: -1 | 1,
+): MoneyFormulaVarMeta["unit"] | null {
+  let cursor = index + direction;
+  if (cursor < 0 || cursor >= tokens.length) return null;
+
+  const token = tokens[cursor];
+  if (token?.kind === "var") return varUnit(token.id);
+  if (
+    token?.kind === "op" &&
+    (token.op === "*" || token.op === "/" || token.op === "+" || token.op === "-")
+  ) {
+    cursor += direction;
+    if (cursor < 0 || cursor >= tokens.length) return null;
+    const neighbor = tokens[cursor];
+    if (neighbor?.kind === "var") return varUnit(neighbor.id);
+  }
+  return null;
+}
+
+/** Whether a number chip is a currency literal (minor storage) vs a plain scalar. */
+export function moneyFormulaNumberChipUnit(
+  tokens: MoneyFormulaToken[],
+  index: number,
+  output: MoneyFormulaOutput,
+): MoneyFormulaNumberChipUnit {
+  const token = tokens[index];
+  if (!token || token.kind !== "number") return "scalar";
+  if (output === "ratio" || output === "hours") return "scalar";
+
+  const prev = tokens[index - 1];
+  if (prev?.kind === "op" && prev.op === "/") return "scalar";
+
+  const next = tokens[index + 1];
+  const afterNext = tokens[index + 2];
+  if (
+    next?.kind === "op" &&
+    next.op === "*" &&
+    afterNext?.kind === "var" &&
+    afterNext.id === "member_cost_rate_amount"
+  ) {
+    return "scalar";
+  }
+
+  const leftUnit = neighborVarUnit(tokens, index, -1);
+  const rightUnit = neighborVarUnit(tokens, index, 1);
+  if (leftUnit === "hours" || rightUnit === "hours") return "scalar";
+  if (leftUnit === "count" || rightUnit === "count") return "scalar";
+
+  return "amount";
+}
+
+function formatMoneyFormulaNumberChipLabel(valueMinor: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(amountToFormulaMajor(valueMinor));
+  } catch {
+    return `${amountToFormulaMajor(valueMinor).toLocaleString()} ${currency}`;
+  }
+}
+
+export function moneyFormulaTokenLabel(
+  token: MoneyFormulaToken,
+  context?: MoneyFormulaTokenLabelContext,
+): string {
   switch (token.kind) {
     case "var":
       return VAR_LABEL.get(token.id) ?? token.id;
-    case "number":
+    case "number": {
+      if (!context) return String(token.value);
+      if (
+        moneyFormulaNumberChipUnit(context.tokens, context.index, context.output) === "amount" &&
+        context.currency
+      ) {
+        return formatMoneyFormulaNumberChipLabel(token.value, context.currency);
+      }
       return String(token.value);
+    }
     case "op":
       return MONEY_FORMULA_OPS.find((item) => item.op === token.op)?.label ?? token.op;
     case "paren":
@@ -73,9 +174,22 @@ export function moneyFormulaTokenLabel(token: MoneyFormulaToken): string {
   }
 }
 
-export function summarizeMoneyFormulaTokens(tokens: MoneyFormulaToken[]): string {
+export function summarizeMoneyFormulaTokens(
+  tokens: MoneyFormulaToken[],
+  options?: { output?: MoneyFormulaOutput; currency?: string },
+): string {
   if (tokens.length === 0) return "Empty formula";
-  return tokens.map((token) => moneyFormulaTokenLabel(token)).join(" ");
+  const output = options?.output ?? "amount";
+  return tokens
+    .map((token, index) =>
+      moneyFormulaTokenLabel(token, {
+        tokens,
+        index,
+        output,
+        currency: options?.currency,
+      }),
+    )
+    .join(" ");
 }
 
 const KNOWN_VARS = new Set(MONEY_FORMULA_VAR_PALETTE.map((item) => item.id));

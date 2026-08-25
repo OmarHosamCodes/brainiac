@@ -110,6 +110,7 @@ function MoneySettingsDialog({
             ) : editor?.kind === "formula" ? (
               <MoneyFormulaChipEditorView
                 formula={editor.formula}
+                currency={settings.currency.code}
                 ruleOptions={settings.ruleOptions}
                 validationError={settings.formulaValidationError}
                 previewLabel={settings.formulaPreviewLabel}
@@ -402,7 +403,10 @@ function MoneySettingsDialog({
                               />
                             </span>
                             <span className="mt-1 block truncate font-mono text-xs text-muted">
-                              {summarizeMoneyFormulaTokens(formula.tokens)}
+                              {summarizeMoneyFormulaTokens(formula.tokens, {
+                                output: formula.output,
+                                currency: settings.currency.code,
+                              })}
                             </span>
                             <span className="mt-1.5 inline-flex max-w-full items-center rounded-full bg-elevated px-2.5 py-0.5 text-xs text-muted">
                               <span className="truncate">
