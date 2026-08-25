@@ -1,5 +1,5 @@
 import { type FormEvent } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 
 import {
@@ -8,16 +8,15 @@ import {
   type MoneyExpensePeriod,
 } from "@/features/billing/money-expense-form";
 import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
+import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
 import {
   agencyErrorPanelClass,
-  agencyFocusRingClass,
   agencyFormFieldClass,
   agencyFormLabelClass,
   agencyInputPlaceholderClass,
   agencyLabelClass,
   agencyMetricClass,
   agencyPanelClass,
-  agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import { expenseStripMeta, type ExpenseStripItem } from "@/features/money/money-expenses-strip";
 import { ExpenseStripGlyph } from "@/features/money/money-expense-strip-glyphs";
@@ -25,6 +24,14 @@ import {
   moneyBaseTransition,
   moneyExpenseStripItemVariants,
 } from "@/features/money/money-motion";
+import {
+  moneyPanelHeaderClass,
+  MoneyPanelCount,
+  MoneyPanelFilterPill,
+  MoneyPanelFilterRow,
+  MoneyPanelMetricBlock,
+  MoneyPanelTitleRow,
+} from "@/features/money/money-panel-chrome";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
@@ -67,48 +74,16 @@ function formatExpenseStartPreview(value: string): string {
   });
 }
 
-function ExpenseFilterPill({
-  label,
-  selected,
-  onSelect,
-}: {
-  label: string;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      className={cn(
-        "relative inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors duration-150",
-        agencyFocusRingClass,
-        selected ? "text-highlighted" : "text-muted hover:bg-elevated/70 hover:text-highlighted",
-        "motion-reduce:transition-none",
-      )}
-      onClick={onSelect}
-    >
-      {selected ? (
-        <motion.span
-          layoutId="expense-strip-filter-bg"
-          className="absolute inset-0 rounded-full bg-elevated ring-1 ring-border"
-          transition={moneyBaseTransition}
-          aria-hidden
-        />
-      ) : null}
-      <span className="relative z-10">{label}</span>
-    </button>
-  );
-}
-
 function ExpenseStripRow({
   item,
   index,
+  searchTerm,
   onOpenEdit,
   onOpenPayment,
 }: {
   item: ExpenseStripItem;
   index: number;
+  searchTerm: string;
   onOpenEdit: (expenseId: string) => void;
   onOpenPayment: (expenseId: string) => void;
 }) {
@@ -141,18 +116,20 @@ function ExpenseStripRow({
             onClick={() => onOpenEdit(item.expenseId)}
             title={item.name}
           >
-            <span dir="auto">{item.name}</span>
+            <span dir="auto">
+              <AgencySearchHighlight text={item.name} query={searchTerm} />
+            </span>
           </Button>
           <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[0.6875rem]">
             {item.statusLabel}
           </Badge>
         </div>
         <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
-          {expenseStripMeta(item)}
+          <AgencySearchHighlight text={expenseStripMeta(item)} query={searchTerm} />
         </p>
         {item.note ? (
           <p className="truncate text-[11px] text-muted/80" dir="auto">
-            {item.note}
+            <AgencySearchHighlight text={item.note} query={searchTerm} />
           </p>
         ) : null}
       </div>
@@ -197,36 +174,33 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
   const details = expenses.details;
   const payment = expenses.payment;
   const strip = expenses.strip;
+  const expenseCountLabel =
+    strip.itemCount === 1 ? "1 expense" : `${strip.itemCount} expenses`;
 
   return (
     <section
       className={cn(agencyPanelClass, "flex h-full min-h-0 flex-col overflow-hidden")}
       aria-label="Expenses"
     >
-      <div className="flex flex-col gap-3 border-b border-default p-5 pb-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h2 className={cn(agencyWorkTitleClass, "text-balance")}>{expenses.title}</h2>
-            <div className="text-xs text-muted text-balance">
-              {expenses.periodSpendLabel ? (
-                <>
-                  <span className="text-[0.625rem] font-medium tracking-[0.06em] text-muted uppercase">
-                    Period spend
-                  </span>
-                  <span
-                    className={cn(
-                      agencyMetricClass,
-                      "mt-0.5 block font-mono text-base font-semibold tabular-nums tracking-tight text-highlighted",
-                    )}
-                  >
-                    {expenses.periodSpendLabel}
-                  </span>
-                </>
-              ) : (
-                <p>{expenses.subtitle}</p>
+      <div className={moneyPanelHeaderClass}>
+        <MoneyPanelTitleRow title={expenses.title}>
+          <div className="relative min-w-48 flex-1 sm:max-w-56 sm:flex-none">
+            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
+            <Input
+              value={expenses.searchTerm}
+              onChange={(event) => expenses.onSearchTermChange(event.target.value)}
+              placeholder="Search expenses"
+              aria-label="Search expenses"
+              className={cn(
+                "h-9 rounded-xl border-default bg-default pl-9 text-sm",
+                agencyInputPlaceholderClass,
+                expenses.searchTerm.trim() ? "text-highlighted" : undefined,
               )}
-            </div>
+            />
           </div>
+          {expenses.status === "ready" ? (
+            <MoneyPanelCount>{expenseCountLabel}</MoneyPanelCount>
+          ) : null}
           <TooltipProvider delayDuration={120}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -244,27 +218,32 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               <TooltipContent side="bottom">Add expense</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        </div>
+        </MoneyPanelTitleRow>
+
+        {expenses.periodSpendLabel ? (
+          <MoneyPanelMetricBlock
+            label="Period spend"
+            value={expenses.periodSpendLabel}
+            hint={strip.insight}
+          />
+        ) : expenses.subtitle ? (
+          <p className="text-xs text-muted text-balance">{expenses.subtitle}</p>
+        ) : null}
 
         {expenses.status === "ready" ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <LayoutGroup id="expense-strip-filters">
-              <div
-                className="flex flex-wrap items-center gap-1"
-                role="group"
-                aria-label="Expense filters"
-              >
-                {strip.filterOptions.map((option) => (
-                  <ExpenseFilterPill
-                    key={option.id}
-                    label={option.label}
-                    selected={strip.filter === option.id}
-                    onSelect={() => strip.onFilterChange(option.id)}
-                  />
-                ))}
-              </div>
-            </LayoutGroup>
-          </div>
+          <LayoutGroup id="expense-strip-filters">
+            <MoneyPanelFilterRow label="Expense filters">
+              {strip.filterOptions.map((option) => (
+                <MoneyPanelFilterPill
+                  key={option.id}
+                  label={option.label}
+                  selected={strip.filter === option.id}
+                  onSelect={() => strip.onFilterChange(option.id)}
+                  layoutId="expense-strip-filter-bg"
+                />
+              ))}
+            </MoneyPanelFilterRow>
+          </LayoutGroup>
         ) : null}
       </div>
 
@@ -307,6 +286,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                   key={`${strip.filter}-${item.id}`}
                   item={item}
                   index={index}
+                  searchTerm={expenses.searchTerm}
                   onOpenEdit={expenses.onOpenEdit}
                   onOpenPayment={expenses.onOpenPayment}
                 />
@@ -321,8 +301,12 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
             transition={moneyBaseTransition}
             className="mx-5 my-6 rounded-2xl border border-dashed border-default px-4 py-8 text-center"
           >
-            <p className="text-sm font-semibold text-highlighted text-balance">{strip.empty.title}</p>
-            <p className="mt-1 text-xs text-muted text-balance">{strip.empty.body}</p>
+            <p className="text-sm font-semibold text-highlighted text-balance">
+              <AgencySearchHighlight text={strip.empty.title} query={expenses.searchTerm} />
+            </p>
+            <p className="mt-1 text-xs text-muted text-balance">
+              <AgencySearchHighlight text={strip.empty.body} query={expenses.searchTerm} />
+            </p>
           </motion.div>
         ) : null}
       </div>
@@ -345,9 +329,11 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               <Card className="border-dashed shadow-none">
                 <CardContent className="py-8 text-center">
                   <CardTitle className="text-sm font-semibold text-highlighted">
-                    {details.emptyTitle}
+                    <AgencySearchHighlight text={details.emptyTitle} query={expenses.searchTerm} />
                   </CardTitle>
-                  <CardDescription className="mt-1 text-balance">{details.emptyBody}</CardDescription>
+                  <CardDescription className="mt-1 text-balance">
+                    <AgencySearchHighlight text={details.emptyBody} query={expenses.searchTerm} />
+                  </CardDescription>
                 </CardContent>
               </Card>
             ) : (
@@ -389,7 +375,9 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                                     className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-xs font-medium text-highlighted sm:text-sm"
                                     onClick={() => expenses.onOpenEdit(item.expenseId)}
                                   >
-                                    <span dir="auto">{item.name}</span>
+                                    <span dir="auto">
+                                      <AgencySearchHighlight text={item.name} query={expenses.searchTerm} />
+                                    </span>
                                   </Button>
                                   <Badge
                                     variant="secondary"
@@ -399,11 +387,14 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                                   </Badge>
                                 </div>
                                 <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
-                                  {item.meta}
+                                  <AgencySearchHighlight
+                                    text={expenseStripMeta(item)}
+                                    query={expenses.searchTerm}
+                                  />
                                 </p>
                                 {item.note ? (
                                   <p className="truncate text-[11px] text-muted/80" dir="auto">
-                                    {item.note}
+                                    <AgencySearchHighlight text={item.note} query={expenses.searchTerm} />
                                   </p>
                                 ) : null}
                               </div>

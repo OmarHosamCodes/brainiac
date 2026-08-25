@@ -4,7 +4,10 @@ import {
   buildExpenseStripItems,
   expenseStripEmptyCopy,
   expenseStripFilterVisibility,
+  expenseStripInsight,
+  expenseStripItemMatchesSearch,
   expenseStripMeta,
+  filterExpenseStripItems,
 } from "./money-expenses-strip";
 
 const sources = {
@@ -96,6 +99,41 @@ describe("expenseStripEmptyCopy", () => {
 describe("expenseStripFilterVisibility", () => {
   it("maps all filter to due and paid visibility", () => {
     expect(expenseStripFilterVisibility("all")).toEqual({ due: true, paid: true });
+  });
+});
+
+describe("expenseStripItemMatchesSearch", () => {
+  it("matches name, meta, note, and amount label", () => {
+    const item = sources.recent.items[0]!;
+    expect(expenseStripItemMatchesSearch(item, "supplies")).toBe(true);
+    expect(expenseStripItemMatchesSearch(item, "notion")).toBe(false);
+    expect(expenseStripItemMatchesSearch(sources.allSubscriptions.items[1]!, "figma")).toBe(true);
+  });
+});
+
+describe("filterExpenseStripItems", () => {
+  it("returns all items when search is empty", () => {
+    const items = buildExpenseStripItems("all", sources);
+    expect(filterExpenseStripItems(items, "")).toHaveLength(items.length);
+  });
+
+  it("filters strip items by search term", () => {
+    const items = buildExpenseStripItems("all", sources);
+    expect(filterExpenseStripItems(items, "figma").map((item) => item.id)).toEqual(["sub-paid"]);
+  });
+});
+
+describe("expenseStripEmptyCopy", () => {
+  it("returns search empty copy when filtered list is empty", () => {
+    expect(expenseStripEmptyCopy("all", sources, 0, "missing")?.title).toBe(
+      "No matching expenses",
+    );
+  });
+});
+
+describe("expenseStripInsight", () => {
+  it("summarizes due and paid counts", () => {
+    expect(expenseStripInsight(sources)).toBe("2 due · 1 paid");
   });
 });
 

@@ -1,3 +1,5 @@
+import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
+
 export type ExpenseStripFilter = "due" | "paid" | "all";
 
 export type ExpenseStripItem = {
@@ -72,8 +74,16 @@ export function expenseStripEmptyCopy(
   filter: ExpenseStripFilter,
   expenses: ExpenseStripSources,
   itemCount: number,
+  searchTerm = "",
 ): { title: string; body: string } | null {
   if (itemCount > 0) return null;
+  const normalizedSearch = searchTerm.trim();
+  if (normalizedSearch) {
+    return {
+      title: "No matching expenses",
+      body: `Nothing matches “${normalizedSearch}” in this view.`,
+    };
+  }
   if (filter === "due") {
     return {
       title: expenses.upcoming.emptyTitle,
@@ -102,6 +112,45 @@ export function expenseStripEmptyCopy(
 export function expenseStripMeta(item: ExpenseStripItem): string {
   if (item.meta?.trim()) return item.meta.trim();
   return item.kind === "subscription" ? "Subscription" : "One-time";
+}
+
+export function expenseStripItemMatchesSearch(
+  item: ExpenseStripItem,
+  searchTerm: string,
+): boolean {
+  return agencyListSearchMatches(
+    searchTerm,
+    item.name,
+    expenseStripMeta(item),
+    item.note ?? "",
+    item.statusLabel,
+    item.amountLabel,
+  );
+}
+
+export function filterExpenseStripItems(
+  items: ExpenseStripItem[],
+  searchTerm: string,
+): ExpenseStripItem[] {
+  const normalized = searchTerm.trim();
+  if (!normalized) return items;
+  return items.filter((item) => expenseStripItemMatchesSearch(item, normalized));
+}
+
+export function expenseStripInsight(expenses: ExpenseStripSources): string | null {
+  const subscriptionDueCount = expenses.allSubscriptions.items.filter(
+    (item) => item.statusLabel !== "Paid",
+  ).length;
+  const paidCount = expenses.allSubscriptions.items.filter(
+    (item) => item.statusLabel === "Paid",
+  ).length;
+  const oneTimeCount = expenses.recent.count;
+  const dueCount = subscriptionDueCount + oneTimeCount;
+  const parts: string[] = [];
+  if (dueCount > 0) parts.push(`${dueCount} due`);
+  if (paidCount > 0) parts.push(`${paidCount} paid`);
+  if (parts.length === 0) return null;
+  return parts.join(" · ");
 }
 
 export function expenseStripFilterVisibility(

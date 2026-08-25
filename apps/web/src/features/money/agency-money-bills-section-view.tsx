@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { FileText, Plus, Receipt, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { MemberProfileLeaveRangePicker } from "@/features/shared/date/member-profile-leave-range-picker";
@@ -14,7 +14,6 @@ import {
   agencyInputPlaceholderClass,
   agencyMetricClass,
   agencyPanelClass,
-  agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import {
@@ -58,6 +57,14 @@ import { instrumentPlateSurfaceClass } from "@/features/member-profile/member-pr
 import { MoneyListGhostPreview } from "./agency-money-shared-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 import { moneyNestItemVariants } from "./money-motion";
+import {
+  moneyPanelHeaderClass,
+  MoneyPanelCount,
+  MoneyPanelFilterPill,
+  MoneyPanelFilterRow,
+  MoneyPanelMetricBlock,
+  MoneyPanelTitleRow,
+} from "./money-panel-chrome";
 
 const billInstrumentRowClass =
   "group/instrument grid items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]";
@@ -296,7 +303,7 @@ function BillAdjustmentRow({
       </div>
       <div className="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
         <span className="font-mono text-sm font-semibold tabular-nums text-muted">
-          {row.metaLabel}
+          <AgencySearchHighlight text={row.metaLabel} query={searchTerm} />
         </span>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
           {row.canRecordPayment ? (
@@ -677,7 +684,7 @@ function BillPersonGroupCard({
         <div className="min-w-0">
           {partyTitle}
           <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
-            {groupMetaRail}
+            <AgencySearchHighlight text={groupMetaRail} query={searchTerm} />
           </p>
         </div>
         <BillRemainingHero
@@ -728,151 +735,105 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
   const sections = bills.displaySections;
   const insight = moneyBillComposeListInsight(bills.rows);
   const showSectionHeaders = sections.length > 1;
-  const activeFilterChipCount =
-    (bills.partyFilter !== "all" ? 1 : 0) +
-    (bills.statusFilter ? 1 : 0) +
-    (bills.clientCategoryFilter === "external" ? 1 : 0);
-  const statusFilterLabel = bills.statusFilter
-    ? (bills.statusOptions.find((option) => option.id === bills.statusFilter)?.label ??
-      bills.statusFilter)
-    : null;
 
   return (
     <section
       className={cn(agencyPanelClass, "flex h-full min-h-0 flex-col overflow-hidden")}
       aria-label="Bills"
     >
-      <div className="flex flex-col gap-3 border-b border-default p-5 pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className={cn(agencyWorkTitleClass, "text-balance")}>Bills</h2>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-3 sm:flex-none">
-            <div className="relative min-w-48 flex-1 sm:max-w-72 sm:flex-none">
-              <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-              <Input
-                value={bills.searchTerm}
-                onChange={(event) => bills.onSearchTermChange(event.target.value)}
-                placeholder="Search bills"
-                aria-label="Search bills"
-                className={cn(
-                  "h-9 rounded-xl border-default bg-default pl-9 text-sm",
-                  agencyInputPlaceholderClass,
-                  bills.searchTerm.trim() ? "text-highlighted" : undefined,
-                )}
-              />
-            </div>
-            <span className={cn(agencyMetricClass, "text-xs tabular-nums text-muted")}>
-              {billCountLabel}
-            </span>
-            <TooltipProvider delayDuration={120}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-sm"
-                    className="rounded-xl"
-                    onClick={bills.onOpenCreate}
-                    aria-label="Create invoice"
-                  >
-                    <Plus className="size-4" aria-hidden />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">Create invoice</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+      <div className={moneyPanelHeaderClass}>
+        <MoneyPanelTitleRow title="Bills">
+          <div className="relative min-w-48 flex-1 sm:max-w-72 sm:flex-none">
+            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
+            <Input
+              value={bills.searchTerm}
+              onChange={(event) => bills.onSearchTermChange(event.target.value)}
+              placeholder="Search bills"
+              aria-label="Search bills"
+              className={cn(
+                "h-9 rounded-xl border-default bg-default pl-9 text-sm",
+                agencyInputPlaceholderClass,
+                bills.searchTerm.trim() ? "text-highlighted" : undefined,
+              )}
+            />
           </div>
-        </div>
+          <MoneyPanelCount>{billCountLabel}</MoneyPanelCount>
+          <TooltipProvider delayDuration={120}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  className="rounded-xl"
+                  onClick={bills.onOpenCreate}
+                  aria-label="Create invoice"
+                >
+                  <Plus className="size-4" aria-hidden />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Create invoice</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </MoneyPanelTitleRow>
 
-        <div className="flex flex-col gap-2">
-          <Tabs
-            value={bills.partyFilter}
-            onValueChange={(value) => bills.onPartyFilterChange(value as MoneyBillsPartyFilter)}
-            className="gap-0"
-          >
-            <TabsList aria-label="Bill party" className="h-9 w-full max-w-full flex-wrap sm:w-fit">
-              {bills.partyOptions.map((option) => (
-                <TabsTrigger key={option.id} value={option.id} className="px-2.5">
-                  {option.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+        {bills.remainingLabel ? (
+          <MoneyPanelMetricBlock
+            label="Remaining"
+            value={bills.remainingLabel}
+            hint={insight}
+          />
+        ) : insight ? (
+          <p className="text-xs text-muted text-balance" aria-live="polite">
+            {insight}
+          </p>
+        ) : null}
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            {hasStatusFilters
-              ? bills.statusOptions.map((option) => {
-                  const selected = bills.statusFilter === option.id;
-                  return (
-                    <button
+        <LayoutGroup id="bills-party-filters">
+          <MoneyPanelFilterRow label="Bill party">
+            {bills.partyOptions.map((option) => (
+              <MoneyPanelFilterPill
+                key={option.id}
+                label={option.label}
+                selected={bills.partyFilter === option.id}
+                onSelect={() => bills.onPartyFilterChange(option.id as MoneyBillsPartyFilter)}
+                layoutId="bills-party-filter-bg"
+              />
+            ))}
+          </MoneyPanelFilterRow>
+        </LayoutGroup>
+
+        {hasStatusFilters || bills.clientCategoryFilter === "external" ? (
+          <div className="flex flex-col gap-2">
+            {hasStatusFilters ? (
+              <LayoutGroup id="bills-status-filters">
+                <MoneyPanelFilterRow label="Bill status">
+                  {bills.statusOptions.map((option) => (
+                    <MoneyPanelFilterPill
                       key={option.id}
-                      type="button"
-                      aria-pressed={selected}
-                      className={cn(
-                        "inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors",
-                        agencyFocusRingClass,
-                        selected
-                          ? "bg-elevated text-highlighted ring-1 ring-border"
-                          : "text-muted hover:bg-elevated/70 hover:text-highlighted",
-                      )}
-                      onClick={() =>
+                      label={option.label}
+                      selected={bills.statusFilter === option.id}
+                      onSelect={() =>
                         bills.onStatusFilterChange(option.id as MoneyBillsStatusFilter)
                       }
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })
-              : null}
-            {bills.partyFilter !== "all" ? (
-              <ActiveBillFilterChip
-                label={
-                  bills.partyOptions.find((option) => option.id === bills.partyFilter)?.label ??
-                  bills.partyFilter
-                }
-                clearLabel="Clear party filter"
-                onClear={() => bills.onPartyFilterChange("all")}
-              />
+                      layoutId="bills-status-filter-bg"
+                    />
+                  ))}
+                </MoneyPanelFilterRow>
+              </LayoutGroup>
             ) : null}
-            {statusFilterLabel ? (
-              <ActiveBillFilterChip
-                label={statusFilterLabel}
-                clearLabel="Clear status filter"
-                onClear={bills.onClearStatusFilter}
-              />
-            ) : null}
+
             {bills.clientCategoryFilter === "external" ? (
-              <ActiveBillFilterChip
-                label="External"
-                clearLabel="Show internal clients too"
-                onClear={bills.onClearClientCategoryFilter}
-              />
-            ) : null}
-            {bills.statusFilter ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1 px-2 text-xs text-muted"
-                onClick={bills.onClearStatusFilter}
-                aria-label="Clear status filter"
-              >
-                <X className="size-3" aria-hidden />
-                Clear
-              </Button>
-            ) : null}
-            {activeFilterChipCount > 1 ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs text-muted hover:text-highlighted"
-                onClick={bills.onClearAllFilters}
-              >
-                Clear all
-              </Button>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <ActiveBillFilterChip
+                  label="External"
+                  clearLabel="Show internal clients too"
+                  onClear={bills.onClearClientCategoryFilter}
+                />
+              </div>
             ) : null}
           </div>
-        </div>
+        ) : null}
       </div>
 
       <div className="relative flex flex-1 flex-col pb-5">
@@ -906,12 +867,6 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
 
         {!bills.isLoading && !bills.isError && (bills.rows.length > 0 || bills.salaryPool.pool) ? (
           <div className="flex flex-col gap-3 px-4 pt-4" aria-label="Bill list">
-            {insight ? (
-              <p className="px-1 text-xs text-muted" aria-live="polite">
-                {insight}
-              </p>
-            ) : null}
-
             {sections.map((section) => {
               const showWasteInMeta = section.rows.some((row) => {
                 if (row.kind === "person-group") return row.wasteAmount > 0;
@@ -926,7 +881,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                   {showSectionHeaders ? (
                     <div className="flex items-baseline justify-between gap-2 px-1">
                       <h3 className="text-sm font-medium text-highlighted">{section.title}</h3>
-                      {!insight && section.hint ? (
+                      {section.hint ? (
                         <span className="text-xs text-muted">{section.hint}</span>
                       ) : null}
                     </div>

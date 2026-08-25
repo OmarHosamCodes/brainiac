@@ -41,6 +41,8 @@ import {
   EXPENSE_STRIP_FILTERS,
   expenseStripEmptyCopy,
   expenseStripFilterVisibility,
+  expenseStripInsight,
+  filterExpenseStripItems,
   type ExpenseStripFilter,
 } from "@/features/money/money-expenses-strip";
 import { dateInputToIso, toDateInputValue } from "@/features/shared/use-agency-time-range-filters";
@@ -376,6 +378,7 @@ export function useAgencyMoneySurface(teamId: string) {
     },
   );
   const [expenseStripFilter, setExpenseStripFilter] = useState<ExpenseStripFilter>("all");
+  const [expenseSearchTerm, setExpenseSearchTerm] = useState("");
   const [moneySettingsOpen, setMoneySettingsOpen] = useState(false);
   const [lastStatsMetricSelection, setLastStatsMetricSelection] =
     useState<MoneyStatsMetricSelection | null>(null);
@@ -966,6 +969,16 @@ export function useAgencyMoneySurface(teamId: string) {
     );
   }, [periodScoreboardQuery.data, scoreboardStatus]);
 
+  const billsRemainingLabel = useMemo(() => {
+    const board = periodScoreboardQuery.data;
+    if (scoreboardStatus !== "ready" || !board) return null;
+    return formatMoneyStatsMetricValue(
+      "currency",
+      amountToMajor(board.remainingAmount),
+      board.currency,
+    );
+  }, [periodScoreboardQuery.data, scoreboardStatus]);
+
   const expenseStripSources = useMemo(() => {
     const upcomingEmptyTitle =
       !subscriptionVisibility.due && !subscriptionVisibility.paid
@@ -1007,9 +1020,50 @@ export function useAgencyMoneySurface(teamId: string) {
     [expenseStripFilter, expenseStripSources],
   );
 
+  const expenseStripVisibleItems = useMemo(
+    () => filterExpenseStripItems(expenseStripItems, expenseSearchTerm),
+    [expenseSearchTerm, expenseStripItems],
+  );
+
   const expenseStripEmpty = useMemo(
-    () => expenseStripEmptyCopy(expenseStripFilter, expenseStripSources, expenseStripItems.length),
-    [expenseStripFilter, expenseStripSources, expenseStripItems.length],
+    () =>
+      expenseStripEmptyCopy(
+        expenseStripFilter,
+        expenseStripSources,
+        expenseStripVisibleItems.length,
+        expenseSearchTerm,
+      ),
+    [
+      expenseSearchTerm,
+      expenseStripFilter,
+      expenseStripSources,
+      expenseStripVisibleItems.length,
+    ],
+  );
+
+  const expenseStripInsightLabel = useMemo(
+    () =>
+      expensesStatus === "ready" ? expenseStripInsight(expenseStripSources) : null,
+    [expenseStripSources, expensesStatus],
+  );
+
+  const expenseDetailsSections = useMemo(
+    () =>
+      expensesStatus === "ready"
+        ? [
+            {
+              id: "upcoming" as const,
+              title: "Subscriptions",
+              items: filterExpenseStripItems(upcomingExpenses, expenseSearchTerm),
+            },
+            {
+              id: "recent" as const,
+              title: "One-time expenses",
+              items: filterExpenseStripItems(recentExpenses, expenseSearchTerm),
+            },
+          ]
+        : [],
+    [expenseSearchTerm, expensesStatus, recentExpenses, upcomingExpenses],
   );
 
   function onExpenseStripFilterChange(next: ExpenseStripFilter) {
@@ -2057,6 +2111,7 @@ export function useAgencyMoneySurface(teamId: string) {
       activeFilterSummary: billsActiveFilterSummary,
       emptyCopy: billsEmptyCopy,
       billCount: billRows.length,
+      remainingLabel: billsRemainingLabel,
       rows: billRows,
       displaySections: billDisplaySections,
       isLoading: billsIsLoading,
@@ -2195,6 +2250,8 @@ export function useAgencyMoneySurface(teamId: string) {
       title: "Expenses",
       subtitle: "Subscriptions and ops spend",
       periodSpendLabel: expensesPeriodSpendLabel,
+      searchTerm: expenseSearchTerm,
+      onSearchTermChange: setExpenseSearchTerm,
       status: expensesStatus,
       errorMessage: expensesErrorMessage,
       onRetry: () => void Promise.all([expensesQuery.refetch(), subscriptionCyclesQuery.refetch()]),
@@ -2204,29 +2261,26 @@ export function useAgencyMoneySurface(teamId: string) {
         filter: expenseStripFilter,
         filterOptions: EXPENSE_STRIP_FILTERS,
         onFilterChange: onExpenseStripFilterChange,
-        items: expenseStripItems,
+        items: expenseStripVisibleItems,
+        itemCount: expenseStripVisibleItems.length,
+        insight: expenseStripInsightLabel,
         empty: expenseStripEmpty,
       },
       details: {
         open: expenseDetailsOpen,
         onOpenChange: setExpenseDetailsOpen,
         title: "All expenses",
-        emptyTitle: "No expenses yet",
-        emptyBody: "Add a one-time expense or subscription to see it here.",
-        sections: [
-          {
-            id: "upcoming" as const,
-            title: "Subscriptions",
-            items: upcomingExpenses,
-          },
-          {
-            id: "recent" as const,
-            title: "One-time expenses",
-            items: recentExpenses,
-          },
-        ],
+        emptyTitle: expenseSearchTerm.trim()
+          ? "No matching expenses"
+          : "No expenses yet",
+        emptyBody: expenseSearchTerm.trim()
+          ? `Nothing matches “${expenseSearchTerm.trim()}” in this view.`
+          : "Add a one-time expense or subscription to see it here.",
+        sections: expenseDetailsSections,
         totalCount:
-          expensesStatus === "ready" ? upcomingExpenses.length + recentExpenses.length : 0,
+          expensesStatus === "ready"
+            ? expenseDetailsSections.reduce((sum, section) => sum + section.items.length, 0)
+            : 0,
       },
       create: {
         open: expenseCreateOpen,
