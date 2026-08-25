@@ -88,3 +88,25 @@ export function moneySectionStaggerIndex(index: number): number {
 export function moneyNestStaggerIndex(index: number): number {
   return Math.min(index, MONEY_NEST_STAGGER_CAP - 1);
 }
+
+/** Expense scoreboard strip rows (D4). */
+export const MONEY_EXPENSE_STRIP_STAGGER_CAP = 8;
+export const MONEY_EXPENSE_STRIP_STAGGER_STEP = 0.03;
+
+export const moneyExpenseStripItemVariants: Variants = {
+  hidden: { opacity: 0, y: 3 },
+  show: (index: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      ...moneyBaseTransition,
+      delay:
+        Math.min(index, MONEY_EXPENSE_STRIP_STAGGER_CAP - 1) * MONEY_EXPENSE_STRIP_STAGGER_STEP,
+    },
+  }),
+  exit: {
+    opacity: 0,
+    y: -2,
+    transition: { type: "tween", duration: MONEY_MS.fast * 0.85, ease: MONEY_EASE },
+  },
+};

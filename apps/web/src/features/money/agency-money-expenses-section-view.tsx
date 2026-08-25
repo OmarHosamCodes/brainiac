@@ -1,5 +1,6 @@
-import { type FormEvent, type ReactNode } from "react";
-import { CalendarClock, History, List, Plus } from "lucide-react";
+import { type FormEvent } from "react";
+import { Plus } from "lucide-react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 
 import {
   moneyExpensePeriodLabel,
@@ -9,6 +10,7 @@ import {
 import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
 import {
   agencyErrorPanelClass,
+  agencyFocusRingClass,
   agencyFormFieldClass,
   agencyFormLabelClass,
   agencyInputPlaceholderClass,
@@ -17,6 +19,12 @@ import {
   agencyPanelClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
+import { expenseStripMeta, expenseStripStatusChipClass, type ExpenseStripItem } from "@/features/money/money-expenses-strip";
+import { ExpenseStripGlyph } from "@/features/money/money-expense-strip-glyphs";
+import {
+  moneyBaseTransition,
+  moneyExpenseStripItemVariants,
+} from "@/features/money/money-motion";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
@@ -27,14 +35,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
@@ -46,9 +46,12 @@ import { cn } from "@/lib/utils";
 
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 
-type ExpensesGroupViewModel =
-  | AgencyMoneySurfaceViewModel["expenses"]["upcoming"]
-  | AgencyMoneySurfaceViewModel["expenses"]["recent"];
+const expenseStripRowClass =
+  "group/row flex items-center gap-3 px-5 py-3 transition-colors duration-150 hover:bg-elevated/25 focus-within:bg-elevated/25 motion-reduce:transition-none";
+
+function expenseStripAmountClass(item: ExpenseStripItem): string {
+  return item.statusLabel === "Paid" ? "text-muted" : "text-highlighted";
+}
 
 function formatExpenseStartPreview(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
@@ -62,45 +65,228 @@ function formatExpenseStartPreview(value: string): string {
   });
 }
 
+function ExpenseFilterPill({
+  label,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      className={cn(
+        "relative inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors duration-150",
+        agencyFocusRingClass,
+        selected ? "text-highlighted" : "text-muted hover:bg-elevated/70 hover:text-highlighted",
+        "motion-reduce:transition-none",
+      )}
+      onClick={onSelect}
+    >
+      {selected ? (
+        <motion.span
+          layoutId="expense-strip-filter-bg"
+          className="absolute inset-0 rounded-full bg-elevated ring-1 ring-border"
+          transition={moneyBaseTransition}
+          aria-hidden
+        />
+      ) : null}
+      <span className="relative z-10">{label}</span>
+    </button>
+  );
+}
+
+function ExpenseStripRow({
+  item,
+  index,
+  onOpenEdit,
+  onOpenPayment,
+}: {
+  item: ExpenseStripItem;
+  index: number;
+  onOpenEdit: (expenseId: string) => void;
+  onOpenPayment: (expenseId: string) => void;
+}) {
+  const paymentLabel = item.kind === "subscription" ? "Pay" : "Record";
+  const amountColumnLabel = item.canRecordPayment
+    ? "Remaining"
+    : item.statusLabel === "Paid"
+      ? "Paid"
+      : null;
+
+  return (
+    <motion.li
+      layout={false}
+      custom={index}
+      variants={moneyExpenseStripItemVariants}
+      initial="hidden"
+      animate="show"
+      exit="exit"
+      className={expenseStripRowClass}
+      aria-label={`${item.name}. ${item.statusLabel}. ${item.amountLabel}.`}
+    >
+      <ExpenseStripGlyph kind={item.kind} />
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-start text-xs font-medium text-highlighted sm:text-sm"
+            onClick={() => onOpenEdit(item.expenseId)}
+            title={item.name}
+          >
+            <span dir="auto">{item.name}</span>
+          </Button>
+          <span
+            className={cn(
+              "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
+              expenseStripStatusChipClass,
+            )}
+          >
+            {item.statusLabel}
+          </span>
+        </div>
+        <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
+          {expenseStripMeta(item)}
+        </p>
+        {item.note ? (
+          <p className="truncate text-[11px] text-muted/80" dir="auto">
+            {item.note}
+          </p>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-0.5 text-end">
+        {amountColumnLabel ? (
+          <div className="text-[0.625rem] font-medium tracking-[0.06em] text-muted uppercase">
+            {amountColumnLabel}
+          </div>
+        ) : null}
+        <span
+          className={cn(
+            agencyMetricClass,
+            "whitespace-nowrap font-mono text-sm font-semibold tabular-nums sm:text-base",
+            expenseStripAmountClass(item),
+          )}
+        >
+          {item.amountLabel}
+        </span>
+        {item.canRecordPayment ? (
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className={cn(
+              "h-auto min-h-0 shrink-0 px-0 py-0 text-[11px] font-semibold text-muted",
+              "opacity-80 transition-opacity duration-150 hover:text-highlighted group-hover/row:opacity-100 group-focus-within/row:opacity-100",
+              "motion-reduce:transition-none",
+            )}
+            onClick={() => onOpenPayment(item.expenseId)}
+            aria-label={`${paymentLabel} ${item.name}`}
+          >
+            {paymentLabel}
+          </Button>
+        ) : null}
+      </div>
+    </motion.li>
+  );
+}
+
 function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["expenses"] }) {
   const create = expenses.create;
   const details = expenses.details;
   const payment = expenses.payment;
+  const strip = expenses.strip;
 
   return (
     <section
       className={cn(agencyPanelClass, "flex h-full min-h-0 flex-col overflow-hidden")}
       aria-label="Expenses"
     >
-      <div className="flex items-start justify-between gap-3 border-b border-default p-5 pb-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 className={cn(agencyWorkTitleClass, "text-balance")}>{expenses.title}</h2>
-          <p className="text-xs text-muted text-balance">{expenses.subtitle}</p>
+      <div className="flex flex-col gap-3 border-b border-default p-5 pb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 className={cn(agencyWorkTitleClass, "text-balance")}>{expenses.title}</h2>
+            <div className="text-xs text-muted text-balance">
+              {expenses.periodSpendLabel ? (
+                <>
+                  <span className="text-[0.625rem] font-medium tracking-[0.06em] text-muted uppercase">
+                    Period spend
+                  </span>
+                  <span
+                    className={cn(
+                      agencyMetricClass,
+                      "mt-0.5 block font-mono text-base font-semibold tabular-nums tracking-tight text-highlighted",
+                    )}
+                  >
+                    {expenses.periodSpendLabel}
+                  </span>
+                </>
+              ) : (
+                <p>{expenses.subtitle}</p>
+              )}
+            </div>
+          </div>
+          <TooltipProvider delayDuration={120}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  className="shrink-0 rounded-xl"
+                  onClick={expenses.onOpenCreate}
+                  aria-label="Add expense"
+                >
+                  <Plus className="size-4" aria-hidden />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Add expense</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
-        <TooltipProvider delayDuration={120}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                className="shrink-0 rounded-xl"
-                onClick={expenses.onOpenCreate}
-                aria-label="Add expense"
+
+        {expenses.status === "ready" ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <LayoutGroup id="expense-strip-filters">
+              <div
+                className="flex flex-wrap items-center gap-1"
+                role="group"
+                aria-label="Expense filters"
               >
-                <Plus className="size-4" aria-hidden />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Add expense</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+                {strip.filterOptions.map((option) => (
+                  <ExpenseFilterPill
+                    key={option.id}
+                    label={option.label}
+                    selected={strip.filter === option.id}
+                    onSelect={() => strip.onFilterChange(option.id)}
+                  />
+                ))}
+              </div>
+            </LayoutGroup>
+          </div>
+        ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {expenses.status === "loading" ? (
-          <div className="flex flex-col gap-3 p-5" aria-busy="true">
-            <Skeleton className="h-20 rounded-xl" />
-            <Skeleton className="h-20 rounded-xl" />
+          <div className="flex flex-col divide-y divide-default" aria-busy="true" aria-label="Loading expenses">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="flex items-center gap-3 px-5 py-3">
+                <Skeleton className="size-9 shrink-0 rounded-xl" />
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-32 max-w-[55%] rounded-md" />
+                  <Skeleton className="h-3 w-44 max-w-[70%] rounded-md" />
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <Skeleton className="h-2.5 w-8 rounded-md" />
+                  <Skeleton className="h-4 w-16 rounded-md" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : expenses.status === "error" ? (
           <div className={cn(agencyErrorPanelClass, "m-5")} role="alert">
@@ -116,26 +302,32 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               Retry
             </Button>
           </div>
-        ) : (
-          <>
-            <ExpensesGroup
-              group={expenses.upcoming}
-              icon={<CalendarClock className="size-4 text-muted" aria-hidden />}
-              onOpenDetails={expenses.onOpenDetails}
-              onOpenEdit={expenses.onOpenEdit}
-              onOpenPayment={expenses.onOpenPayment}
-            />
-            <div className="mx-5 border-t border-default" />
-            <ExpensesGroup
-              group={expenses.recent}
-              icon={<History className="size-4 text-muted" aria-hidden />}
-              grow
-              onOpenDetails={expenses.onOpenDetails}
-              onOpenEdit={expenses.onOpenEdit}
-              onOpenPayment={expenses.onOpenPayment}
-            />
-          </>
-        )}
+        ) : strip.items.length > 0 ? (
+          <ul className="flex flex-col divide-y divide-default pb-2">
+            <AnimatePresence initial={false} mode="popLayout">
+              {strip.items.map((item, index) => (
+                <ExpenseStripRow
+                  key={`${strip.filter}-${item.id}`}
+                  item={item}
+                  index={index}
+                  onOpenEdit={expenses.onOpenEdit}
+                  onOpenPayment={expenses.onOpenPayment}
+                />
+              ))}
+            </AnimatePresence>
+          </ul>
+        ) : strip.empty ? (
+          <motion.div
+            key={`${strip.filter}-empty`}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={moneyBaseTransition}
+            className="mx-5 my-6 rounded-2xl border border-dashed border-default px-4 py-8 text-center"
+          >
+            <p className="text-sm font-semibold text-highlighted text-balance">{strip.empty.title}</p>
+            <p className="mt-1 text-xs text-muted text-balance">{strip.empty.body}</p>
+          </motion.div>
+        ) : null}
       </div>
 
       <Dialog open={details.open} onOpenChange={details.onOpenChange}>
@@ -172,52 +364,57 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                     {section.items.length === 0 ? (
                       <p className="text-xs text-muted">None in this group.</p>
                     ) : (
-                      <ul className="flex flex-col gap-2">
+                      <ul className="flex flex-col divide-y divide-default rounded-xl border border-default">
                         {section.items.map((item) => (
                           <li
                             key={item.id}
-                            className="flex items-start gap-3 rounded-xl border border-default bg-elevated/30 px-3 py-2.5"
+                            className="flex items-center gap-3 px-3 py-2.5 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none"
                           >
-                            <span
-                              className="mt-0.5 size-7 shrink-0 rounded-full bg-muted/40"
-                              aria-hidden
-                            />
+                            <ExpenseStripGlyph kind={item.kind} />
                             <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                                 <Button
                                   type="button"
                                   variant="link"
                                   size="sm"
-                                  className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-sm font-medium text-highlighted"
+                                  className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-xs font-medium text-highlighted sm:text-sm"
                                   onClick={() => expenses.onOpenEdit(item.expenseId)}
                                 >
-                                  {item.name}
+                                  <span dir="auto">{item.name}</span>
                                 </Button>
-                                <span className="shrink-0 text-[11px] tabular-nums text-highlighted">
-                                  {item.amountLabel}
+                                <span
+                                  className={cn(
+                                    "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
+                                    expenseStripStatusChipClass,
+                                  )}
+                                >
+                                  {item.statusLabel}
                                 </span>
                               </div>
-                              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
-                                <span>{item.meta}</span>
-                                <span aria-hidden>·</span>
-                                <span>{item.statusLabel}</span>
-                                {item.canRecordPayment ? (
-                                  <>
-                                    <span aria-hidden>·</span>
-                                    <Button
-                                      type="button"
-                                      variant="link"
-                                      size="sm"
-                                      className="h-auto min-h-0 px-0 py-0 text-[11px]"
-                                      onClick={() => expenses.onOpenPayment(item.expenseId)}
-                                    >
-                                      {item.kind === "subscription" ? "Pay" : "Record payment"}
-                                    </Button>
-                                  </>
-                                ) : null}
-                              </div>
+                              <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
+                                {item.meta}
+                              </p>
                               {item.note ? (
-                                <p className="mt-0.5 text-xs text-muted text-pretty">{item.note}</p>
+                                <p className="truncate text-[11px] text-muted/80" dir="auto">
+                                  {item.note}
+                                </p>
+                              ) : null}
+                            </div>
+                            <div className="flex shrink-0 flex-col items-end gap-0.5 text-end">
+                              <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-highlighted">
+                                {item.amountLabel}
+                              </span>
+                              {item.canRecordPayment ? (
+                                <Button
+                                  type="button"
+                                  variant="link"
+                                  size="sm"
+                                  className="h-auto min-h-0 px-0 py-0 text-[11px] font-semibold text-muted hover:text-highlighted"
+                                  onClick={() => expenses.onOpenPayment(item.expenseId)}
+                                  aria-label={`${item.kind === "subscription" ? "Pay" : "Record payment"} ${item.name}`}
+                                >
+                                  {item.kind === "subscription" ? "Pay" : "Record"}
+                                </Button>
                               ) : null}
                             </div>
                           </li>
@@ -537,153 +734,6 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
         </DialogContent>
       </Dialog>
     </section>
-  );
-}
-
-function ExpensesGroup({
-  group,
-  icon,
-  grow,
-  onOpenDetails,
-  onOpenEdit,
-  onOpenPayment,
-}: {
-  group: ExpensesGroupViewModel;
-  icon: ReactNode;
-  grow?: boolean;
-  onOpenDetails: () => void;
-  onOpenEdit: (expenseId: string) => void;
-  onOpenPayment: (expenseId: string) => void;
-}) {
-  const hasItems = group.items.length > 0;
-
-  return (
-    <div className={cn("flex flex-col gap-3 p-5", grow && "flex-1")}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          {icon}
-          <div className="min-w-0">
-            <h3 className={cn(agencyWorkTitleClass, "text-xs")}>{group.title}</h3>
-            <p className="text-[11px] text-muted">{group.hint}</p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <span className={cn(agencyMetricClass, "text-xs tabular-nums text-muted")}>
-            {group.countLabel}
-          </span>
-          {"visibility" in group ? (
-            <DropdownMenu>
-              <TooltipProvider delayDuration={120}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="size-7 rounded-lg text-muted transition-colors duration-150 hover:text-highlighted motion-reduce:transition-none"
-                        aria-label="Subscription visibility"
-                      >
-                        <List className="size-3.5" aria-hidden />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">Subscription visibility</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <DropdownMenuContent align="end">
-                <DropdownMenuCheckboxItem
-                  checked={group.visibility.due}
-                  onCheckedChange={(checked) => group.visibility.onDueChange(checked === true)}
-                >
-                  Due
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuCheckboxItem
-                  checked={group.visibility.paid}
-                  onCheckedChange={(checked) => group.visibility.onPaidChange(checked === true)}
-                >
-                  Paid
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={onOpenDetails}>View all expenses</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <TooltipProvider delayDuration={120}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="size-7 rounded-lg text-muted transition-colors duration-150 hover:text-highlighted motion-reduce:transition-none"
-                    onClick={onOpenDetails}
-                    aria-label={`View all expenses from ${group.title}`}
-                  >
-                    <List className="size-3.5" aria-hidden />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">All expenses</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-      </div>
-
-      {hasItems ? (
-        <ul className="flex flex-col gap-2">
-          {group.items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-start gap-3 rounded-xl border border-default bg-elevated/30 px-3 py-2.5 transition-colors duration-150 hover:bg-elevated/50 motion-reduce:transition-none"
-            >
-              <span className="mt-0.5 size-7 shrink-0 rounded-full bg-muted/40" aria-hidden />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-sm font-medium text-highlighted"
-                    onClick={() => onOpenEdit(item.expenseId)}
-                  >
-                    {item.name}
-                  </Button>
-                  <span className="shrink-0 text-[11px] tabular-nums text-highlighted">
-                    {item.amountLabel}
-                  </span>
-                </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
-                  <span className="truncate">{item.meta}</span>
-                  {item.canRecordPayment ? (
-                    <>
-                      <span aria-hidden>·</span>
-                      <Button
-                        type="button"
-                        variant="link"
-                        size="sm"
-                        className="h-auto min-h-0 shrink-0 px-0 py-0 text-[11px]"
-                        onClick={() => onOpenPayment(item.expenseId)}
-                      >
-                        {item.kind === "subscription" ? "Pay" : "Record payment"}
-                      </Button>
-                    </>
-                  ) : null}
-                </div>
-                {item.note ? (
-                  <p className="mt-0.5 truncate text-xs text-muted">{item.note}</p>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-default px-3.5 py-4">
-          <p className="text-sm font-semibold text-highlighted">{group.emptyTitle}</p>
-          <p className="mt-0.5 text-xs text-muted text-balance">{group.emptyBody}</p>
-        </div>
-      )}
-    </div>
   );
 }
 

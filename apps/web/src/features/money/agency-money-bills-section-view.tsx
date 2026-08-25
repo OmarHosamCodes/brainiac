@@ -53,9 +53,14 @@ import { Textarea } from "@/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+import { instrumentPlateSurfaceClass } from "@/features/member-profile/member-profile-instrument-plate";
+
 import { MoneyListGhostPreview } from "./agency-money-shared-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 import { moneyNestItemVariants } from "./money-motion";
+
+const billInstrumentRowClass =
+  "group/instrument grid items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]";
 
 function BillClientMark({ title, hueId }: { title: string; hueId: string }) {
   return (
@@ -122,119 +127,87 @@ function ActiveBillFilterChip({
   );
 }
 
-function BillMetricCell({
-  label,
-  value,
-  valueClassName,
-  align = "start",
-  showLabel = true,
-  compact = false,
+function buildBillMetaRail(input: {
+  lead?: string;
+  totalLabel: string;
+  receivedLabel: string;
+  receivedTitle: string;
+  wasteAmount: number;
+  wasteLabel: string;
+  showWaste: boolean;
+  pendingSuffix?: string;
+}): string {
+  const parts: string[] = [];
+  if (input.lead?.trim()) parts.push(input.lead.trim());
+  parts.push(`Total ${input.totalLabel}`);
+  parts.push(`${input.receivedTitle} ${input.receivedLabel}`);
+  if (input.showWaste && input.wasteAmount > 0) {
+    parts.push(`Waste ${input.wasteLabel}`);
+  }
+  if (input.pendingSuffix) parts.push(input.pendingSuffix);
+  return parts.join(" · ");
+}
+
+function BillRemainingHero({
+  remainingLabel,
+  remainingAmount,
+  receivedTitle,
+  receivedLabel,
+  showReceivedSub = false,
 }: {
-  label: string;
-  value: string;
-  valueClassName?: string;
-  align?: "start" | "end";
-  showLabel?: boolean;
-  compact?: boolean;
+  remainingLabel: string;
+  remainingAmount: number;
+  receivedTitle: string;
+  receivedLabel: string;
+  showReceivedSub?: boolean;
 }) {
+  const urgent = remainingAmount > 0;
   return (
-    <div
-      className={cn(
-        "min-w-0",
-        compact ? "px-1.5 sm:px-2" : "px-1.5 sm:px-3",
-        showLabel ? (compact ? "py-1.5" : "py-2") : "flex items-center justify-end py-1.5",
-        align === "end" && "text-end",
-      )}
-    >
-      {showLabel ? <div className="text-[0.6875rem] font-medium text-muted">{label}</div> : null}
+    <div className="bill-remaining-hero min-w-[5.5rem] shrink-0 text-end sm:justify-self-end">
+      <div className="text-[0.625rem] font-medium tracking-[0.06em] text-muted uppercase">
+        Remaining
+      </div>
       <div
         className={cn(
-          "truncate font-mono text-xs font-medium tabular-nums text-highlighted",
-          showLabel && "mt-1",
-          valueClassName,
+          agencyMetricClass,
+          "mt-0.5 whitespace-nowrap font-mono text-sm font-semibold tabular-nums sm:text-base",
+          urgent ? "text-warning" : "text-muted",
         )}
-        aria-label={showLabel ? undefined : `${label} ${value}`}
       >
-        {value}
+        {remainingLabel}
       </div>
+      {showReceivedSub ? (
+        <div className="mt-0.5 font-mono text-[0.625rem] tabular-nums text-muted">
+          {receivedTitle} {receivedLabel}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function BillMetricGrid({
-  totalLabel,
-  receivedLabel,
-  remainingLabel,
-  wasteLabel,
-  wasteAmount,
-  remainingAmount = 0,
-  receivedTitle = "Received",
-  ariaLabel,
-  compact = false,
-  showLabels = true,
-  showWasteColumn = true,
-}: {
-  totalLabel: string;
-  receivedLabel: string;
-  remainingLabel: string;
-  wasteLabel: string;
-  wasteAmount: number;
-  remainingAmount?: number;
-  receivedTitle?: string;
-  ariaLabel: string;
-  compact?: boolean;
-  showLabels?: boolean;
-  /** When false, omit the Waste column entirely (section has no waste). */
-  showWasteColumn?: boolean;
-}) {
-  const hasWaste = wasteAmount > 0;
-  const remainingUrgent = remainingAmount > 0;
+function BillInstrumentGlyphSlot({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        "grid min-w-0 divide-x divide-border overflow-hidden rounded-lg border border-default",
-        showWasteColumn ? "grid-cols-4" : "grid-cols-3",
-        showLabels
-          ? compact
-            ? "bg-transparent"
-            : "bg-elevated/30"
-          : "border-transparent bg-transparent",
+        instrumentPlateSurfaceClass(),
+        "flex size-9 shrink-0 items-center justify-center rounded-xl border",
       )}
-      aria-label={ariaLabel}
     >
-      <BillMetricCell
-        label="Total"
-        value={totalLabel}
-        align="end"
-        showLabel={showLabels}
-        compact={compact}
-      />
-      <BillMetricCell
-        label={receivedTitle}
-        value={receivedLabel}
-        align="end"
-        showLabel={showLabels}
-        compact={compact}
-      />
-      <BillMetricCell
-        label="Remaining"
-        value={remainingLabel}
-        align="end"
-        showLabel={showLabels}
-        compact={compact}
-        valueClassName={remainingUrgent ? "text-warning" : "text-muted"}
-      />
-      {showWasteColumn ? (
-        <BillMetricCell
-          label="Waste"
-          value={hasWaste ? wasteLabel : "—"}
-          align="end"
-          showLabel={showLabels}
-          compact={compact}
-          valueClassName={hasWaste ? "text-destructive/80" : "text-muted"}
-        />
-      ) : null}
+      {children}
     </div>
+  );
+}
+
+function BillInstrumentRowSkeleton() {
+  return (
+    <li className="flex items-center gap-3 border-t border-default px-3 py-3 first:border-t-0">
+      <Skeleton className="size-9 shrink-0 rounded-xl" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-4 w-40 max-w-full" />
+        <Skeleton className="h-3 w-full max-w-xs" />
+      </div>
+      <Skeleton className="h-10 w-[5.5rem] shrink-0 rounded-lg" />
+    </li>
   );
 }
 
@@ -265,7 +238,7 @@ function BillIconAction({
               "hover:bg-elevated hover:text-highlighted",
               "motion-reduce:transition-none",
               quiet &&
-                "opacity-100 sm:opacity-45 sm:group-hover/card:opacity-100 sm:group-focus-within/card:opacity-100 sm:group-hover/line:opacity-100 sm:group-focus-within/line:opacity-100 sm:focus-visible:opacity-100",
+                "opacity-100 sm:opacity-45 sm:group-hover/card:opacity-100 sm:group-focus-within/card:opacity-100 sm:group-hover/instrument:opacity-100 sm:group-focus-within/instrument:opacity-100 sm:group-hover/line:opacity-100 sm:group-focus-within/line:opacity-100 sm:focus-visible:opacity-100",
             )}
             disabled={disabled}
             onClick={onClick}
@@ -429,8 +402,7 @@ function BillObligationLineRow({
   index,
   searchTerm,
   isMutationPending,
-  showWasteColumn,
-  showMetricLabels,
+  showWasteInMeta,
   onOpenPreviewLine,
   onOpenAdjustLine,
 }: {
@@ -439,12 +411,23 @@ function BillObligationLineRow({
   index: number;
   searchTerm: string;
   isMutationPending: boolean;
-  showWasteColumn: boolean;
-  showMetricLabels: boolean;
+  showWasteInMeta: boolean;
   onOpenPreviewLine: (group: MoneyBillPersonGroup, line: MoneyBillObligationLine) => void;
   onOpenAdjustLine: (group: MoneyBillPersonGroup, line: MoneyBillObligationLine) => void;
 }) {
   const receivedTitle = group.party === "team" ? "Paid" : "Received";
+  const previewLabel = group.party === "team" ? "Preview payslip" : "Preview invoice";
+  const showReceivedSub =
+    line.receivedAmount > 0 && line.remainingAmount > 0 && line.statusLabel === "Part paid";
+  const metaRail = buildBillMetaRail({
+    totalLabel: line.totalLabel,
+    receivedLabel: line.receivedLabel,
+    receivedTitle,
+    wasteAmount: line.wasteAmount,
+    wasteLabel: line.wasteLabel,
+    showWaste: showWasteInMeta,
+  });
+
   return (
     <motion.li
       layout={false}
@@ -454,52 +437,51 @@ function BillObligationLineRow({
       animate="show"
       exit="exit"
       className={cn(
-        "group/line grid items-center gap-2 rounded-lg border px-2.5 py-2 transition-[background-color,border-color] duration-150 ease-out",
-        "md:grid-cols-[minmax(8.5rem,0.85fr)_minmax(0,1.8fr)_auto]",
-        "motion-reduce:transition-none",
-        line.isCarry
-          ? "border-dashed border-default/70 bg-elevated/25 hover:border-default hover:bg-elevated/40"
-          : "border-default/80 bg-default/80 hover:border-default hover:bg-elevated/35",
+        billInstrumentRowClass,
+        "group/line border-l border-dashed border-default/80 pl-3 sm:pl-4",
+        line.isCarry && "bg-elevated/15",
       )}
+      aria-label={`${line.subtitle}. Remaining ${line.remainingLabel}.`}
     >
-      <div className="flex min-w-0 items-start gap-2">
+      <BillInstrumentGlyphSlot>
         {line.isCarry ? (
-          <span className="mt-0.5 shrink-0 rounded-md bg-elevated px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted">
+          <span className="text-[0.625rem] font-semibold tracking-wide text-muted uppercase">
             Prior
           </span>
-        ) : null}
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="min-w-0 truncate text-xs font-medium text-highlighted sm:text-sm">
-              <AgencySearchHighlight text={line.subtitle} query={searchTerm} />
-            </span>
-            <span
-              className={cn(
-                "inline-flex h-5 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
-                mergedBillStatusChipClass(line.statusLabel),
-              )}
-            >
-              {line.statusLabel}
-            </span>
-          </div>
+        ) : (
+          <span className="text-[0.625rem] font-medium text-muted" aria-hidden>
+            ·
+          </span>
+        )}
+      </BillInstrumentGlyphSlot>
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="min-w-0 truncate text-xs font-medium text-highlighted sm:text-sm">
+            <AgencySearchHighlight text={line.subtitle} query={searchTerm} />
+          </span>
+          <span
+            className={cn(
+              "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
+              mergedBillStatusChipClass(line.statusLabel),
+            )}
+          >
+            {line.statusLabel}
+          </span>
         </div>
+        <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
+          {metaRail}
+        </p>
       </div>
-      <BillMetricGrid
-        totalLabel={line.totalLabel}
-        receivedLabel={line.receivedLabel}
+      <BillRemainingHero
         remainingLabel={line.remainingLabel}
-        wasteLabel={line.wasteLabel}
-        wasteAmount={line.wasteAmount}
         remainingAmount={line.remainingAmount}
         receivedTitle={receivedTitle}
-        ariaLabel={`${line.subtitle} money breakdown`}
-        compact
-        showLabels={showMetricLabels}
-        showWasteColumn={showWasteColumn}
+        receivedLabel={line.receivedLabel}
+        showReceivedSub={showReceivedSub}
       />
-      <div className="flex shrink-0 items-center justify-end gap-0.5">
+      <div className="flex shrink-0 items-center justify-end gap-0.5 sm:col-start-4">
         <BillIconAction
-          label={group.party === "team" ? "Preview payslip" : "Preview invoice"}
+          label={previewLabel}
           disabled={isMutationPending}
           onClick={() => onOpenPreviewLine(group, line)}
         >
@@ -522,8 +504,7 @@ function BillPersonGroupCard({
   group,
   searchTerm,
   isMutationPending,
-  showWasteColumn,
-  showMetricLabels = true,
+  showWasteInMeta,
   onOpenClient,
   onOpenMember,
   onOpenPreview,
@@ -534,8 +515,7 @@ function BillPersonGroupCard({
   group: MoneyBillPersonGroup;
   searchTerm: string;
   isMutationPending: boolean;
-  showWasteColumn: boolean;
-  showMetricLabels?: boolean;
+  showWasteInMeta: boolean;
   onOpenClient: (clientId: string) => void;
   onOpenMember: (userId: string) => void;
   onOpenPreview: (group: MoneyBillPersonGroup) => void;
@@ -552,24 +532,31 @@ function BillPersonGroupCard({
     group.pendingAdjustmentCents !== 0
       ? formatMoneyAmount(Math.abs(group.pendingAdjustmentCents), group.currency)
       : null;
+  const pendingSuffix = pendingAdjLabel
+    ? `${group.pendingAdjustmentCents > 0 ? "+" : "−"}${pendingAdjLabel} pending`
+    : undefined;
 
   function onOpenParty() {
     if (group.party === "client" && group.clientId) onOpenClient(group.clientId);
     else if (group.party === "team" && group.userId) onOpenMember(group.userId);
   }
 
-  const partyMark =
+  const partyGlyph =
     group.party === "team" ? (
       <AgencyMemberAvatar
         name={group.title}
         userId={group.userId ?? group.id}
         avatarUrl={group.userAvatar}
         size="md"
-        className="size-9"
+        className="size-9 shrink-0"
       />
     ) : hueId ? (
       <BillClientMark title={group.title} hueId={hueId} />
-    ) : null;
+    ) : (
+      <BillInstrumentGlyphSlot>
+        <span className="text-[0.7rem] font-semibold text-muted">?</span>
+      </BillInstrumentGlyphSlot>
+    );
 
   const partyTitle = (
     <button
@@ -585,136 +572,128 @@ function BillPersonGroupCard({
     </button>
   );
 
-  // Single obligation: one row. Parent+child grids were identical and doubled scan cost.
+  function renderInstrumentActions(
+    onPreview: () => void,
+    onAdjustClick: () => void,
+  ) {
+    return (
+      <div className="flex shrink-0 items-center justify-end gap-0.5 sm:col-start-4">
+        <BillIconAction label={previewLabel} disabled={isMutationPending} onClick={onPreview}>
+          <FileText className="size-4" aria-hidden />
+        </BillIconAction>
+        <BillIconAction
+          label="Adjust"
+          disabled={isMutationPending}
+          quiet
+          onClick={onAdjustClick}
+        >
+          <SlidersHorizontal className="size-4" aria-hidden />
+        </BillIconAction>
+      </div>
+    );
+  }
+
   if (soleLine) {
+    const showReceivedSub =
+      soleLine.receivedAmount > 0 &&
+      soleLine.remainingAmount > 0 &&
+      soleLine.statusLabel === "Part paid";
+    const metaRail = buildBillMetaRail({
+      lead: soleLine.subtitle,
+      totalLabel: soleLine.totalLabel,
+      receivedLabel: soleLine.receivedLabel,
+      receivedTitle,
+      wasteAmount: soleLine.wasteAmount,
+      wasteLabel: soleLine.wasteLabel,
+      showWaste: showWasteInMeta,
+      pendingSuffix,
+    });
+
     return (
       <li className="group/card overflow-hidden">
         <div
-          className={cn(
-            "grid items-center gap-3 px-3 py-3 transition-colors duration-150 hover:bg-elevated/25 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto] motion-reduce:transition-none",
-            soleLine.isCarry && "bg-elevated/15",
-          )}
+          className={cn(billInstrumentRowClass, soleLine.isCarry && "bg-elevated/15")}
+          aria-label={`${group.title}. Remaining ${soleLine.remainingLabel}.`}
         >
-          <div className="flex min-w-0 items-center gap-3">
-            {partyMark}
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                {partyTitle}
-                <span
-                  className={cn(
-                    "inline-flex h-5 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
-                    mergedBillStatusChipClass(soleLine.statusLabel),
-                  )}
-                >
-                  {soleLine.statusLabel}
-                </span>
-              </div>
-              <p className="mt-0.5 truncate text-xs text-muted">
-                <AgencySearchHighlight text={soleLine.subtitle} query={searchTerm} />
-                {pendingAdjLabel ? (
-                  <>
-                    <span aria-hidden> · </span>
-                    {group.pendingAdjustmentCents > 0 ? "+" : "−"}
-                    {pendingAdjLabel} pending
-                  </>
-                ) : null}
-              </p>
+          {partyGlyph}
+          <div className="min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+              {partyTitle}
+              <span
+                className={cn(
+                  "inline-flex h-5 shrink-0 items-center rounded-md px-1.5 text-[0.6875rem] font-medium",
+                  mergedBillStatusChipClass(soleLine.statusLabel),
+                )}
+              >
+                {soleLine.statusLabel}
+              </span>
             </div>
+            <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
+              <AgencySearchHighlight text={metaRail} query={searchTerm} />
+            </p>
           </div>
-          <BillMetricGrid
-            totalLabel={soleLine.totalLabel}
-            receivedLabel={soleLine.receivedLabel}
+          <BillRemainingHero
             remainingLabel={soleLine.remainingLabel}
-            wasteLabel={soleLine.wasteLabel}
-            wasteAmount={soleLine.wasteAmount}
             remainingAmount={soleLine.remainingAmount}
             receivedTitle={receivedTitle}
-            ariaLabel={`${group.title} money breakdown`}
-            showLabels={showMetricLabels}
-            showWasteColumn={showWasteColumn}
+            receivedLabel={soleLine.receivedLabel}
+            showReceivedSub={showReceivedSub}
           />
-          <div className="flex shrink-0 items-center justify-end gap-0.5">
-            <BillIconAction
-              label={previewLabel}
-              disabled={isMutationPending}
-              onClick={() => onOpenPreviewLine(group, soleLine)}
-            >
-              <FileText className="size-4" aria-hidden />
-            </BillIconAction>
-            <BillIconAction
-              label="Adjust"
-              disabled={isMutationPending}
-              quiet
-              onClick={() => onOpenAdjustLine(group, soleLine)}
-            >
-              <SlidersHorizontal className="size-4" aria-hidden />
-            </BillIconAction>
-          </div>
+          {renderInstrumentActions(
+            () => onOpenPreviewLine(group, soleLine),
+            () => onOpenAdjustLine(group, soleLine),
+          )}
         </div>
       </li>
     );
   }
 
+  const groupMetaLead = [
+    `${group.openLabel} open`,
+    priorLineCount > 0 ? `${priorLineCount} prior` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const groupMetaRail = buildBillMetaRail({
+    lead: groupMetaLead,
+    totalLabel: group.totalLabel,
+    receivedLabel: group.receivedLabel,
+    receivedTitle,
+    wasteAmount: group.wasteAmount,
+    wasteLabel: group.wasteLabel,
+    showWaste: showWasteInMeta,
+    pendingSuffix,
+  });
+  const showGroupReceivedSub =
+    group.receivedAmount > 0 && group.remainingAmount > 0;
+
   return (
     <li className="group/card overflow-hidden">
-      <div className="grid items-center gap-3 bg-default/40 px-3 py-3 transition-colors duration-150 hover:bg-elevated/25 md:grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto] motion-reduce:transition-none">
-        <div className="flex min-w-0 items-center gap-3">
-          {partyMark}
-          <div className="min-w-0 flex-1">
-            {partyTitle}
-            <p className="mt-0.5 text-xs text-muted">
-              <span className="font-mono tabular-nums">{group.openLabel}</span> open
-              {priorLineCount > 0 ? (
-                <>
-                  <span aria-hidden> · </span>
-                  {priorLineCount} prior
-                </>
-              ) : null}
-              {pendingAdjLabel ? (
-                <>
-                  <span aria-hidden> · </span>
-                  {group.pendingAdjustmentCents > 0 ? "+" : "−"}
-                  {pendingAdjLabel} pending
-                </>
-              ) : null}
-            </p>
-          </div>
+      <div
+        className={cn(billInstrumentRowClass, "bg-default/40")}
+        aria-label={`${group.title}. Remaining ${group.remainingLabel}.`}
+      >
+        {partyGlyph}
+        <div className="min-w-0">
+          {partyTitle}
+          <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
+            {groupMetaRail}
+          </p>
         </div>
-        <BillMetricGrid
-          totalLabel={group.totalLabel}
-          receivedLabel={group.receivedLabel}
+        <BillRemainingHero
           remainingLabel={group.remainingLabel}
-          wasteLabel={group.wasteLabel}
-          wasteAmount={group.wasteAmount}
           remainingAmount={group.remainingAmount}
           receivedTitle={receivedTitle}
-          ariaLabel={`${group.title} money breakdown`}
-          showLabels={showMetricLabels}
-          showWasteColumn={showWasteColumn}
+          receivedLabel={group.receivedLabel}
+          showReceivedSub={showGroupReceivedSub}
         />
-        <div className="flex shrink-0 items-center justify-end gap-0.5">
-          <BillIconAction
-            label={previewLabel}
-            disabled={isMutationPending}
-            onClick={() => onOpenPreview(group)}
-          >
-            <FileText className="size-4" aria-hidden />
-          </BillIconAction>
-          <BillIconAction
-            label="Adjust"
-            disabled={isMutationPending}
-            quiet
-            onClick={() => onOpenAdjust(group)}
-          >
-            <SlidersHorizontal className="size-4" aria-hidden />
-          </BillIconAction>
-        </div>
+        {renderInstrumentActions(
+          () => onOpenPreview(group),
+          () => onOpenAdjust(group),
+        )}
       </div>
       {group.lines.length > 0 ? (
-        <ul
-          className="flex flex-col gap-2 border-t border-default/60 bg-elevated/10 py-2.5 pr-3 pl-3 sm:pl-14"
-          aria-label={`${group.title} invoices`}
-        >
+        <ul className="flex flex-col" aria-label={`${group.title} invoices`}>
           <AnimatePresence initial={false}>
             {group.lines.map((line, index) => (
               <BillObligationLineRow
@@ -724,8 +703,7 @@ function BillPersonGroupCard({
                 index={index}
                 searchTerm={searchTerm}
                 isMutationPending={isMutationPending}
-                showWasteColumn={showWasteColumn}
-                showMetricLabels={false}
+                showWasteInMeta={showWasteInMeta}
                 onOpenPreviewLine={onOpenPreviewLine}
                 onOpenAdjustLine={onOpenAdjustLine}
               />
@@ -764,12 +742,10 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
       className={cn(agencyPanelClass, "flex h-full min-h-0 flex-col overflow-hidden")}
       aria-label="Bills"
     >
-      <div className="flex flex-col gap-4 border-b border-default p-5 pb-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h2 className={cn(agencyWorkTitleClass, "text-balance")}>Bills</h2>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-3 border-b border-default p-5 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className={cn(agencyWorkTitleClass, "text-balance")}>Bills</h2>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-3 sm:flex-none">
             <div className="relative min-w-48 flex-1 sm:max-w-72 sm:flex-none">
               <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
               <Input
@@ -807,27 +783,46 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
           </div>
         </div>
 
-        <Tabs
-          value={bills.partyFilter}
-          onValueChange={(value) => bills.onPartyFilterChange(value as MoneyBillsPartyFilter)}
-          className="gap-0"
-        >
-          <TabsList aria-label="Bill party" className="h-9 w-full max-w-full flex-wrap sm:w-fit">
-            {bills.partyOptions.map((option) => (
-              <TabsTrigger key={option.id} value={option.id} className="px-2.5">
-                {option.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
-        {bills.activeFilterSummary ? (
-          <div
-            className="flex flex-wrap items-center gap-1.5"
-            role="group"
-            aria-label="Active bill filters"
-            aria-live="polite"
+        <div className="flex flex-col gap-2">
+          <Tabs
+            value={bills.partyFilter}
+            onValueChange={(value) => bills.onPartyFilterChange(value as MoneyBillsPartyFilter)}
+            className="gap-0"
           >
+            <TabsList aria-label="Bill party" className="h-9 w-full max-w-full flex-wrap sm:w-fit">
+              {bills.partyOptions.map((option) => (
+                <TabsTrigger key={option.id} value={option.id} className="px-2.5">
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {hasStatusFilters
+              ? bills.statusOptions.map((option) => {
+                  const selected = bills.statusFilter === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={selected}
+                      className={cn(
+                        "inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors",
+                        agencyFocusRingClass,
+                        selected
+                          ? "bg-elevated text-highlighted ring-1 ring-border"
+                          : "text-muted hover:bg-elevated/70 hover:text-highlighted",
+                      )}
+                      onClick={() =>
+                        bills.onStatusFilterChange(option.id as MoneyBillsStatusFilter)
+                      }
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })
+              : null}
             {bills.partyFilter !== "all" ? (
               <ActiveBillFilterChip
                 label={
@@ -852,46 +847,6 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                 onClear={bills.onClearClientCategoryFilter}
               />
             ) : null}
-            {activeFilterChipCount > 1 ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs text-muted hover:text-highlighted"
-                onClick={bills.onClearAllFilters}
-              >
-                Clear all
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {hasStatusFilters ? (
-          <div
-            className="flex flex-wrap items-center gap-1.5"
-            role="group"
-            aria-label="Bill status"
-          >
-            {bills.statusOptions.map((option) => {
-              const selected = bills.statusFilter === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  aria-pressed={selected}
-                  className={cn(
-                    "inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors",
-                    agencyFocusRingClass,
-                    selected
-                      ? "bg-elevated text-highlighted ring-1 ring-border"
-                      : "text-muted hover:bg-elevated/70 hover:text-highlighted",
-                  )}
-                  onClick={() => bills.onStatusFilterChange(option.id as MoneyBillsStatusFilter)}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
             {bills.statusFilter ? (
               <Button
                 type="button"
@@ -905,21 +860,32 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                 Clear
               </Button>
             ) : null}
+            {activeFilterChipCount > 1 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted hover:text-highlighted"
+                onClick={bills.onClearAllFilters}
+              >
+                Clear all
+              </Button>
+            ) : null}
           </div>
-        ) : null}
+        </div>
       </div>
 
       <div className="relative flex flex-1 flex-col pb-5">
         {bills.isLoading ? (
-          <div
-            className="flex flex-col gap-2 px-4 pt-4"
+          <ul
+            className="mx-4 mt-4 divide-y divide-border overflow-hidden rounded-xl border border-default"
             aria-busy="true"
             aria-label="Loading bills"
           >
             {[1, 2, 3].map((item) => (
-              <Skeleton key={item} className="h-16 rounded-xl" />
+              <BillInstrumentRowSkeleton key={item} />
             ))}
-          </div>
+          </ul>
         ) : null}
 
         {bills.isError ? (
@@ -947,7 +913,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             ) : null}
 
             {sections.map((section) => {
-              const showWasteColumn = section.rows.some((row) => {
+              const showWasteInMeta = section.rows.some((row) => {
                 if (row.kind === "person-group") return row.wasteAmount > 0;
                 return false;
               });
@@ -993,26 +959,6 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                       ) : null}
                       {section.rows.length > 0 ? (
                         <ul className="divide-y divide-border overflow-hidden rounded-xl border border-default">
-                      <li
-                        className="grid grid-cols-[minmax(11rem,0.95fr)_minmax(0,1.8fr)_auto] items-center gap-3 border-b border-default bg-elevated/20 px-3 py-1.5"
-                        aria-hidden
-                      >
-                        <span className="text-[0.6875rem] font-medium text-muted">Account</span>
-                        <div
-                          className={cn(
-                            "grid min-w-0 divide-x divide-border text-end text-[0.6875rem] font-medium text-muted",
-                            showWasteColumn ? "grid-cols-4" : "grid-cols-3",
-                          )}
-                        >
-                          <span className="px-1.5 sm:px-3">Total</span>
-                          <span className="px-1.5 sm:px-3">
-                            {section.id === "team" ? "Paid" : "Received"}
-                          </span>
-                          <span className="px-1.5 sm:px-3">Remaining</span>
-                          {showWasteColumn ? <span className="px-1.5 sm:px-3">Waste</span> : null}
-                        </div>
-                        <span className="w-18" />
-                      </li>
                       {section.rows.map((row) => {
                         if (row.kind !== "person-group") return null;
                         return (
@@ -1021,8 +967,7 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
                             group={row}
                             searchTerm={bills.searchTerm}
                             isMutationPending={bills.isMutationPending}
-                            showWasteColumn={showWasteColumn}
-                            showMetricLabels={false}
+                            showWasteInMeta={showWasteInMeta}
                             onOpenClient={bills.onOpenClient}
                             onOpenMember={bills.onOpenMember}
                             onOpenPreview={bills.onOpenPreview}

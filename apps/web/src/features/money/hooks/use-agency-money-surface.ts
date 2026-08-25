@@ -43,6 +43,13 @@ import {
   subscriptionCountLabel,
   type MoneySubscriptionVisibility,
 } from "@/features/billing/money-subscription-visibility";
+import {
+  buildExpenseStripItems,
+  EXPENSE_STRIP_FILTERS,
+  expenseStripEmptyCopy,
+  expenseStripFilterVisibility,
+  type ExpenseStripFilter,
+} from "@/features/money/money-expenses-strip";
 import { dateInputToIso, toDateInputValue } from "@/features/shared/use-agency-time-range-filters";
 import {
   moneyBillsActiveFilterSummary,
@@ -372,9 +379,10 @@ export function useAgencyMoneySurface(teamId: string) {
   const [subscriptionVisibility, setSubscriptionVisibility] = useState<MoneySubscriptionVisibility>(
     {
       due: true,
-      paid: false,
+      paid: true,
     },
   );
+  const [expenseStripFilter, setExpenseStripFilter] = useState<ExpenseStripFilter>("all");
   const [moneySettingsOpen, setMoneySettingsOpen] = useState(false);
   const [lastStatsMetricSelection, setLastStatsMetricSelection] =
     useState<MoneyStatsMetricSelection | null>(null);
@@ -1035,6 +1043,76 @@ export function useAgencyMoneySurface(teamId: string) {
         : [],
     [expenseRecords, expensesStatus],
   );
+  const allSubscriptionExpenses = useMemo(
+    () =>
+      expensesStatus === "ready"
+        ? ((subscriptionCyclesQuery.data ?? []) as MoneySubscriptionCycleRecord[]).map(
+            toSubscriptionCycleRow,
+          )
+        : [],
+    [expensesStatus, subscriptionCyclesQuery.data],
+  );
+  const expensesPeriodSpendLabel = useMemo(() => {
+    const board = periodScoreboardQuery.data;
+    if (scoreboardStatus !== "ready" || !board) return null;
+    return formatMoneyStatsMetricValue(
+      "currency",
+      amountToMajor(board.expensesAmount),
+      board.currency,
+    );
+  }, [periodScoreboardQuery.data, scoreboardStatus]);
+
+  const expenseStripSources = useMemo(() => {
+    const upcomingEmptyTitle =
+      !subscriptionVisibility.due && !subscriptionVisibility.paid
+        ? "No visibility selected"
+        : subscriptionVisibility.paid && !subscriptionVisibility.due
+          ? "No paid subscriptions this period"
+          : "Nothing due soon";
+    const upcomingEmptyBody =
+      !subscriptionVisibility.due && !subscriptionVisibility.paid
+        ? "Choose Due or Paid from visibility."
+        : "Change visibility to inspect other subscription cycles.";
+
+    return {
+      recent: { items: recentExpenses, count: recentExpenses.length },
+      upcoming: {
+        items: upcomingExpenses,
+        count: upcomingExpenses.length,
+        emptyTitle: upcomingEmptyTitle,
+        emptyBody: upcomingEmptyBody,
+        visibility: {
+          onDueChange: (due: boolean) =>
+            setSubscriptionVisibility((current) => ({ ...current, due })),
+          onPaidChange: (paid: boolean) =>
+            setSubscriptionVisibility((current) => ({ ...current, paid })),
+        },
+      },
+      allSubscriptions: { items: allSubscriptionExpenses },
+    };
+  }, [
+    allSubscriptionExpenses,
+    recentExpenses,
+    subscriptionVisibility.due,
+    subscriptionVisibility.paid,
+    upcomingExpenses,
+  ]);
+
+  const expenseStripItems = useMemo(
+    () => buildExpenseStripItems(expenseStripFilter, expenseStripSources),
+    [expenseStripFilter, expenseStripSources],
+  );
+
+  const expenseStripEmpty = useMemo(
+    () => expenseStripEmptyCopy(expenseStripFilter, expenseStripSources, expenseStripItems.length),
+    [expenseStripFilter, expenseStripSources, expenseStripItems.length],
+  );
+
+  function onExpenseStripFilterChange(next: ExpenseStripFilter) {
+    setExpenseStripFilter(next);
+    const visibility = expenseStripFilterVisibility(next);
+    setSubscriptionVisibility(visibility);
+  }
 
   const canSubmitExpense = moneyExpenseCanSubmit(
     expenseName,
@@ -2215,12 +2293,19 @@ export function useAgencyMoneySurface(teamId: string) {
     expenses: {
       title: "Expenses",
       subtitle: "Subscriptions and ops spend",
+      periodSpendLabel: expensesPeriodSpendLabel,
       status: expensesStatus,
       errorMessage: expensesErrorMessage,
       onRetry: () => void Promise.all([expensesQuery.refetch(), subscriptionCyclesQuery.refetch()]),
       onOpenCreate: () => onExpenseCreateOpenChange(true),
       onOpenEdit: onOpenExpenseEdit,
-      onOpenDetails: () => setExpenseDetailsOpen(true),
+      strip: {
+        filter: expenseStripFilter,
+        filterOptions: EXPENSE_STRIP_FILTERS,
+        onFilterChange: onExpenseStripFilterChange,
+        items: expenseStripItems,
+        empty: expenseStripEmpty,
+      },
       details: {
         open: expenseDetailsOpen,
         onOpenChange: setExpenseDetailsOpen,
@@ -2330,6 +2415,9 @@ export function useAgencyMoneySurface(teamId: string) {
         count: recentExpenses.length,
         countLabel: expenseCountLabel(recentExpenses.length, "this period", "this period"),
         items: recentExpenses,
+      },
+      allSubscriptions: {
+        items: allSubscriptionExpenses,
       },
     },
   };
