@@ -6,12 +6,15 @@ export type MoneyExpensePeriod = "weekly" | "monthly" | "quarterly" | "yearly";
 
 export type MoneyExpenseStatus = "due" | "partial" | "paid";
 
+export type MoneyExpenseAmountMode = "fixed" | "variable";
+
 export type MoneyExpenseRecord = {
   id: string;
   name: string;
   kind: MoneyExpenseKind;
   period: MoneyExpensePeriod | null;
   note: string;
+  amountMode?: MoneyExpenseAmountMode;
   amount: number;
   paidAmount: number;
   remainingAmount: number;
@@ -41,6 +44,14 @@ export const MONEY_EXPENSE_PERIOD_OPTIONS: ReadonlyArray<{
   { id: "yearly", label: "Yearly" },
 ];
 
+export const MONEY_EXPENSE_AMOUNT_MODE_OPTIONS: ReadonlyArray<{
+  id: MoneyExpenseAmountMode;
+  label: string;
+}> = [
+  { id: "fixed", label: "Fixed" },
+  { id: "variable", label: "Variable" },
+];
+
 export function moneyExpensePeriodLabel(period: MoneyExpensePeriod | null): string | null {
   if (!period) return null;
   return MONEY_EXPENSE_PERIOD_OPTIONS.find((option) => option.id === period)?.label ?? null;
@@ -62,11 +73,40 @@ export function moneyExpenseCanSubmit(
   kind: MoneyExpenseKind,
   period: MoneyExpensePeriod | null,
   amount: string,
+  amountMode: MoneyExpenseAmountMode = "fixed",
 ): boolean {
   if (!name.trim()) return false;
-  if (parseMoneyExpenseAmount(amount) === null) return false;
-  if (kind === "subscription") return period !== null;
-  return true;
+  if (kind === "subscription" && period === null) return false;
+  if (kind === "subscription" && amountMode === "variable") return true;
+  return parseMoneyExpenseAmount(amount) !== null;
+}
+
+export function moneyExpenseAmountLabel(input: {
+  amountMode: MoneyExpenseAmountMode;
+  amount: number;
+  currency: string;
+}): string {
+  if (input.amountMode === "variable" && input.amount <= 0) return "Variable";
+  return formatMoneyExpenseAmount(input.amount, input.currency);
+}
+
+export function parseMoneyExpensePaymentAmount(
+  value: string,
+  remainingAmount: number,
+  amountMode: MoneyExpenseAmountMode,
+): number | null {
+  if (amountMode === "variable") return parseMoneyExpenseAmount(value);
+  const parsed = parseMoneyExpenseAmount(value);
+  if (parsed === null || parsed > remainingAmount) return null;
+  return parsed;
+}
+
+export function moneyExpensePaymentCanSubmit(
+  value: string,
+  remainingAmount: number,
+  amountMode: MoneyExpenseAmountMode,
+): boolean {
+  return parseMoneyExpensePaymentAmount(value, remainingAmount, amountMode) !== null;
 }
 
 export function formatMoneyExpenseAmount(amount: number, currency: string): string {

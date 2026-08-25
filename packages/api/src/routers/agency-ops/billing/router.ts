@@ -79,6 +79,7 @@ const payoutSectionKeySchema = z.enum([
 ]);
 const payoutBillsPartySchema = z.enum(["team", "adjustments", "all"]);
 const expenseKindSchema = z.enum(["one_time", "subscription"]);
+const expenseAmountModeSchema = z.enum(["fixed", "variable"]);
 const expensePeriodSchema = z.enum(["weekly", "monthly", "quarterly", "yearly"]);
 const expenseStatusSchema = z.enum(["due", "partial", "paid"]);
 const moneyPartyTypeSchema = z.enum(["client", "member"]);
@@ -224,6 +225,7 @@ const expenseRecordSchema = z.object({
   kind: expenseKindSchema,
   period: expensePeriodSchema.nullable(),
   note: z.string(),
+  amountMode: expenseAmountModeSchema,
   amount: z.number().int().nonnegative(),
   paidAmount: z.number().int().nonnegative(),
   remainingAmount: z.number().int().nonnegative(),
@@ -247,6 +249,7 @@ const subscriptionCycleRecordSchema = z.object({
   remainingAmount: z.number().int().nonnegative(),
   currency: z.string().min(1),
   period: expensePeriodSchema,
+  amountMode: expenseAmountModeSchema,
   dueAt: z.string().datetime(),
   canRecordPayment: z.boolean(),
 });
@@ -717,7 +720,8 @@ export const billingRouter = {
           kind: expenseKindSchema,
           period: expensePeriodSchema.nullable().optional(),
           note: z.string().optional(),
-          amount: z.number().int().positive(),
+          amount: z.number().int().nonnegative(),
+          amountMode: expenseAmountModeSchema.optional(),
           currency: z.string().length(3).optional(),
           startsAt: z.string().datetime().nullable().optional(),
           nextDueAt: z.string().datetime().nullable().optional(),
@@ -733,7 +737,8 @@ export const billingRouter = {
           expenseId: z.string().min(1),
           name: z.string().min(1).optional(),
           note: z.string().optional(),
-          amount: z.number().int().positive().optional(),
+          amount: z.number().int().nonnegative().optional(),
+          amountMode: expenseAmountModeSchema.optional(),
           currency: z.string().length(3).optional(),
           period: expensePeriodSchema.nullable().optional(),
           startsAt: z.string().datetime().nullable().optional(),

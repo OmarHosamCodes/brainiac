@@ -1016,6 +1016,7 @@ export const agencyOpsFxRate = pgTable(
 // ---------------------------------------------------------------------------
 
 export type AgencyOpsExpenseKind = "one_time" | "subscription";
+export type AgencyOpsExpenseAmountMode = "fixed" | "variable";
 export type AgencyOpsExpensePeriod = "weekly" | "monthly" | "quarterly" | "yearly";
 export type AgencyOpsExpenseStatus = "due" | "partial" | "paid";
 
@@ -1032,6 +1033,7 @@ export const agencyOpsExpense = pgTable(
     note: text("note").notNull().default(""),
     /** Agency-currency amount (integer minor units). */
     amount: integer("amount").notNull().default(0),
+    amountMode: text("amount_mode").$type<AgencyOpsExpenseAmountMode>().notNull().default("fixed"),
     currency: text("currency").notNull().default("USD"),
     sourceAmount: integer("source_amount"),
     fxRate: text("fx_rate").notNull().default("1"),

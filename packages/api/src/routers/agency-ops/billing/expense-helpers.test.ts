@@ -8,6 +8,7 @@ import {
   expenseRemainingAmount,
   expenseStatusAfterPaid,
   isSubscriptionVisibleInPeriod,
+  planExpensePayment,
 } from "./expense-helpers";
 
 describe("expenseRemainingAmount", () => {
@@ -140,6 +141,91 @@ describe("expensePeriodTotals", () => {
   });
 });
 
+describe("planExpensePayment", () => {
+  const now = new Date("2026-08-24T00:00:00.000Z");
+  const due = new Date("2026-08-24T00:00:00.000Z");
+
+  test("fixed subscription rejects payment over remaining", () => {
+    expect(
+      planExpensePayment({
+        kind: "subscription",
+        amountMode: "fixed",
+        period: "monthly",
+        templateAmount: 178_000,
+        paidAmount: 0,
+        paymentAmount: 200_000,
+        nextDueAt: due,
+        startsAt: null,
+        now,
+      }),
+    ).toEqual({ ok: false, error: "Payment exceeds remaining balance." });
+  });
+
+  test("fixed subscription full pay snapshots template amount and advances due", () => {
+    const plan = planExpensePayment({
+      kind: "subscription",
+      amountMode: "fixed",
+      period: "monthly",
+      templateAmount: 178_000,
+      paidAmount: 0,
+      paymentAmount: 178_000,
+      nextDueAt: due,
+      startsAt: null,
+      now,
+    });
+    expect(plan).toMatchObject({
+      ok: true,
+      occurrenceAmount: 178_000,
+      occurrencePaidAmount: 178_000,
+      templatePaidAmount: 0,
+      templateStatus: "due",
+      writeOccurrence: true,
+    });
+    if (!plan.ok) throw new Error("expected ok");
+    expect(plan.nextDueAt?.toISOString()).toBe("2026-09-24T00:00:00.000Z");
+  });
+
+  test("variable subscription uses payment as cycle amount and always completes", () => {
+    const plan = planExpensePayment({
+      kind: "subscription",
+      amountMode: "variable",
+      period: "monthly",
+      templateAmount: 0,
+      paidAmount: 0,
+      paymentAmount: 124_000,
+      nextDueAt: due,
+      startsAt: null,
+      now,
+    });
+    expect(plan).toMatchObject({
+      ok: true,
+      occurrenceAmount: 124_000,
+      occurrencePaidAmount: 124_000,
+      templatePaidAmount: 0,
+      templateStatus: "due",
+      writeOccurrence: true,
+    });
+    if (!plan.ok) throw new Error("expected ok");
+    expect(plan.nextDueAt?.toISOString()).toBe("2026-09-24T00:00:00.000Z");
+  });
+
+  test("variable subscription rejects non-positive payment", () => {
+    expect(
+      planExpensePayment({
+        kind: "subscription",
+        amountMode: "variable",
+        period: "monthly",
+        templateAmount: 0,
+        paidAmount: 0,
+        paymentAmount: 0,
+        nextDueAt: due,
+        startsAt: null,
+        now,
+      }).ok,
+    ).toBe(false);
+  });
+});
+
 describe("buildSubscriptionCycleRecords", () => {
   test("separates paid history from the current payable cycle", () => {
     const records = buildSubscriptionCycleRecords({
@@ -154,6 +240,7 @@ describe("buildSubscriptionCycleRecords", () => {
           paidAmount: 0,
           currency: "EGP",
           period: "monthly",
+          amountMode: "fixed",
           nextDueAt: new Date("2026-09-24T00:00:00.000Z"),
         },
         {
@@ -164,6 +251,7 @@ describe("buildSubscriptionCycleRecords", () => {
           paidAmount: 10_000,
           currency: "EGP",
           period: "monthly",
+          amountMode: "fixed",
           nextDueAt: new Date("2026-08-20T00:00:00.000Z"),
         },
       ],
@@ -177,6 +265,7 @@ describe("buildSubscriptionCycleRecords", () => {
           paidAmount: 178_000,
           currency: "EGP",
           period: "monthly",
+          amountMode: "fixed",
           dueAt: new Date("2026-08-24T00:00:00.000Z"),
         },
       ],
@@ -194,6 +283,7 @@ describe("buildSubscriptionCycleRecords", () => {
         remainingAmount: 40_000,
         currency: "EGP",
         period: "monthly",
+        amountMode: "fixed",
         dueAt: "2026-08-20T00:00:00.000Z",
         canRecordPayment: true,
       },
@@ -208,8 +298,47 @@ describe("buildSubscriptionCycleRecords", () => {
         remainingAmount: 0,
         currency: "EGP",
         period: "monthly",
+        amountMode: "fixed",
         dueAt: "2026-08-24T00:00:00.000Z",
         canRecordPayment: false,
+      },
+    ]);
+  });
+
+  test("variable due cycle keeps amount 0 and stays payable", () => {
+    const records = buildSubscriptionCycleRecords({
+      periodStart: new Date("2026-08-01T00:00:00.000Z"),
+      periodEnd: new Date("2026-09-01T00:00:00.000Z"),
+      subscriptions: [
+        {
+          id: "expense-var",
+          name: "Electricity",
+          note: "",
+          amount: 0,
+          paidAmount: 0,
+          currency: "EGP",
+          period: "monthly",
+          amountMode: "variable",
+          nextDueAt: new Date("2026-08-24T00:00:00.000Z"),
+        },
+      ],
+      occurrences: [],
+    });
+    expect(records).toEqual([
+      {
+        id: "due:expense-var:2026-08-24T00:00:00.000Z",
+        expenseId: "expense-var",
+        state: "due",
+        name: "Electricity",
+        note: "",
+        amount: 0,
+        paidAmount: 0,
+        remainingAmount: 0,
+        currency: "EGP",
+        period: "monthly",
+        amountMode: "variable",
+        dueAt: "2026-08-24T00:00:00.000Z",
+        canRecordPayment: true,
       },
     ]);
   });
@@ -227,6 +356,7 @@ describe("buildSubscriptionCycleRecords", () => {
           paidAmount: 0,
           currency: "EGP",
           period: "monthly",
+          amountMode: "fixed",
           nextDueAt: new Date("2026-07-20T00:00:00.000Z"),
         },
       ],
@@ -240,6 +370,7 @@ describe("buildSubscriptionCycleRecords", () => {
           paidAmount: 10_000,
           currency: "EGP",
           period: "monthly",
+          amountMode: "fixed",
           dueAt: new Date("2026-07-31T23:59:59.999Z"),
         },
         {
@@ -251,6 +382,7 @@ describe("buildSubscriptionCycleRecords", () => {
           paidAmount: 10_000,
           currency: "EGP",
           period: "monthly",
+          amountMode: "fixed",
           dueAt: new Date("2026-09-01T00:00:00.000Z"),
         },
       ],

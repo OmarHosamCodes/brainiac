@@ -293,7 +293,19 @@ type CreateExpensePayload = {
   period?: "weekly" | "monthly" | "quarterly" | "yearly" | null;
   note?: string;
   amount: number;
+  amountMode?: "fixed" | "variable";
   currency?: string;
+  startsAt?: string | null;
+};
+
+type UpdateExpensePayload = {
+  teamId: string;
+  expenseId: string;
+  name?: string;
+  note?: string;
+  amount?: number;
+  amountMode?: "fixed" | "variable";
+  period?: "weekly" | "monthly" | "quarterly" | "yearly" | null;
   startsAt?: string | null;
 };
 
@@ -2062,6 +2074,7 @@ function createAgencyOpsActions(
         period: payload.period,
         note: payload.note,
         amount: payload.amount,
+        amountMode: payload.amountMode,
         currency: payload.currency,
         startsAt: payload.startsAt,
       });
@@ -2082,6 +2095,43 @@ function createAgencyOpsActions(
       toast.success("Expense added");
     } catch (error) {
       toast.error("Couldn't add expense", { description: getErrorMessage(error, "Try again.") });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
+  async function updateExpense(
+    payload: UpdateExpensePayload,
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    if (!payload.teamId || !payload.expenseId) return;
+
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.expenses.update(payload);
+
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.expenses.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.expenses.subscriptionCycles.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+      ]);
+
+      callbacks?.onSuccess?.();
+      toast.success("Expense updated");
+    } catch (error) {
+      toast.error("Couldn't update expense", {
+        description: getErrorMessage(error, "Try again."),
+      });
     } finally {
       set((state) => ({
         ...state,
@@ -2409,6 +2459,7 @@ function createAgencyOpsActions(
     upsertSalaryPoolTotal,
     recordSalaryPoolPayment,
     createExpense,
+    updateExpense,
     recordExpensePayment,
     removeExpense,
     upsertMoneySettings,

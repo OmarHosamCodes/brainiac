@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  formatMoneyExpenseAmount,
+  moneyExpenseAmountLabel,
   moneyExpenseCanSubmit,
   moneyExpensePeriodLabel,
   moneyExpenseStatusLabel,
   moneyExpenseSubscriptionMeta,
   parseMoneyExpenseAmount,
+  parseMoneyExpensePaymentAmount,
 } from "./money-expense-form";
 
 describe("moneyExpenseCanSubmit", () => {
@@ -21,6 +24,46 @@ describe("moneyExpenseCanSubmit", () => {
   test("subscription needs period", () => {
     expect(moneyExpenseCanSubmit("Notion", "subscription", null, "20")).toBe(false);
     expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly", "20")).toBe(true);
+  });
+
+  test("variable subscription needs name and period, not amount", () => {
+    expect(moneyExpenseCanSubmit("Electricity", "subscription", "monthly", "", "variable")).toBe(
+      true,
+    );
+    expect(moneyExpenseCanSubmit("Electricity", "subscription", null, "", "variable")).toBe(false);
+    expect(moneyExpenseCanSubmit("Rent", "one_time", null, "", "variable")).toBe(false);
+  });
+
+  test("fixed subscription still needs amount", () => {
+    expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly", "", "fixed")).toBe(false);
+    expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly", "20", "fixed")).toBe(true);
+  });
+});
+
+describe("moneyExpenseAmountLabel", () => {
+  test("variable unpaid shows Variable, paid snapshot shows amount", () => {
+    expect(
+      moneyExpenseAmountLabel({ amountMode: "variable", amount: 0, currency: "EGP" }),
+    ).toBe("Variable");
+    expect(
+      moneyExpenseAmountLabel({ amountMode: "variable", amount: 178_000, currency: "EGP" }),
+    ).toBe(formatMoneyExpenseAmount(178_000, "EGP"));
+    expect(
+      moneyExpenseAmountLabel({ amountMode: "fixed", amount: 0, currency: "EGP" }),
+    ).toBe(formatMoneyExpenseAmount(0, "EGP"));
+  });
+});
+
+describe("parseMoneyExpensePaymentAmount", () => {
+  test("variable ignores remaining and requires a positive amount", () => {
+    expect(parseMoneyExpensePaymentAmount("1240", 0, "variable")).toBe(124_000);
+    expect(parseMoneyExpensePaymentAmount("", 0, "variable")).toBeNull();
+    expect(parseMoneyExpensePaymentAmount("0", 0, "variable")).toBeNull();
+  });
+
+  test("fixed still rejects more than remaining", () => {
+    expect(parseMoneyExpensePaymentAmount("20", 10_000, "fixed")).toBe(2000);
+    expect(parseMoneyExpensePaymentAmount("200", 10_000, "fixed")).toBeNull();
   });
 });
 

@@ -122,6 +122,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               group={expenses.upcoming}
               icon={<CalendarClock className="size-4 text-muted" aria-hidden />}
               onOpenDetails={expenses.onOpenDetails}
+              onOpenEdit={expenses.onOpenEdit}
               onOpenPayment={expenses.onOpenPayment}
             />
             <div className="mx-5 border-t border-default" />
@@ -130,6 +131,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
               icon={<History className="size-4 text-muted" aria-hidden />}
               grow
               onOpenDetails={expenses.onOpenDetails}
+              onOpenEdit={expenses.onOpenEdit}
               onOpenPayment={expenses.onOpenPayment}
             />
           </>
@@ -182,9 +184,15 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                             />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                                <p className="truncate text-sm font-medium text-highlighted">
+                                <Button
+                                  type="button"
+                                  variant="link"
+                                  size="sm"
+                                  className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-sm font-medium text-highlighted"
+                                  onClick={() => expenses.onOpenEdit(item.expenseId)}
+                                >
                                   {item.name}
-                                </p>
+                                </Button>
                                 <span className="shrink-0 text-[11px] tabular-nums text-highlighted">
                                   {item.amountLabel}
                                 </span>
@@ -250,16 +258,18 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
           <DialogHeader className="space-y-2 border-b border-default px-5 py-4 pr-14 text-left">
             <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="text-base font-bold text-highlighted">
-                Add expense
+                {create.title}
               </DialogTitle>
               <Badge variant="secondary">
                 {create.kind === "subscription" ? "Subscription" : "One-time"}
               </Badge>
             </div>
             <DialogDescription className="text-xs text-muted">
-              {create.kind === "subscription"
-                ? "Recurring charge with a clear next due date"
-                : "Ops spend for this period"}
+              {create.kind === "subscription" && create.amountMode === "variable"
+                ? "Recurring charge. Amount is set each time you Pay."
+                : create.kind === "subscription"
+                  ? "Recurring charge with a clear next due date"
+                  : "Ops spend for this period"}
             </DialogDescription>
           </DialogHeader>
 
@@ -292,6 +302,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                 <Select
                   value={create.kind}
                   onValueChange={(value) => create.onKindChange(value as MoneyExpenseKind)}
+                  disabled={create.kindLocked}
                 >
                   <SelectTrigger
                     id={`${create.formId}-kind`}
@@ -311,6 +322,37 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
 
               {create.kind === "subscription" ? (
                 <>
+                  <div className={agencyFormFieldClass}>
+                    <Label htmlFor={`${create.formId}-amount-mode`} className={agencyFormLabelClass}>
+                      Amount type
+                    </Label>
+                    <Select
+                      value={create.amountMode}
+                      onValueChange={(value) =>
+                        create.onAmountModeChange(value as typeof create.amountMode)
+                      }
+                    >
+                      <SelectTrigger
+                        id={`${create.formId}-amount-mode`}
+                        className="h-9 w-full rounded-xl border-default bg-default"
+                      >
+                        <SelectValue placeholder="Select amount type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {create.amountModeOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {create.amountMode === "variable" ? (
+                      <p className="text-[11px] text-muted text-pretty">
+                        Enter this cycle&apos;s amount when you Pay.
+                      </p>
+                    ) : null}
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className={agencyFormFieldClass}>
                       <Label htmlFor={`${create.formId}-period`} className={agencyFormLabelClass}>
@@ -374,22 +416,24 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                 </>
               ) : null}
 
-              <div className={agencyFormFieldClass}>
-                <Label htmlFor={`${create.formId}-amount`} className={agencyFormLabelClass}>
-                  Amount
-                </Label>
-                <Input
-                  id={`${create.formId}-amount`}
-                  inputMode="decimal"
-                  value={create.amount}
-                  onChange={(event) => create.onAmountChange(event.target.value)}
-                  placeholder="0.00"
-                  className={cn(
-                    "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
-                    agencyInputPlaceholderClass,
-                  )}
-                />
-              </div>
+              {create.kind !== "subscription" || create.amountMode === "fixed" ? (
+                <div className={agencyFormFieldClass}>
+                  <Label htmlFor={`${create.formId}-amount`} className={agencyFormLabelClass}>
+                    Amount
+                  </Label>
+                  <Input
+                    id={`${create.formId}-amount`}
+                    inputMode="decimal"
+                    value={create.amount}
+                    onChange={(event) => create.onAmountChange(event.target.value)}
+                    placeholder="0.00"
+                    className={cn(
+                      "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
+                      agencyInputPlaceholderClass,
+                    )}
+                  />
+                </div>
+              ) : null}
 
               <div className={agencyFormFieldClass}>
                 <Label htmlFor={`${create.formId}-note`} className={agencyFormLabelClass}>
@@ -419,7 +463,7 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={!create.canSubmit} form={create.formId}>
-                Add
+                {create.submitLabel}
               </Button>
             </DialogFooter>
           </form>
@@ -445,19 +489,17 @@ function ExpensesSection({ expenses }: { expenses: AgencyMoneySurfaceViewModel["
           >
             <div className="flex flex-col gap-4 px-5 py-4">
               <div className="rounded-xl border border-default bg-muted/25 px-4 py-4 text-center">
-                <p className="text-xs text-muted">Remaining</p>
+                <p className="text-xs text-muted">{payment.heroLabel}</p>
                 <p
                   className={cn(
                     agencyMetricClass,
                     "mt-1 font-mono text-2xl font-semibold tabular-nums text-highlighted",
                   )}
                 >
-                  {payment.remainingLabel || "—"}
+                  {payment.heroValue || "—"}
                 </p>
-                {payment.kind === "subscription" ? (
-                  <p className="mt-2 text-[11px] text-muted text-pretty">
-                    Paying in full rolls the next due forward and hides this row until then.
-                  </p>
+                {payment.heroHint ? (
+                  <p className="mt-2 text-[11px] text-muted text-pretty">{payment.heroHint}</p>
                 ) : null}
               </div>
               <Separator />
@@ -503,12 +545,14 @@ function ExpensesGroup({
   icon,
   grow,
   onOpenDetails,
+  onOpenEdit,
   onOpenPayment,
 }: {
   group: ExpensesGroupViewModel;
   icon: ReactNode;
   grow?: boolean;
   onOpenDetails: () => void;
+  onOpenEdit: (expenseId: string) => void;
   onOpenPayment: (expenseId: string) => void;
 }) {
   const hasItems = group.items.length > 0;
@@ -596,7 +640,15 @@ function ExpensesGroup({
               <span className="mt-0.5 size-7 shrink-0 rounded-full bg-muted/40" aria-hidden />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                  <p className="truncate text-sm font-medium text-highlighted">{item.name}</p>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto min-h-0 max-w-full truncate px-0 py-0 text-sm font-medium text-highlighted"
+                    onClick={() => onOpenEdit(item.expenseId)}
+                  >
+                    {item.name}
+                  </Button>
                   <span className="shrink-0 text-[11px] tabular-nums text-highlighted">
                     {item.amountLabel}
                   </span>

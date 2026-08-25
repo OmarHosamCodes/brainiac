@@ -2,6 +2,7 @@ import { db } from "@orch/db";
 import {
   agencyOpsExpense,
   agencyOpsExpenseOccurrence,
+  type AgencyOpsExpenseAmountMode,
   type AgencyOpsExpenseKind,
   type AgencyOpsExpensePeriod,
   type AgencyOpsExpenseStatus,
@@ -13,7 +14,6 @@ import { createWorkspaceId } from "@orch/workspace";
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import {
-  advanceExpenseNextDueAt,
   type AgencySubscriptionCycleRecord,
   buildSubscriptionCycleRecords,
   defaultExpenseNextDueAt,
@@ -21,6 +21,7 @@ import {
   expenseRemainingAmount,
   expenseStatusAfterPaid,
   isSubscriptionVisibleInPeriod,
+  planExpensePayment,
 } from "./expense-helpers";
 import { paginateItems, type PaginatedItems } from "./list-pagination";
 import { loadMoneyResolveContext } from "./money-fx-service";
@@ -32,6 +33,7 @@ export type AgencyExpenseRecord = {
   kind: AgencyOpsExpenseKind;
   period: AgencyOpsExpensePeriod | null;
   note: string;
+  amountMode: AgencyOpsExpenseAmountMode;
   amount: number;
   paidAmount: number;
   remainingAmount: number;
@@ -53,6 +55,7 @@ function mapExpenseRow(row: typeof agencyOpsExpense.$inferSelect): AgencyExpense
     kind: row.kind,
     period: row.period ?? null,
     note: row.note ?? "",
+    amountMode: row.amountMode ?? "fixed",
     amount: row.amount,
     paidAmount,
     remainingAmount: expenseRemainingAmount(row.amount, paidAmount),
@@ -131,6 +134,7 @@ export async function listSubscriptionCycles(
         paidAmount: agencyOpsExpense.paidAmount,
         currency: agencyOpsExpense.currency,
         period: agencyOpsExpense.period,
+        amountMode: agencyOpsExpense.amountMode,
         nextDueAt: agencyOpsExpense.nextDueAt,
       })
       .from(agencyOpsExpense)
@@ -147,6 +151,7 @@ export async function listSubscriptionCycles(
         paidAmount: agencyOpsExpenseOccurrence.paidAmount,
         currency: agencyOpsExpenseOccurrence.currency,
         period: agencyOpsExpense.period,
+        amountMode: agencyOpsExpense.amountMode,
         dueAt: agencyOpsExpenseOccurrence.dueAt,
       })
       .from(agencyOpsExpenseOccurrence)
@@ -182,6 +187,7 @@ export async function createExpense(
     period?: AgencyOpsExpensePeriod | null;
     note?: string;
     amount: number;
+    amountMode?: AgencyOpsExpenseAmountMode;
     currency?: string;
     startsAt?: string | null;
     nextDueAt?: string | null;
@@ -194,7 +200,16 @@ export async function createExpense(
   if (!name) {
     throw new ORPCError("BAD_REQUEST", { message: "Name is required." });
   }
-  if (!Number.isInteger(input.amount) || input.amount <= 0) {
+
+  const amountMode: AgencyOpsExpenseAmountMode =
+    input.kind === "subscription" ? (input.amountMode ?? "fixed") : "fixed";
+  if (amountMode === "variable") {
+    if (input.kind !== "subscription") {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Variable amount is only valid for subscriptions.",
+      });
+    }
+  } else if (!Number.isInteger(input.amount) || input.amount <= 0) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Amount must be a positive integer (minor units).",
     });
@@ -225,8 +240,9 @@ export async function createExpense(
 
   const id = createWorkspaceId("agency-expense");
   const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+  const resolvedAmount = amountMode === "variable" ? 0 : input.amount;
   const money = moneyCtx.resolve(
-    input.amount,
+    resolvedAmount,
     (input.currency ?? moneyCtx.agencyCurrency).toUpperCase(),
   );
   await moneyCtx.lock();
@@ -241,6 +257,7 @@ export async function createExpense(
       period,
       note: (input.note ?? "").trim(),
       amount: money.amount,
+      amountMode,
       currency: money.sourceCurrency,
       sourceAmount: money.sourceAmount,
       fxRate: money.fxRate,
@@ -268,6 +285,7 @@ export async function updateExpense(
     name?: string;
     note?: string;
     amount?: number;
+    amountMode?: AgencyOpsExpenseAmountMode;
     currency?: string;
     period?: AgencyOpsExpensePeriod | null;
     startsAt?: string | null;
@@ -292,14 +310,30 @@ export async function updateExpense(
     throw new ORPCError("BAD_REQUEST", { message: "Name is required." });
   }
 
+  const amountMode: AgencyOpsExpenseAmountMode =
+    existing.kind === "subscription"
+      ? (input.amountMode ?? existing.amountMode ?? "fixed")
+      : "fixed";
+
+  if (amountMode === "variable" && (existing.paidAmount ?? 0) > 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Finish the current cycle before switching to variable amount.",
+    });
+  }
+
   const sourceCurrency = (
     input.currency !== undefined ? input.currency : existing.currency
   ).toUpperCase();
-  const sourceAmount = input.amount ?? existing.sourceAmount ?? existing.amount;
+  const rawSourceAmount =
+    amountMode === "variable"
+      ? 0
+      : (input.amount ?? existing.sourceAmount ?? existing.amount);
   const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
   const money =
-    input.amount !== undefined || input.currency !== undefined
-      ? moneyCtx.resolve(sourceAmount, sourceCurrency)
+    input.amount !== undefined ||
+    input.currency !== undefined ||
+    input.amountMode !== undefined
+      ? moneyCtx.resolve(rawSourceAmount, sourceCurrency)
       : {
           amount: existing.amount,
           sourceAmount: existing.sourceAmount ?? existing.amount,
@@ -307,12 +341,12 @@ export async function updateExpense(
           fxRate: existing.fxRate,
           fxAsOf: existing.fxAsOf?.toISOString() ?? new Date().toISOString(),
         };
-  if (input.amount !== undefined || input.currency !== undefined) {
+  if (input.amount !== undefined || input.currency !== undefined || input.amountMode !== undefined) {
     await moneyCtx.lock();
   }
 
   const amount = money.amount;
-  if (!Number.isInteger(amount) || amount <= 0) {
+  if (amountMode === "fixed" && (!Number.isInteger(amount) || amount <= 0)) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Amount must be a positive integer (minor units).",
     });
@@ -351,6 +385,7 @@ export async function updateExpense(
       name,
       note: input.note !== undefined ? input.note.trim() : existing.note,
       amount,
+      amountMode,
       currency: money.sourceCurrency,
       sourceAmount: money.sourceAmount,
       fxRate: money.fxRate,
@@ -391,26 +426,29 @@ export async function recordExpensePayment(
   if (!existing) {
     throw new ORPCError("NOT_FOUND", { message: "Expense not found." });
   }
-  if (existing.status === "paid") {
+  if (existing.status === "paid" && existing.amountMode !== "variable") {
     throw new ORPCError("BAD_REQUEST", { message: "Expense is already paid." });
   }
 
-  const remaining = expenseRemainingAmount(existing.amount, existing.paidAmount ?? 0);
-  if (input.amount > remaining) {
-    throw new ORPCError("BAD_REQUEST", { message: "Payment exceeds remaining balance." });
+  const plan = planExpensePayment({
+    kind: existing.kind,
+    amountMode: existing.amountMode ?? "fixed",
+    period: existing.period ?? null,
+    templateAmount: existing.amount,
+    paidAmount: existing.paidAmount ?? 0,
+    paymentAmount: input.amount,
+    nextDueAt: existing.nextDueAt,
+    startsAt: existing.startsAt,
+    now: new Date(),
+  });
+  if (!plan.ok) {
+    throw new ORPCError("BAD_REQUEST", { message: plan.error });
   }
 
-  let paidAmount = (existing.paidAmount ?? 0) + input.amount;
-  let status = expenseStatusAfterPaid(existing.amount, paidAmount);
-  let nextDueAt = existing.nextDueAt ?? existing.startsAt;
-  const occurrenceDueAt = existing.kind === "subscription" ? (nextDueAt ?? new Date()) : null;
-
-  // Subscription fully paid → roll to next due cycle and clear this period's balance.
-  if (existing.kind === "subscription" && status === "paid" && existing.period && occurrenceDueAt) {
-    nextDueAt = advanceExpenseNextDueAt(occurrenceDueAt, existing.period);
-    paidAmount = 0;
-    status = "due";
-  }
+  const occurrenceDueAt =
+    plan.writeOccurrence && existing.kind === "subscription"
+      ? (existing.nextDueAt ?? existing.startsAt ?? new Date())
+      : null;
 
   const row = await db.transaction(async (tx) => {
     if (occurrenceDueAt) {
@@ -420,15 +458,15 @@ export async function recordExpensePayment(
           id: createWorkspaceId("expenseOccurrence"),
           expenseId: existing.id,
           dueAt: occurrenceDueAt,
-          amount: existing.amount,
-          paidAmount: (existing.paidAmount ?? 0) + input.amount,
+          amount: plan.occurrenceAmount,
+          paidAmount: plan.occurrencePaidAmount,
           currency: existing.currency,
         })
         .onConflictDoUpdate({
           target: [agencyOpsExpenseOccurrence.expenseId, agencyOpsExpenseOccurrence.dueAt],
           set: {
-            amount: existing.amount,
-            paidAmount: (existing.paidAmount ?? 0) + input.amount,
+            amount: plan.occurrenceAmount,
+            paidAmount: plan.occurrencePaidAmount,
             currency: existing.currency,
             updatedAt: new Date(),
           },
@@ -438,9 +476,9 @@ export async function recordExpensePayment(
     const [updated] = await tx
       .update(agencyOpsExpense)
       .set({
-        paidAmount,
-        status,
-        nextDueAt,
+        paidAmount: plan.templatePaidAmount,
+        status: plan.templateStatus,
+        nextDueAt: plan.nextDueAt,
         updatedAt: new Date(),
       })
       .where(eq(agencyOpsExpense.id, existing.id))

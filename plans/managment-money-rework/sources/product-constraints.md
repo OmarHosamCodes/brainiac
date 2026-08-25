@@ -29,6 +29,11 @@ Spec: `docs/superpowers/specs/2026-08-06-money-compose-on-demand-design.md`
   cycle. Paid cycles leave the default Due list but remain in the selected
   period’s Expenses total. The Subscriptions menu can independently show Due
   and Paid cycles; paid rows are read-only.
+- Subscriptions may be Fixed or Variable. Variable keeps the billing cadence
+  but stores no template amount; Pay records this cycle's amount, snapshots
+  the occurrence, and advances next due. Unpaid variable due does not add to
+  the Expenses scoreboard. Edit updates the template only; paid occurrences
+  stay immutable.
 - Payout formulas/rules apply from Money settings (rules + chip/token formulas).
 - A manual Team salary pool takes precedence over rate-derived member salary
   lines for that period. Pool-level partial payments reduce the shared remaining

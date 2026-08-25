@@ -15,13 +15,18 @@ import {
 import { useAgencyPeriodState } from "@/features/shared/use-agency-period-state";
 import {
   formatMoneyExpenseAmount,
+  moneyExpenseAmountLabel,
   moneyExpenseCanSubmit,
+  moneyExpensePaymentCanSubmit,
   moneyExpensePeriodLabel,
   moneyExpenseStatusLabel,
   moneyExpenseSubscriptionMeta,
   parseMoneyExpenseAmount,
+  parseMoneyExpensePaymentAmount,
+  MONEY_EXPENSE_AMOUNT_MODE_OPTIONS,
   MONEY_EXPENSE_KIND_OPTIONS,
   MONEY_EXPENSE_PERIOD_OPTIONS,
+  type MoneyExpenseAmountMode,
   type MoneyExpenseKind,
   type MoneyExpensePeriod,
   type MoneyExpenseRecord,
@@ -116,9 +121,14 @@ function expenseCountLabel(count: number, singular: string, plural: string): str
 }
 
 function toExpenseRow(record: MoneyExpenseRecord) {
+  const amountMode = record.amountMode ?? "fixed";
   const kindMeta =
     record.kind === "subscription" ? moneyExpenseSubscriptionMeta(record) : "One-time";
-  const amountLabel = formatMoneyExpenseAmount(record.amount, record.currency);
+  const amountLabel = moneyExpenseAmountLabel({
+    amountMode,
+    amount: record.amount,
+    currency: record.currency,
+  });
   return {
     id: record.id,
     expenseId: record.id,
@@ -126,6 +136,7 @@ function toExpenseRow(record: MoneyExpenseRecord) {
     kind: record.kind,
     meta: kindMeta,
     amountLabel,
+    amountMode,
     statusLabel: moneyExpenseStatusLabel(record.status),
     remainingAmount: record.remainingAmount,
     remainingLabel: formatMoneyExpenseAmount(record.remainingAmount, record.currency),
@@ -146,6 +157,7 @@ type MoneySubscriptionCycleRecord = {
   remainingAmount: number;
   currency: string;
   period: MoneyExpensePeriod;
+  amountMode: MoneyExpenseAmountMode;
   dueAt: string;
   canRecordPayment: boolean;
 };
@@ -156,6 +168,7 @@ function toSubscriptionCycleRow(record: MoneySubscriptionCycleRecord) {
     month: "short",
     year: "numeric",
   });
+  const amountMode = record.amountMode ?? "fixed";
   return {
     id: record.id,
     expenseId: record.expenseId,
@@ -164,7 +177,12 @@ function toSubscriptionCycleRow(record: MoneySubscriptionCycleRecord) {
     meta: `${moneyExpensePeriodLabel(record.period)} · ${
       record.state === "paid" ? "Paid for" : "Next"
     } ${dateLabel}`,
-    amountLabel: formatMoneyExpenseAmount(record.amount, record.currency),
+    amountLabel: moneyExpenseAmountLabel({
+      amountMode,
+      amount: record.amount,
+      currency: record.currency,
+    }),
+    amountMode,
     statusLabel: record.state === "paid" ? "Paid" : record.paidAmount > 0 ? "Partial" : "Due",
     remainingAmount: record.remainingAmount,
     remainingLabel: formatMoneyExpenseAmount(record.remainingAmount, record.currency),
@@ -331,10 +349,12 @@ export function useAgencyMoneySurface(teamId: string) {
   const [adjustNote, setAdjustNote] = useState("");
   const [composeActionPending, setComposeActionPending] = useState(false);
   const [expenseCreateOpen, setExpenseCreateOpen] = useState(false);
+  const [expenseEditorId, setExpenseEditorId] = useState<string | null>(null);
   const [expenseDetailsOpen, setExpenseDetailsOpen] = useState(false);
   const [expenseName, setExpenseName] = useState("");
   const [expenseKind, setExpenseKind] = useState<MoneyExpenseKind>("one_time");
   const [expensePeriod, setExpensePeriod] = useState<MoneyExpensePeriod | null>(null);
+  const [expenseAmountMode, setExpenseAmountMode] = useState<MoneyExpenseAmountMode>("fixed");
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseNote, setExpenseNote] = useState("");
   const [expenseStartsAt, setExpenseStartsAt] = useState("");
@@ -905,6 +925,7 @@ export function useAgencyMoneySurface(teamId: string) {
     expenseKind,
     expensePeriod,
     expenseAmount,
+    expenseAmountMode,
   );
 
   const expensePaymentRow = useMemo(() => {
@@ -913,7 +934,11 @@ export function useAgencyMoneySurface(teamId: string) {
   }, [expensePaymentId, expenseRecords]);
 
   const expensePaymentCanSubmit = expensePaymentRow
-    ? moneyBillsPaymentCanSubmit(expensePaymentAmount, expensePaymentRow.remainingAmount)
+    ? moneyExpensePaymentCanSubmit(
+        expensePaymentAmount,
+        expensePaymentRow.remainingAmount,
+        expensePaymentRow.amountMode,
+      )
     : false;
 
   function onSelectMetric(selection: MoneyStatsMetricSelection) {
@@ -1527,9 +1552,11 @@ export function useAgencyMoneySurface(teamId: string) {
   }
 
   function resetExpenseCreateForm() {
+    setExpenseEditorId(null);
     setExpenseName("");
     setExpenseKind("one_time");
     setExpensePeriod(null);
+    setExpenseAmountMode("fixed");
     setExpenseAmount("");
     setExpenseNote("");
     setExpenseStartsAt("");
@@ -1545,6 +1572,7 @@ export function useAgencyMoneySurface(teamId: string) {
     if (next === "one_time") {
       setExpensePeriod(null);
       setExpenseStartsAt("");
+      setExpenseAmountMode("fixed");
     }
   }
 
@@ -1558,14 +1586,71 @@ export function useAgencyMoneySurface(teamId: string) {
   function onOpenExpensePayment(expenseId: string) {
     const record = expenseRecords.find((item) => item.id === expenseId);
     setExpensePaymentId(expenseId);
-    setExpensePaymentAmount(record ? (record.remainingAmount / 100).toFixed(2) : "");
+    if (!record || record.amountMode === "variable") {
+      setExpensePaymentAmount("");
+      return;
+    }
+    setExpensePaymentAmount((record.remainingAmount / 100).toFixed(2));
+  }
+
+  function onOpenExpenseEdit(expenseId: string) {
+    const record = expenseRecords.find((item) => item.id === expenseId);
+    if (!record) return;
+    setExpenseEditorId(record.id);
+    setExpenseName(record.name);
+    setExpenseKind(record.kind);
+    setExpensePeriod(record.period);
+    setExpenseAmountMode(record.amountMode ?? "fixed");
+    setExpenseAmount(
+      record.amountMode === "variable" ? "" : (record.amount / 100).toFixed(2),
+    );
+    setExpenseNote(record.note);
+    setExpenseStartsAt(record.startsAt ? toDateInputValue(new Date(record.startsAt)) : "");
+    setExpenseCreateOpen(true);
   }
 
   async function onExpenseCreateSubmit(event: { preventDefault: () => void }) {
     event.preventDefault();
-    if (!moneyExpenseCanSubmit(expenseName, expenseKind, expensePeriod, expenseAmount)) return;
-    const amount = parseMoneyExpenseAmount(expenseAmount);
-    if (amount === null) return;
+    if (
+      !moneyExpenseCanSubmit(
+        expenseName,
+        expenseKind,
+        expensePeriod,
+        expenseAmount,
+        expenseAmountMode,
+      )
+    ) {
+      return;
+    }
+    const amount =
+      expenseKind === "subscription" && expenseAmountMode === "variable"
+        ? 0
+        : parseMoneyExpenseAmount(expenseAmount);
+    if (amount === null && !(expenseKind === "subscription" && expenseAmountMode === "variable")) {
+      return;
+    }
+    const startsAt =
+      expenseKind === "subscription" && expenseStartsAt
+        ? dateInputToIso(expenseStartsAt)
+        : undefined;
+
+    if (expenseEditorId) {
+      await agencyOps.updateExpense(
+        {
+          teamId,
+          expenseId: expenseEditorId,
+          name: expenseName,
+          period: expensePeriod,
+          note: expenseNote,
+          amount: amount ?? 0,
+          amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
+          startsAt,
+        },
+        { onSuccess: () => onExpenseCreateOpenChange(false) },
+      );
+      return;
+    }
+
     await agencyOps.createExpense(
       {
         teamId,
@@ -1573,11 +1658,9 @@ export function useAgencyMoneySurface(teamId: string) {
         kind: expenseKind,
         period: expensePeriod,
         note: expenseNote,
-        amount,
-        startsAt:
-          expenseKind === "subscription" && expenseStartsAt
-            ? dateInputToIso(expenseStartsAt)
-            : undefined,
+        amount: amount ?? 0,
+        amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
+        startsAt,
       },
       { onSuccess: () => onExpenseCreateOpenChange(false) },
     );
@@ -1586,9 +1669,10 @@ export function useAgencyMoneySurface(teamId: string) {
   async function onExpensePaymentSubmit(event: { preventDefault: () => void }) {
     event.preventDefault();
     if (!expensePaymentRow) return;
-    const amount = parseMoneyBillPaymentAmount(
+    const amount = parseMoneyExpensePaymentAmount(
       expensePaymentAmount,
       expensePaymentRow.remainingAmount,
+      expensePaymentRow.amountMode,
     );
     if (amount === null) return;
     await agencyOps.recordExpensePayment(
@@ -2016,6 +2100,7 @@ export function useAgencyMoneySurface(teamId: string) {
       errorMessage: expensesErrorMessage,
       onRetry: () => void Promise.all([expensesQuery.refetch(), subscriptionCyclesQuery.refetch()]),
       onOpenCreate: () => onExpenseCreateOpenChange(true),
+      onOpenEdit: onOpenExpenseEdit,
       onOpenDetails: () => setExpenseDetailsOpen(true),
       details: {
         open: expenseDetailsOpen,
@@ -2042,6 +2127,10 @@ export function useAgencyMoneySurface(teamId: string) {
         open: expenseCreateOpen,
         onOpenChange: onExpenseCreateOpenChange,
         formId: EXPENSE_CREATE_FORM_ID,
+        mode: expenseEditorId ? ("edit" as const) : ("create" as const),
+        title: expenseEditorId ? "Edit expense" : "Add expense",
+        submitLabel: expenseEditorId ? "Save" : "Add",
+        kindLocked: Boolean(expenseEditorId),
         name: expenseName,
         onNameChange: setExpenseName,
         kind: expenseKind,
@@ -2050,6 +2139,9 @@ export function useAgencyMoneySurface(teamId: string) {
         period: expensePeriod,
         periodOptions: MONEY_EXPENSE_PERIOD_OPTIONS,
         onPeriodChange: setExpensePeriod,
+        amountMode: expenseAmountMode,
+        amountModeOptions: MONEY_EXPENSE_AMOUNT_MODE_OPTIONS,
+        onAmountModeChange: setExpenseAmountMode,
         startsAt: expenseStartsAt,
         onStartsAtChange: setExpenseStartsAt,
         amount: expenseAmount,
@@ -2065,6 +2157,18 @@ export function useAgencyMoneySurface(teamId: string) {
         formId: "agency-money-expense-payment",
         kind: expensePaymentRow?.kind ?? "one_time",
         name: expensePaymentRow?.name ?? "",
+        amountMode: expensePaymentRow?.amountMode ?? "fixed",
+        heroLabel: expensePaymentRow?.amountMode === "variable" ? "This cycle" : "Remaining",
+        heroValue:
+          expensePaymentRow?.amountMode === "variable"
+            ? "Variable"
+            : (expensePaymentRow?.remainingLabel ?? "—"),
+        heroHint:
+          expensePaymentRow?.kind === "subscription"
+            ? expensePaymentRow.amountMode === "variable"
+              ? "Enter this cycle's amount. Paying records it and rolls the next due forward."
+              : "Paying in full rolls the next due forward and hides this row until then."
+            : "",
         remainingLabel: expensePaymentRow?.remainingLabel ?? "",
         currency: expensePaymentRow?.currency ?? "USD",
         amount: expensePaymentAmount,
