@@ -3,28 +3,23 @@ import {
   agencyOpsPayoutLine,
   agencyOpsPayoutRun,
   agencyOpsPayoutSection,
-  agencyOpsSalaryMemberSettlement,
   agencyOpsSalaryPool,
-  user,
-  workspaceTeamMember,
 } from "@orch/db/schema";
 import { and, eq } from "drizzle-orm";
 import { ORPCError } from "@orpc/server";
 import { createWorkspaceId } from "@orch/workspace";
 
-import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import { loadMoneyResolveContext } from "./money-fx-service";
 import { ensurePayoutPeriod } from "./payout-service";
 import {
-  nextMemberPaidAmount,
+  nextPoolPaidAmount,
   periodHasRateDerivedSalaryLines,
-  salaryPoolPaidTotal,
   salaryPoolRemaining,
   salaryPoolTotalsFromPool,
-  validateSalaryMemberPayment,
   validateSalaryPoolCreateAllowed,
+  validateSalaryPoolPayment,
   validateSalaryPoolTotalUpdate,
 } from "./salary-pool";
 
@@ -42,18 +37,8 @@ export type AgencySalaryPoolRecord = {
   updatedAt: string;
 };
 
-export type AgencySalaryPoolMemberRecord = {
-  userId: string;
-  userName: string;
-  userAvatar: string | null;
-  paidAmount: number;
-  finalizedAt: string | null;
-  isFinalized: boolean;
-};
-
 export type AgencySalaryPoolDetail = {
   pool: AgencySalaryPoolRecord | null;
-  members: AgencySalaryPoolMemberRecord[];
 };
 
 type SalaryPoolRow = typeof agencyOpsSalaryPool.$inferSelect;
@@ -61,8 +46,8 @@ type SalaryPoolRow = typeof agencyOpsSalaryPool.$inferSelect;
 function mapPoolRecord(
   pool: SalaryPoolRow,
   run: typeof agencyOpsPayoutRun.$inferSelect,
-  paidAmount: number,
 ): AgencySalaryPoolRecord {
+  const paidAmount = pool.paidAmount;
   return {
     id: pool.id,
     teamId: pool.teamId,
@@ -122,14 +107,9 @@ export async function loadSalaryPoolPeriodTotals(
   const loaded = await loadSalaryPoolRowByPeriod(input.teamId, periodStart, periodEnd);
   if (!loaded) return null;
 
-  const settlements = await db
-    .select({ paidAmount: agencyOpsSalaryMemberSettlement.paidAmount })
-    .from(agencyOpsSalaryMemberSettlement)
-    .where(eq(agencyOpsSalaryMemberSettlement.poolId, loaded.pool.id));
-
   const totals = salaryPoolTotalsFromPool({
     totalAmount: loaded.pool.totalAmount,
-    members: settlements,
+    paidAmount: loaded.pool.paidAmount,
     currency: loaded.pool.currency,
   });
 
@@ -165,47 +145,6 @@ async function loadSalaryPoolRowByPeriod(
   return row ?? null;
 }
 
-async function loadPoolSettlements(poolId: string) {
-  return db
-    .select()
-    .from(agencyOpsSalaryMemberSettlement)
-    .where(eq(agencyOpsSalaryMemberSettlement.poolId, poolId));
-}
-
-async function loadTeamMembers(teamId: string) {
-  return db
-    .select({
-      userId: workspaceTeamMember.userId,
-      userName: user.name,
-      userAvatar: user.image,
-    })
-    .from(workspaceTeamMember)
-    .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
-    .where(eq(workspaceTeamMember.teamId, teamId));
-}
-
-function mergeMembersWithSettlements(
-  members: Awaited<ReturnType<typeof loadTeamMembers>>,
-  settlements: Awaited<ReturnType<typeof loadPoolSettlements>>,
-): AgencySalaryPoolMemberRecord[] {
-  const settlementByUser = new Map(settlements.map((row) => [row.userId, row]));
-
-  return members
-    .map((member) => {
-      const settlement = settlementByUser.get(member.userId);
-      const finalizedAt = settlement?.finalizedAt?.toISOString() ?? null;
-      return {
-        userId: member.userId,
-        userName: member.userName?.trim() || "Unknown",
-        userAvatar: formatAvatarUrl(member.userAvatar),
-        paidAmount: settlement?.paidAmount ?? 0,
-        finalizedAt,
-        isFinalized: finalizedAt != null,
-      };
-    })
-    .sort((a, b) => a.userName.localeCompare(b.userName));
-}
-
 export async function getSalaryPool(
   actorUserId: string,
   input: {
@@ -219,21 +158,13 @@ export async function getSalaryPool(
   const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
   const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
 
-  const [members, loaded] = await Promise.all([
-    loadTeamMembers(input.teamId),
-    loadSalaryPoolRowByPeriod(input.teamId, periodStart, periodEnd),
-  ]);
-
+  const loaded = await loadSalaryPoolRowByPeriod(input.teamId, periodStart, periodEnd);
   if (!loaded) {
-    return { pool: null, members: mergeMembersWithSettlements(members, []) };
+    return { pool: null };
   }
 
-  const settlements = await loadPoolSettlements(loaded.pool.id);
-  const paidAmount = salaryPoolPaidTotal(settlements);
-
   return {
-    pool: mapPoolRecord(loaded.pool, loaded.run, paidAmount),
-    members: mergeMembersWithSettlements(members, settlements),
+    pool: mapPoolRecord(loaded.pool, loaded.run),
   };
 }
 
@@ -262,17 +193,12 @@ export async function upsertSalaryPoolTotal(
     currency: input.currency,
   });
 
-  const [existingPool, rateLines, settlements] = await Promise.all([
+  const [existingPool, rateLines] = await Promise.all([
     loadSalaryPoolRowByPeriod(input.teamId, periodStart, periodEnd),
     loadRateDerivedSalaryLines(input.teamId, periodStart, periodEnd),
-    (async () => {
-      const loaded = await loadSalaryPoolRowByPeriod(input.teamId, periodStart, periodEnd);
-      if (!loaded) return [];
-      return loadPoolSettlements(loaded.pool.id);
-    })(),
   ]);
 
-  const paidTotal = salaryPoolPaidTotal(settlements);
+  const paidTotal = existingPool?.pool.paidAmount ?? 0;
   const totalError = validateSalaryPoolTotalUpdate(input.totalAmount, paidTotal);
   if (totalError) {
     throw new ORPCError("BAD_REQUEST", { message: totalError });
@@ -312,7 +238,7 @@ export async function upsertSalaryPoolTotal(
       .limit(1);
     if (!runRow) throw new ORPCError("INTERNAL_SERVER_ERROR");
 
-    return mapPoolRecord(updated, runRow, paidTotal);
+    return mapPoolRecord(updated, runRow);
   }
 
   const poolId = createWorkspaceId("agency-salary-pool");
@@ -323,6 +249,7 @@ export async function upsertSalaryPoolTotal(
       teamId: input.teamId,
       runId: run.id,
       totalAmount: resolved.amount,
+      paidAmount: 0,
       currency: moneyCtx.agencyCurrency,
       sourceAmount: resolved.sourceAmount,
       fxRate: resolved.fxRate,
@@ -340,20 +267,18 @@ export async function upsertSalaryPoolTotal(
     .limit(1);
   if (!runRow) throw new ORPCError("INTERNAL_SERVER_ERROR");
 
-  return mapPoolRecord(inserted, runRow, 0);
+  return mapPoolRecord(inserted, runRow);
 }
 
-export async function recordSalaryMemberPayment(
+export async function recordSalaryPoolPayment(
   actorUserId: string,
   input: {
     teamId: string;
     periodStart: string;
     periodEnd: string;
-    userId: string;
     amount: number;
-    finalize?: boolean;
   },
-): Promise<AgencySalaryPoolMemberRecord> {
+): Promise<AgencySalaryPoolRecord> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
@@ -366,171 +291,30 @@ export async function recordSalaryMemberPayment(
     });
   }
 
-  const [member] = await db
-    .select({ userId: workspaceTeamMember.userId, userName: user.name, userAvatar: user.image })
-    .from(workspaceTeamMember)
-    .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
-    .where(
-      and(
-        eq(workspaceTeamMember.teamId, input.teamId),
-        eq(workspaceTeamMember.userId, input.userId),
-      ),
-    )
-    .limit(1);
-
-  if (!member) {
-    throw new ORPCError("BAD_REQUEST", { message: "User is not a member of this team." });
-  }
-
-  const settlements = await loadPoolSettlements(loaded.pool.id);
-  const paidTotal = salaryPoolPaidTotal(settlements);
-  const poolRemaining = salaryPoolRemaining(loaded.pool.totalAmount, paidTotal);
-  const existing = settlements.find((row) => row.userId === input.userId);
-  const isFinalized = existing?.finalizedAt != null;
-
-  const paymentError = validateSalaryMemberPayment({
+  const poolRemaining = salaryPoolRemaining(loaded.pool.totalAmount, loaded.pool.paidAmount);
+  const paymentError = validateSalaryPoolPayment({
     paymentAmount: input.amount,
     poolRemaining,
-    isFinalized,
   });
   if (paymentError) {
     throw new ORPCError("BAD_REQUEST", { message: paymentError });
   }
 
+  const nextPaid = nextPoolPaidAmount(loaded.pool.paidAmount, input.amount);
   const now = new Date();
-  const nextPaid = nextMemberPaidAmount(existing?.paidAmount ?? 0, input.amount);
-  const finalize = input.finalize === true;
-
-  if (existing) {
-    const [updated] = await db
-      .update(agencyOpsSalaryMemberSettlement)
-      .set({
-        paidAmount: nextPaid,
-        finalizedAt: finalize ? now : existing.finalizedAt,
-        finalizedByUserId: finalize ? actorUserId : existing.finalizedByUserId,
-        updatedAt: now,
-      })
-      .where(eq(agencyOpsSalaryMemberSettlement.id, existing.id))
-      .returning();
-
-    if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
-
-    return {
-      userId: member.userId,
-      userName: member.userName?.trim() || "Unknown",
-      userAvatar: formatAvatarUrl(member.userAvatar),
-      paidAmount: updated.paidAmount,
-      finalizedAt: updated.finalizedAt?.toISOString() ?? null,
-      isFinalized: updated.finalizedAt != null,
-    };
-  }
-
-  const settlementId = createWorkspaceId("agency-salary-settle");
-  const [inserted] = await db
-    .insert(agencyOpsSalaryMemberSettlement)
-    .values({
-      id: settlementId,
-      poolId: loaded.pool.id,
-      userId: input.userId,
-      paidAmount: nextPaid,
-      finalizedAt: finalize ? now : null,
-      finalizedByUserId: finalize ? actorUserId : null,
-    })
-    .returning();
-
-  if (!inserted) throw new ORPCError("INTERNAL_SERVER_ERROR");
-
-  return {
-    userId: member.userId,
-    userName: member.userName?.trim() || "Unknown",
-    userAvatar: formatAvatarUrl(member.userAvatar),
-    paidAmount: inserted.paidAmount,
-    finalizedAt: inserted.finalizedAt?.toISOString() ?? null,
-    isFinalized: inserted.finalizedAt != null,
-  };
-}
-
-export async function reopenSalaryMember(
-  actorUserId: string,
-  input: {
-    teamId: string;
-    periodStart: string;
-    periodEnd: string;
-    userId: string;
-  },
-): Promise<AgencySalaryPoolMemberRecord> {
-  await requireTeamMembership(actorUserId, input.teamId, "owner");
-
-  const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
-  const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
-
-  const loaded = await loadSalaryPoolRowByPeriod(input.teamId, periodStart, periodEnd);
-  if (!loaded) {
-    throw new ORPCError("NOT_FOUND", { message: "Team salaries pool was not found." });
-  }
-
-  const [member] = await db
-    .select({ userId: workspaceTeamMember.userId, userName: user.name, userAvatar: user.image })
-    .from(workspaceTeamMember)
-    .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
-    .where(
-      and(
-        eq(workspaceTeamMember.teamId, input.teamId),
-        eq(workspaceTeamMember.userId, input.userId),
-      ),
-    )
-    .limit(1);
-
-  if (!member) {
-    throw new ORPCError("BAD_REQUEST", { message: "User is not a member of this team." });
-  }
-
-  const [existing] = await db
-    .select()
-    .from(agencyOpsSalaryMemberSettlement)
-    .where(
-      and(
-        eq(agencyOpsSalaryMemberSettlement.poolId, loaded.pool.id),
-        eq(agencyOpsSalaryMemberSettlement.userId, input.userId),
-      ),
-    )
-    .limit(1);
-
-  if (!existing) {
-    throw new ORPCError("NOT_FOUND", { message: "Member has no salary pool payments yet." });
-  }
-
-  if (existing.finalizedAt == null) {
-    return {
-      userId: member.userId,
-      userName: member.userName?.trim() || "Unknown",
-      userAvatar: formatAvatarUrl(member.userAvatar),
-      paidAmount: existing.paidAmount,
-      finalizedAt: null,
-      isFinalized: false,
-    };
-  }
 
   const [updated] = await db
-    .update(agencyOpsSalaryMemberSettlement)
+    .update(agencyOpsSalaryPool)
     .set({
-      finalizedAt: null,
-      finalizedByUserId: null,
-      updatedAt: new Date(),
+      paidAmount: nextPaid,
+      updatedAt: now,
     })
-    .where(eq(agencyOpsSalaryMemberSettlement.id, existing.id))
+    .where(eq(agencyOpsSalaryPool.id, loaded.pool.id))
     .returning();
 
   if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
 
-  return {
-    userId: member.userId,
-    userName: member.userName?.trim() || "Unknown",
-    userAvatar: formatAvatarUrl(member.userAvatar),
-    paidAmount: updated.paidAmount,
-    finalizedAt: null,
-    isFinalized: false,
-  };
+  return mapPoolRecord(updated, loaded.run);
 }
 
 export async function assertNoSalaryPoolForRateDerivedExport(

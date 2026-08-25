@@ -59,8 +59,7 @@ import {
 } from "./money-export-service";
 import {
   getSalaryPool,
-  recordSalaryMemberPayment,
-  reopenSalaryMember,
+  recordSalaryPoolPayment,
   upsertSalaryPoolTotal,
 } from "./salary-pool-service";
 
@@ -623,16 +622,6 @@ export const billingRouter = {
                 updatedAt: z.string().datetime(),
               })
               .nullable(),
-            members: z.array(
-              z.object({
-                userId: z.string().min(1),
-                userName: z.string().min(1),
-                userAvatar: z.string().nullable(),
-                paidAmount: z.number().int().nonnegative(),
-                finalizedAt: z.string().datetime().nullable(),
-                isFinalized: z.boolean(),
-              }),
-            ),
           })
           .parse(await getSalaryPool(context.session.user.id, input));
       }),
@@ -667,42 +656,25 @@ export const billingRouter = {
         teamScopedInputSchema.extend({
           periodStart: z.string().datetime(),
           periodEnd: z.string().datetime(),
-          userId: z.string().min(1),
           amount: z.number().int().positive(),
-          finalize: z.boolean().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return z
           .object({
-            userId: z.string().min(1),
-            userName: z.string().min(1),
-            userAvatar: z.string().nullable(),
+            id: z.string().min(1),
+            teamId: z.string().min(1),
+            runId: z.string().min(1),
+            totalAmount: z.number().int().nonnegative(),
             paidAmount: z.number().int().nonnegative(),
-            finalizedAt: z.string().datetime().nullable(),
-            isFinalized: z.boolean(),
+            remainingAmount: z.number().int().nonnegative(),
+            currency: z.string().min(1),
+            periodStart: z.string().datetime(),
+            periodEnd: z.string().datetime(),
+            createdAt: z.string().datetime(),
+            updatedAt: z.string().datetime(),
           })
-          .parse(await recordSalaryMemberPayment(context.session.user.id, input));
-      }),
-    reopenMember: protectedProProcedure
-      .input(
-        teamScopedInputSchema.extend({
-          periodStart: z.string().datetime(),
-          periodEnd: z.string().datetime(),
-          userId: z.string().min(1),
-        }),
-      )
-      .handler(async ({ context, input }) => {
-        return z
-          .object({
-            userId: z.string().min(1),
-            userName: z.string().min(1),
-            userAvatar: z.string().nullable(),
-            paidAmount: z.number().int().nonnegative(),
-            finalizedAt: z.string().datetime().nullable(),
-            isFinalized: z.boolean(),
-          })
-          .parse(await reopenSalaryMember(context.session.user.id, input));
+          .parse(await recordSalaryPoolPayment(context.session.user.id, input));
       }),
   },
 

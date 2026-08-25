@@ -1,23 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  nextMemberPaidAmount,
+  nextPoolPaidAmount,
   periodHasRateDerivedSalaryLines,
-  salaryPoolPaidTotal,
   salaryPoolRemaining,
   salaryPoolTotalsFromPool,
-  validateSalaryMemberPayment,
   validateSalaryPoolCreateAllowed,
+  validateSalaryPoolPayment,
   validateSalaryPoolTotalUpdate,
 } from "./salary-pool";
-
-describe("salaryPoolPaidTotal", () => {
-  test("sums member paid amounts", () => {
-    expect(
-      salaryPoolPaidTotal([{ paidAmount: 5_000 }, { paidAmount: 2_500 }, { paidAmount: 0 }]),
-    ).toBe(7_500);
-  });
-});
 
 describe("salaryPoolRemaining", () => {
   test("never goes negative", () => {
@@ -62,41 +53,29 @@ describe("validateSalaryPoolCreateAllowed", () => {
   });
 });
 
-describe("validateSalaryMemberPayment", () => {
-  test("blocks finalized member", () => {
-    expect(
-      validateSalaryMemberPayment({
-        paymentAmount: 1_000,
-        poolRemaining: 5_000,
-        isFinalized: true,
-      }),
-    ).toMatch(/finalized/i);
-  });
-
+describe("validateSalaryPoolPayment", () => {
   test("blocks overpayment", () => {
     expect(
-      validateSalaryMemberPayment({
+      validateSalaryPoolPayment({
         paymentAmount: 6_000,
         poolRemaining: 5_000,
-        isFinalized: false,
       }),
     ).toMatch(/exceeds/i);
   });
 
   test("accepts valid payment", () => {
     expect(
-      validateSalaryMemberPayment({
+      validateSalaryPoolPayment({
         paymentAmount: 2_000,
         poolRemaining: 5_000,
-        isFinalized: false,
       }),
     ).toBeNull();
   });
 });
 
-describe("nextMemberPaidAmount", () => {
+describe("nextPoolPaidAmount", () => {
   test("accumulates cumulative payments", () => {
-    expect(nextMemberPaidAmount(3_000, 2_000)).toBe(5_000);
+    expect(nextPoolPaidAmount(3_000, 2_000)).toBe(5_000);
   });
 });
 
@@ -104,7 +83,7 @@ describe("salaryPoolTotalsFromPool", () => {
   test("uses full total for formulas regardless of paid", () => {
     const totals = salaryPoolTotalsFromPool({
       totalAmount: 100_000,
-      members: [{ paidAmount: 25_000 }, { paidAmount: 10_000 }],
+      paidAmount: 35_000,
       currency: "EGP",
     });
     expect(totals.totalAmount).toBe(100_000);
