@@ -20,7 +20,11 @@ import {
   type MoneyStatsMetricSelection,
 } from "./hooks/use-agency-money-surface";
 
-function formatMetricValue(kind: MoneyStatsMetricKind, amount: number, currency: string): string {
+export function formatMoneyStatsMetricValue(
+  kind: MoneyStatsMetricKind,
+  amount: number,
+  currency: string,
+): string {
   if (kind === "percent") {
     return new Intl.NumberFormat(undefined, {
       style: "percent",
@@ -156,7 +160,7 @@ export function MoneyStatsPlate({
             key={metric.id}
             card={card}
             metric={metric}
-            value={formatMetricValue(metric.kind, metric.amount, card.currency)}
+            value={formatMoneyStatsMetricValue(metric.kind, metric.amount, card.currency)}
             onSelect={onSelectMetric}
           />
         ))}
