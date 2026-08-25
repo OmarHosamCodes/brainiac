@@ -14,6 +14,13 @@ import {
 } from "@/features/shared/stores/agency-ops";
 import { useAgencyPeriodState } from "@/features/shared/use-agency-period-state";
 import {
+  buildMoneyPayoutRunSections,
+  deriveMoneyPayoutRunStatus,
+  moneyPayoutRunLinesForSection,
+  type MoneyPayoutRunLineSource,
+} from "@/features/billing/build-money-payout-run-view-model";
+import type { MoneyPayoutRunViewModel } from "@/features/billing/money-payout-run-view";
+import {
   formatMoneyExpenseAmount,
   moneyExpenseAmountLabel,
   moneyExpenseCanSubmit,
@@ -104,6 +111,8 @@ import {
   amountToMajor,
   type MoneyStatsCardWithSource,
 } from "@/features/billing/money-stats-live";
+import { moneyStatsPlateMeta } from "@/features/money/money-stats-plate-meta";
+import { formatMoneyStatsMetricValue } from "@/features/money/money-stats-plate-view";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { orpc, orpcClient } from "@/lib/orpc";
 
@@ -367,6 +376,9 @@ export function useAgencyMoneySurface(teamId: string) {
     },
   );
   const [moneySettingsOpen, setMoneySettingsOpen] = useState(false);
+  const [lastStatsMetricSelection, setLastStatsMetricSelection] =
+    useState<MoneyStatsMetricSelection | null>(null);
+  const [selectedPayoutSectionId, setSelectedPayoutSectionId] = useState<string | null>(null);
   const [cohortPane, setCohortPane] = useState<MoneyCohortPane>("rules");
   const [moneySettingsDraft, setMoneySettingsDraft] = useState<MoneySettingsEditorDraft | null>(
     null,
@@ -441,6 +453,18 @@ export function useAgencyMoneySurface(teamId: string) {
       },
     }),
     enabled: Boolean(teamId) && isOwner && loadsPayoutLines,
+  });
+
+  const payoutRunQuery = useQuery({
+    ...orpc.agencyOps.payouts.list.queryOptions({
+      input: {
+        teamId,
+        periodStart: periodRange.from,
+        periodEnd: periodRange.to,
+        billsParty: "all",
+      },
+    }),
+    enabled: Boolean(teamId) && isOwner,
   });
 
   const salaryPoolQuery = useQuery({
@@ -703,6 +727,98 @@ export function useAgencyMoneySurface(teamId: string) {
     }).map((card) => buildCardViewModel(card));
   }, [periodScoreboardQuery.data, scoreboardStatus]);
 
+  const lastStatsMetricHint = useMemo(() => {
+    if (!lastStatsMetricSelection) return null;
+    const card = statsCards.find((item) => item.id === lastStatsMetricSelection.cardId);
+    if (!card) return null;
+    const metric =
+      card.primary.id === lastStatsMetricSelection.metricId
+        ? card.primary
+        : card.secondary.find((item) => item.id === lastStatsMetricSelection.metricId);
+    if (!metric) return null;
+    return {
+      label: metric.label,
+      value: formatMoneyStatsMetricValue(metric.kind, metric.amount, card.currency),
+      destination: moneyStatsPlateMeta(card.id).destinationHint,
+    };
+  }, [lastStatsMetricSelection, statsCards]);
+
+  const payoutRunLines = useMemo((): MoneyPayoutRunLineSource[] => {
+    return (payoutRunQuery.data?.items ?? []).map((item) => ({
+      id: item.id,
+      sectionKey: item.sectionKey,
+      sectionTitle: item.sectionTitle,
+      userName: item.userName,
+      label: item.label,
+      cohortKey: item.cohortKey,
+      amount: item.amount,
+      paidAmount: item.paidAmount,
+      remainingAmount: item.remainingAmount,
+      currency: item.currency,
+      status: item.status,
+    }));
+  }, [payoutRunQuery.data?.items]);
+
+  const payoutRun = useMemo((): MoneyPayoutRunViewModel => {
+    const currency = periodScoreboardQuery.data?.currency ?? "USD";
+    const sections = buildMoneyPayoutRunSections(payoutRunLines);
+    const status = deriveMoneyPayoutRunStatus(sections);
+    const isLoading = payoutRunQuery.isPending;
+    const isError = payoutRunQuery.isError;
+    return {
+      title: "Period payout run",
+      subtitle: "Team and adjustment sections for this period",
+      status,
+      currency,
+      periodLabel,
+      sections,
+      selectedSectionId: selectedPayoutSectionId,
+      onSelectSection: setSelectedPayoutSectionId,
+      selectedSectionLines: moneyPayoutRunLinesForSection(payoutRunLines, selectedPayoutSectionId),
+      isLoading,
+      isError,
+      errorMessage: getErrorMessage(payoutRunQuery.error, "Try refreshing the payout run."),
+      onRetry: () => void payoutRunQuery.refetch(),
+      linesStatus: isLoading ? "loading" : isError ? "error" : "ready",
+      onOpenPayment: null,
+      onMarkPaid: null,
+      onAddLine: null,
+      onOpenTeamBills: () => {
+        setPartyFilter("team");
+        setStatusFilter(null);
+      },
+      onSyncFormulaLines: isOwner
+        ? () => {
+            void agencyOps.syncFormulaPayoutLines(
+              {
+                teamId,
+                periodStart: periodRange.from,
+                periodEnd: periodRange.to,
+                refreshSnapshot: true,
+              },
+              { onSuccess: () => void payoutRunQuery.refetch() },
+            );
+          }
+        : null,
+      isMutationPending: isInvoiceMutationPending,
+    };
+  }, [
+    agencyOps,
+    isInvoiceMutationPending,
+    isOwner,
+    payoutRunLines,
+    payoutRunQuery.error,
+    payoutRunQuery.isError,
+    payoutRunQuery.isPending,
+    payoutRunQuery.refetch,
+    periodLabel,
+    periodRange.from,
+    periodRange.to,
+    periodScoreboardQuery.data?.currency,
+    selectedPayoutSectionId,
+    teamId,
+  ]);
+
   const statusOptions = useMemo(() => moneyBillsStatusOptionsForParty(partyFilter), [partyFilter]);
 
   const billsClientCategoryFilterActive =
@@ -942,6 +1058,7 @@ export function useAgencyMoneySurface(teamId: string) {
     : false;
 
   function onSelectMetric(selection: MoneyStatsMetricSelection) {
+    setLastStatsMetricSelection(selection);
     switch (selection.metricId) {
       case "total-income":
         setPartyFilter("client");
@@ -1810,6 +1927,8 @@ export function useAgencyMoneySurface(teamId: string) {
       label: periodLabel,
     },
     statsCards,
+    lastStatsMetricHint,
+    payoutRun,
     scoreboardStatus,
     scoreboardErrorMessage,
     onRetryScoreboard: () => void periodScoreboardQuery.refetch(),
