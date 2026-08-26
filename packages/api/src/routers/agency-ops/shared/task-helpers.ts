@@ -1,6 +1,8 @@
 import { db } from "@orch/db";
 import {
   user,
+  agencyOpsClient,
+  agencyOpsProject,
   agencyOpsProjectTaskBlueprint,
   agencyOpsProjectTaskMemberStatus,
   agencyOpsProjectTaskAssignee,
@@ -39,6 +41,10 @@ export function mapProjectTaskRow(row: {
   assignedToTeam: boolean;
   isWaste: boolean;
   estimateMinutes: number | null;
+  billableRateAmount: number | null;
+  currency: string;
+  projectBillableRateAmount: number | null;
+  clientBillableRateAmount: number | null;
   createdByUserId: string;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
@@ -59,6 +65,10 @@ export function mapProjectTaskRow(row: {
     assignedToTeam: row.assignedToTeam,
     isWaste: row.isWaste,
     estimateMinutes: row.estimateMinutes,
+    billableRateAmount: row.billableRateAmount,
+    currency: row.currency,
+    projectBillableRateAmount: row.projectBillableRateAmount,
+    clientBillableRateAmount: row.clientBillableRateAmount,
     createdByUserId: row.createdByUserId,
     assignees: row.assignees,
     ...(row.viewerStatus !== undefined ? { viewerStatus: row.viewerStatus } : {}),
@@ -254,6 +264,10 @@ export async function buildProjectTaskRecord(
     assignedToTeam: boolean;
     isWaste: boolean;
     estimateMinutes: number | null;
+    billableRateAmount: number | null;
+    currency: string;
+    projectBillableRateAmount: number | null;
+    clientBillableRateAmount: number | null;
     createdByUserId: string;
     dueDate: Date | null;
     createdAt: Date;
@@ -320,10 +334,18 @@ export const projectTaskColumns = {
   assignedToTeam: agencyOpsProjectTask.assignedToTeam,
   isWaste: agencyOpsProjectTask.isWaste,
   estimateMinutes: agencyOpsProjectTask.estimateMinutes,
+  billableRateAmount: agencyOpsProjectTask.billableRateAmount,
+  currency: agencyOpsProjectTask.currency,
   createdByUserId: agencyOpsProjectTask.createdByUserId,
   dueDate: agencyOpsProjectTask.dueDate,
   createdAt: agencyOpsProjectTask.createdAt,
   updatedAt: agencyOpsProjectTask.updatedAt,
+} as const;
+
+export const projectTaskSelectWithParentRates = {
+  ...projectTaskColumns,
+  projectBillableRateAmount: agencyOpsProject.billableRateAmount,
+  clientBillableRateAmount: agencyOpsClient.billableRateAmount,
 } as const;
 
 export type ProjectTaskRow = {
@@ -336,8 +358,40 @@ export type ProjectTaskRow = {
   assignedToTeam: boolean;
   isWaste: boolean;
   estimateMinutes: number | null;
+  billableRateAmount: number | null;
+  currency: string;
   createdByUserId: string;
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type ProjectTaskRowWithParentRates = ProjectTaskRow & {
+  projectBillableRateAmount: number | null;
+  clientBillableRateAmount: number | null;
+};
+
+export async function attachParentRates(
+  rows: ProjectTaskRow[],
+): Promise<ProjectTaskRowWithParentRates[]> {
+  if (rows.length === 0) return [];
+  const projectIds = [...new Set(rows.map((row) => row.projectId))];
+  const projects = await db
+    .select({
+      id: agencyOpsProject.id,
+      billableRateAmount: agencyOpsProject.billableRateAmount,
+      clientBillableRateAmount: agencyOpsClient.billableRateAmount,
+    })
+    .from(agencyOpsProject)
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .where(inArray(agencyOpsProject.id, projectIds));
+  const byId = new Map(projects.map((project) => [project.id, project]));
+  return rows.map((row) => {
+    const parent = byId.get(row.projectId);
+    return {
+      ...row,
+      projectBillableRateAmount: parent?.billableRateAmount ?? null,
+      clientBillableRateAmount: parent?.clientBillableRateAmount ?? null,
+    };
+  });
+}

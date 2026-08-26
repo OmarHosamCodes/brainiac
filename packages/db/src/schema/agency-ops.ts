@@ -155,6 +155,12 @@ export const agencyOpsProjectTask = pgTable(
     assignedToTeam: boolean("assigned_to_team").notNull().default(false),
     isWaste: boolean("is_waste").notNull().default(false),
     estimateMinutes: integer("estimate_minutes"),
+    /** Optional override; null inherits project then client billable rate. */
+    billableRateAmount: integer("billable_rate_amount"),
+    currency: text("currency").notNull().default("USD"),
+    sourceBillableRateAmount: integer("source_billable_rate_amount"),
+    fxRate: text("fx_rate").notNull().default("1"),
+    fxAsOf: timestamp("fx_as_of"),
     dueDate: timestamp("due_date"),
     createdByUserId: text("created_by_user_id")
       .notNull()

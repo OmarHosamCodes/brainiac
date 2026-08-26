@@ -70,6 +70,8 @@ export const tasksRouter = {
           dueDate: z.string().datetime().nullable().optional(),
           estimateMinutes: z.number().int().min(1).max(1440).nullable().optional(),
           isWaste: z.boolean().optional(),
+          billableRateAmount: z.number().int().nonnegative().nullable().optional(),
+          currency: z.string().min(1).optional(),
         }),
       )
       .handler(async ({ context, input }) => {

@@ -478,6 +478,7 @@ export async function createInvoice(
       isWaste: agencyOpsTimeEntry.isWaste,
       taskIsWaste: agencyOpsProjectTask.isWaste,
       taskTitle: agencyOpsProjectTask.title,
+      taskRateAmount: agencyOpsProjectTask.billableRateAmount,
       projectRateAmount: agencyOpsProject.billableRateAmount,
     })
     .from(agencyOpsTimeEntry)
@@ -498,6 +499,7 @@ export async function createInvoice(
     projectName: row.projectName,
     durationSeconds: row.durationSeconds,
     isWaste: resolveEntryWaste(row),
+    taskRateAmount: row.taskRateAmount,
     projectRateAmount: row.projectRateAmount,
   }));
 
@@ -708,6 +710,7 @@ async function loadPeriodClientBillableRows(
       taskIsWaste: agencyOpsProjectTask.isWaste,
       taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
+      taskRateAmount: agencyOpsProjectTask.billableRateAmount,
       projectRateAmount: agencyOpsProject.billableRateAmount,
       clientRateAmount: agencyOpsClient.billableRateAmount,
     })
@@ -731,6 +734,7 @@ async function loadPeriodClientBillableRows(
     projectId: row.projectId,
     durationSeconds: row.durationSeconds,
     isWaste: resolveEntryWaste(row),
+    taskRateAmount: row.taskRateAmount,
     projectRateAmount: row.projectRateAmount,
     clientRateAmount: row.clientRateAmount,
   }));

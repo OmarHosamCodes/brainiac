@@ -19,6 +19,7 @@ describe("myTasksEditDraftFromTask", () => {
       assignedToTeam: false,
       assigneeUserIds: ["u1", "u2"],
       estimateMinutes: 60,
+      billableRateDraft: "",
     });
   });
 
@@ -26,6 +27,12 @@ describe("myTasksEditDraftFromTask", () => {
     expect(myTasksEditDraftFromTask({ ...task, estimateMinutes: undefined }).estimateMinutes).toBe(
       null,
     );
+  });
+
+  test("formats billable rate draft from minor units", () => {
+    expect(
+      myTasksEditDraftFromTask({ ...task, billableRateAmount: 15_000 }).billableRateDraft,
+    ).toBe("150");
   });
 });
 
@@ -41,11 +48,12 @@ describe("isMyTasksEditDraftDirty", () => {
     ).toBe(false);
   });
 
-  test("true when title, assignees, team flag, or estimate change", () => {
+  test("true when title, assignees, team flag, estimate, or rate change", () => {
     expect(isMyTasksEditDraftDirty(baseline, { ...baseline, title: "Other" })).toBe(true);
     expect(isMyTasksEditDraftDirty(baseline, { ...baseline, estimateMinutes: null })).toBe(true);
     expect(isMyTasksEditDraftDirty(baseline, { ...baseline, assignedToTeam: true })).toBe(true);
     expect(isMyTasksEditDraftDirty(baseline, { ...baseline, assigneeUserIds: ["u1"] })).toBe(true);
+    expect(isMyTasksEditDraftDirty(baseline, { ...baseline, billableRateDraft: "100" })).toBe(true);
   });
 });
 

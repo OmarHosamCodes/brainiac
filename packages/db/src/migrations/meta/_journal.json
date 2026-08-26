@@ -414,6 +414,13 @@
       "when": 1787900000035,
       "tag": "0060_agency_tenure_off_day_reduce_hours_fractional",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1787900000036,
+      "tag": "0061_agency_task_billable_rate",
+      "breakpoints": true
     }
   ]
 }

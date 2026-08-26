@@ -108,6 +108,8 @@ Defined in `packages/db/src/schema/agency-ops.ts`:
 - `agency_ops_expense_occurrence` — immutable paid subscription-cycle snapshot
 - `agency_ops_project.billable_rate_amount` — nullable project override; `null`
   inherits the client rate
+- `agency_ops_project_task.billable_rate_amount` — nullable task override; `null`
+  inherits project then client rate
 
 API/services: `packages/api/src/routers/agency-ops/billing/` (`router.ts`, `service.ts`, scoreboard, export, FX, expenses, payouts, formula eval, bill carry). Waste classification for income/scoreboard uses `packages/api/src/routers/agency-ops/shared/waste-helpers.ts` (entry flag, task flag, waste-named project/task).
 

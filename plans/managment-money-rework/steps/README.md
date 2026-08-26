@@ -31,8 +31,11 @@ execution log, not a replacement for:
 9. [`09-production-currency-and-input-audit.md`](./09-production-currency-and-input-audit.md) —
    Railway deploy verification, guarded production EGP migration, and read-only
    Fin-Sheet July input reconciliation.
+10. [`10-task-rate-overrides.md`](./10-task-rate-overrides.md) — optional task
+    catalog rate override with project then client inheritance.
 
 **Production:** see [`../actions/02-production-deploy.md`](../actions/02-production-deploy.md).
 
 Steps 01–08 were implemented locally before the production deploy. Step 09
 records the production deployment, currency migration, and read-only input audit.
+Step 10 extends catalog rate inheritance to tasks.

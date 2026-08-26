@@ -1,8 +1,10 @@
 import { Button } from "@/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/ui/dialog";
 import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
 import { agencyInputPlaceholderClass } from "@/features/shared/agency-ui";
 import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
+import { formatRate } from "@/features/shared/format-rate";
 import type { AgencyMyTasksEditDialogViewModel } from "@/features/task-management/hooks/use-agency-my-tasks-edit-dialog";
 import { AgencyMyTasksEstimatePopover } from "@/features/task-management/my-tasks-rail/agency-my-tasks-estimate-popover";
 import { cn } from "@/lib/utils";
@@ -30,6 +32,12 @@ export function AgencyMyTasksEditDialogView({
     setAssigneeUserIds,
     estimateMinutes,
     setEstimateMinutes,
+    isOwner,
+    billableRateDraft,
+    setBillableRateDraft,
+    parentRateAmount,
+    effectiveRateAmount,
+    rateCurrency,
     canSubmit,
     pending,
     editError,
@@ -88,6 +96,37 @@ export function AgencyMyTasksEditDialogView({
                 onChange={setEstimateMinutes}
               />
             </div>
+
+            {isOwner ? (
+              <div className="space-y-1.5 border-t border-default pt-3">
+                <Label htmlFor={`${formId}-task-rate`} className="text-[11px] font-bold">
+                  Task rate / hour
+                </Label>
+                <Input
+                  id={`${formId}-task-rate`}
+                  value={billableRateDraft}
+                  onChange={(event) => setBillableRateDraft(event.target.value)}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Inherit project/client rate"
+                  disabled={pending}
+                  className="h-9"
+                />
+                <p className="text-[11px] text-muted">
+                  Parent default: {formatRate(parentRateAmount, rateCurrency, { perHour: true })}
+                </p>
+                <p className="text-[11px] text-muted">
+                  Effective now: {formatRate(effectiveRateAmount, rateCurrency, { perHour: true })}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1 border-t border-default pt-3 text-[11px] text-muted">
+                <p>
+                  Effective rate: {formatRate(effectiveRateAmount, rateCurrency, { perHour: true })}
+                </p>
+              </div>
+            )}
 
             {editError ? (
               <p className="text-xs text-destructive" role="alert">

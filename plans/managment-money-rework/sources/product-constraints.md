@@ -38,8 +38,8 @@ Spec: `docs/superpowers/specs/2026-08-06-money-compose-on-demand-design.md`
 - A manual Team salary pool takes precedence over rate-derived member salary
   lines for that period. Pool-level partial payments reduce the shared remaining
   amount; the scoreboard uses the full pool total.
-- Effective client income/invoice rate is project override → client rate.
-  Projects with no override inherit automatically.
+- Effective client income/invoice rate is task → project → client.
+  Unset levels inherit automatically.
 - Money cohort **Rules** define who qualifies; **Formulas** calculate amounts.
   Formulas may bind a rule via `ruleId` for payout eligibility and `cohort_size`.
 - Fin-Sheet mental model (stats cards): income-cash, deductions, profitability, allocations. Original UI plan: `docs/superpowers/plans/2026-08-04-management-money-ui.md`. Domain reference: `artifacts/Fin-Sheet.csv`.

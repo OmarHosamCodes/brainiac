@@ -217,6 +217,8 @@ type UpdateProjectTaskPayload = {
   assigneeUserIds?: string[];
   dueDate?: string | null;
   estimateMinutes?: number | null;
+  billableRateAmount?: number | null;
+  currency?: string;
 };
 
 type ArchiveClientPayload = {
@@ -864,6 +866,10 @@ function createAgencyOpsActions(
       assignedToTeam: false,
       isWaste: false,
       estimateMinutes: null,
+      billableRateAmount: null,
+      currency: "USD",
+      projectBillableRateAmount: null,
+      clientBillableRateAmount: null,
       createdByUserId,
       assignees: assigneeIds.map((userId) => ({
         userId,
@@ -1022,6 +1028,10 @@ function createAgencyOpsActions(
       assignedToTeam,
       isWaste: false,
       estimateMinutes: payload.estimateMinutes ?? null,
+      billableRateAmount: null,
+      currency: "USD",
+      projectBillableRateAmount: null,
+      clientBillableRateAmount: null,
       createdByUserId,
       // Assignees required so assignee-filtered active lists accept the optimistic row.
       assignees: assigneeUserIds.map((userId) => ({
@@ -1567,6 +1577,8 @@ function createAgencyOpsActions(
           assigneeUserIds: payload.assigneeUserIds,
           dueDate: payload.dueDate,
           estimateMinutes: payload.estimateMinutes,
+          billableRateAmount: payload.billableRateAmount,
+          currency: payload.currency,
         })) as AgencyProjectTask;
 
         patchUpdatedProjectTask(payload.teamId, updated);
@@ -1613,6 +1625,11 @@ function createAgencyOpsActions(
       dueDate: payload.dueDate === undefined ? current.dueDate : payload.dueDate,
       estimateMinutes:
         payload.estimateMinutes === undefined ? current.estimateMinutes : payload.estimateMinutes,
+      billableRateAmount:
+        payload.billableRateAmount === undefined
+          ? current.billableRateAmount
+          : payload.billableRateAmount,
+      currency: payload.currency === undefined ? current.currency : payload.currency,
       updatedAt: nowIso,
     };
 
@@ -1629,6 +1646,8 @@ function createAgencyOpsActions(
         assigneeUserIds: payload.assigneeUserIds,
         dueDate: payload.dueDate,
         estimateMinutes: payload.estimateMinutes,
+        billableRateAmount: payload.billableRateAmount,
+        currency: payload.currency,
       })) as AgencyProjectTask;
 
       patchUpdatedProjectTask(payload.teamId, updated);

@@ -21,6 +21,8 @@ import {
   setTaskMemberStatusesForUsers,
   type ProjectTaskRow,
   projectTaskColumns,
+  projectTaskSelectWithParentRates,
+  attachParentRates,
   setTaskAssignees,
   loadTaskAssignees,
   loadTaskMemberStatuses,
@@ -35,6 +37,7 @@ import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
 import { buildTaskListSearchPredicate, tokenizeTaskListSearch } from "./task-list-search";
 import { publishAgencyTaskUpdated } from "../live/live";
 import { canEditAgencyProjectTask } from "./task-edit-authz";
+import { loadMoneyResolveContext } from "../billing/money-fx-service";
 
 async function createTaskBlueprintForViewer(
   teamId: string,
@@ -181,11 +184,15 @@ async function reopenMemberTaskForActor(taskId: string, actorUserId: string) {
 
 async function buildTaskRecordForActor(task: ProjectTaskRow, actorUserId: string) {
   await reopenMemberTaskForActor(task.id, actorUserId);
+  const [withRates] = await attachParentRates([task]);
+  if (!withRates) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
   const assigneesByTask = await loadTaskAssignees([task.id]);
   const memberStatuses = await loadTaskMemberStatuses([task.id]);
   const blueprintsByTask = await loadTaskBlueprintsForViewer([task.id], actorUserId);
   return buildProjectTaskRecord(
-    task,
+    withRates,
     assigneesByTask.get(task.id) ?? [],
     actorUserId,
     memberStatuses.get(task.id),
@@ -401,7 +408,7 @@ export async function listAgencyProjectTasks(
   const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
   const rows = await db
-    .select(projectTaskColumns)
+    .select(projectTaskSelectWithParentRates)
     .from(agencyOpsProjectTask)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
@@ -674,11 +681,15 @@ export async function completeAgencyProjectTaskForMember(
   const assigneesByTask = await loadTaskAssignees([current.id]);
   const memberStatuses = await loadTaskMemberStatuses([current.id]);
   const blueprintsByTask = await loadTaskBlueprintsForViewer([current.id], actorUserId);
+  const [withRates] = await attachParentRates([current]);
+  if (!withRates) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
 
   await maybeSyncJourneyForTask(input.teamId, input.taskId);
 
   return buildProjectTaskRecord(
-    current,
+    withRates,
     assigneesByTask.get(current.id) ?? [],
     actorUserId,
     memberStatuses.get(current.id),
@@ -751,6 +762,8 @@ export async function updateAgencyProjectTask(
     dueDate?: string | null;
     estimateMinutes?: number | null;
     isWaste?: boolean;
+    billableRateAmount?: number | null;
+    currency?: string;
   },
 ) {
   const actorRole = await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -766,6 +779,14 @@ export async function updateAgencyProjectTask(
     })
   ) {
     throw new ORPCError("FORBIDDEN", { message: "Only assignees or editors can update this task." });
+  }
+
+  if (input.billableRateAmount !== undefined || input.currency !== undefined) {
+    if (actorRole !== "owner") {
+      throw new ORPCError("FORBIDDEN", {
+        message: "Only owners can set or clear the task billable rate.",
+      });
+    }
   }
 
   const previousAssigneeIds = new Set(assignees.map((assignee) => assignee.userId));
@@ -814,6 +835,59 @@ export async function updateAgencyProjectTask(
     }
   }
 
+  const ratePatch: {
+    billableRateAmount?: number | null;
+    currency?: string;
+    sourceBillableRateAmount?: number | null;
+    fxRate?: string;
+    fxAsOf?: Date | null;
+  } = {};
+
+  if (input.billableRateAmount !== undefined || input.currency !== undefined) {
+    if (input.billableRateAmount === null) {
+      ratePatch.billableRateAmount = null;
+      ratePatch.sourceBillableRateAmount = null;
+      ratePatch.fxRate = "1";
+      ratePatch.fxAsOf = null;
+    } else {
+      const [currentFx] = await db
+        .select({
+          currency: agencyOpsProjectTask.currency,
+          billableRateAmount: agencyOpsProjectTask.billableRateAmount,
+          sourceBillableRateAmount: agencyOpsProjectTask.sourceBillableRateAmount,
+        })
+        .from(agencyOpsProjectTask)
+        .where(
+          and(
+            eq(agencyOpsProjectTask.teamId, input.teamId),
+            eq(agencyOpsProjectTask.id, input.taskId),
+          ),
+        )
+        .limit(1);
+      if (!currentFx) {
+        throw new ORPCError("NOT_FOUND");
+      }
+      const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
+      const sourceCurrency = (
+        input.currency ?? currentFx.currency ?? moneyCtx.agencyCurrency
+      ).toUpperCase();
+      const sourceAmount =
+        input.billableRateAmount ??
+        currentFx.sourceBillableRateAmount ??
+        currentFx.billableRateAmount;
+      if (sourceAmount == null) {
+        throw new ORPCError("BAD_REQUEST", { message: "Task rate amount is required." });
+      }
+      const money = moneyCtx.resolve(sourceAmount, sourceCurrency);
+      await moneyCtx.lock();
+      ratePatch.billableRateAmount = money.amount;
+      ratePatch.currency = money.sourceCurrency;
+      ratePatch.sourceBillableRateAmount = money.sourceAmount;
+      ratePatch.fxRate = money.fxRate;
+      ratePatch.fxAsOf = new Date(money.fxAsOf);
+    }
+  }
+
   const now = new Date();
   const [updated] = await db.transaction(async (tx) => {
     const [task] = await tx
@@ -827,6 +901,7 @@ export async function updateAgencyProjectTask(
           : {}),
         dueDate,
         estimateMinutes,
+        ...ratePatch,
         updatedAt: now,
       })
       .where(
@@ -852,15 +927,22 @@ export async function updateAgencyProjectTask(
     await maybeSyncJourneyForTask(input.teamId, input.taskId);
   }
 
+  const [withRates] = await attachParentRates([updated]);
+  if (!withRates) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
   const assigneesByTask = await loadTaskAssignees([updated.id]);
-  const task = await buildProjectTaskRecord(updated, assigneesByTask.get(updated.id) ?? []);
+  const task = await buildProjectTaskRecord(withRates, assigneesByTask.get(updated.id) ?? []);
 
   if (
     input.status !== undefined ||
     input.assigneeUserIds !== undefined ||
     input.assignedToTeam !== undefined ||
     input.title !== undefined ||
-    input.estimateMinutes !== undefined
+    input.estimateMinutes !== undefined ||
+    input.billableRateAmount !== undefined ||
+    input.currency !== undefined
   ) {
     await publishAgencyTaskUpdated(input.teamId, task);
   }

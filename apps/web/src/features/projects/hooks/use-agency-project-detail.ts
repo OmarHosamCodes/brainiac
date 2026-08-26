@@ -317,6 +317,7 @@ export function useAgencyProjectDetail({
           clientBillableRateAmount: project.clientBillableRateAmount,
           clientCurrency: project.clientCurrency,
           effectiveBillableRateAmount: resolveEffectiveBillableRate(
+            null,
             project.billableRateAmount,
             project.clientBillableRateAmount,
           ),

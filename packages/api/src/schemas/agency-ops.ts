@@ -81,6 +81,11 @@ export const agencyProjectTaskSchema = z.object({
   assignedToTeam: z.boolean(),
   isWaste: z.boolean(),
   estimateMinutes: z.number().int().min(1).max(1440).nullable(),
+  /** Optional override; null inherits project then client rate. */
+  billableRateAmount: z.number().int().nonnegative().nullable(),
+  currency: z.string().min(1),
+  projectBillableRateAmount: z.number().int().nonnegative().nullable(),
+  clientBillableRateAmount: z.number().int().nonnegative().nullable(),
   createdByUserId: z.string().min(1),
   assignees: z.array(agencyProjectTaskAssigneeSchema),
   viewerStatus: agencyProjectTaskMemberStatusSchema.optional(),

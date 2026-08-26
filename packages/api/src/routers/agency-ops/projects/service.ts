@@ -15,6 +15,7 @@ import {
   type AgencyProjectTaskRecord,
   type ProjectTaskRow,
   projectTaskColumns,
+  attachParentRates,
   loadTaskAssignees,
   loadTaskMemberStatuses,
   loadTaskBlueprintsForViewer,
@@ -330,6 +331,9 @@ async function buildAgencyProjectJourneyRecord(
     }
   }
 
+  const tasksWithRates = await attachParentRates([...tasksById.values()]);
+  const tasksWithRatesById = new Map(tasksWithRates.map((task) => [task.id, task]));
+
   const assigneesByTask = await loadTaskAssignees(taskIds);
   const memberStatusesByTask = actorUserId ? await loadTaskMemberStatuses(taskIds) : undefined;
   const blueprintsByTask =
@@ -340,7 +344,7 @@ async function buildAgencyProjectJourneyRecord(
 
   const steps: AgencyProjectJourneyStepRecord[] = await Promise.all(
     stepRows.map(async (step) => {
-      const taskRow = step.taskId ? (tasksById.get(step.taskId) ?? null) : null;
+      const taskRow = step.taskId ? (tasksWithRatesById.get(step.taskId) ?? null) : null;
       const task = taskRow
         ? await buildProjectTaskRecord(
             taskRow,

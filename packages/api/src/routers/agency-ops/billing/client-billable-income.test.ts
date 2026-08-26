@@ -14,12 +14,16 @@ describe("amountFromDurationAndRate", () => {
 });
 
 describe("resolveEffectiveBillableRate", () => {
-  test("prefers project override", () => {
-    expect(resolveEffectiveBillableRate(12_000, 10_000)).toBe(12_000);
+  test("prefers task override over project and client", () => {
+    expect(resolveEffectiveBillableRate(20_000, 12_000, 10_000)).toBe(20_000);
   });
 
-  test("inherits client rate when project override is null", () => {
-    expect(resolveEffectiveBillableRate(null, 10_000)).toBe(10_000);
+  test("prefers project override when task is null", () => {
+    expect(resolveEffectiveBillableRate(null, 12_000, 10_000)).toBe(12_000);
+  });
+
+  test("inherits client rate when task and project are null", () => {
+    expect(resolveEffectiveBillableRate(null, null, 10_000)).toBe(10_000);
   });
 });
 
@@ -33,6 +37,7 @@ describe("aggregateExternalBillableIncome", () => {
         projectId: "p1",
         durationSeconds: 3600,
         isWaste: false,
+        taskRateAmount: null,
         projectRateAmount: null,
         clientRateAmount: 10_000,
       },
@@ -43,6 +48,7 @@ describe("aggregateExternalBillableIncome", () => {
         projectId: "p1",
         durationSeconds: 1800,
         isWaste: true,
+        taskRateAmount: null,
         projectRateAmount: null,
         clientRateAmount: 10_000,
       },
@@ -53,6 +59,7 @@ describe("aggregateExternalBillableIncome", () => {
         projectId: "p2",
         durationSeconds: 3600,
         isWaste: false,
+        taskRateAmount: null,
         projectRateAmount: null,
         clientRateAmount: 10_000,
       },
@@ -75,6 +82,7 @@ describe("aggregateExternalBillableIncome", () => {
         projectId: "p1",
         durationSeconds: 3600,
         isWaste: true,
+        taskRateAmount: null,
         projectRateAmount: null,
         clientRateAmount: 10_000,
       },
@@ -95,6 +103,7 @@ describe("aggregateExternalBillableIncome", () => {
         projectId: "premium",
         durationSeconds: 3600,
         isWaste: false,
+        taskRateAmount: null,
         projectRateAmount: 15_000,
         clientRateAmount: 10_000,
       },
@@ -105,6 +114,7 @@ describe("aggregateExternalBillableIncome", () => {
         projectId: "standard",
         durationSeconds: 3600,
         isWaste: false,
+        taskRateAmount: null,
         projectRateAmount: null,
         clientRateAmount: 10_000,
       },
@@ -114,7 +124,37 @@ describe("aggregateExternalBillableIncome", () => {
     expect(result.clients[0]?.billableAmount).toBe(25_000);
   });
 
-  test("rounds once per client project instead of once per time entry", () => {
+  test("uses task override within a project and inherits otherwise", () => {
+    const result = aggregateExternalBillableIncome([
+      {
+        clientId: "c1",
+        clientName: "Acme",
+        category: "external",
+        projectId: "p1",
+        durationSeconds: 3600,
+        isWaste: false,
+        taskRateAmount: 20_000,
+        projectRateAmount: 15_000,
+        clientRateAmount: 10_000,
+      },
+      {
+        clientId: "c1",
+        clientName: "Acme",
+        category: "external",
+        projectId: "p1",
+        durationSeconds: 3600,
+        isWaste: false,
+        taskRateAmount: null,
+        projectRateAmount: 15_000,
+        clientRateAmount: 10_000,
+      },
+    ]);
+
+    expect(result.billablePoolAmount).toBe(35_000);
+    expect(result.clients[0]?.billableAmount).toBe(35_000);
+  });
+
+  test("rounds once per client project rate bucket instead of once per time entry", () => {
     const result = aggregateExternalBillableIncome([
       {
         clientId: "c1",
@@ -123,6 +163,7 @@ describe("aggregateExternalBillableIncome", () => {
         projectId: "p1",
         durationSeconds: 1,
         isWaste: false,
+        taskRateAmount: null,
         projectRateAmount: null,
         clientRateAmount: 1_800,
       },
@@ -133,6 +174,7 @@ describe("aggregateExternalBillableIncome", () => {
         projectId: "p1",
         durationSeconds: 1,
         isWaste: false,
+        taskRateAmount: null,
         projectRateAmount: null,
         clientRateAmount: 1_800,
       },
@@ -181,6 +223,50 @@ describe("priceClientInvoiceProjects", () => {
           durationSeconds: 1800,
           rateAmount: 10_000,
           amount: 5_000,
+        },
+      ],
+    });
+  });
+
+  test("splits invoice lines when task rates differ within a project", () => {
+    expect(
+      priceClientInvoiceProjects(
+        [
+          {
+            projectId: "p1",
+            projectName: "Mixed",
+            durationSeconds: 3600,
+            isWaste: false,
+            taskRateAmount: 20_000,
+            projectRateAmount: 15_000,
+          },
+          {
+            projectId: "p1",
+            projectName: "Mixed",
+            durationSeconds: 1800,
+            isWaste: false,
+            taskRateAmount: null,
+            projectRateAmount: 15_000,
+          },
+        ],
+        10_000,
+      ),
+    ).toEqual({
+      ok: true,
+      projects: [
+        {
+          projectId: "p1",
+          projectName: "Mixed",
+          durationSeconds: 3600,
+          rateAmount: 20_000,
+          amount: 20_000,
+        },
+        {
+          projectId: "p1",
+          projectName: "Mixed",
+          durationSeconds: 1800,
+          rateAmount: 15_000,
+          amount: 7_500,
         },
       ],
     });

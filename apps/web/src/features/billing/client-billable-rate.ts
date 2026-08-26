@@ -1,8 +1,10 @@
-/** Mirrors packages/api billing helper for effective client/project catalog rates. */
+/** Mirrors packages/api billing helper for effective task/project/client catalog rates. */
 export function resolveEffectiveBillableRate(
-  projectRateAmount: number | null | undefined,
-  clientRateAmount: number | null | undefined,
+  taskRateAmount: number | null | undefined,
+  projectRateAmount?: number | null | undefined,
+  clientRateAmount?: number | null | undefined,
 ): number | null {
+  if (taskRateAmount != null) return taskRateAmount;
   if (projectRateAmount != null) return projectRateAmount;
   if (clientRateAmount != null) return clientRateAmount;
   return null;

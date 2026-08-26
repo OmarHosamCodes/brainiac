@@ -11,14 +11,20 @@ export function amountFromDurationAndRate(durationSeconds: number, rateAmount: n
   return Math.round((durationSeconds / 3600) * rateAmount);
 }
 
-/** Project override when set; otherwise inherit the client catalog rate. */
+/** Task override when set; else project; else inherit the client catalog rate. */
 export function resolveEffectiveBillableRate(
-  projectRateAmount: number | null | undefined,
-  clientRateAmount: number | null | undefined,
+  taskRateAmount: number | null | undefined,
+  projectRateAmount?: number | null | undefined,
+  clientRateAmount?: number | null | undefined,
 ): number | null {
+  if (taskRateAmount != null) return taskRateAmount;
   if (projectRateAmount != null) return projectRateAmount;
   if (clientRateAmount != null) return clientRateAmount;
   return null;
+}
+
+function rateBucketKey(projectId: string, effectiveRate: number | null): string {
+  return `${projectId}\0${effectiveRate ?? "null"}`;
 }
 
 export type ClientBillableIncomeRow = {
@@ -28,6 +34,7 @@ export type ClientBillableIncomeRow = {
   projectId: string;
   durationSeconds: number;
   isWaste: boolean;
+  taskRateAmount?: number | null;
   projectRateAmount: number | null;
   clientRateAmount: number | null;
 };
@@ -52,6 +59,7 @@ export type ClientInvoiceTimeEntry = {
   projectName: string;
   durationSeconds: number;
   isWaste: boolean;
+  taskRateAmount?: number | null;
   projectRateAmount?: number | null;
 };
 
@@ -70,44 +78,38 @@ export function priceClientInvoiceProjects(
   | { ok: true; projects: PricedClientInvoiceProject[] }
   | { ok: false; reason: "missing_client_rate" } {
   const billableEntries = entries.filter((entry) => !entry.isWaste);
-  const byProject = new Map<
+  const byBucket = new Map<
     string,
-    Pick<PricedClientInvoiceProject, "projectId" | "projectName" | "durationSeconds"> & {
-      projectRateAmount: number | null;
-    }
+    Pick<PricedClientInvoiceProject, "projectId" | "projectName" | "durationSeconds" | "rateAmount">
   >();
 
   for (const entry of billableEntries) {
-    const existing = byProject.get(entry.projectId) ?? {
-      projectId: entry.projectId,
-      projectName: entry.projectName,
-      durationSeconds: 0,
-      projectRateAmount: entry.projectRateAmount ?? null,
-    };
-    existing.durationSeconds += entry.durationSeconds;
-    if (entry.projectRateAmount != null) {
-      existing.projectRateAmount = entry.projectRateAmount;
-    }
-    byProject.set(entry.projectId, existing);
-  }
-
-  const projects: PricedClientInvoiceProject[] = [];
-  for (const project of byProject.values()) {
     const rateAmount = resolveEffectiveBillableRate(
-      project.projectRateAmount,
+      entry.taskRateAmount,
+      entry.projectRateAmount,
       clientRateAmount,
     );
     if (rateAmount === null) {
       return { ok: false, reason: "missing_client_rate" };
     }
-    projects.push({
-      projectId: project.projectId,
-      projectName: project.projectName,
-      durationSeconds: project.durationSeconds,
+    const key = rateBucketKey(entry.projectId, rateAmount);
+    const existing = byBucket.get(key) ?? {
+      projectId: entry.projectId,
+      projectName: entry.projectName,
+      durationSeconds: 0,
       rateAmount,
-      amount: amountFromDurationAndRate(project.durationSeconds, rateAmount),
-    });
+    };
+    existing.durationSeconds += entry.durationSeconds;
+    byBucket.set(key, existing);
   }
+
+  const projects: PricedClientInvoiceProject[] = [...byBucket.values()].map((bucket) => ({
+    projectId: bucket.projectId,
+    projectName: bucket.projectName,
+    durationSeconds: bucket.durationSeconds,
+    rateAmount: bucket.rateAmount,
+    amount: amountFromDurationAndRate(bucket.durationSeconds, bucket.rateAmount),
+  }));
 
   return { ok: true, projects };
 }
@@ -117,34 +119,33 @@ export function aggregateExternalBillableIncome(
   rows: ReadonlyArray<ClientBillableIncomeRow>,
 ): ExternalBillablePool {
   type ClientBucket = Omit<ClientMoneyActivity, "billableAmount" | "wasteAmount"> & {
-    billableSecondsByProject: Map<string, number>;
-    wasteSecondsByProject: Map<string, number>;
-    effectiveRateByProject: Map<string, number | null>;
+    billableSecondsByBucket: Map<string, number>;
+    wasteSecondsByBucket: Map<string, number>;
+    effectiveRateByBucket: Map<string, number | null>;
   };
   const byClient = new Map<string, ClientBucket>();
 
   for (const row of rows) {
     const effectiveRate = resolveEffectiveBillableRate(
+      row.taskRateAmount,
       row.projectRateAmount,
       row.clientRateAmount,
     );
+    const bucketKey = rateBucketKey(row.projectId, effectiveRate);
     const existing = byClient.get(row.clientId) ?? {
       clientId: row.clientId,
       clientName: row.clientName,
       category: row.category,
       durationSeconds: 0,
-      billableSecondsByProject: new Map<string, number>(),
-      wasteSecondsByProject: new Map<string, number>(),
-      effectiveRateByProject: new Map<string, number | null>(),
+      billableSecondsByBucket: new Map<string, number>(),
+      wasteSecondsByBucket: new Map<string, number>(),
+      effectiveRateByBucket: new Map<string, number | null>(),
     };
-    const secondsByProject = row.isWaste
-      ? existing.wasteSecondsByProject
-      : existing.billableSecondsByProject;
-    secondsByProject.set(
-      row.projectId,
-      (secondsByProject.get(row.projectId) ?? 0) + row.durationSeconds,
-    );
-    existing.effectiveRateByProject.set(row.projectId, effectiveRate);
+    const secondsByBucket = row.isWaste
+      ? existing.wasteSecondsByBucket
+      : existing.billableSecondsByBucket;
+    secondsByBucket.set(bucketKey, (secondsByBucket.get(bucketKey) ?? 0) + row.durationSeconds);
+    existing.effectiveRateByBucket.set(bucketKey, effectiveRate);
 
     if (!row.isWaste) {
       existing.durationSeconds += row.durationSeconds;
@@ -155,26 +156,23 @@ export function aggregateExternalBillableIncome(
   const clients = [...byClient.values()]
     .map(
       ({
-        billableSecondsByProject,
-        wasteSecondsByProject,
-        effectiveRateByProject,
+        billableSecondsByBucket,
+        wasteSecondsByBucket,
+        effectiveRateByBucket,
         ...client
       }): ClientMoneyActivity => ({
         ...client,
-        billableAmount: [...billableSecondsByProject.entries()].reduce(
-          (total, [projectId, seconds]) => {
-            const rate = effectiveRateByProject.get(projectId) ?? 0;
+        billableAmount: [...billableSecondsByBucket.entries()].reduce(
+          (total, [bucketKey, seconds]) => {
+            const rate = effectiveRateByBucket.get(bucketKey) ?? 0;
             return total + amountFromDurationAndRate(seconds, rate ?? 0);
           },
           0,
         ),
-        wasteAmount: [...wasteSecondsByProject.entries()].reduce(
-          (total, [projectId, seconds]) => {
-            const rate = effectiveRateByProject.get(projectId) ?? 0;
-            return total + amountFromDurationAndRate(seconds, rate ?? 0);
-          },
-          0,
-        ),
+        wasteAmount: [...wasteSecondsByBucket.entries()].reduce((total, [bucketKey, seconds]) => {
+          const rate = effectiveRateByBucket.get(bucketKey) ?? 0;
+          return total + amountFromDurationAndRate(seconds, rate ?? 0);
+        }, 0),
       }),
     )
     .sort((a, b) => a.clientName.localeCompare(b.clientName));

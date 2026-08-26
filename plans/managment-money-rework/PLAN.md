@@ -24,8 +24,8 @@ and shadcn UI.
 - Agency currency is team-selected ISO 4217; soft-locked once money data exists
 - Default Money range is the current calendar month, clamped to tenure start/end
 - Client bills default to an external filter badge; dismissing it also shows internal clients
-- Effective billable rate is project override → client rate; an unset project
-  override always inherits
+- Effective billable rate is task override → project override → client rate;
+  unset levels inherit the next parent
 - A manual Team salary pool replaces rate-derived member salary lines for its
   period and drives the full scoreboard salary cost
 - Subscription templates schedule future cycles; paid occurrences preserve
@@ -62,6 +62,7 @@ Actual local execution is recorded in [`steps/`](./steps/README.md).
 - [`steps/03-client-rate-only-invoicing.md`](./steps/03-client-rate-only-invoicing.md) — client-only revenue rates, invoice pricing, and aligned rounding
 - [`steps/04-team-salary-pool.md`](./steps/04-team-salary-pool.md) — manual Team salaries pool, member partial/final payments, scoreboard precedence
 - [`steps/05-project-rate-overrides.md`](./steps/05-project-rate-overrides.md) — project rate overrides client rate; unset projects inherit client catalog rate
+- [`steps/10-task-rate-overrides.md`](./steps/10-task-rate-overrides.md) — task rate overrides project then client; unset tasks inherit
 - [`steps/06-period-range-bounds.md`](./steps/06-period-range-bounds.md) — valid future tenure-period bounds for scoreboard reads
 - [`steps/07-subscription-expense-occurrences.md`](./steps/07-subscription-expense-occurrences.md) — paid subscription history, stable scoreboard totals, Due/Paid visibility
 - [`steps/08-formula-rule-binding.md`](./steps/08-formula-rule-binding.md) — formulas bind Money Rules for eligibility and cohort size
@@ -102,6 +103,7 @@ Task knowledge base lives next to this plan:
 - [x] Restrict client invoicing to client/project rates
 - [x] Add manual Team salary pool and member partial/final settlement
 - [x] Add project rate overrides with client-rate inheritance
+- [x] Add task rate overrides with project/client inheritance
 - [x] Fix inverted future tenure-period scoreboard bounds
 - [x] Preserve paid subscription cycles in totals and add Due/Paid visibility
 - [x] Bind formulas to Money Rules (`ruleId`) for payout eligibility
