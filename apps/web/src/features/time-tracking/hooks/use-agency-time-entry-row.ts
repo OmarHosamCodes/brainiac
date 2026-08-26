@@ -1,4 +1,4 @@
-import { resolveEntryWaste } from "@orch/api/routers/agency-ops/shared/waste-helpers";
+import { summarizeEntryGroupWaste } from "@/features/time-tracking/agency-entry-group-waste";
 
 import type { FocusEvent, KeyboardEvent, MouseEvent, RefObject } from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -161,6 +161,10 @@ export type AgencyTimeEntryRowViewModel = {
   rowDuplicating: boolean;
   rowWastePending: boolean;
   isWaste: boolean;
+  isPartialWaste: boolean;
+  wasteCount: number;
+  canDismissWaste: boolean;
+  canToggleWaste: boolean;
   timeRange: string;
   durationLabel: string;
   displayTitle: string;
@@ -313,7 +317,9 @@ export function useAgencyTimeEntryRow({
   }, [groupDescription, groupTaskTitle, editingDescription, resolvedTitle]);
 
   useEffect(() => {
-    if (!shouldSyncTimeDraftFromEntry({ editingDuration: duration.editingDuration, timeEditorOpen }))
+    if (
+      !shouldSyncTimeDraftFromEntry({ editingDuration: duration.editingDuration, timeEditorOpen })
+    )
       return;
     const nextDraft = entryToDraft(primaryEntry);
     setEditDraft(nextDraft);
@@ -501,9 +507,12 @@ export function useAgencyTimeEntryRow({
   const rowUpdating = group.entries.some((entry) => updatingEntryIds.includes(entry.id));
   const rowDuplicating = group.entries.some((entry) => duplicatingEntryIds.includes(entry.id));
   const rowWastePending = rowUpdating;
-  const isWaste = isMulti
-    ? group.entries.every((entry) => resolveEntryWaste(entry))
-    : resolveEntryWaste(primaryEntry);
+  const wasteSummary = summarizeEntryGroupWaste(group.entries);
+  const isWaste = wasteSummary.isAllWaste;
+  const isPartialWaste = wasteSummary.isPartialWaste;
+  const canDismissWaste = wasteSummary.canDismissEntryWaste;
+  // Task/name-only waste cannot be cleared via entry update — don't offer a false unmark.
+  const canToggleWaste = canDismissWaste || !isWaste;
   const timeRange = isMulti
     ? formatGroupTimeRange(group)
     : formatTimeRange(primaryEntry.startedAt, primaryEntry.endedAt);
@@ -555,6 +564,10 @@ export function useAgencyTimeEntryRow({
     rowDuplicating,
     rowWastePending,
     isWaste,
+    isPartialWaste,
+    wasteCount: wasteSummary.resolvedCount,
+    canDismissWaste,
+    canToggleWaste,
     timeRange,
     durationLabel,
     displayTitle: displayTitle(group),
@@ -568,8 +581,13 @@ export function useAgencyTimeEntryRow({
     onDeleteGroup: () => onDeleteGroup(group.entries.map((entry) => entry.id)),
     onDeleteEntry,
     onDuplicate: () => onDuplicate(primaryEntry.id),
-    onToggleWaste: () =>
-      onToggleWaste(isMulti ? group.entries.map((entry) => entry.id) : primaryEntry.id),
+    onToggleWaste: () => {
+      if (canDismissWaste) {
+        onToggleWaste(wasteSummary.entryFlagIds);
+        return;
+      }
+      onToggleWaste(isMulti ? group.entries.map((entry) => entry.id) : primaryEntry.id);
+    },
     onDescriptionChange: setDescriptionDraft,
     onDescriptionBlur: () => void saveDescriptionEdit(),
     onDescriptionKeyDown: (event) => {

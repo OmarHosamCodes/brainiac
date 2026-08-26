@@ -1,3 +1,4 @@
+import { AnimatePresence } from "motion/react";
 import { MoreVertical, Play, Trash2 } from "lucide-react";
 
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
@@ -33,7 +34,7 @@ import {
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import { reportEntryWasteTextClass } from "@/features/reports/agency-report-grouping";
-import { AgencyWasteTag } from "@/features/shared/agency-waste-badge";
+import { AgencyPartialWasteChip, AgencyWasteTag } from "@/features/shared/agency-waste-badge";
 import { agentScopeableProps } from "@/features/shared/agent-scopeable";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +67,10 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     rowDuplicating,
     rowWastePending,
     isWaste,
+    isPartialWaste,
+    wasteCount,
+    canDismissWaste,
+    canToggleWaste,
     timeRange,
     durationLabel,
     editingDescription,
@@ -175,11 +180,23 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             className={cn(taskChooserTriggerClass, "h-8 max-w-full")}
           />
         </div>
-        {isWaste ? (
-          <AgencyWasteTag
-            onDismiss={onToggleWaste}
-            dismissLabel={isMulti ? `Unmark ${group.entries.length} entries as waste` : undefined}
-            disabled={rowWastePending || rowUpdating || editSaving}
+        <AnimatePresence mode="popLayout">
+          {isWaste ? (
+            <AgencyWasteTag
+              key="waste-tag"
+              onDismiss={canDismissWaste ? onToggleWaste : undefined}
+              dismissLabel={
+                isMulti && canDismissWaste ? `Unmark ${wasteCount} entries as waste` : undefined
+              }
+              disabled={rowWastePending || rowUpdating || editSaving}
+            />
+          ) : null}
+        </AnimatePresence>
+        {!isWaste && isPartialWaste ? (
+          <AgencyPartialWasteChip
+            wasteCount={wasteCount}
+            totalCount={group.entries.length}
+            onActivate={onToggleExpand}
           />
         ) : null}
         {/* Absorbs leftover width so the right action rail stays fixed. */}
@@ -334,7 +351,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                   <MoreVertical className="size-3.5" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-40 p-1">
+              <PopoverContent align="end" className="w-44 p-1">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -343,6 +360,24 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 >
                   Show {group.entries.length} entries
                 </Button>
+                {canToggleWaste ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "w-full justify-start",
+                      (isWaste || isPartialWaste) && "text-warning",
+                    )}
+                    disabled={rowWastePending || rowDeleting}
+                    onClick={onToggleWaste}
+                  >
+                    {canDismissWaste
+                      ? isPartialWaste
+                        ? `Unmark ${wasteCount} waste`
+                        : "Unmark as waste"
+                      : "Mark as waste"}
+                  </Button>
+                ) : null}
                 <Button
                   variant="ghost"
                   size="sm"
@@ -361,14 +396,14 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 id: primaryEntryId,
                 projectName: group.projectName,
                 taskTitle: group.taskTitle,
-                isWaste,
+                isWaste: canDismissWaste,
               }}
               deleting={rowDeleting || rowUpdating || editSaving}
               duplicating={rowDuplicating}
               wastePending={rowWastePending}
               onDelete={() => onDeleteGroup()}
               onDuplicate={!isMulti ? onDuplicate : undefined}
-              onToggleWaste={onToggleWaste}
+              onToggleWaste={canToggleWaste ? onToggleWaste : undefined}
             />
           )}
         </div>

@@ -1964,7 +1964,7 @@ function createAgencyTimeTrackingActions(
       toast.error("Unable to update entries", {
         description: "One or more entries were not found.",
       });
-      return;
+      throw new Error("One or more entries were not found.");
     }
 
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
@@ -2013,6 +2013,7 @@ function createAgencyTimeTrackingActions(
       toast.error("Unable to update entries", {
         description: getErrorMessage(error, "Please try again."),
       });
+      throw error;
     } finally {
       set((s) => ({
         ...s,

@@ -24,6 +24,7 @@ import {
   validateTimeEntryDraft,
   type TimeEntryDraft,
 } from "@/features/time-tracking/agency-time-entry";
+import { resolveWasteTogglePatch } from "@/features/time-tracking/agency-entry-group-waste";
 import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
@@ -380,23 +381,30 @@ export function useAgencyTimeEntriesLog({
 
   async function toggleEntryWaste(entryId: string | readonly string[]) {
     if (!teamId || wastePending) return;
-    const entryIds = typeof entryId === "string" ? [entryId] : [...entryId];
-    const targets = entries.filter((item) => entryIds.includes(item.id));
-    if (targets.length === 0) return;
-    const nextIsWaste = !targets.every((entry) => entry.isWaste === true);
-    await saveBulkPatch(
-      targets.map((entry) => entry.id),
-      { isWaste: nextIsWaste },
-    );
-    toast.success(
-      targets.length === 1
-        ? nextIsWaste
-          ? "Marked as waste"
-          : "Unmarked as waste"
-        : nextIsWaste
-          ? `Marked ${targets.length} entries as waste`
-          : `Unmarked ${targets.length} entries as waste`,
-    );
+    const selectedIds = typeof entryId === "string" ? [entryId] : [...entryId];
+    const targets = entries.filter((item) => selectedIds.includes(item.id));
+    const patch = resolveWasteTogglePatch(targets);
+    if (!patch) return;
+
+    setWastePending(true);
+    try {
+      await saveBulkPatch(patch.entryIds, { isWaste: patch.nextIsWaste });
+      toast.success(
+        patch.entryIds.length === 1
+          ? patch.nextIsWaste
+            ? "Marked as waste"
+            : "Unmarked as waste"
+          : patch.nextIsWaste
+            ? `Marked ${patch.entryIds.length} entries as waste`
+            : `Unmarked ${patch.entryIds.length} entries as waste`,
+      );
+    } catch (error) {
+      toast.error("Couldn't update waste", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      setWastePending(false);
+    }
   }
 
   async function saveBulkPatch(
