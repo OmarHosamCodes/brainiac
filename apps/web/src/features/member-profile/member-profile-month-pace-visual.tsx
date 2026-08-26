@@ -121,7 +121,7 @@ export function MemberProfileMonthPaceVisual({ pace, className }: Props) {
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
         <div>
           <dt className="text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Logged this month
+            {pace.isSingleMonthScope ? "Logged this month" : "Logged this period"}
           </dt>
           <dd className="mt-0.5 font-mono text-lg font-semibold tabular-nums text-foreground">
             {pace.loggedHoursLabel}

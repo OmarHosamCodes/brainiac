@@ -84,7 +84,10 @@ export function moneyExpenseCanSubmit(
 ): boolean {
   if (!name.trim()) return false;
   if (kind === "subscription" && period === null) return false;
-  if (kind === "subscription" && amountMode === "variable") return true;
+  if (kind === "subscription" && amountMode === "variable") {
+    if (!amount.trim()) return true;
+    return parseMoneyExpenseAmount(amount) !== null;
+  }
   return parseMoneyExpenseAmount(amount) !== null;
 }
 

@@ -4,10 +4,12 @@ import {
   advanceExpenseNextDueAt,
   buildSubscriptionCycleRecords,
   defaultExpenseNextDueAt,
+  EXPENSE_KIND_CHANGE_PAID_ERROR,
   expensePeriodTotals,
   expenseRemainingAmount,
   expenseStatusAfterPaid,
   isSubscriptionVisibleInPeriod,
+  planExpenseKindFields,
   planExpensePayment,
 } from "./expense-helpers";
 
@@ -230,9 +232,29 @@ describe("planExpensePayment", () => {
       templatePaidAmount: 0,
       templateStatus: "due",
       writeOccurrence: true,
+      nextTemplateAmount: 0,
     });
     if (!plan.ok) throw new Error("expected ok");
     expect(plan.nextDueAt?.toISOString()).toBe("2026-09-24T00:00:00.000Z");
+  });
+
+  test("variable first amount does not cap the Pay; template amount still clears", () => {
+    const plan = planExpensePayment({
+      kind: "subscription",
+      amountMode: "variable",
+      period: "monthly",
+      templateAmount: 22_800,
+      paidAmount: 0,
+      paymentAmount: 30_000,
+      nextDueAt: due,
+      startsAt: null,
+      now,
+    });
+    expect(plan).toMatchObject({
+      ok: true,
+      occurrenceAmount: 30_000,
+      nextTemplateAmount: 0,
+    });
   });
 
   test("variable subscription rejects non-positive payment", () => {
@@ -415,5 +437,121 @@ describe("buildSubscriptionCycleRecords", () => {
     });
 
     expect(records.map((record) => record.id)).toEqual(["due:overdue:2026-07-20T00:00:00.000Z"]);
+  });
+});
+
+describe("planExpenseKindFields", () => {
+  const now = new Date("2026-08-27T00:00:00.000Z");
+  const due = new Date("2026-08-23T00:00:00.000Z");
+
+  const subscriptionBase = {
+    existingKind: "subscription" as const,
+    nextKind: "subscription" as const,
+    paidAmount: 0,
+    existingAmountMode: "fixed" as const,
+    existingPeriod: "monthly" as const,
+    existingStartsAt: due,
+    existingNextDueAt: due,
+    existingOccurredAt: null,
+    now,
+  };
+
+  const oneTimeBase = {
+    existingKind: "one_time" as const,
+    nextKind: "one_time" as const,
+    paidAmount: 0,
+    existingAmountMode: "fixed" as const,
+    existingPeriod: null,
+    existingStartsAt: null,
+    existingNextDueAt: null,
+    existingOccurredAt: new Date("2026-08-10T00:00:00.000Z"),
+    now,
+  };
+
+  test("same-kind subscription keeps cadence and applies period", () => {
+    expect(planExpenseKindFields({ ...subscriptionBase, period: "yearly" })).toMatchObject({
+      ok: true,
+      kind: "subscription",
+      amountMode: "fixed",
+      period: "yearly",
+      startsAt: due,
+      nextDueAt: due,
+      occurredAt: null,
+    });
+  });
+
+  test("same-kind one-time applies occurredAt", () => {
+    const occurredAt = new Date("2026-08-15T00:00:00.000Z");
+    expect(planExpenseKindFields({ ...oneTimeBase, occurredAt })).toMatchObject({
+      ok: true,
+      kind: "one_time",
+      amountMode: "fixed",
+      occurredAt,
+    });
+  });
+
+  test("rejects kind change while the current cycle has a payment", () => {
+    expect(
+      planExpenseKindFields({
+        ...subscriptionBase,
+        nextKind: "one_time",
+        paidAmount: 500,
+      }),
+    ).toEqual({ ok: false, error: EXPENSE_KIND_CHANGE_PAID_ERROR });
+  });
+
+  test("subscription to one-time clears cadence and uses next due as occurredAt", () => {
+    expect(planExpenseKindFields({ ...subscriptionBase, nextKind: "one_time" })).toMatchObject({
+      ok: true,
+      kind: "one_time",
+      amountMode: "fixed",
+      period: null,
+      startsAt: null,
+      nextDueAt: null,
+      occurredAt: due,
+    });
+  });
+
+  test("one-time to subscription requires a period and defaults next due", () => {
+    const plan = planExpenseKindFields({
+      ...oneTimeBase,
+      nextKind: "subscription",
+      period: "monthly",
+    });
+    expect(plan).toMatchObject({
+      ok: true,
+      kind: "subscription",
+      amountMode: "fixed",
+      period: "monthly",
+      startsAt: null,
+      occurredAt: null,
+    });
+    if (!plan.ok) throw new Error("expected ok");
+    expect(plan.nextDueAt?.toISOString()).toBe("2026-09-27T00:00:00.000Z");
+  });
+
+  test("one-time to subscription uses start date as first due", () => {
+    const startsAt = new Date("2026-09-01T00:00:00.000Z");
+    expect(
+      planExpenseKindFields({
+        ...oneTimeBase,
+        nextKind: "subscription",
+        period: "monthly",
+        startsAt,
+      }),
+    ).toMatchObject({
+      ok: true,
+      kind: "subscription",
+      startsAt,
+      nextDueAt: startsAt,
+      occurredAt: null,
+    });
+  });
+
+  test("one-time to subscription without period fails", () => {
+    expect(planExpenseKindFields({ ...oneTimeBase, nextKind: "subscription" })).toEqual({
+      ok: false,
+      error: "Subscription expenses require a period.",
+    });
   });
 });

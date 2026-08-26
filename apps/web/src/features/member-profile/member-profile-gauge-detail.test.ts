@@ -54,6 +54,7 @@ function sampleMonthPace(): GaugeMonthPaceVisual {
     onTrackForMin: false,
     onTrackForTarget: false,
     scaleMaxHours: 216,
+    isSingleMonthScope: true,
   };
 }
 

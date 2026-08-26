@@ -76,6 +76,119 @@ export function expenseStatusAfterPaid(amount: number, paidAmount: number): Agen
   return "partial";
 }
 
+export const EXPENSE_KIND_CHANGE_PAID_ERROR = "Finish the current payment before changing type.";
+
+export type ExpenseKindFieldsPlan =
+  | { ok: false; error: string }
+  | {
+      ok: true;
+      kind: AgencyOpsExpenseKind;
+      amountMode: AgencyOpsExpenseAmountMode;
+      period: AgencyOpsExpensePeriod | null;
+      startsAt: Date | null;
+      nextDueAt: Date | null;
+      occurredAt: Date | null;
+    };
+
+/** Remap cadence vs occurredAt when creating, editing, or converting expense kind. */
+export function planExpenseKindFields(input: {
+  existingKind: AgencyOpsExpenseKind;
+  nextKind: AgencyOpsExpenseKind;
+  paidAmount: number;
+  existingAmountMode: AgencyOpsExpenseAmountMode;
+  existingPeriod: AgencyOpsExpensePeriod | null;
+  existingStartsAt: Date | null;
+  existingNextDueAt: Date | null;
+  existingOccurredAt: Date | null;
+  amountMode?: AgencyOpsExpenseAmountMode;
+  period?: AgencyOpsExpensePeriod | null;
+  startsAt?: Date | null;
+  nextDueAt?: Date | null;
+  occurredAt?: Date | null;
+  now: Date;
+}): ExpenseKindFieldsPlan {
+  if (input.nextKind !== input.existingKind && input.paidAmount > 0) {
+    return { ok: false, error: EXPENSE_KIND_CHANGE_PAID_ERROR };
+  }
+
+  switch (input.nextKind) {
+    case "one_time":
+      if (input.existingKind === "subscription") {
+        return {
+          ok: true,
+          kind: "one_time",
+          amountMode: "fixed",
+          period: null,
+          startsAt: null,
+          nextDueAt: null,
+          occurredAt:
+            input.existingOccurredAt ??
+            input.existingNextDueAt ??
+            input.existingStartsAt ??
+            input.now,
+        };
+      }
+      return {
+        ok: true,
+        kind: "one_time",
+        amountMode: "fixed",
+        period: input.existingPeriod,
+        startsAt: input.existingStartsAt,
+        nextDueAt: input.existingNextDueAt,
+        occurredAt: input.occurredAt !== undefined ? input.occurredAt : input.existingOccurredAt,
+      };
+    case "subscription": {
+      if (input.existingKind === "one_time") {
+        const period = input.period ?? input.existingPeriod;
+        if (!period) {
+          return { ok: false, error: "Subscription expenses require a period." };
+        }
+        const startsAt = input.startsAt !== undefined ? input.startsAt : input.existingStartsAt;
+        const nextDueAt =
+          input.nextDueAt !== undefined
+            ? input.nextDueAt
+            : (startsAt ?? defaultExpenseNextDueAt(input.now, period));
+        return {
+          ok: true,
+          kind: "subscription",
+          amountMode: input.amountMode ?? "fixed",
+          period,
+          startsAt,
+          nextDueAt,
+          occurredAt: null,
+        };
+      }
+      if (input.period !== undefined && !input.period) {
+        return { ok: false, error: "Subscription expenses require a period." };
+      }
+      const period = input.period !== undefined ? input.period : input.existingPeriod;
+      if (!period) {
+        return { ok: false, error: "Subscription expenses require a period." };
+      }
+      const startsAt = input.startsAt !== undefined ? input.startsAt : input.existingStartsAt;
+      let nextDueAt = input.existingNextDueAt;
+      if (input.nextDueAt !== undefined) {
+        nextDueAt = input.nextDueAt;
+      } else if (input.startsAt !== undefined && startsAt && !input.existingNextDueAt) {
+        nextDueAt = startsAt;
+      }
+      return {
+        ok: true,
+        kind: "subscription",
+        amountMode: input.amountMode ?? input.existingAmountMode ?? "fixed",
+        period,
+        startsAt,
+        nextDueAt,
+        occurredAt: input.existingOccurredAt,
+      };
+    }
+    default: {
+      const _exhaustive: never = input.nextKind;
+      return _exhaustive;
+    }
+  }
+}
+
 export type ExpensePaymentPlan =
   | { ok: false; error: string }
   | {
@@ -86,6 +199,8 @@ export type ExpensePaymentPlan =
       templateStatus: AgencyOpsExpenseStatus;
       nextDueAt: Date | null;
       writeOccurrence: boolean;
+      /** After a variable Pay, clear the first-amount so later cycles stay open. */
+      nextTemplateAmount: number | null;
     };
 
 export function planExpensePayment(input: {
@@ -116,6 +231,7 @@ export function planExpensePayment(input: {
       templateStatus: "due",
       nextDueAt: advanceExpenseNextDueAt(occurrenceDueAt, input.period),
       writeOccurrence: true,
+      nextTemplateAmount: 0,
     };
   }
 
@@ -138,6 +254,7 @@ export function planExpensePayment(input: {
       templateStatus: "due",
       nextDueAt: advanceExpenseNextDueAt(occurrenceDueAt, input.period),
       writeOccurrence: true,
+      nextTemplateAmount: null,
     };
   }
 
@@ -149,6 +266,7 @@ export function planExpensePayment(input: {
     templateStatus: status,
     nextDueAt: input.nextDueAt,
     writeOccurrence: occurrenceDueAt !== null,
+    nextTemplateAmount: null,
   };
 }
 

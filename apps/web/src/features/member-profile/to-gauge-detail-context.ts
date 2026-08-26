@@ -1,4 +1,5 @@
 import type { memberProfileSchema } from "@orch/api/routers/agency-ops/member-profile/schemas";
+import type { FiscalCalendar } from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import type { z } from "zod";
 
@@ -14,7 +15,10 @@ import {
   computeMonthPaceVisual,
   type GaugeDetailModel,
 } from "@/features/member-profile/member-profile-gauge-detail";
+import { isSingleMonthProfilePeriod, resolveProfilePaceParams } from "@/features/member-profile/member-profile-period";
 import type { StatPlateKey } from "@/features/member-profile/member-profile-instrument-plate";
+import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";
+import type { TenureQuarterMonth } from "@/features/resourcing/tenure-utils";
 
 type MemberProfileRecord = z.infer<typeof memberProfileSchema>;
 
@@ -28,8 +32,16 @@ export type BuildMemberProfileGaugeDetailInput = {
   weekStartsOn: number;
   weekendDurationDays: number;
   monthlyMinHours: number;
+  quarterlyMinHours: number;
   offDayReduceHours: number;
   requiredDailyHours: number;
+  effectiveRangePreset: RangePreset;
+  effectiveTenureMonthIndexes: number[];
+  tenureQuarterMonths: TenureQuarterMonth[];
+  rangeStartKey: string;
+  rangeEndKey: string;
+  tenureEnabled: boolean;
+  fiscalCalendar: FiscalCalendar;
 };
 
 export function buildMemberProfileGaugeDetail(
@@ -102,50 +114,77 @@ export function buildMemberProfileGaugeDetail(
     }
   }
 
-  const periodStartKey = input.data.calendarMonth.periodStart;
-  const periodEndKey = input.data.calendarMonth.periodEnd;
+  const singleMonthPeriod = isSingleMonthProfilePeriod(
+    input.rangeStartKey,
+    input.rangeEndKey,
+    input.tenureEnabled,
+    input.fiscalCalendar,
+  );
+  const paceParams = resolveProfilePaceParams({
+    rangeStartKey: input.rangeStartKey,
+    rangeEndKey: input.rangeEndKey,
+    tenureEnabled: input.tenureEnabled,
+    fiscalCalendar: input.fiscalCalendar,
+    monthlyMinHours: input.monthlyMinHours,
+    quarterlyMinHours: input.quarterlyMinHours,
+    effectiveRangePreset: input.effectiveRangePreset,
+    effectiveTenureMonthIndexes: input.effectiveTenureMonthIndexes,
+    tenureQuarterMonths: input.tenureQuarterMonths,
+    anchorDateKey: input.today,
+  });
+  const coverageLabel = singleMonthPeriod ? input.profile.calendar.label : input.periodLabel;
+  const periodStartKey = paceParams.paceStartKey;
+  const periodEndKey = paceParams.paceEndKey;
   const offDayKeys = new Set(
-    input.data.calendarMonth.days
-      .filter(
-        (day) =>
-          day.inMonth && (day.status === "leave" || day.status === "holiday") && day.leaveId,
-      )
-      .map((day) => day.date),
+    singleMonthPeriod
+      ? input.data.calendarMonth.days
+          .filter(
+            (day) =>
+              day.inMonth && (day.status === "leave" || day.status === "holiday") && day.leaveId,
+          )
+          .map((day) => day.date)
+      : input.data.heatMap.days.filter((day) => day.off).map((day) => day.date),
   );
 
-  const monthPaceDayHours = input.data.calendarMonth.days
-    .filter((day) => day.inMonth)
-    .map((day) => {
-      const date = new Date(`${day.date}T12:00:00.000Z`);
-      const label = date.toLocaleDateString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        timeZone: "UTC",
-      });
-      return {
-        date: day.date,
-        label,
-        hoursLabel: shortHours(day.totalSeconds),
-        totalSeconds: day.totalSeconds,
-      };
+  const paceDayHours = (singleMonthPeriod
+    ? input.data.calendarMonth.days.filter((day) => day.inMonth)
+    : input.data.heatMap.days
+  ).map((day) => {
+    const date = new Date(`${day.date}T12:00:00.000Z`);
+    const label = date.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
     });
-
-  const monthPaceVisual = computeMonthPaceVisual({
-    dayHours: monthPaceDayHours,
-    schedule: {
-      weekStartsOn: input.weekStartsOn,
-      weekendDurationDays: input.weekendDurationDays,
-      requiredDailyHours: input.requiredDailyHours,
-    },
-    monthlyMinHours: input.monthlyMinHours,
-    offDayReduceHours: input.offDayReduceHours,
-    offDayKeys,
-    todayKey: input.today,
-    periodStartKey,
-    periodEndKey,
-    periodLabel: input.data.calendarMonth.label,
+    return {
+      date: day.date,
+      label,
+      hoursLabel: shortHours(day.totalSeconds),
+      totalSeconds: day.totalSeconds,
+    };
   });
+
+  const monthPaceVisual =
+    input.openGaugeKey === "period"
+      ? computeMonthPaceVisual({
+          dayHours: paceDayHours,
+          schedule: {
+            weekStartsOn: input.weekStartsOn,
+            weekendDurationDays: input.weekendDurationDays,
+            requiredDailyHours: input.requiredDailyHours,
+          },
+          monthlyMinHours: input.monthlyMinHours,
+          baseMinHours: paceParams.baseMinHours,
+          offDayReduceHours: input.offDayReduceHours,
+          offDayKeys,
+          todayKey: input.today,
+          periodStartKey,
+          periodEndKey,
+          periodLabel: coverageLabel,
+          isSingleMonthScope: paceParams.isSingleMonth,
+        })
+      : null;
 
   return buildGaugeDetail({
     canManageLeave: input.profile.canManageLeave,
@@ -167,7 +206,7 @@ export function buildMemberProfileGaugeDetail(
     hoursBreakdown: { paidSeconds, internalSeconds },
     dayHours,
     monthPaceVisual,
-    calendarLabel: input.profile.calendar.label,
+    calendarLabel: coverageLabel,
     calendarDays: input.profile.calendar.days.map((day) => {
       const date = new Date(`${day.date}T12:00:00.000Z`);
       return {

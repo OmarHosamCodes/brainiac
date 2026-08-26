@@ -27,9 +27,15 @@ describe("moneyExpenseCanSubmit", () => {
     expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly", "20")).toBe(true);
   });
 
-  test("variable subscription needs name and period, not amount", () => {
+  test("variable subscription needs period; first amount is optional", () => {
     expect(moneyExpenseCanSubmit("Electricity", "subscription", "monthly", "", "variable")).toBe(
       true,
+    );
+    expect(moneyExpenseCanSubmit("Electricity", "subscription", "monthly", "20", "variable")).toBe(
+      true,
+    );
+    expect(moneyExpenseCanSubmit("Electricity", "subscription", "monthly", "nope", "variable")).toBe(
+      false,
     );
     expect(moneyExpenseCanSubmit("Electricity", "subscription", null, "", "variable")).toBe(false);
     expect(moneyExpenseCanSubmit("Rent", "one_time", null, "", "variable")).toBe(false);

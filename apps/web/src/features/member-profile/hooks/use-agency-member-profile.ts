@@ -35,7 +35,6 @@ import {
   resolveDefaultDashboardRangePreset,
   resolveDefaultTenureMonthIndexes,
   resolveProfilePeriodMonth,
-  shiftProfilePeriodMonth,
 } from "@/features/resourcing/tenure-utils";
 import { useCurrentAgencyTeam } from "@/features/time-tracking/stores/agency-timer";
 import { useTeamStore } from "@/features/team/team-store";
@@ -49,6 +48,12 @@ import {
   resolveMemberProfileRosterNav,
   type MemberProfileRosterMember,
 } from "@/features/member-profile/member-profile-roster-nav";
+import {
+  canShiftProfilePeriodMonth,
+  resolveDefaultProfilePeriodMonthStart,
+  resolveProfilePeriodMonthBounds,
+  shiftProfilePeriodMonthWithinBounds,
+} from "@/features/member-profile/member-profile-period";
 
 export type { AgencyMemberProfileViewModel } from "@/features/member-profile/agency-member-profile-types";
 
@@ -183,15 +188,26 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       }),
     [tenurePolicy],
   );
+  const rangeStartKey = range.from.slice(0, 10);
+  const rangeEndKey = range.to.slice(0, 10);
+
   const tenureEnabled = tenurePolicy?.enabled ?? false;
-  const defaultPeriodMonthStart = useMemo(() => {
-    const anchorDateKey = todayKey(utcOffsetMinutes);
-    return resolveProfilePeriodMonth({
-      tenureEnabled,
-      calendar: fiscalCalendar,
-      anchorDateKey,
-    }).startKey;
-  }, [fiscalCalendar, tenureEnabled, utcOffsetMinutes]);
+  const periodMonthBounds = useMemo(
+    () =>
+      resolveProfilePeriodMonthBounds(rangeStartKey, rangeEndKey, tenureEnabled, fiscalCalendar),
+    [fiscalCalendar, rangeEndKey, rangeStartKey, tenureEnabled],
+  );
+  const defaultPeriodMonthStart = useMemo(
+    () =>
+      resolveDefaultProfilePeriodMonthStart(
+        rangeStartKey,
+        rangeEndKey,
+        today,
+        tenureEnabled,
+        fiscalCalendar,
+      ),
+    [fiscalCalendar, rangeEndKey, rangeStartKey, tenureEnabled, today],
+  );
 
   const [periodMonthStartOverride, setPeriodMonthStartOverride] = useState<string | null>(null);
   const periodMonthStart = periodMonthStartOverride ?? defaultPeriodMonthStart;
@@ -208,6 +224,16 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
 
   const onTenureMonthIndexesChange = useCallback((indexes: number[]) => {
     setTenureMonthIndexes(indexes);
+    setPeriodMonthStartOverride(null);
+  }, []);
+
+  const onCustomFromChange = useCallback((value: string) => {
+    setCustomFromDate(value);
+    setPeriodMonthStartOverride(null);
+  }, []);
+
+  const onCustomToChange = useCallback((value: string) => {
+    setCustomToDate(value);
     setPeriodMonthStartOverride(null);
   }, []);
 
@@ -236,9 +262,6 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     ...orpc.agencyOps.departments.list.queryOptions({ input: { teamId } }),
     enabled: Boolean(teamId && session.data?.user),
   });
-
-  const rangeStartKey = range.from.slice(0, 10);
-  const rangeEndKey = range.to.slice(0, 10);
 
   function scrollToActivityDay(date: string) {
     setExpandedDays((prev) => ({ ...prev, [date]: true }));
@@ -364,23 +387,30 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     customToDate,
   );
 
+  const canGoPrevCalendarMonth = canShiftProfilePeriodMonth(periodMonthStart, -1, periodMonthBounds);
+  const canGoNextCalendarMonth = canShiftProfilePeriodMonth(periodMonthStart, 1, periodMonthBounds);
+
   const onCalendarPrevMonth = useCallback(() => {
-    setPeriodMonthStartOverride(
-      shiftProfilePeriodMonth(periodMonthStart, -1, {
-        tenureEnabled,
-        calendar: fiscalCalendar,
-      }).startKey,
+    const next = shiftProfilePeriodMonthWithinBounds(
+      periodMonthStart,
+      -1,
+      periodMonthBounds,
+      tenureEnabled,
+      fiscalCalendar,
     );
-  }, [fiscalCalendar, periodMonthStart, tenureEnabled]);
+    if (next) setPeriodMonthStartOverride(next);
+  }, [fiscalCalendar, periodMonthBounds, periodMonthStart, tenureEnabled]);
 
   const onCalendarNextMonth = useCallback(() => {
-    setPeriodMonthStartOverride(
-      shiftProfilePeriodMonth(periodMonthStart, 1, {
-        tenureEnabled,
-        calendar: fiscalCalendar,
-      }).startKey,
+    const next = shiftProfilePeriodMonthWithinBounds(
+      periodMonthStart,
+      1,
+      periodMonthBounds,
+      tenureEnabled,
+      fiscalCalendar,
     );
-  }, [fiscalCalendar, periodMonthStart, tenureEnabled]);
+    if (next) setPeriodMonthStartOverride(next);
+  }, [fiscalCalendar, periodMonthBounds, periodMonthStart, tenureEnabled]);
 
   const profile = useMemo(() => {
     const data = profileQuery.data;
@@ -392,33 +422,50 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       today,
       periodLabel,
       monthlyMinHours: tenurePolicy?.monthlyMinHours ?? 200,
+      quarterlyMinHours: tenurePolicy?.quarterlyMinHours ?? 525,
       effectiveRangePreset,
       effectiveTenureMonthIndexes,
+      tenureQuarterMonths,
       expandedDays,
       selectedHeatDate,
       weekStartsOn,
       weekendDurationDays,
       rangeStartKey,
       rangeEndKey,
+      tenureEnabled,
+      fiscalCalendar,
+      requiredDailyHours:
+        tenurePolicy?.requiredDailyHours ?? DEFAULT_WORK_SCHEDULE.requiredDailyHours,
+      offDayReduceHours: tenurePolicy?.offDayReduceHours ?? 8,
       departments: (departmentsQuery.data?.items ?? []).map((item) => ({
         id: item.id,
         name: item.name,
       })),
       onPrevMonth: onCalendarPrevMonth,
       onNextMonth: onCalendarNextMonth,
+      canGoPrevMonth: canGoPrevCalendarMonth,
+      canGoNextMonth: canGoNextCalendarMonth,
     });
   }, [
     departmentsQuery.data?.items,
     effectiveRangePreset,
     effectiveTenureMonthIndexes,
     expandedDays,
+    fiscalCalendar,
     onCalendarNextMonth,
     onCalendarPrevMonth,
+    canGoNextCalendarMonth,
+    canGoPrevCalendarMonth,
     periodLabel,
     profileQuery.data,
     selectedHeatDate,
     serverUrl,
+    tenureEnabled,
     tenurePolicy?.monthlyMinHours,
+    tenurePolicy?.quarterlyMinHours,
+    tenurePolicy?.offDayReduceHours,
+    tenurePolicy?.requiredDailyHours,
+    tenureQuarterMonths,
     today,
     subjectUserId,
     weekStartsOn,
@@ -439,15 +486,30 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       weekStartsOn,
       weekendDurationDays,
       monthlyMinHours: tenurePolicy?.monthlyMinHours ?? 200,
+      quarterlyMinHours: tenurePolicy?.quarterlyMinHours ?? 525,
       offDayReduceHours: tenurePolicy?.offDayReduceHours ?? 8,
       requiredDailyHours:
         tenurePolicy?.requiredDailyHours ?? DEFAULT_WORK_SCHEDULE.requiredDailyHours,
+      effectiveRangePreset,
+      effectiveTenureMonthIndexes,
+      tenureQuarterMonths,
+      rangeStartKey,
+      rangeEndKey,
+      tenureEnabled,
+      fiscalCalendar,
     });
   }, [
     openGaugeKey,
     periodLabel,
     profile,
     profileQuery.data,
+    rangeEndKey,
+    rangeStartKey,
+    tenureEnabled,
+    fiscalCalendar,
+    effectiveRangePreset,
+    effectiveTenureMonthIndexes,
+    tenureQuarterMonths,
     tenurePolicy,
     today,
     weekStartsOn,
@@ -588,9 +650,9 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       rangePreset: effectiveRangePreset,
       onRangePresetChange,
       customFromDate,
-      onCustomFromChange: setCustomFromDate,
+      onCustomFromChange,
       customToDate,
-      onCustomToChange: setCustomToDate,
+      onCustomToChange,
       tenureAvailable: Boolean(tenurePolicy?.enabled),
       tenurePeriodLabel,
       tenureQuarterLabel,

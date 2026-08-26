@@ -42,6 +42,7 @@ export type GaugeMonthPaceVisual = {
   onTrackForMin: boolean;
   onTrackForTarget: boolean;
   scaleMaxHours: number;
+  isSingleMonthScope: boolean;
 };
 
 export type GaugeStreakVisual = {
@@ -212,12 +213,14 @@ export function computeMonthPaceVisual(input: {
   dayHours: GaugeDayHours[];
   schedule: GaugeWorkSchedule;
   monthlyMinHours: number;
+  baseMinHours?: number;
   offDayReduceHours: number;
   offDayKeys: ReadonlySet<string>;
   todayKey: string;
   periodStartKey: string;
   periodEndKey: string;
   periodLabel: string;
+  isSingleMonthScope?: boolean;
 }): GaugeMonthPaceVisual | null {
   const projection = projectPeriodPace({
     startKey: input.periodStartKey,
@@ -228,7 +231,7 @@ export function computeMonthPaceVisual(input: {
       totalSeconds: day.totalSeconds,
     })),
     schedule: input.schedule,
-    baseMinHours: input.monthlyMinHours,
+    baseMinHours: input.baseMinHours ?? input.monthlyMinHours,
     offDayReduceHours: input.offDayReduceHours,
     offDayKeys: input.offDayKeys,
   });
@@ -276,6 +279,7 @@ export function computeMonthPaceVisual(input: {
     onTrackForMin: projectedHours >= monthMinHours,
     onTrackForTarget: projectedHours >= monthTargetHours,
     scaleMaxHours,
+    isSingleMonthScope: input.isSingleMonthScope ?? true,
   };
 }
 
@@ -360,7 +364,7 @@ export function buildGaugeDetail(context: GaugeDetailContext): GaugeDetailModel 
         return {
           key,
           title,
-          explain: `${monthPaceVisual.monthLabel} pace against team minimum and target. Target is required daily hours times working days in the month.`,
+          explain: `${monthPaceVisual.monthLabel} pace against team minimum and target. Target is required daily hours times working days in the period.`,
           metric,
           shortLabel,
           tone: gaugeToneToPlateTone(

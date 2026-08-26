@@ -88,4 +88,23 @@ describe("computeAttendanceStreak", () => {
     expect(result.segments.at(-1)).toBe("present");
     expect(result.segments.at(-2)).toBe("missed");
   });
+
+  test("period coverage stats use heat days across the selected range", () => {
+    const result = computeAttendanceStreak({
+      anchorDate: "2026-08-07",
+      schedule,
+      heatDays: [
+        { date: "2026-08-03", totalSeconds: 3600, off: null },
+        { date: "2026-08-04", totalSeconds: 3600, off: null },
+        { date: "2026-08-05", totalSeconds: 0, off: null },
+        { date: "2026-08-06", totalSeconds: 3600, off: null },
+        { date: "2026-08-07", totalSeconds: 3600, off: null },
+      ],
+      calendarDays: [],
+      periodRange: { startKey: "2026-08-03", endKey: "2026-08-07" },
+    });
+    expect(result.bestInMonth).toBe(2);
+    expect(result.monthPresentDays).toBe(4);
+    expect(result.monthWorkingDays).toBe(5);
+  });
 });

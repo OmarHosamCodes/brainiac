@@ -736,6 +736,7 @@ export const billingRouter = {
         teamScopedInputSchema.extend({
           expenseId: z.string().min(1),
           name: z.string().min(1).optional(),
+          kind: expenseKindSchema.optional(),
           note: z.string().optional(),
           amount: z.number().int().nonnegative().optional(),
           amountMode: expenseAmountModeSchema.optional(),

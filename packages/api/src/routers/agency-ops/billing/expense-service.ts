@@ -21,6 +21,7 @@ import {
   expenseRemainingAmount,
   expenseStatusAfterPaid,
   isSubscriptionVisibleInPeriod,
+  planExpenseKindFields,
   planExpensePayment,
 } from "./expense-helpers";
 import { paginateItems, type PaginatedItems } from "./list-pagination";
@@ -209,6 +210,11 @@ export async function createExpense(
         message: "Variable amount is only valid for subscriptions.",
       });
     }
+    if (!Number.isInteger(input.amount) || input.amount < 0) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Amount must be a non-negative integer (minor units).",
+      });
+    }
   } else if (!Number.isInteger(input.amount) || input.amount <= 0) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Amount must be a positive integer (minor units).",
@@ -240,7 +246,7 @@ export async function createExpense(
 
   const id = createWorkspaceId("agency-expense");
   const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
-  const resolvedAmount = amountMode === "variable" ? 0 : input.amount;
+  const resolvedAmount = input.amount;
   const money = moneyCtx.resolve(
     resolvedAmount,
     (input.currency ?? moneyCtx.agencyCurrency).toUpperCase(),
@@ -283,6 +289,7 @@ export async function updateExpense(
     teamId: string;
     expenseId: string;
     name?: string;
+    kind?: AgencyOpsExpenseKind;
     note?: string;
     amount?: number;
     amountMode?: AgencyOpsExpenseAmountMode;
@@ -310,10 +317,42 @@ export async function updateExpense(
     throw new ORPCError("BAD_REQUEST", { message: "Name is required." });
   }
 
-  const amountMode: AgencyOpsExpenseAmountMode =
-    existing.kind === "subscription"
-      ? (input.amountMode ?? existing.amountMode ?? "fixed")
-      : "fixed";
+  const kindPlan = planExpenseKindFields({
+    existingKind: existing.kind,
+    nextKind: input.kind ?? existing.kind,
+    paidAmount: existing.paidAmount ?? 0,
+    existingAmountMode: existing.amountMode ?? "fixed",
+    existingPeriod: existing.period ?? null,
+    existingStartsAt: existing.startsAt,
+    existingNextDueAt: existing.nextDueAt,
+    existingOccurredAt: existing.occurredAt,
+    amountMode: input.amountMode,
+    period: input.period,
+    startsAt:
+      input.startsAt !== undefined
+        ? input.startsAt
+          ? parseIsoDateTime(input.startsAt, "startsAt")
+          : null
+        : undefined,
+    nextDueAt:
+      input.nextDueAt !== undefined
+        ? input.nextDueAt
+          ? parseIsoDateTime(input.nextDueAt, "nextDueAt")
+          : null
+        : undefined,
+    occurredAt:
+      input.occurredAt !== undefined
+        ? input.occurredAt
+          ? parseIsoDateTime(input.occurredAt, "occurredAt")
+          : null
+        : undefined,
+    now: new Date(),
+  });
+  if (!kindPlan.ok) {
+    throw new ORPCError("BAD_REQUEST", { message: kindPlan.error });
+  }
+
+  const { kind, amountMode, period, startsAt, nextDueAt, occurredAt } = kindPlan;
 
   if (amountMode === "variable" && (existing.paidAmount ?? 0) > 0) {
     throw new ORPCError("BAD_REQUEST", {
@@ -324,8 +363,7 @@ export async function updateExpense(
   const sourceCurrency = (
     input.currency !== undefined ? input.currency : existing.currency
   ).toUpperCase();
-  const rawSourceAmount =
-    amountMode === "variable" ? 0 : (input.amount ?? existing.sourceAmount ?? existing.amount);
+  const rawSourceAmount = input.amount ?? existing.sourceAmount ?? existing.amount;
   const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
   const money =
     input.amount !== undefined || input.currency !== undefined || input.amountMode !== undefined
@@ -352,30 +390,6 @@ export async function updateExpense(
     });
   }
 
-  let period = existing.period ?? null;
-  let startsAt = existing.startsAt;
-  let nextDueAt = existing.nextDueAt;
-  let occurredAt = existing.occurredAt;
-
-  if (existing.kind === "subscription") {
-    if (input.period !== undefined) {
-      if (!input.period) {
-        throw new ORPCError("BAD_REQUEST", { message: "Subscription expenses require a period." });
-      }
-      period = input.period;
-    }
-    if (input.startsAt !== undefined) {
-      startsAt = input.startsAt ? parseIsoDateTime(input.startsAt, "startsAt") : null;
-    }
-    if (input.nextDueAt !== undefined) {
-      nextDueAt = input.nextDueAt ? parseIsoDateTime(input.nextDueAt, "nextDueAt") : null;
-    } else if (input.startsAt !== undefined && startsAt && !existing.nextDueAt) {
-      nextDueAt = startsAt;
-    }
-  } else if (input.occurredAt !== undefined) {
-    occurredAt = input.occurredAt ? parseIsoDateTime(input.occurredAt, "occurredAt") : null;
-  }
-
   const paidAmount = Math.min(existing.paidAmount ?? 0, amount);
   const status = expenseStatusAfterPaid(amount, paidAmount);
 
@@ -383,6 +397,7 @@ export async function updateExpense(
     .update(agencyOpsExpense)
     .set({
       name,
+      kind,
       note: input.note !== undefined ? input.note.trim() : existing.note,
       amount,
       amountMode,
@@ -482,6 +497,9 @@ export async function recordExpensePayment(
         paidAmount: plan.templatePaidAmount,
         status: plan.templateStatus,
         nextDueAt: plan.nextDueAt,
+        ...(plan.nextTemplateAmount !== null
+          ? { amount: plan.nextTemplateAmount, sourceAmount: plan.nextTemplateAmount }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(agencyOpsExpense.id, existing.id))

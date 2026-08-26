@@ -141,6 +141,8 @@ export type AgencyMemberProfileViewModel = {
       }>;
       onPrevMonth: () => void;
       onNextMonth: () => void;
+      canGoPrevMonth: boolean;
+      canGoNextMonth: boolean;
       todayDate: string;
     };
     timeline: Array<{

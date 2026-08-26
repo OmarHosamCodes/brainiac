@@ -247,7 +247,10 @@ export function useAgencyMoneyExpensesPanel({
     expenseAmount,
     expenseAmountMode,
   );
-  const expenseNeedsAmount = expenseKind !== "subscription" || expenseAmountMode === "fixed";
+  const expenseNeedsAmount =
+    expenseKind !== "subscription" ||
+    expenseAmountMode === "fixed" ||
+    Boolean(expenseAmount.trim());
   const expenseCreateErrors = {
     name: expenseCreateSubmitted && !expenseName.trim() ? "Enter an expense name." : null,
     period:
@@ -308,8 +311,12 @@ export function useAgencyMoneyExpensesPanel({
   function onOpenExpensePayment(expenseId: string) {
     const record = expenseRecords.find((item) => item.id === expenseId);
     setExpensePaymentId(expenseId);
-    if (!record || record.amountMode === "variable") {
+    if (!record) {
       setExpensePaymentAmount("");
+      return;
+    }
+    if (record.amountMode === "variable") {
+      setExpensePaymentAmount(record.amount > 0 ? (record.amount / 100).toFixed(2) : "");
       return;
     }
     setExpensePaymentAmount((record.remainingAmount / 100).toFixed(2));
@@ -323,7 +330,11 @@ export function useAgencyMoneyExpensesPanel({
     setExpenseKind(record.kind);
     setExpensePeriod(record.period);
     setExpenseAmountMode(record.amountMode ?? "fixed");
-    setExpenseAmount(record.amountMode === "variable" ? "" : (record.amount / 100).toFixed(2));
+    setExpenseAmount(
+      record.amountMode === "variable" && record.amount <= 0
+        ? ""
+        : (record.amount / 100).toFixed(2),
+    );
     setExpenseNote(record.note);
     setExpenseStartsAt(record.startsAt ? toDateInputValue(new Date(record.startsAt)) : "");
     setExpenseCreateOpen(true);
@@ -343,11 +354,13 @@ export function useAgencyMoneyExpensesPanel({
     ) {
       return;
     }
+    const parsedAmount = parseMoneyExpenseAmount(expenseAmount);
     const amount =
-      expenseKind === "subscription" && expenseAmountMode === "variable"
+      parsedAmount ??
+      (expenseKind === "subscription" && expenseAmountMode === "variable" && !expenseAmount.trim()
         ? 0
-        : parseMoneyExpenseAmount(expenseAmount);
-    if (amount === null && !(expenseKind === "subscription" && expenseAmountMode === "variable")) {
+        : null);
+    if (amount === null) {
       return;
     }
     const startsAt =
@@ -361,11 +374,12 @@ export function useAgencyMoneyExpensesPanel({
           teamId,
           expenseId: expenseEditorId,
           name: expenseName,
-          period: expensePeriod,
+          kind: expenseKind,
+          period: expenseKind === "subscription" ? expensePeriod : null,
           note: expenseNote,
-          amount: amount ?? 0,
+          amount,
           amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
-          startsAt,
+          startsAt: expenseKind === "subscription" ? (startsAt ?? null) : null,
         },
         { onSuccess: () => onExpenseCreateOpenChange(false) },
       );
@@ -379,7 +393,7 @@ export function useAgencyMoneyExpensesPanel({
         kind: expenseKind,
         period: expensePeriod,
         note: expenseNote,
-        amount: amount ?? 0,
+        amount,
         amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
         startsAt,
       },
@@ -406,6 +420,10 @@ export function useAgencyMoneyExpensesPanel({
   function refetchExpenses() {
     return Promise.all([expensesQuery.refetch(), subscriptionCyclesQuery.refetch()]);
   }
+
+  const expenseEditorPaidAmount =
+    expenseRecords.find((item) => item.id === expenseEditorId)?.paidAmount ?? 0;
+  const kindLocked = Boolean(expenseEditorId && expenseEditorPaidAmount > 0);
 
   const expensesPanel = {
     periodSpendLabel: expensesPeriodSpendLabel,
@@ -445,7 +463,8 @@ export function useAgencyMoneyExpensesPanel({
       mode: expenseEditorId ? ("edit" as const) : ("create" as const),
       title: expenseEditorId ? "Edit expense" : "Add expense",
       submitLabel: expenseEditorId ? "Save" : "Add",
-      kindLocked: Boolean(expenseEditorId),
+      kindLocked,
+      kindHint: kindLocked ? "Finish the current payment before changing type." : null,
       name: expenseName,
       onNameChange: setExpenseName,
       kind: expenseKind,
@@ -476,14 +495,13 @@ export function useAgencyMoneyExpensesPanel({
       name: expensePaymentRow?.name ?? "",
       amountMode: expensePaymentRow?.amountMode ?? "fixed",
       heroLabel: expensePaymentRow?.amountMode === "variable" ? "This cycle" : "Remaining",
-      heroValue:
-        expensePaymentRow?.amountMode === "variable"
-          ? "Variable"
-          : (expensePaymentRow?.remainingLabel ?? "—"),
+      heroValue: expensePaymentRow?.remainingLabel ?? "—",
       heroHint:
         expensePaymentRow?.kind === "subscription"
           ? expensePaymentRow.amountMode === "variable"
-            ? "Enter this cycle's amount. Paying records it and rolls the next due forward."
+            ? expensePaymentRow.remainingAmount > 0
+              ? "First amount is filled in. Change it if this cycle is different."
+              : "Enter this cycle's amount. Paying records it and rolls the next due forward."
             : "Paying in full rolls the next due forward and hides this row until then."
           : "",
       remainingLabel: expensePaymentRow?.remainingLabel ?? "",

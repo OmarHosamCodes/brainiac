@@ -393,7 +393,7 @@ function MoneyExpensesPanelContent({
             </div>
             <DialogDescription className="text-xs text-muted">
               {create.kind === "subscription" && create.amountMode === "variable"
-                ? "Recurring charge. Amount is set each time you Pay."
+                ? "Recurring charge. First amount is optional; later cycles you enter when you Pay."
                 : create.kind === "subscription"
                   ? "Recurring charge with a clear next due date"
                   : "Ops spend for this period"}
@@ -459,6 +459,11 @@ function MoneyExpensesPanelContent({
                     ))}
                   </SelectContent>
                 </Select>
+                {create.kindHint ? (
+                  <CardDescription className="text-[11px] text-pretty">
+                    {create.kindHint}
+                  </CardDescription>
+                ) : null}
               </div>
 
               {create.kind === "subscription" ? (
@@ -490,11 +495,6 @@ function MoneyExpensesPanelContent({
                         ))}
                       </SelectContent>
                     </Select>
-                    {create.amountMode === "variable" ? (
-                      <CardDescription className="text-[11px] text-pretty">
-                        Enter this cycle&apos;s amount when you Pay.
-                      </CardDescription>
-                    ) : null}
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -567,38 +567,48 @@ function MoneyExpensesPanelContent({
                 </>
               ) : null}
 
-              {create.kind !== "subscription" || create.amountMode === "fixed" ? (
-                <div className={agencyFormFieldClass}>
-                  <Label htmlFor={`${create.formId}-amount`} className={agencyFormLabelClass}>
-                    Amount
-                  </Label>
-                  <Input
-                    id={`${create.formId}-amount`}
-                    inputMode="decimal"
-                    value={create.amount}
-                    onChange={(event) => create.onAmountChange(event.target.value)}
-                    placeholder="0.00"
-                    className={cn(
-                      "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
-                      agencyInputPlaceholderClass,
-                    )}
-                    required
-                    aria-invalid={Boolean(create.errors.amount)}
-                    aria-describedby={
-                      create.errors.amount ? `${create.formId}-amount-error` : undefined
-                    }
-                  />
-                  {create.errors.amount ? (
-                    <p
-                      id={`${create.formId}-amount-error`}
-                      className="text-xs text-destructive"
-                      role="alert"
-                    >
-                      {create.errors.amount}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
+              <div className={agencyFormFieldClass}>
+                <Label htmlFor={`${create.formId}-amount`} className={agencyFormLabelClass}>
+                  {create.kind === "subscription" && create.amountMode === "variable" ? (
+                    <>
+                      First amount <span className="font-normal text-muted">(optional)</span>
+                    </>
+                  ) : (
+                    "Amount"
+                  )}
+                </Label>
+                <Input
+                  id={`${create.formId}-amount`}
+                  inputMode="decimal"
+                  value={create.amount}
+                  onChange={(event) => create.onAmountChange(event.target.value)}
+                  placeholder="0.00"
+                  className={cn(
+                    "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
+                    agencyInputPlaceholderClass,
+                  )}
+                  required={create.kind !== "subscription" || create.amountMode === "fixed"}
+                  aria-invalid={Boolean(create.errors.amount)}
+                  aria-describedby={
+                    create.errors.amount ? `${create.formId}-amount-error` : undefined
+                  }
+                />
+                {create.kind === "subscription" && create.amountMode === "variable" ? (
+                  <CardDescription className="text-[11px] text-pretty">
+                    Leave blank to enter the amount when you Pay. If you set one, it fills the first
+                    Pay.
+                  </CardDescription>
+                ) : null}
+                {create.errors.amount ? (
+                  <p
+                    id={`${create.formId}-amount-error`}
+                    className="text-xs text-destructive"
+                    role="alert"
+                  >
+                    {create.errors.amount}
+                  </p>
+                ) : null}
+              </div>
 
               <div className={agencyFormFieldClass}>
                 <Label htmlFor={`${create.formId}-note`} className={agencyFormLabelClass}>

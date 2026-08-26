@@ -304,6 +304,7 @@ type UpdateExpensePayload = {
   teamId: string;
   expenseId: string;
   name?: string;
+  kind?: "one_time" | "subscription";
   note?: string;
   amount?: number;
   amountMode?: "fixed" | "variable";

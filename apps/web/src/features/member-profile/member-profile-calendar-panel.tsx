@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,6 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
+import { Button } from "@/ui/button";
 import { agencyFocusRingClass, agencyWorkMetaClass } from "@/features/shared/agency-ui";
 
 /** Profile panels: shadcn surface tokens + theme radius. */
@@ -34,6 +36,10 @@ export type MemberProfileCalendarPanelProps = {
     days: CalendarDay[];
     legend: CalendarLegendItem[];
     todayDate: string;
+    onPrevMonth: () => void;
+    onNextMonth: () => void;
+    canGoPrevMonth: boolean;
+    canGoNextMonth: boolean;
   };
   canManageLeave: boolean;
   onFocusDay: (date: string) => void;
@@ -234,7 +240,33 @@ export function MemberProfileCalendarPanel({
 }: MemberProfileCalendarPanelProps) {
   return (
     <section className={cn(profilePanelClass, "p-4")}>
-      <p className="mb-2 text-xs font-medium text-foreground">{calendar.label}</p>
+      <div className="mb-2 flex items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className={cn("shrink-0", agencyFocusRingClass)}
+          onClick={calendar.onPrevMonth}
+          disabled={!calendar.canGoPrevMonth}
+          aria-label="Previous month"
+        >
+          <ChevronLeft className="size-4" aria-hidden />
+        </Button>
+        <p className="min-w-0 flex-1 text-center text-xs font-medium text-foreground">
+          {calendar.label}
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className={cn("shrink-0", agencyFocusRingClass)}
+          onClick={calendar.onNextMonth}
+          disabled={!calendar.canGoNextMonth}
+          aria-label="Next month"
+        >
+          <ChevronRight className="size-4" aria-hidden />
+        </Button>
+      </div>
       <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] text-muted-foreground">
         {calendar.weekdayLabels.map((label, index) => (
           <span key={`${label}-${index}`} className="py-0.5">

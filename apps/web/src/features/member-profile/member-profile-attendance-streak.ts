@@ -39,6 +39,7 @@ export function computeAttendanceStreak(input: {
   schedule: WorkSchedule;
   heatDays: HeatDay[];
   calendarDays: CalendarDay[];
+  periodRange?: { startKey: string; endKey: string } | null;
 }): AttendanceStreakModel {
   const heatByDate = new Map(input.heatDays.map((day) => [day.date, day]));
   const calendarByDate = new Map(input.calendarDays.map((day) => [day.date, day]));
@@ -69,18 +70,9 @@ export function computeAttendanceStreak(input: {
     break;
   }
 
-  const inMonthWorking = input.calendarDays
-    .filter(
-      (day) =>
-        day.inMonth &&
-        day.status !== "weekend" &&
-        day.status !== "holiday" &&
-        day.status !== "leave",
-    )
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const monthPresentDays = inMonthWorking.filter((day) => day.status === "present").length;
-  const monthWorkingDays = inMonthWorking.length;
-  const bestInMonth = longestPresentRun(inMonthWorking.map((day) => day.status === "present"));
+  const coverageStats = input.periodRange
+    ? computePeriodCoverageStats(input.periodRange, input.schedule, heatByDate, calendarByDate)
+    : computeMonthCoverageStats(input.calendarDays);
 
   const segments: StreakSegmentState[] = [];
   let segCursor = streakAnchor;
@@ -102,7 +94,60 @@ export function computeAttendanceStreak(input: {
     segCursor = addDaysToDateKey(segCursor, -1);
   }
 
-  return { currentStreak, bestInMonth, monthPresentDays, monthWorkingDays, segments };
+  return {
+    currentStreak,
+    bestInMonth: coverageStats.bestPresentRun,
+    monthPresentDays: coverageStats.presentDays,
+    monthWorkingDays: coverageStats.workingDays,
+    segments,
+  };
+}
+
+function computeMonthCoverageStats(calendarDays: CalendarDay[]): {
+  bestPresentRun: number;
+  presentDays: number;
+  workingDays: number;
+} {
+  const inMonthWorking = calendarDays
+    .filter(
+      (day) =>
+        day.inMonth &&
+        day.status !== "weekend" &&
+        day.status !== "holiday" &&
+        day.status !== "leave",
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const presentDays = inMonthWorking.filter((day) => day.status === "present").length;
+  return {
+    bestPresentRun: longestPresentRun(inMonthWorking.map((day) => day.status === "present")),
+    presentDays,
+    workingDays: inMonthWorking.length,
+  };
+}
+
+function computePeriodCoverageStats(
+  periodRange: { startKey: string; endKey: string },
+  schedule: WorkSchedule,
+  heatByDate: Map<string, HeatDay>,
+  calendarByDate: Map<string, CalendarDay>,
+): { bestPresentRun: number; presentDays: number; workingDays: number } {
+  const flags: boolean[] = [];
+  let cursor = periodRange.startKey;
+  while (cursor <= periodRange.endKey) {
+    if (!isWeekendDateKey(cursor, schedule.weekStartsOn, schedule.weekendDurationDays)) {
+      const dayState = resolveDayState(cursor, heatByDate, calendarByDate);
+      if (!dayState.off) {
+        flags.push(dayState.present);
+      }
+    }
+    cursor = addDaysToDateKey(cursor, 1);
+  }
+  const presentDays = flags.filter(Boolean).length;
+  return {
+    bestPresentRun: longestPresentRun(flags),
+    presentDays,
+    workingDays: flags.length,
+  };
 }
 
 function resolveDayState(

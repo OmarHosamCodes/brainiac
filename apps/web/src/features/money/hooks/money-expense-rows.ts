@@ -45,7 +45,10 @@ export function toExpenseRow(record: MoneyExpenseRecord) {
     status: record.status,
     statusLabel: moneyExpenseStatusLabel(record.status),
     remainingAmount: record.remainingAmount,
-    remainingLabel: formatMoneyExpenseAmount(record.remainingAmount, record.currency),
+    remainingLabel:
+      amountMode === "variable" && record.amount <= 0
+        ? amountLabel
+        : formatMoneyExpenseAmount(record.remainingAmount, record.currency),
     currency: record.currency,
     canRecordPayment: record.status === "due" || record.status === "partial",
     note: record.note || null,
@@ -65,6 +68,11 @@ export function toSubscriptionCycleRow(record: MoneySubscriptionCycleRecord) {
       : record.paidAmount > 0
         ? ("partial" as const)
         : ("due" as const);
+  const amountLabel = moneyExpenseAmountLabel({
+    amountMode,
+    amount: record.amount,
+    currency: record.currency,
+  });
   return {
     id: record.id,
     expenseId: record.expenseId,
@@ -73,16 +81,15 @@ export function toSubscriptionCycleRow(record: MoneySubscriptionCycleRecord) {
     meta: `${moneyExpensePeriodLabel(record.period)} · ${
       record.state === "paid" ? "Paid for" : "Next"
     } ${dateLabel}`,
-    amountLabel: moneyExpenseAmountLabel({
-      amountMode,
-      amount: record.amount,
-      currency: record.currency,
-    }),
+    amountLabel,
     amountMode,
     status,
     statusLabel: moneyExpenseStatusLabel(status),
     remainingAmount: record.remainingAmount,
-    remainingLabel: formatMoneyExpenseAmount(record.remainingAmount, record.currency),
+    remainingLabel:
+      amountMode === "variable" && record.amount <= 0
+        ? amountLabel
+        : formatMoneyExpenseAmount(record.remainingAmount, record.currency),
     currency: record.currency,
     canRecordPayment: record.canRecordPayment,
     note: record.note || null,
