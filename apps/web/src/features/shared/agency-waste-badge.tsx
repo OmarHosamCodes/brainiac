@@ -1,6 +1,5 @@
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { X } from "lucide-react";
-import { useRef, useState } from "react";
 
 import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { Badge } from "@/ui/badge";
@@ -17,31 +16,6 @@ type AgencyWasteDismissibleProps = {
   dismissLabel?: string;
   disabled?: boolean;
 };
-
-function useWasteDismiss(onDismiss?: () => void, disabled = false) {
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const [visible, setVisible] = useState(true);
-  const pendingDismissRef = useRef(false);
-  const dismissible = Boolean(onDismiss);
-
-  function dismiss() {
-    if (!dismissible || disabled || pendingDismissRef.current) return;
-    if (prefersReducedMotion) {
-      onDismiss?.();
-      return;
-    }
-    pendingDismissRef.current = true;
-    setVisible(false);
-  }
-
-  function onExitComplete() {
-    if (!pendingDismissRef.current) return;
-    pendingDismissRef.current = false;
-    onDismiss?.();
-  }
-
-  return { dismissible, prefersReducedMotion, visible, dismiss, onExitComplete };
-}
 
 function WasteDismissButton({
   disabled,
@@ -81,6 +55,8 @@ function WasteDismissButton({
 /**
  * Inline Waste tag — Tracker entry-log treatment, also used on Reports rows.
  * Dismissible with X when `onDismiss` is set (single or grouped bulk unmark).
+ * Visibility is parent-driven (`{isWaste ? <AgencyWasteTag /> : null}`) so a failed
+ * unmark never leaves a false-positive hidden tag.
  */
 export function AgencyWasteTag({
   className,
@@ -88,41 +64,73 @@ export function AgencyWasteTag({
   dismissLabel = "Unmark as waste",
   disabled = false,
 }: AgencyWasteDismissibleProps) {
-  const { dismissible, prefersReducedMotion, visible, dismiss, onExitComplete } = useWasteDismiss(
-    onDismiss,
-    disabled,
-  );
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const dismissible = Boolean(onDismiss);
 
   return (
-    <AnimatePresence onExitComplete={onExitComplete}>
-      {visible ? (
-        <motion.span
-          key="agency-waste-tracker-tag"
-          className={cn("inline-flex shrink-0 self-center", className)}
-          initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.92 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
-          transition={{ duration: 0.18, ease: WASTE_EASE }}
-        >
-          <Badge
-            variant="destructive"
-            className={cn(
-              "shrink-0 gap-0.5 px-1.5 text-[10px] font-semibold uppercase tracking-wide",
-              dismissible && "pr-0.5",
-            )}
-          >
-            Waste
-            {dismissible ? (
-              <WasteDismissButton
-                disabled={disabled}
-                prefersReducedMotion={prefersReducedMotion}
-                label={dismissLabel}
-                onDismiss={dismiss}
-              />
-            ) : null}
-          </Badge>
-        </motion.span>
-      ) : null}
-    </AnimatePresence>
+    <motion.span
+      className={cn("inline-flex shrink-0 self-center", className)}
+      initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.92 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+      transition={{ duration: 0.18, ease: WASTE_EASE }}
+    >
+      <Badge
+        variant="destructive"
+        className={cn(
+          "shrink-0 gap-0.5 px-1.5 text-[10px] font-semibold uppercase tracking-wide",
+          dismissible && "pr-0.5",
+        )}
+      >
+        Waste
+        {dismissible ? (
+          <WasteDismissButton
+            disabled={disabled}
+            prefersReducedMotion={prefersReducedMotion}
+            label={dismissLabel}
+            onDismiss={() => {
+              if (disabled) return;
+              onDismiss?.();
+            }}
+          />
+        ) : null}
+      </Badge>
+    </motion.span>
   );
+}
+
+/** Quiet partial-waste chip for collapsed xN rows (some waste, some not). */
+export function AgencyPartialWasteChip({
+  wasteCount,
+  totalCount,
+  className,
+  onActivate,
+}: {
+  wasteCount: number;
+  totalCount: number;
+  className?: string;
+  /** Prefer expanding the group so the user can see which rows are waste. */
+  onActivate?: () => void;
+}) {
+  const label = `${wasteCount}/${totalCount} waste`;
+  const classNames = cn(
+    "inline-flex h-5 shrink-0 items-center rounded-full border border-destructive/40 bg-destructive/10",
+    "px-1.5 text-[10px] font-semibold uppercase tracking-wide text-destructive",
+    className,
+  );
+
+  if (onActivate) {
+    return (
+      <button
+        type="button"
+        className={classNames}
+        aria-label={`Show ${label} entries`}
+        onClick={onActivate}
+      >
+        {label}
+      </button>
+    );
+  }
+
+  return <span className={classNames}>{label}</span>;
 }
