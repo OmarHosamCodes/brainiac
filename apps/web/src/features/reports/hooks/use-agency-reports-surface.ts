@@ -24,10 +24,10 @@ import {
   type AggregatedReportRow,
   type AgencyReportEntry,
 } from "@/features/reports/agency-report-grouping";
+import { deleteReportEntries } from "@/features/reports/report-entry-mutations";
 import { selectEntriesForDetailsRow } from "@/features/reports/hooks/use-agency-report-entry-details-dialog";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { formatDuration } from "@/lib/utils/format-duration";
-import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
 import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 
 const SAVED_TICK_MS = 1200;
@@ -40,11 +40,10 @@ export type UseAgencyReportsSurfaceProps = {
 export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSurfaceProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
-  const deletingEntryIds = useAgencyTimeTrackingStore((state) => state.deletingEntryIds);
+  const [deletingEntryIds, setDeletingEntryIds] = useState<string[]>([]);
+  const [updatingRowKeys, setUpdatingRowKeys] = useState<Set<string>>(() => new Set());
   const { range, projectId, memberUserId, clientId, clientIds, projectIds, memberUserIds } =
     filters;
-  const [updatingRowKeys, setUpdatingRowKeys] = useState<Set<string>>(() => new Set());
   const [savedRowKeys, setSavedRowKeys] = useState<Set<string>>(() => new Set());
   const [detailsRowKey, setDetailsRowKey] = useState<string | null>(null);
   const [detailsRowLabel, setDetailsRowLabel] = useState("");
@@ -204,10 +203,23 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     async (row: AggregatedReportRow) => {
       if (!teamId || row.entries.length === 0) return;
 
-      await agencyTimeTrackingStore.deleteEntries({ teamId, entries: row.entries });
-      void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
+      const entryIds = row.entries.map((entry) => entry.id);
+      setDeletingEntryIds((current) => [...new Set([...current, ...entryIds])]);
+      try {
+        await deleteReportEntries(queryClient, teamId, entryIds);
+        flashSavedRow(row.key);
+      } catch (error) {
+        toast.error(
+          row.entries.length > 1 ? "Unable to delete entries" : "Unable to delete entry",
+          {
+            description: getErrorMessage(error, "Please try again."),
+          },
+        );
+      } finally {
+        setDeletingEntryIds((current) => current.filter((id) => !entryIds.includes(id)));
+      }
     },
-    [agencyTimeTrackingStore, queryClient, teamId],
+    [flashSavedRow, queryClient, teamId],
   );
 
   const handleToggleWaste = useCallback(

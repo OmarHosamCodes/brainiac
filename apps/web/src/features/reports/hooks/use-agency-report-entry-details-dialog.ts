@@ -4,16 +4,17 @@ import { toast } from "sonner";
 
 import type { AgencyReportEntry } from "@/features/reports/agency-report-grouping";
 import {
-  applyReportEntriesWaste,
   reportRowAggregationKey,
   type ReportRowAggregationOptions,
 } from "@/features/reports/agency-report-grouping";
 import {
-  invalidateAgencyDashboardQueries,
-  invalidateAgencyEntriesQueries,
-  invalidateAgencyReportsQueries,
-  useAgencyProjectsQuery,
-} from "@/features/shared/agency-queries";
+  deleteReportEntries,
+  duplicateReportEntry,
+  persistReportEntriesWaste,
+  updateReportEntries,
+  updateReportEntry,
+} from "@/features/reports/report-entry-mutations";
+import { useAgencyProjectsQuery } from "@/features/shared/agency-queries";
 import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-task-chooser-catalog";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
@@ -41,7 +42,6 @@ import {
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { orpc, orpcClient } from "@/lib/orpc";
 
 export function selectEntriesForDetailsRow(
   entries: AgencyReportEntry[],
@@ -117,15 +117,15 @@ export type AgencyReportEntryDetailsDialogViewModel = {
   onClose: () => void;
 };
 
-function invalidateReportsEntries(teamId: string, queryClient: ReturnType<typeof useQueryClient>) {
-  void Promise.all([
-    invalidateAgencyEntriesQueries(teamId),
-    invalidateAgencyReportsQueries(teamId),
-    invalidateAgencyDashboardQueries(teamId),
-    queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.memberProfile.get.key(),
-    }),
-  ]);
+function trackPendingIds(
+  setPending: (updater: (current: string[]) => string[]) => void,
+  entryIds: string[],
+  action: () => Promise<void>,
+) {
+  setPending((current) => [...new Set([...current, ...entryIds])]);
+  return action().finally(() => {
+    setPending((current) => current.filter((id) => !entryIds.includes(id)));
+  });
 }
 
 export function useAgencyReportEntryDetailsDialog({
@@ -138,11 +138,11 @@ export function useAgencyReportEntryDetailsDialog({
   const prefersReducedMotion = usePrefersReducedMotion();
   const queryClient = useQueryClient();
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
-  const deletingEntryIds = useAgencyTimeTrackingStore((state) => state.deletingEntryIds);
-  const updatingEntryIds = useAgencyTimeTrackingStore((state) => state.updatingEntryIds);
-  const duplicatingEntryIds = useAgencyTimeTrackingStore((state) => state.duplicatingEntryIds);
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
 
+  const [deletingEntryIds, setDeletingEntryIds] = useState<string[]>([]);
+  const [updatingEntryIds, setUpdatingEntryIds] = useState<string[]>([]);
+  const [duplicatingEntryIds, setDuplicatingEntryIds] = useState<string[]>([]);
   const [expandedGroupKeys, setExpandedGroupKeys] = useState(() => new Set<string>());
   const [selectedEntryIds, setSelectedEntryIds] = useState(() => new Set<string>());
   const [bulkEditDayKey, setBulkEditDayKey] = useState<string | null>(null);
@@ -194,17 +194,29 @@ export function useAgencyReportEntryDetailsDialog({
   }, [open, entries.length, onOpenChange]);
 
   async function deleteEntry(entryId: string) {
-    const entry = entries.find((item) => item.id === entryId);
-    if (!teamId || !entry) return;
-    await agencyTimeTrackingStore.deleteEntries({ teamId, entries: [entry] });
-    invalidateReportsEntries(teamId, queryClient);
+    if (!teamId) return;
+    try {
+      await trackPendingIds(setDeletingEntryIds, [entryId], () =>
+        deleteReportEntries(queryClient, teamId, [entryId]),
+      );
+    } catch (error) {
+      toast.error("Unable to delete entry", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    }
   }
 
   async function deleteGroupEntries(entryIds: string[]) {
-    const selectedEntries = entries.filter((entry) => entryIds.includes(entry.id));
-    if (!teamId || selectedEntries.length === 0) return;
-    await agencyTimeTrackingStore.deleteEntries({ teamId, entries: selectedEntries });
-    invalidateReportsEntries(teamId, queryClient);
+    if (!teamId || entryIds.length === 0) return;
+    try {
+      await trackPendingIds(setDeletingEntryIds, entryIds, () =>
+        deleteReportEntries(queryClient, teamId, entryIds),
+      );
+    } catch (error) {
+      toast.error(entryIds.length > 1 ? "Unable to delete entries" : "Unable to delete entry", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    }
   }
 
   async function restartEntry(group: CollapsedEntryGroup) {
@@ -260,29 +272,36 @@ export function useAgencyReportEntryDetailsDialog({
     if (!teamId || !entry || !project) return;
     if (draft.taskId && !task) return;
 
-    await agencyTimeTrackingStore.updateEntry({
-      teamId,
-      entryId: entry.id,
-      previousEntry: entry,
-      projectId: project.id,
-      taskId: task?.id ?? null,
-      task,
-      project,
-      description: draft.description,
-      startAt: range.startAt,
-      endAt: range.endAt,
-      durationSeconds: range.durationSeconds,
-      tagIds: draft.tagIds,
-      isBillable: draft.isBillable,
-    });
-    invalidateReportsEntries(teamId, queryClient);
+    try {
+      await trackPendingIds(setUpdatingEntryIds, [entryId], async () => {
+        await updateReportEntry(queryClient, teamId, entryId, {
+          projectId: project.id,
+          taskId: task?.id ?? null,
+          description: draft.description.trim(),
+          startAt: range.startAt,
+          endAt: range.endAt,
+          tagIds: draft.tagIds,
+          isBillable: draft.isBillable,
+        });
+      });
+    } catch (error) {
+      toast.error("Unable to update entry", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    }
   }
 
   async function duplicateEntry(entryId: string) {
-    const entry = entries.find((item) => item.id === entryId);
-    if (!teamId || !entry) return;
-    await agencyTimeTrackingStore.duplicateEntry({ teamId, entry });
-    invalidateReportsEntries(teamId, queryClient);
+    if (!teamId) return;
+    try {
+      await trackPendingIds(setDuplicatingEntryIds, [entryId], async () => {
+        await duplicateReportEntry(queryClient, teamId, entryId);
+      });
+    } catch (error) {
+      toast.error("Unable to duplicate entry", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    }
   }
 
   function toggleGroupExpand(collapseKey: string) {
@@ -342,7 +361,7 @@ export function useAgencyReportEntryDetailsDialog({
 
     setWastePending(true);
     try {
-      await persistReportEntriesWaste(entryIds, true);
+      await persistReportEntriesWaste(queryClient, teamId, entryIds, true);
       toast.success(
         entryIds.length === 1 ? "Marked as waste" : `Marked ${entryIds.length} entries as waste`,
       );
@@ -355,37 +374,6 @@ export function useAgencyReportEntryDetailsDialog({
     }
   }
 
-  async function persistReportEntriesWaste(entryIds: string[], nextIsWaste: boolean) {
-    if (!teamId || entryIds.length === 0) return;
-
-    const idSet = new Set(entryIds);
-    const snapshots = queryClient.getQueriesData<AgencyReportEntry[]>({
-      queryKey: ["agency-reports", "entries", teamId],
-    });
-    for (const [queryKey, data] of snapshots) {
-      if (!data) continue;
-      queryClient.setQueryData(queryKey, applyReportEntriesWaste(data, idSet, nextIsWaste));
-    }
-
-    try {
-      await Promise.all(
-        entryIds.map((entryId) =>
-          orpcClient.agencyOps.reports.updateEntry({
-            teamId,
-            entryId,
-            isWaste: nextIsWaste,
-          }),
-        ),
-      );
-      invalidateReportsEntries(teamId, queryClient);
-    } catch (error) {
-      for (const [queryKey, data] of snapshots) {
-        queryClient.setQueryData(queryKey, data);
-      }
-      throw error;
-    }
-  }
-
   async function toggleEntryWaste(entryId: string | readonly string[]) {
     if (!teamId || wastePending) return;
     const selectedIds = typeof entryId === "string" ? [entryId] : [...entryId];
@@ -395,7 +383,7 @@ export function useAgencyReportEntryDetailsDialog({
 
     setWastePending(true);
     try {
-      await persistReportEntriesWaste(patch.entryIds, patch.nextIsWaste);
+      await persistReportEntriesWaste(queryClient, teamId, patch.entryIds, patch.nextIsWaste);
       toast.success(
         patch.entryIds.length === 1
           ? patch.nextIsWaste
@@ -427,16 +415,22 @@ export function useAgencyReportEntryDetailsDialog({
   ) {
     if (!teamId || entryIds.length === 0 || Object.keys(patch).length === 0) return;
     if (patch.isWaste !== undefined && Object.keys(patch).length === 1) {
-      await persistReportEntriesWaste(entryIds, patch.isWaste);
+      await persistReportEntriesWaste(queryClient, teamId, entryIds, patch.isWaste);
       return;
     }
-    await agencyTimeTrackingStore.updateEntriesBulk({
-      teamId,
-      entryIds,
-      previousEntries: entries.filter((entry) => entryIds.includes(entry.id)),
-      patch,
-    });
-    invalidateReportsEntries(teamId, queryClient);
+
+    const { isWaste: _isWaste, ...rest } = patch;
+    if (Object.keys(rest).length === 0) return;
+
+    try {
+      await trackPendingIds(setUpdatingEntryIds, entryIds, () =>
+        updateReportEntries(queryClient, teamId, entryIds, rest),
+      );
+    } catch (error) {
+      toast.error("Unable to update entries", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    }
   }
 
   async function applyBulkPatch() {
