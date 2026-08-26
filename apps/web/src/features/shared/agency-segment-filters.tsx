@@ -35,6 +35,7 @@ import {
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Skeleton } from "@/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { suggestAgencyReportName } from "@/features/reports/agency-report-naming";
@@ -50,7 +51,7 @@ import {
 } from "@/features/shared/agency-period-query";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { parseBillableRateAmount } from "@/features/shared/format-rate";
+import { AGENCY_CURRENCY_OPTIONS, parseBillableRateAmount } from "@/features/shared/format-rate";
 import {
   selectIsClientMutationPending,
   useAgencyOpsStore,
@@ -383,11 +384,13 @@ function ClientsFiltersRoot({
   const [newClientName, setNewClientName] = useState("");
   const [newClientCategory, setNewClientCategory] = useState<"internal" | "external">("external");
   const [newClientBillableRate, setNewClientBillableRate] = useState("");
+  const [newClientCurrency, setNewClientCurrency] = useState("USD");
 
   function resetNewClientForm() {
     setNewClientName("");
     setNewClientCategory("external");
     setNewClientBillableRate("");
+    setNewClientCurrency("USD");
   }
 
   async function createClient() {
@@ -404,6 +407,7 @@ function ClientsFiltersRoot({
       name,
       category: newClientCategory,
       billableRateAmount,
+      currency: newClientCurrency,
     });
   }
 
@@ -461,15 +465,32 @@ function ClientsFiltersRoot({
                           <label className="text-[11px] font-bold text-muted">
                             Billable rate / hour
                           </label>
-                          <Input
-                            value={newClientBillableRate}
-                            onChange={(event) => setNewClientBillableRate(event.target.value)}
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="Optional"
-                            className="mt-1"
-                          />
+                          <div className="mt-1 flex gap-2">
+                            <Input
+                              value={newClientBillableRate}
+                              onChange={(event) => setNewClientBillableRate(event.target.value)}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              placeholder="Optional"
+                              className="min-w-0 flex-1"
+                            />
+                            <Select value={newClientCurrency} onValueChange={setNewClientCurrency}>
+                              <SelectTrigger
+                                aria-label="Rate currency"
+                                className="w-[5.5rem] shrink-0"
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {AGENCY_CURRENCY_OPTIONS.map((code) => (
+                                  <SelectItem key={code} value={code}>
+                                    {code}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <Button
                           type="submit"

@@ -35,6 +35,7 @@ type AgencyClient = {
   name: string;
   category: "internal" | "external";
   billableRateAmount: number | null;
+  sourceBillableRateAmount: number | null;
   currency: string;
   createdAt: string;
   updatedAt: string;
@@ -48,8 +49,10 @@ type AgencyProject = {
   name: string;
   colorHueId: number | null;
   billableRateAmount: number | null;
+  sourceBillableRateAmount: number | null;
   currency: string;
   clientBillableRateAmount: number | null;
+  clientSourceBillableRateAmount: number | null;
   clientCurrency: string;
   deletedAt: string | null;
   createdAt: string;
@@ -697,6 +700,7 @@ function createAgencyOpsActions(
       name: payload.name.trim(),
       category: payload.category ?? "external",
       billableRateAmount: payload.billableRateAmount ?? null,
+      sourceBillableRateAmount: payload.billableRateAmount ?? null,
       currency: payload.currency ?? "USD",
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -755,6 +759,7 @@ function createAgencyOpsActions(
     }
     if (payload.billableRateAmount !== undefined) {
       optimisticPatch.billableRateAmount = payload.billableRateAmount;
+      optimisticPatch.sourceBillableRateAmount = payload.billableRateAmount;
     }
     if (payload.currency !== undefined) {
       optimisticPatch.currency = payload.currency;
@@ -805,8 +810,10 @@ function createAgencyOpsActions(
       name: payload.name.trim(),
       colorHueId: payload.colorHueId ?? null,
       billableRateAmount: null,
+      sourceBillableRateAmount: null,
       currency: "USD",
       clientBillableRateAmount: null,
+      clientSourceBillableRateAmount: null,
       clientCurrency: "USD",
       deletedAt: null,
       createdAt: nowIso,
@@ -868,9 +875,13 @@ function createAgencyOpsActions(
       isWaste: false,
       estimateMinutes: null,
       billableRateAmount: null,
+      sourceBillableRateAmount: null,
       currency: "USD",
       projectBillableRateAmount: null,
+      projectSourceBillableRateAmount: null,
+      projectCurrency: "USD",
       clientBillableRateAmount: null,
+      clientSourceBillableRateAmount: null,
       clientCurrency: "USD",
       createdByUserId,
       assignees: assigneeIds.map((userId) => ({
@@ -924,8 +935,10 @@ function createAgencyOpsActions(
       name,
       colorHueId: null,
       billableRateAmount: null,
+      sourceBillableRateAmount: null,
       currency: "USD",
       clientBillableRateAmount: null,
+      clientSourceBillableRateAmount: null,
       clientCurrency: "USD",
       deletedAt: null,
       createdAt: nowIso,
@@ -1031,9 +1044,13 @@ function createAgencyOpsActions(
       isWaste: false,
       estimateMinutes: payload.estimateMinutes ?? null,
       billableRateAmount: null,
+      sourceBillableRateAmount: null,
       currency: "USD",
       projectBillableRateAmount: null,
+      projectSourceBillableRateAmount: null,
+      projectCurrency: "USD",
       clientBillableRateAmount: null,
+      clientSourceBillableRateAmount: null,
       clientCurrency: "USD",
       createdByUserId,
       // Assignees required so assignee-filtered active lists accept the optimistic row.
@@ -1631,6 +1648,10 @@ function createAgencyOpsActions(
       billableRateAmount:
         payload.billableRateAmount === undefined
           ? current.billableRateAmount
+          : payload.billableRateAmount,
+      sourceBillableRateAmount:
+        payload.billableRateAmount === undefined
+          ? current.sourceBillableRateAmount
           : payload.billableRateAmount,
       currency: payload.currency === undefined ? current.currency : payload.currency,
       updatedAt: nowIso,
@@ -2396,6 +2417,41 @@ function createAgencyOpsActions(
     }
   }
 
+  async function applyCurrentFxToPeriod(
+    payload: { teamId: string; periodStart: string; periodEnd: string },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+    try {
+      await orpcClient.agencyOps.fxRates.applyCurrentToPeriod(payload);
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.fxRates.listPeriod.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.invoices.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.invoices.periodActivity.key(),
+        }),
+      ]);
+      callbacks?.onSuccess?.();
+      toast.success("Period FX updated");
+    } catch (error) {
+      toast.error("Couldn't update this period's FX", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
   async function syncFormulaPayoutLines(
     payload: {
       teamId: string;
@@ -2489,6 +2545,7 @@ function createAgencyOpsActions(
     upsertFxRate,
     deleteFxRate,
     suggestFxRate,
+    applyCurrentFxToPeriod,
     syncFormulaPayoutLines,
   };
 }
