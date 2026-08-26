@@ -1031,6 +1031,35 @@ export const agencyOpsFxRate = pgTable(
   ],
 );
 
+/** Locked team FX copy for one Money period range. Missing pairs copy in; existing rows never overwrite. */
+export const agencyOpsPeriodFx = pgTable(
+  "agency_ops_period_fx",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    periodStart: timestamp("period_start").notNull(),
+    periodEnd: timestamp("period_end").notNull(),
+    fromCurrency: text("from_currency").notNull(),
+    toCurrency: text("to_currency").notNull(),
+    /** Decimal string: 1 fromCurrency = rate toCurrency */
+    rate: text("rate").notNull(),
+    fxAsOf: timestamp("fx_as_of"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("agency_ops_period_fx_team_idx").on(table.teamId),
+    uniqueIndex("agency_ops_period_fx_team_period_pair_unique").on(
+      table.teamId,
+      table.periodStart,
+      table.periodEnd,
+      table.fromCurrency,
+      table.toCurrency,
+    ),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // Ops expenses (vendor / subscription spend — Money Expenses card)
 // ---------------------------------------------------------------------------
