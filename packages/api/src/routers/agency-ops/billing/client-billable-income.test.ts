@@ -228,7 +228,7 @@ describe("priceClientInvoiceProjects", () => {
     });
   });
 
-  test("splits invoice lines when task rates differ within a project", () => {
+  test("coalesces one invoice line per project when task rates differ", () => {
     expect(
       priceClientInvoiceProjects(
         [
@@ -257,16 +257,10 @@ describe("priceClientInvoiceProjects", () => {
         {
           projectId: "p1",
           projectName: "Mixed",
-          durationSeconds: 3600,
-          rateAmount: 20_000,
-          amount: 20_000,
-        },
-        {
-          projectId: "p1",
-          projectName: "Mixed",
-          durationSeconds: 1800,
-          rateAmount: 15_000,
-          amount: 7_500,
+          durationSeconds: 5400,
+          // Blended display rate: (20000 + 7500) / 1.5h
+          rateAmount: 18_333,
+          amount: 27_500,
         },
       ],
     });

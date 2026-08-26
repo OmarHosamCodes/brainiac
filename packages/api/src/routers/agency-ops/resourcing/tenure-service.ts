@@ -489,7 +489,6 @@ export async function upsertTenurePolicy(
   ) {
     throw new ORPCError("BAD_REQUEST", { message: "offDayReduceHours must be 0–24." });
   }
-  // Minute precision — 6h 45m → 6.75
   const offDayReduceHours = Math.round(input.offDayReduceHours * 60) / 60;
 
   const policyEffectiveFrom = new Date(input.policyEffectiveFrom);

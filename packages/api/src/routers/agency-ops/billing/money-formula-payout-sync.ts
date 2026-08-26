@@ -146,17 +146,24 @@ export async function syncFormulaPayoutLines(
     return typeof hours === "number" ? hours : 200;
   })();
 
+  // Zero section totals that these formulas write so team_profit / cost chips aren't circular.
+  const formulaDrivenSections = new Set(
+    sectionFormulas.map((formula) => formula.sectionKey).filter(Boolean),
+  );
+
   const baseFacts: MoneyFormulaPeriodFacts = {
     totalIncomeAmount: invoiceSummary.billedAmount,
     receivedAmount: invoiceSummary.receivedAmount,
     salariesAmount: payoutSummary.salariesDueAmount || sectionTotals.salaries,
     expensesAmount: expenseTotals.amount,
     debtDiscountAmount: sectionTotals.debt_discount,
-    paidVacationAmount: sectionTotals.paid_vacation,
-    deviceCompAmount: sectionTotals.device_comp,
-    charityAmount: sectionTotals.charity,
-    pbcAmount: sectionTotals.pbc,
-    teamLossAmount: sectionTotals.team_loss,
+    paidVacationAmount: formulaDrivenSections.has("paid_vacation")
+      ? 0
+      : sectionTotals.paid_vacation,
+    deviceCompAmount: formulaDrivenSections.has("device_comp") ? 0 : sectionTotals.device_comp,
+    charityAmount: formulaDrivenSections.has("charity") ? 0 : sectionTotals.charity,
+    pbcAmount: formulaDrivenSections.has("pbc") ? 0 : sectionTotals.pbc,
+    teamLossAmount: formulaDrivenSections.has("team_loss") ? 0 : sectionTotals.team_loss,
     paidVacationHours,
     cohortSize: allMemberIds.length,
   };
@@ -189,6 +196,7 @@ export async function syncFormulaPayoutLines(
       const label = formulaLineLabel(formula);
       const result = await upsertFormulaLine({
         sectionId: section.id,
+        sourceFormulaId: formula.id,
         payeeUserId: null,
         label,
         amount: Math.round(amount),
@@ -225,6 +233,7 @@ export async function syncFormulaPayoutLines(
       const label = `${formulaLineLabel(formula)} · ${memberNameById.get(memberId) ?? "Member"}`;
       const result = await upsertFormulaLine({
         sectionId: section.id,
+        sourceFormulaId: formula.id,
         payeeUserId: memberId,
         label,
         amount: Math.round(amount),
@@ -240,61 +249,65 @@ export async function syncFormulaPayoutLines(
 
 async function upsertFormulaLine(input: {
   sectionId: string;
+  sourceFormulaId: string;
   payeeUserId: string | null;
   label: string;
   amount: number;
   cohortKey: string | null;
 }): Promise<"upserted" | "skipped"> {
-  if (input.payeeUserId) {
-    const [existing] = await db
-      .select()
-      .from(agencyOpsPayoutLine)
-      .where(
-        and(
+  const formulaMatch =
+    input.payeeUserId == null
+      ? and(
           eq(agencyOpsPayoutLine.sectionId, input.sectionId),
-          eq(agencyOpsPayoutLine.payeeUserId, input.payeeUserId),
-        ),
-      )
-      .limit(1);
-
-    if (existing) {
-      if (existing.status === "partial" || existing.status === "paid") return "skipped";
-      await db
-        .update(agencyOpsPayoutLine)
-        .set({
-          amount: input.amount,
-          label: input.label,
-          cohortKey: input.cohortKey,
-          updatedAt: new Date(),
-        })
-        .where(eq(agencyOpsPayoutLine.id, existing.id));
-      return "upserted";
-    }
-  } else {
-    const [existing] = await db
-      .select()
-      .from(agencyOpsPayoutLine)
-      .where(
-        and(
-          eq(agencyOpsPayoutLine.sectionId, input.sectionId),
-          eq(agencyOpsPayoutLine.label, input.label),
+          eq(agencyOpsPayoutLine.sourceFormulaId, input.sourceFormulaId),
           isNull(agencyOpsPayoutLine.payeeUserId),
-        ),
-      )
-      .limit(1);
+        )
+      : and(
+          eq(agencyOpsPayoutLine.sectionId, input.sectionId),
+          eq(agencyOpsPayoutLine.sourceFormulaId, input.sourceFormulaId),
+          eq(agencyOpsPayoutLine.payeeUserId, input.payeeUserId),
+        );
 
-    if (existing) {
-      if (existing.status === "partial" || existing.status === "paid") return "skipped";
-      await db
-        .update(agencyOpsPayoutLine)
-        .set({
-          amount: input.amount,
-          cohortKey: input.cohortKey,
-          updatedAt: new Date(),
-        })
-        .where(eq(agencyOpsPayoutLine.id, existing.id));
-      return "upserted";
-    }
+  const [byFormula] = await db.select().from(agencyOpsPayoutLine).where(formulaMatch).limit(1);
+
+  let existing = byFormula ?? null;
+
+  // Best-effort claim of pre-migration formula-looking lines (null sourceFormulaId).
+  if (!existing) {
+    const legacyLabelPrefix = formulaLineLabelPrefix(input.label);
+    const legacyRows = await db
+      .select()
+      .from(agencyOpsPayoutLine)
+      .where(
+        and(
+          eq(agencyOpsPayoutLine.sectionId, input.sectionId),
+          isNull(agencyOpsPayoutLine.sourceFormulaId),
+          input.payeeUserId == null
+            ? isNull(agencyOpsPayoutLine.payeeUserId)
+            : eq(agencyOpsPayoutLine.payeeUserId, input.payeeUserId),
+        ),
+      );
+    existing =
+      legacyRows.find(
+        (row) =>
+          row.label === input.label ||
+          (legacyLabelPrefix != null && row.label.startsWith(legacyLabelPrefix)),
+      ) ?? null;
+  }
+
+  if (existing) {
+    if (existing.status === "partial" || existing.status === "paid") return "skipped";
+    await db
+      .update(agencyOpsPayoutLine)
+      .set({
+        amount: input.amount,
+        label: input.label,
+        cohortKey: input.cohortKey,
+        sourceFormulaId: input.sourceFormulaId,
+        updatedAt: new Date(),
+      })
+      .where(eq(agencyOpsPayoutLine.id, existing.id));
+    return "upserted";
   }
 
   await db.insert(agencyOpsPayoutLine).values({
@@ -303,6 +316,7 @@ async function upsertFormulaLine(input: {
     payeeUserId: input.payeeUserId,
     label: input.label,
     cohortKey: input.cohortKey,
+    sourceFormulaId: input.sourceFormulaId,
     amount: input.amount,
     paidAmount: 0,
     status: "draft",
@@ -310,4 +324,10 @@ async function upsertFormulaLine(input: {
     rateAmount: 0,
   });
   return "upserted";
+}
+
+/** `Formula · {name}` prefix used to claim legacy synced lines. */
+function formulaLineLabelPrefix(label: string): string | null {
+  const match = /^(Formula · .+?)(?: · |$)/.exec(label);
+  return match?.[1] ?? null;
 }

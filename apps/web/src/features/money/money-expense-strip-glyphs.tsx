@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 
 const STRIP_GLYPH_VIEW = "0 0 64 32";
 
-/** Equal cadence bars — recurring subscription rhythm. */
 function SubscriptionCadenceGlyph({ className }: { className?: string }) {
   const barWidth = 6;
   const barGap = 3;
@@ -41,7 +40,6 @@ function SubscriptionCadenceGlyph({ className }: { className?: string }) {
   );
 }
 
-/** Single dominant bar — one-off spend. */
 function OneTimeSpikeGlyph({ className }: { className?: string }) {
   return (
     <svg viewBox={STRIP_GLYPH_VIEW} className={className} aria-hidden>

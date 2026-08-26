@@ -778,7 +778,9 @@ export async function updateAgencyProjectTask(
       actorRole,
     })
   ) {
-    throw new ORPCError("FORBIDDEN", { message: "Only assignees or editors can update this task." });
+    throw new ORPCError("FORBIDDEN", {
+      message: "Only assignees or editors can update this task.",
+    });
   }
 
   if (input.billableRateAmount !== undefined || input.currency !== undefined) {
@@ -845,10 +847,12 @@ export async function updateAgencyProjectTask(
 
   if (input.billableRateAmount !== undefined || input.currency !== undefined) {
     if (input.billableRateAmount === null) {
+      const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
       ratePatch.billableRateAmount = null;
       ratePatch.sourceBillableRateAmount = null;
       ratePatch.fxRate = "1";
       ratePatch.fxAsOf = null;
+      ratePatch.currency = moneyCtx.agencyCurrency;
     } else {
       const [currentFx] = await db
         .select({
@@ -869,7 +873,9 @@ export async function updateAgencyProjectTask(
       }
       const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
       const sourceCurrency = (
-        input.currency ?? currentFx.currency ?? moneyCtx.agencyCurrency
+        input.currency ??
+        currentFx.currency ??
+        moneyCtx.agencyCurrency
       ).toUpperCase();
       const sourceAmount =
         input.billableRateAmount ??

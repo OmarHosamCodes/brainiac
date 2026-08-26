@@ -13,9 +13,9 @@ export function amountFromDurationAndRate(durationSeconds: number, rateAmount: n
 
 /** Task override when set; else project; else inherit the client catalog rate. */
 export function resolveEffectiveBillableRate(
-  taskRateAmount: number | null | undefined,
-  projectRateAmount?: number | null | undefined,
-  clientRateAmount?: number | null | undefined,
+  taskRateAmount: number | null,
+  projectRateAmount: number | null,
+  clientRateAmount: number | null,
 ): number | null {
   if (taskRateAmount != null) return taskRateAmount;
   if (projectRateAmount != null) return projectRateAmount;
@@ -78,6 +78,7 @@ export function priceClientInvoiceProjects(
   | { ok: true; projects: PricedClientInvoiceProject[] }
   | { ok: false; reason: "missing_client_rate" } {
   const billableEntries = entries.filter((entry) => !entry.isWaste);
+  /** Bucket by rate first so multi-rate time prices correctly, then coalesce to one line per project. */
   const byBucket = new Map<
     string,
     Pick<PricedClientInvoiceProject, "projectId" | "projectName" | "durationSeconds" | "rateAmount">
@@ -85,8 +86,8 @@ export function priceClientInvoiceProjects(
 
   for (const entry of billableEntries) {
     const rateAmount = resolveEffectiveBillableRate(
-      entry.taskRateAmount,
-      entry.projectRateAmount,
+      entry.taskRateAmount ?? null,
+      entry.projectRateAmount ?? null,
       clientRateAmount,
     );
     if (rateAmount === null) {
@@ -103,12 +104,35 @@ export function priceClientInvoiceProjects(
     byBucket.set(key, existing);
   }
 
-  const projects: PricedClientInvoiceProject[] = [...byBucket.values()].map((bucket) => ({
-    projectId: bucket.projectId,
-    projectName: bucket.projectName,
-    durationSeconds: bucket.durationSeconds,
-    rateAmount: bucket.rateAmount,
-    amount: amountFromDurationAndRate(bucket.durationSeconds, bucket.rateAmount),
+  const byProject = new Map<
+    string,
+    { projectId: string; projectName: string; durationSeconds: number; amount: number }
+  >();
+  for (const bucket of byBucket.values()) {
+    const amount = amountFromDurationAndRate(bucket.durationSeconds, bucket.rateAmount);
+    const existing = byProject.get(bucket.projectId);
+    if (!existing) {
+      byProject.set(bucket.projectId, {
+        projectId: bucket.projectId,
+        projectName: bucket.projectName,
+        durationSeconds: bucket.durationSeconds,
+        amount,
+      });
+      continue;
+    }
+    existing.durationSeconds += bucket.durationSeconds;
+    existing.amount += amount;
+  }
+
+  const projects: PricedClientInvoiceProject[] = [...byProject.values()].map((project) => ({
+    projectId: project.projectId,
+    projectName: project.projectName,
+    durationSeconds: project.durationSeconds,
+    rateAmount:
+      project.durationSeconds > 0
+        ? Math.round(project.amount / (project.durationSeconds / 3600))
+        : 0,
+    amount: project.amount,
   }));
 
   return { ok: true, projects };
@@ -127,7 +151,7 @@ export function aggregateExternalBillableIncome(
 
   for (const row of rows) {
     const effectiveRate = resolveEffectiveBillableRate(
-      row.taskRateAmount,
+      row.taskRateAmount ?? null,
       row.projectRateAmount,
       row.clientRateAmount,
     );
@@ -165,13 +189,13 @@ export function aggregateExternalBillableIncome(
         billableAmount: [...billableSecondsByBucket.entries()].reduce(
           (total, [bucketKey, seconds]) => {
             const rate = effectiveRateByBucket.get(bucketKey) ?? 0;
-            return total + amountFromDurationAndRate(seconds, rate ?? 0);
+            return total + amountFromDurationAndRate(seconds, rate);
           },
           0,
         ),
         wasteAmount: [...wasteSecondsByBucket.entries()].reduce((total, [bucketKey, seconds]) => {
           const rate = effectiveRateByBucket.get(bucketKey) ?? 0;
-          return total + amountFromDurationAndRate(seconds, rate ?? 0);
+          return total + amountFromDurationAndRate(seconds, rate);
         }, 0),
       }),
     )

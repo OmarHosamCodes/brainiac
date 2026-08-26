@@ -2,12 +2,15 @@ import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
 
 export type ExpenseStripFilter = "due" | "paid" | "all";
 
+export type ExpenseStripStatus = "due" | "partial" | "paid";
+
 export type ExpenseStripItem = {
   id: string;
   expenseId: string;
   name: string;
   kind: "one_time" | "subscription";
   meta?: string;
+  status: ExpenseStripStatus;
   statusLabel: string;
   remainingAmount: number;
   remainingLabel: string;
@@ -62,11 +65,11 @@ export function buildExpenseStripItems(
   switch (filter) {
     case "due":
       return [...oneTime, ...allSubscriptions]
-        .filter((item) => item.statusLabel !== "Paid")
+        .filter((item) => item.status !== "paid")
         .sort(compareExpenseStripItems);
     case "paid":
       return [...oneTime, ...allSubscriptions]
-        .filter((item) => item.statusLabel === "Paid")
+        .filter((item) => item.status === "paid")
         .sort(compareExpenseStripItems);
     case "all":
       return [...oneTime, ...allSubscriptions].sort(compareExpenseStripItems);
@@ -148,8 +151,8 @@ export function filterExpenseStripItems(
 
 export function expenseStripInsight(expenses: ExpenseStripSources): string | null {
   const allItems = [...expenses.recent.items, ...expenses.allSubscriptions.items];
-  const dueCount = allItems.filter((item) => item.statusLabel !== "Paid").length;
-  const paidCount = allItems.filter((item) => item.statusLabel === "Paid").length;
+  const dueCount = allItems.filter((item) => item.status !== "paid").length;
+  const paidCount = allItems.filter((item) => item.status === "paid").length;
   const parts: string[] = [];
   if (dueCount > 0) parts.push(`${dueCount} due`);
   if (paidCount > 0) parts.push(`${paidCount} paid`);

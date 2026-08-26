@@ -870,6 +870,7 @@ function createAgencyOpsActions(
       currency: "USD",
       projectBillableRateAmount: null,
       clientBillableRateAmount: null,
+      clientCurrency: "USD",
       createdByUserId,
       assignees: assigneeIds.map((userId) => ({
         userId,
@@ -1032,6 +1033,7 @@ function createAgencyOpsActions(
       currency: "USD",
       projectBillableRateAmount: null,
       clientBillableRateAmount: null,
+      clientCurrency: "USD",
       createdByUserId,
       // Assignees required so assignee-filtered active lists accept the optimistic row.
       assignees: assigneeUserIds.map((userId) => ({

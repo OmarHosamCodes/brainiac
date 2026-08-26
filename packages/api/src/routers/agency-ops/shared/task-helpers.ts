@@ -45,6 +45,7 @@ export function mapProjectTaskRow(row: {
   currency: string;
   projectBillableRateAmount: number | null;
   clientBillableRateAmount: number | null;
+  clientCurrency: string;
   createdByUserId: string;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
@@ -69,6 +70,7 @@ export function mapProjectTaskRow(row: {
     currency: row.currency,
     projectBillableRateAmount: row.projectBillableRateAmount,
     clientBillableRateAmount: row.clientBillableRateAmount,
+    clientCurrency: row.clientCurrency,
     createdByUserId: row.createdByUserId,
     assignees: row.assignees,
     ...(row.viewerStatus !== undefined ? { viewerStatus: row.viewerStatus } : {}),
@@ -268,6 +270,7 @@ export async function buildProjectTaskRecord(
     currency: string;
     projectBillableRateAmount: number | null;
     clientBillableRateAmount: number | null;
+    clientCurrency: string;
     createdByUserId: string;
     dueDate: Date | null;
     createdAt: Date;
@@ -346,6 +349,7 @@ export const projectTaskSelectWithParentRates = {
   ...projectTaskColumns,
   projectBillableRateAmount: agencyOpsProject.billableRateAmount,
   clientBillableRateAmount: agencyOpsClient.billableRateAmount,
+  clientCurrency: agencyOpsClient.currency,
 } as const;
 
 export type ProjectTaskRow = {
@@ -369,6 +373,7 @@ export type ProjectTaskRow = {
 export type ProjectTaskRowWithParentRates = ProjectTaskRow & {
   projectBillableRateAmount: number | null;
   clientBillableRateAmount: number | null;
+  clientCurrency: string;
 };
 
 export async function attachParentRates(
@@ -381,6 +386,7 @@ export async function attachParentRates(
       id: agencyOpsProject.id,
       billableRateAmount: agencyOpsProject.billableRateAmount,
       clientBillableRateAmount: agencyOpsClient.billableRateAmount,
+      clientCurrency: agencyOpsClient.currency,
     })
     .from(agencyOpsProject)
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
@@ -392,6 +398,7 @@ export async function attachParentRates(
       ...row,
       projectBillableRateAmount: parent?.billableRateAmount ?? null,
       clientBillableRateAmount: parent?.clientBillableRateAmount ?? null,
+      clientCurrency: parent?.clientCurrency ?? "USD",
     };
   });
 }

@@ -845,6 +845,11 @@ export const agencyOpsPayoutLine = pgTable(
     label: text("label").notNull().default(""),
     /** Optional cohort bucket label (Money settings rules). */
     cohortKey: text("cohort_key"),
+    /**
+     * When set, this line was materialised from a money formula (`AgencyOpsMoneyFormulaDef.id`).
+     * Null = manual / Adjust line. Formula sync never overwrites null-source lines.
+     */
+    sourceFormulaId: text("source_formula_id"),
     amount: integer("amount").notNull().default(0),
     paidAmount: integer("paid_amount").notNull().default(0),
     status: text("status").$type<AgencyOpsPayoutLineStatus>().notNull().default("draft"),
@@ -861,13 +866,20 @@ export const agencyOpsPayoutLine = pgTable(
   (table) => [
     index("agency_ops_payout_line_section_idx").on(table.sectionId),
     index("agency_ops_payout_line_payee_idx").on(table.payeeUserId),
-    // Partial uniques: one line per member payee; one label per non-member line.
-    uniqueIndex("agency_ops_payout_line_section_payee_unique")
+    // Manual lines: one per member payee; one label per non-member line.
+    uniqueIndex("agency_ops_payout_line_section_payee_manual_unique")
       .on(table.sectionId, table.payeeUserId)
-      .where(sql`${table.payeeUserId} is not null`),
-    uniqueIndex("agency_ops_payout_line_section_label_unique")
+      .where(sql`${table.payeeUserId} is not null and ${table.sourceFormulaId} is null`),
+    uniqueIndex("agency_ops_payout_line_section_label_manual_unique")
       .on(table.sectionId, table.label)
-      .where(sql`${table.payeeUserId} is null`),
+      .where(sql`${table.payeeUserId} is null and ${table.sourceFormulaId} is null`),
+    // Formula lines: keyed by formula id (multiple formulas may share a section).
+    uniqueIndex("agency_ops_payout_line_section_formula_payee_unique")
+      .on(table.sectionId, table.sourceFormulaId, table.payeeUserId)
+      .where(sql`${table.payeeUserId} is not null and ${table.sourceFormulaId} is not null`),
+    uniqueIndex("agency_ops_payout_line_section_formula_pool_unique")
+      .on(table.sectionId, table.sourceFormulaId)
+      .where(sql`${table.payeeUserId} is null and ${table.sourceFormulaId} is not null`),
   ],
 );
 
@@ -908,6 +920,7 @@ export const agencyOpsSalaryPool = pgTable(
   ],
 );
 
+/** @deprecated Legacy per-member settlement rows from before pool-level `paid_amount`. Not written by current API — keep for historical rows only. */
 export const agencyOpsSalaryMemberSettlement = pgTable(
   "agency_ops_salary_member_settlement",
   {

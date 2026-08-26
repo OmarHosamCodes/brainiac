@@ -54,6 +54,7 @@ const agencyProjectTaskLiveSchema = z.object({
   currency: z.string().min(1),
   projectBillableRateAmount: z.number().int().nonnegative().nullable(),
   clientBillableRateAmount: z.number().int().nonnegative().nullable(),
+  clientCurrency: z.string().min(1),
   createdByUserId: z.string().min(1),
   assignees: z.array(agencyProjectTaskAssigneeLiveSchema),
   viewerStatus: z.enum(["open", "in_progress", "done"]).optional(),
@@ -334,6 +335,7 @@ export async function publishAgencyTaskUpdated(
     currency: string;
     projectBillableRateAmount: number | null;
     clientBillableRateAmount: number | null;
+    clientCurrency: string;
     createdByUserId: string;
     assignees: Array<{
       userId: string;

@@ -634,53 +634,85 @@ export async function recordPayoutPayment(
     throw new ORPCError("BAD_REQUEST", { message: "Payment amount must be greater than zero." });
   }
 
-  const existing = await loadPayoutLineForTeam(input.teamId, input.lineId);
-  if (!existing) {
-    throw new ORPCError("NOT_FOUND", { message: "Payout line was not found." });
-  }
+  const updated = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({
+        line: agencyOpsPayoutLine,
+        run: agencyOpsPayoutRun,
+        sectionKey: agencyOpsPayoutSection.key,
+        sectionTitle: agencyOpsPayoutSection.title,
+        userName: user.name,
+        userAvatar: user.image,
+      })
+      .from(agencyOpsPayoutLine)
+      .innerJoin(
+        agencyOpsPayoutSection,
+        eq(agencyOpsPayoutSection.id, agencyOpsPayoutLine.sectionId),
+      )
+      .innerJoin(agencyOpsPayoutRun, eq(agencyOpsPayoutRun.id, agencyOpsPayoutSection.runId))
+      .leftJoin(user, eq(user.id, agencyOpsPayoutLine.payeeUserId))
+      .where(
+        and(eq(agencyOpsPayoutLine.id, input.lineId), eq(agencyOpsPayoutRun.teamId, input.teamId)),
+      )
+      .limit(1)
+      .for("update", { of: agencyOpsPayoutLine });
 
-  if (existing.line.status === "paid") {
-    throw new ORPCError("BAD_REQUEST", { message: "Payout line is already paid in full." });
-  }
+    if (!row) {
+      throw new ORPCError("NOT_FOUND", { message: "Payout line was not found." });
+    }
 
-  const remaining = payoutRemainingAmount(existing.line.amount, existing.line.paidAmount);
-  if (input.amount > remaining) {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Payment amount exceeds remaining balance.",
-    });
-  }
+    if (row.line.status === "paid") {
+      throw new ORPCError("BAD_REQUEST", { message: "Payout line is already paid in full." });
+    }
 
-  const nextPaid = existing.line.paidAmount + input.amount;
-  const nextStatus = payoutLineStatusAfterPaid(existing.line.amount, nextPaid);
+    const remaining = payoutRemainingAmount(row.line.amount, row.line.paidAmount);
+    if (input.amount > remaining) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Payment amount exceeds remaining balance.",
+      });
+    }
 
-  const [updated] = await db
-    .update(agencyOpsPayoutLine)
-    .set({
-      paidAmount: nextPaid,
-      status: nextStatus,
-      updatedAt: new Date(),
-    })
-    .where(eq(agencyOpsPayoutLine.id, input.lineId))
-    .returning();
+    const nextPaid = row.line.paidAmount + input.amount;
+    const nextStatus = payoutLineStatusAfterPaid(row.line.amount, nextPaid);
 
-  if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
+    const [line] = await tx
+      .update(agencyOpsPayoutLine)
+      .set({
+        paidAmount: nextPaid,
+        status: nextStatus,
+        updatedAt: new Date(),
+      })
+      .where(eq(agencyOpsPayoutLine.id, input.lineId))
+      .returning();
 
-  await syncPayoutRunStatus(existing.run.id);
+    if (!line) throw new ORPCError("INTERNAL_SERVER_ERROR");
+
+    return {
+      line,
+      runId: row.run.id,
+      sectionKey: row.sectionKey,
+      sectionTitle: row.sectionTitle,
+      userName: row.userName?.trim() || "Unknown",
+      userAvatar: formatAvatarUrl(row.userAvatar),
+    };
+  });
+
+  await syncPayoutRunStatus(updated.runId);
 
   const [runRow] = await db
     .select()
     .from(agencyOpsPayoutRun)
-    .where(eq(agencyOpsPayoutRun.id, existing.run.id))
+    .where(eq(agencyOpsPayoutRun.id, updated.runId))
     .limit(1);
   if (!runRow) throw new ORPCError("INTERNAL_SERVER_ERROR");
 
   return mapPayoutLineRow({
-    line: updated,
+    line: updated.line,
     run: runRow,
-    sectionKey: existing.sectionKey,
-    sectionTitle: existing.sectionTitle,
-    userName: existing.userName,
-    userAvatar: existing.userAvatar,
+    sectionKey: updated.sectionKey,
+    sectionTitle: updated.sectionTitle,
+    userName: updated.userName,
+    userAvatar: updated.userAvatar,
   });
 }
 

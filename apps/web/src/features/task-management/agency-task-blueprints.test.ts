@@ -16,6 +16,7 @@ const baseTask = {
   currency: "USD",
   projectBillableRateAmount: null,
   clientBillableRateAmount: null,
+  clientCurrency: "USD",
   createdByUserId: "user-1",
   assignees: [],
   dueDate: null,

@@ -224,18 +224,26 @@ export function expensePeriodTotals(input: {
   const isInPeriod = (date: Date) => date >= input.periodStart && date < input.periodEnd;
 
   for (const expense of input.expenses) {
-    const date =
-      expense.kind === "subscription"
-        ? expense.nextDueAt
-        : (expense.occurredAt ?? expense.createdAt);
+    if (expense.kind === "subscription") {
+      if (
+        !isSubscriptionVisibleInPeriod(expense.nextDueAt, input.periodStart, input.periodEnd) ||
+        !expense.nextDueAt
+      ) {
+        continue;
+      }
+      amount += expense.amount;
+      paidAmount += expense.paidAmount ?? 0;
+      currency = expense.currency;
+      currentSubscriptionDue.set(expense.id, expense.nextDueAt.getTime());
+      continue;
+    }
+
+    const date = expense.occurredAt ?? expense.createdAt;
     if (!date || !isInPeriod(date)) continue;
 
     amount += expense.amount;
     paidAmount += expense.paidAmount ?? 0;
     currency = expense.currency;
-    if (expense.kind === "subscription") {
-      currentSubscriptionDue.set(expense.id, date.getTime());
-    }
   }
 
   for (const occurrence of input.occurrences) {

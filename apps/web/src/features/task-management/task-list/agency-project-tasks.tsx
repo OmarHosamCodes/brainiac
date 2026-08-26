@@ -40,9 +40,7 @@ export function AgencyProjectTasks({
 
   useEffect(() => {
     if (!focusTaskId || tasksQuery.isPending) return;
-    const row = document.querySelector<HTMLElement>(
-      `[data-task-id='${CSS.escape(focusTaskId)}']`,
-    );
+    const row = document.querySelector<HTMLElement>(`[data-task-id='${CSS.escape(focusTaskId)}']`);
     row?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [focusTaskId, tasksQuery.isPending, tasks.length]);
 

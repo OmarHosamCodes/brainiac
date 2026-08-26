@@ -64,12 +64,10 @@ export type MoneyFormulaTokenLabelContext = {
   currency?: string;
 };
 
-/** Major (UI) → integer minor units. */
 export function majorToFormulaAmount(major: number): number {
   return Math.round(major * 100);
 }
 
-/** Integer minor → major for display/forms. */
 export function amountToFormulaMajor(amount: number): number {
   return amount / 100;
 }
@@ -90,10 +88,7 @@ function neighborVarUnit(
 
   const token = tokens[cursor];
   if (token?.kind === "var") return varUnit(token.id);
-  if (
-    token?.kind === "op" &&
-    (token.op === "*" || token.op === "/" || token.op === "+" || token.op === "-")
-  ) {
+  if (token?.kind === "op") {
     cursor += direction;
     if (cursor < 0 || cursor >= tokens.length) return null;
     const neighbor = tokens[cursor];

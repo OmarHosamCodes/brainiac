@@ -644,54 +644,71 @@ export async function recordInvoicePayment(
     throw new ORPCError("BAD_REQUEST", { message: "Payment amount must be greater than zero." });
   }
 
-  const [existing] = await db
-    .select({ invoice: agencyOpsInvoice, clientName: agencyOpsClient.name })
-    .from(agencyOpsInvoice)
-    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsInvoice.clientId))
-    .where(and(eq(agencyOpsInvoice.id, input.invoiceId), eq(agencyOpsInvoice.teamId, input.teamId)))
-    .limit(1);
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ invoice: agencyOpsInvoice, clientName: agencyOpsClient.name })
+      .from(agencyOpsInvoice)
+      .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsInvoice.clientId))
+      .where(
+        and(eq(agencyOpsInvoice.id, input.invoiceId), eq(agencyOpsInvoice.teamId, input.teamId)),
+      )
+      .limit(1)
+      .for("update", { of: agencyOpsInvoice });
 
-  if (!existing) {
-    throw new ORPCError("NOT_FOUND", { message: "Invoice was not found." });
-  }
+    if (!existing) {
+      throw new ORPCError("NOT_FOUND", { message: "Invoice was not found." });
+    }
 
-  if (existing.invoice.status === "draft") {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Send the invoice before recording a payment.",
-    });
-  }
-  if (existing.invoice.status === "refunded") {
-    throw new ORPCError("BAD_REQUEST", { message: "Cannot record payment on a refunded invoice." });
-  }
-  if (existing.invoice.status === "paid") {
-    throw new ORPCError("BAD_REQUEST", { message: "Invoice is already paid in full." });
-  }
+    if (existing.invoice.status === "draft") {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Send the invoice before recording a payment.",
+      });
+    }
+    if (existing.invoice.status === "refunded") {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Cannot record payment on a refunded invoice.",
+      });
+    }
+    if (existing.invoice.status === "paid") {
+      throw new ORPCError("BAD_REQUEST", { message: "Invoice is already paid in full." });
+    }
 
-  const now = new Date();
-  const nextReceived = existing.invoice.receivedAmount + input.amount;
-  const nextStatus = invoiceStatusAfterReceived(
-    existing.invoice.amount,
-    nextReceived,
-    existing.invoice.status,
-  );
+    const remaining = invoiceRemainingAmount(
+      existing.invoice.amount,
+      existing.invoice.receivedAmount,
+    );
+    if (input.amount > remaining) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Payment amount exceeds remaining balance.",
+      });
+    }
 
-  const patch: Partial<typeof agencyOpsInvoice.$inferInsert> = {
-    receivedAmount: nextReceived,
-    status: nextStatus,
-    updatedAt: now,
-  };
-  if (nextStatus === "paid") patch.paidAt = now;
-  if (!existing.invoice.issuedAt) patch.issuedAt = now;
+    const now = new Date();
+    const nextReceived = existing.invoice.receivedAmount + input.amount;
+    const nextStatus = invoiceStatusAfterReceived(
+      existing.invoice.amount,
+      nextReceived,
+      existing.invoice.status,
+    );
 
-  const [updated] = await db
-    .update(agencyOpsInvoice)
-    .set(patch)
-    .where(eq(agencyOpsInvoice.id, input.invoiceId))
-    .returning();
+    const patch: Partial<typeof agencyOpsInvoice.$inferInsert> = {
+      receivedAmount: nextReceived,
+      status: nextStatus,
+      updatedAt: now,
+    };
+    if (nextStatus === "paid") patch.paidAt = now;
+    if (!existing.invoice.issuedAt) patch.issuedAt = now;
 
-  if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
+    const [updated] = await tx
+      .update(agencyOpsInvoice)
+      .set(patch)
+      .where(eq(agencyOpsInvoice.id, input.invoiceId))
+      .returning();
 
-  return mapInvoiceRow(updated, existing.clientName);
+    if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
+
+    return mapInvoiceRow(updated, existing.clientName);
+  });
 }
 
 async function loadPeriodClientBillableRows(

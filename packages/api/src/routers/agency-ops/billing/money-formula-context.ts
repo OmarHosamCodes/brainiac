@@ -84,11 +84,9 @@ function formulaByMetric(
 }
 
 function isPassthroughSectionFormula(formula: AgencyOpsMoneyFormulaDef): boolean {
-  return (
-    formula.tokens.length === 1 &&
-    formula.tokens[0]?.kind === "number" &&
-    formula.tokens[0].value === 0
-  );
+  if (formula.tokens.length !== 1) return false;
+  const [only] = formula.tokens;
+  return only?.kind === "number" && only.value === 0;
 }
 
 /** Merge formula-bound metrics onto the hardwired scoreboard fallback. */
@@ -150,11 +148,7 @@ export function applyFormulasToScoreboard(
     facts.paidVacationAmount = board.paidVacationAmount;
   }
 
-  const device = readSectionMetric(
-    "device-compensation",
-    facts.deviceCompAmount,
-    context,
-  );
+  const device = readSectionMetric("device-compensation", facts.deviceCompAmount, context);
   if (device !== null) {
     board.deviceCompensationAmount = device;
     facts.deviceCompAmount = board.deviceCompensationAmount;

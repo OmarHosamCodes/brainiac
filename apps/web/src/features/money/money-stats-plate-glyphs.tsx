@@ -5,13 +5,7 @@ export function clampPlateRatio(ratio: number): number {
   return Math.min(1, Math.max(0, ratio));
 }
 
-function CollectionPaceGlyph({
-  ratio,
-  className,
-}: {
-  ratio: number;
-  className?: string;
-}) {
+function CollectionPaceGlyph({ ratio, className }: { ratio: number; className?: string }) {
   const r = clampPlateRatio(ratio);
   return (
     <svg viewBox="0 0 64 32" className={className} aria-hidden>

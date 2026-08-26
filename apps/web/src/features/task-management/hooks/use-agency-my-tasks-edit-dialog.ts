@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { resolveEffectiveBillableRate } from "@/features/billing/client-billable-rate";
+import { resolveEffectiveBillableRate } from "@orch/api/routers/agency-ops/billing/client-billable-income";
 import type { AgencyMemberOption } from "@/features/shared/agency-member-option";
 import { parseBillableRateAmount } from "@/features/shared/format-rate";
 import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
@@ -105,7 +105,7 @@ export function useAgencyMyTasksEditDialog({
     task.projectBillableRateAmount,
     task.clientBillableRateAmount,
   );
-  const rateCurrency = task.currency || "USD";
+  const rateCurrency = task.clientCurrency || "USD";
 
   const canSubmit = canSaveMyTasksEdit({
     draft,
@@ -158,7 +158,6 @@ export function useAgencyMyTasksEditDialog({
           ? null
           : parseBillableRateAmount(draft.billableRateDraft)
         : undefined;
-      if (rateChanged && draft.billableRateDraft.trim() && billableRateAmount === null) return;
 
       await updateProjectTask({
         teamId,

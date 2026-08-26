@@ -49,7 +49,7 @@ const expenseStripRowClass =
   "group/row flex items-center gap-3 px-5 py-3 transition-colors duration-150 hover:bg-elevated/25 focus-within:bg-elevated/25 motion-reduce:transition-none";
 
 function expenseStripAmountClass(item: ExpenseStripItem): string {
-  return item.statusLabel === "Paid" ? "text-muted" : "text-highlighted";
+  return item.status === "paid" ? "text-muted" : "text-highlighted";
 }
 
 function formatExpenseStartPreview(value: string): string {
@@ -80,7 +80,7 @@ function ExpenseStripRow({
   const paymentLabel = item.kind === "subscription" ? "Pay" : "Record";
   const amountColumnLabel = item.canRecordPayment
     ? "Remaining"
-    : item.statusLabel === "Paid"
+    : item.status === "paid"
       ? "Paid"
       : null;
 

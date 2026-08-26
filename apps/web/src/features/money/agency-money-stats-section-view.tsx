@@ -1,6 +1,4 @@
-import {
-  agencyErrorPanelClass,
-} from "@/features/shared/agency-ui";
+import { agencyErrorPanelClass } from "@/features/shared/agency-ui";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 
@@ -50,10 +48,7 @@ export function MoneyStatsSection({
 
   return (
     <div className="flex flex-col gap-3">
-      <section
-        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-        aria-label="Money period stats"
-      >
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Money period stats">
         {statsCards.map((card) => (
           <MoneyStatsPlate key={card.id} card={card} onSelectMetric={onSelectMetric} />
         ))}

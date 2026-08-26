@@ -86,6 +86,7 @@ export const agencyProjectTaskSchema = z.object({
   currency: z.string().min(1),
   projectBillableRateAmount: z.number().int().nonnegative().nullable(),
   clientBillableRateAmount: z.number().int().nonnegative().nullable(),
+  clientCurrency: z.string().min(1),
   createdByUserId: z.string().min(1),
   assignees: z.array(agencyProjectTaskAssigneeSchema),
   viewerStatus: agencyProjectTaskMemberStatusSchema.optional(),

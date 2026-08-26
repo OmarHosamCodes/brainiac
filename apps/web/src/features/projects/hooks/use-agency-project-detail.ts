@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { parseBillableRateAmount } from "@/features/shared/format-rate";
-import { resolveEffectiveBillableRate } from "@/features/billing/client-billable-rate";
+import { resolveEffectiveBillableRate } from "@orch/api/routers/agency-ops/billing/client-billable-income";
 import { useAgencyProjectJourney } from "@/features/projects/use-agency-project-journey";
 import {
   selectIsProjectMutationPending,
@@ -143,8 +143,7 @@ export function useAgencyProjectDetail({
   }, [project?.billableRateAmount, project?.id]);
 
   const parsedProjectRate = parseBillableRateAmount(editBillableRateDraft);
-  const nextProjectRate =
-    editBillableRateDraft.trim() === "" ? null : parsedProjectRate;
+  const nextProjectRate = editBillableRateDraft.trim() === "" ? null : parsedProjectRate;
   const canSaveProjectRate =
     Boolean(project) &&
     isOwner &&

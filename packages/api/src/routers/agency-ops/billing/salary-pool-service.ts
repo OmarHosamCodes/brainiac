@@ -63,11 +63,7 @@ function mapPoolRecord(
   };
 }
 
-async function loadRateDerivedSalaryLines(
-  teamId: string,
-  periodStart: Date,
-  periodEnd: Date,
-) {
+async function loadRateDerivedSalaryLines(teamId: string, periodStart: Date, periodEnd: Date) {
   return db
     .select({
       payeeUserId: agencyOpsPayoutLine.payeeUserId,
@@ -284,37 +280,57 @@ export async function recordSalaryPoolPayment(
   const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
   const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
 
-  const loaded = await loadSalaryPoolRowByPeriod(input.teamId, periodStart, periodEnd);
-  if (!loaded) {
-    throw new ORPCError("NOT_FOUND", {
-      message: "Create a Team salaries total for this period first.",
+  const result = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({
+        pool: agencyOpsSalaryPool,
+        run: agencyOpsPayoutRun,
+      })
+      .from(agencyOpsSalaryPool)
+      .innerJoin(agencyOpsPayoutRun, eq(agencyOpsPayoutRun.id, agencyOpsSalaryPool.runId))
+      .where(
+        and(
+          eq(agencyOpsSalaryPool.teamId, input.teamId),
+          eq(agencyOpsPayoutRun.periodStart, periodStart),
+          eq(agencyOpsPayoutRun.periodEnd, periodEnd),
+        ),
+      )
+      .limit(1)
+      .for("update", { of: agencyOpsSalaryPool });
+
+    if (!row) {
+      throw new ORPCError("NOT_FOUND", {
+        message: "Create a Team salaries total for this period first.",
+      });
+    }
+
+    const poolRemaining = salaryPoolRemaining(row.pool.totalAmount, row.pool.paidAmount);
+    const paymentError = validateSalaryPoolPayment({
+      paymentAmount: input.amount,
+      poolRemaining,
     });
-  }
+    if (paymentError) {
+      throw new ORPCError("BAD_REQUEST", { message: paymentError });
+    }
 
-  const poolRemaining = salaryPoolRemaining(loaded.pool.totalAmount, loaded.pool.paidAmount);
-  const paymentError = validateSalaryPoolPayment({
-    paymentAmount: input.amount,
-    poolRemaining,
+    const nextPaid = nextPoolPaidAmount(row.pool.paidAmount, input.amount);
+    const now = new Date();
+
+    const [updated] = await tx
+      .update(agencyOpsSalaryPool)
+      .set({
+        paidAmount: nextPaid,
+        updatedAt: now,
+      })
+      .where(eq(agencyOpsSalaryPool.id, row.pool.id))
+      .returning();
+
+    if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
+
+    return mapPoolRecord(updated, row.run);
   });
-  if (paymentError) {
-    throw new ORPCError("BAD_REQUEST", { message: paymentError });
-  }
 
-  const nextPaid = nextPoolPaidAmount(loaded.pool.paidAmount, input.amount);
-  const now = new Date();
-
-  const [updated] = await db
-    .update(agencyOpsSalaryPool)
-    .set({
-      paidAmount: nextPaid,
-      updatedAt: now,
-    })
-    .where(eq(agencyOpsSalaryPool.id, loaded.pool.id))
-    .returning();
-
-  if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
-
-  return mapPoolRecord(updated, loaded.run);
+  return result;
 }
 
 export async function assertNoSalaryPoolForRateDerivedExport(

@@ -105,6 +105,32 @@ describe("expensePeriodTotals", () => {
     });
   });
 
+  test("includes overdue subscription dues still visible in the period", () => {
+    const totals = expensePeriodTotals({
+      periodStart: new Date("2026-08-01T00:00:00.000Z"),
+      periodEnd: new Date("2026-09-01T00:00:00.000Z"),
+      expenses: [
+        {
+          id: "overdue",
+          kind: "subscription",
+          amount: 50_000,
+          paidAmount: 0,
+          currency: "EGP",
+          nextDueAt: new Date("2026-07-20T00:00:00.000Z"),
+          occurredAt: null,
+          createdAt: new Date("2026-06-01T00:00:00.000Z"),
+        },
+      ],
+      occurrences: [],
+    });
+
+    expect(totals).toEqual({
+      amount: 50_000,
+      paidAmount: 0,
+      currency: "EGP",
+    });
+  });
+
   test("does not double-count a partially paid current subscription occurrence", () => {
     const dueAt = new Date("2026-08-24T00:00:00.000Z");
     const totals = expensePeriodTotals({

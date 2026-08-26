@@ -325,14 +325,10 @@ export async function updateExpense(
     input.currency !== undefined ? input.currency : existing.currency
   ).toUpperCase();
   const rawSourceAmount =
-    amountMode === "variable"
-      ? 0
-      : (input.amount ?? existing.sourceAmount ?? existing.amount);
+    amountMode === "variable" ? 0 : (input.amount ?? existing.sourceAmount ?? existing.amount);
   const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
   const money =
-    input.amount !== undefined ||
-    input.currency !== undefined ||
-    input.amountMode !== undefined
+    input.amount !== undefined || input.currency !== undefined || input.amountMode !== undefined
       ? moneyCtx.resolve(rawSourceAmount, sourceCurrency)
       : {
           amount: existing.amount,
@@ -341,7 +337,11 @@ export async function updateExpense(
           fxRate: existing.fxRate,
           fxAsOf: existing.fxAsOf?.toISOString() ?? new Date().toISOString(),
         };
-  if (input.amount !== undefined || input.currency !== undefined || input.amountMode !== undefined) {
+  if (
+    input.amount !== undefined ||
+    input.currency !== undefined ||
+    input.amountMode !== undefined
+  ) {
     await moneyCtx.lock();
   }
 
@@ -417,40 +417,43 @@ export async function recordExpensePayment(
     throw new ORPCError("BAD_REQUEST", { message: "Payment amount must be a positive integer." });
   }
 
-  const [existing] = await db
-    .select()
-    .from(agencyOpsExpense)
-    .where(and(eq(agencyOpsExpense.id, input.expenseId), eq(agencyOpsExpense.teamId, input.teamId)))
-    .limit(1);
-
-  if (!existing) {
-    throw new ORPCError("NOT_FOUND", { message: "Expense not found." });
-  }
-  if (existing.status === "paid" && existing.amountMode !== "variable") {
-    throw new ORPCError("BAD_REQUEST", { message: "Expense is already paid." });
-  }
-
-  const plan = planExpensePayment({
-    kind: existing.kind,
-    amountMode: existing.amountMode ?? "fixed",
-    period: existing.period ?? null,
-    templateAmount: existing.amount,
-    paidAmount: existing.paidAmount ?? 0,
-    paymentAmount: input.amount,
-    nextDueAt: existing.nextDueAt,
-    startsAt: existing.startsAt,
-    now: new Date(),
-  });
-  if (!plan.ok) {
-    throw new ORPCError("BAD_REQUEST", { message: plan.error });
-  }
-
-  const occurrenceDueAt =
-    plan.writeOccurrence && existing.kind === "subscription"
-      ? (existing.nextDueAt ?? existing.startsAt ?? new Date())
-      : null;
-
   const row = await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(agencyOpsExpense)
+      .where(
+        and(eq(agencyOpsExpense.id, input.expenseId), eq(agencyOpsExpense.teamId, input.teamId)),
+      )
+      .limit(1)
+      .for("update");
+
+    if (!existing) {
+      throw new ORPCError("NOT_FOUND", { message: "Expense not found." });
+    }
+    if (existing.status === "paid" && existing.amountMode !== "variable") {
+      throw new ORPCError("BAD_REQUEST", { message: "Expense is already paid." });
+    }
+
+    const plan = planExpensePayment({
+      kind: existing.kind,
+      amountMode: existing.amountMode ?? "fixed",
+      period: existing.period ?? null,
+      templateAmount: existing.amount,
+      paidAmount: existing.paidAmount ?? 0,
+      paymentAmount: input.amount,
+      nextDueAt: existing.nextDueAt,
+      startsAt: existing.startsAt,
+      now: new Date(),
+    });
+    if (!plan.ok) {
+      throw new ORPCError("BAD_REQUEST", { message: plan.error });
+    }
+
+    const occurrenceDueAt =
+      plan.writeOccurrence && existing.kind === "subscription"
+        ? (existing.nextDueAt ?? existing.startsAt ?? new Date())
+        : null;
+
     if (occurrenceDueAt) {
       await tx
         .insert(agencyOpsExpenseOccurrence)

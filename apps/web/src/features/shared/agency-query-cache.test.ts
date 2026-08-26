@@ -42,6 +42,7 @@ function makeTask(id: string, overrides: Record<string, unknown> = {}) {
     currency: "USD",
     projectBillableRateAmount: null,
     clientBillableRateAmount: null,
+    clientCurrency: "USD",
     createdByUserId: "user-1",
     assignees: [],
     dueDate: null,

@@ -3,7 +3,6 @@ export type MyTasksEditDraft = {
   assignedToTeam: boolean;
   assigneeUserIds: string[];
   estimateMinutes: number | null;
-  /** Major-unit draft; empty string means inherit parent rate. */
   billableRateDraft: string;
 };
 
@@ -49,7 +48,6 @@ export function canSaveMyTasksEdit(args: {
   draft: MyTasksEditDraft;
   baseline: MyTasksEditDraft;
   pending: boolean;
-  /** When set, blank draft is ok; non-blank must parse. */
   billableRateAmountValid?: boolean;
 }): boolean {
   if (args.pending) return false;
