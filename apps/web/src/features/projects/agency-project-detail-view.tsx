@@ -29,11 +29,16 @@ import {
   agencyPanelClass,
 } from "@/features/shared/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
-import { formatRate } from "@/features/shared/format-rate";
+import {
+  AGENCY_CURRENCY_OPTIONS,
+  catalogRateAmount,
+  formatRate,
+} from "@/features/shared/format-rate";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { type AgencyProjectDetailViewModel } from "./hooks/use-agency-project-detail";
 
 type AgencyProjectDetailViewProps = {
@@ -95,6 +100,10 @@ export function AgencyProjectDetailView({
     canvasNodeHref,
     editBillableRateDraft,
     onEditBillableRateDraftChange,
+    editCurrencyDraft,
+    onEditCurrencyDraftChange,
+    agencyCurrency,
+    ratePreviewAmount,
     saveProjectRate,
     canSaveProjectRate,
   } = viewModel;
@@ -370,32 +379,52 @@ export function AgencyProjectDetailView({
                     }}
                   >
                     <div>
-                      <Label htmlFor={`project-rate-${project.id}`} className="text-[11px] font-bold">
+                      <Label
+                        htmlFor={`project-rate-${project.id}`}
+                        className="text-[11px] font-bold"
+                      >
                         Project rate / hour
                       </Label>
-                      <Input
-                        id={`project-rate-${project.id}`}
-                        value={editBillableRateDraft}
-                        onChange={(event) => onEditBillableRateDraftChange(event.target.value)}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Inherit client rate"
-                        className="mt-1"
-                      />
+                      <div className="mt-1 flex gap-2">
+                        <Input
+                          id={`project-rate-${project.id}`}
+                          value={editBillableRateDraft}
+                          onChange={(event) => onEditBillableRateDraftChange(event.target.value)}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Inherit client rate"
+                          className="min-w-0 flex-1"
+                        />
+                        <Select value={editCurrencyDraft} onValueChange={onEditCurrencyDraftChange}>
+                          <SelectTrigger aria-label="Rate currency" className="w-[5.5rem] shrink-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AGENCY_CURRENCY_OPTIONS.map((code) => (
+                              <SelectItem key={code} value={code}>
+                                {code}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {ratePreviewAmount != null ? (
+                        <p className="mt-1 text-[11px] text-muted">
+                          ≈ {formatRate(ratePreviewAmount, agencyCurrency, { perHour: true })}
+                        </p>
+                      ) : null}
                       <p className="mt-1 text-[11px] text-muted">
                         Client default:{" "}
-                        {formatRate(
-                          project.clientBillableRateAmount,
-                          project.clientCurrency,
-                          { perHour: true },
-                        )}
+                        {formatRate(project.clientBillableRateAmount, project.clientCurrency, {
+                          perHour: true,
+                        })}
                       </p>
                       <p className="mt-1 text-[11px] text-muted">
                         Effective now:{" "}
                         {formatRate(
                           project.effectiveBillableRateAmount,
-                          project.clientCurrency,
+                          project.effectiveBillableRateCurrency,
                           { perHour: true },
                         )}
                       </p>
@@ -409,7 +438,16 @@ export function AgencyProjectDetailView({
                     <div className="flex justify-between gap-3">
                       <dt className="text-muted">Project override</dt>
                       <dd className="font-mono font-bold tabular-nums text-highlighted">
-                        {formatRate(project.billableRateAmount, project.currency, { perHour: true })}
+                        {formatRate(
+                          catalogRateAmount(
+                            project.sourceBillableRateAmount,
+                            project.billableRateAmount,
+                          ),
+                          project.billableRateAmount != null
+                            ? project.currency
+                            : project.clientCurrency,
+                          { perHour: true },
+                        )}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-3">
@@ -417,7 +455,7 @@ export function AgencyProjectDetailView({
                       <dd className="font-mono font-bold tabular-nums text-highlighted">
                         {formatRate(
                           project.effectiveBillableRateAmount,
-                          project.clientCurrency,
+                          project.effectiveBillableRateCurrency,
                           { perHour: true },
                         )}
                       </dd>

@@ -1,9 +1,12 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 
-import { resolveEffectiveBillableRate } from "@orch/api/routers/agency-ops/billing/client-billable-income";
 import type { AgencyMemberOption } from "@/features/shared/agency-member-option";
-import { parseBillableRateAmount } from "@/features/shared/format-rate";
+import {
+  catalogWinningRate,
+  parseBillableRateAmount,
+  previewConvertedRate,
+} from "@/features/shared/format-rate";
 import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 import {
   canSaveMyTasksEdit,
@@ -12,6 +15,7 @@ import {
 } from "@/features/task-management/agency-my-tasks-edit-draft";
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
 import { teamDetailQueryOptions } from "@/features/team/team-queries";
+import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 export type UseAgencyMyTasksEditDialogOptions = {
@@ -38,9 +42,14 @@ export type AgencyMyTasksEditDialogViewModel = {
   isOwner: boolean;
   billableRateDraft: string;
   setBillableRateDraft: (value: string) => void;
+  billableRateCurrency: string;
+  setBillableRateCurrency: (value: string) => void;
   parentRateAmount: number | null;
+  parentRateCurrency: string;
   effectiveRateAmount: number | null;
-  rateCurrency: string;
+  effectiveRateCurrency: string;
+  agencyCurrency: string;
+  ratePreviewAmount: number | null;
   canSubmit: boolean;
   pending: boolean;
   editError: string | null;
@@ -55,6 +64,7 @@ function emptyDraft(): MyTasksEditDraft {
     assigneeUserIds: [],
     estimateMinutes: null,
     billableRateDraft: "",
+    billableRateCurrency: "USD",
   };
 }
 
@@ -81,6 +91,13 @@ export function useAgencyMyTasksEditDialog({
   });
   const isOwner = teamQuery.data?.role === "owner";
 
+  const fxRatesQuery = useQuery({
+    ...orpc.agencyOps.fxRates.list.queryOptions({
+      input: { teamId },
+    }),
+    enabled: Boolean(teamId) && open && isOwner,
+  });
+
   useEffect(() => {
     if (!open) {
       setEditError(null);
@@ -92,20 +109,49 @@ export function useAgencyMyTasksEditDialog({
     setEditError(null);
   }, [open, task.id]);
 
-  const parentRateAmount = resolveEffectiveBillableRate(
-    null,
-    task.projectBillableRateAmount,
-    task.clientBillableRateAmount,
+  const parentRate = catalogWinningRate(
+    { billableRateAmount: null },
+    {
+      billableRateAmount: task.projectBillableRateAmount,
+      sourceBillableRateAmount: task.projectSourceBillableRateAmount,
+      currency: task.projectCurrency,
+    },
+    {
+      billableRateAmount: task.clientBillableRateAmount,
+      sourceBillableRateAmount: task.clientSourceBillableRateAmount,
+      currency: task.clientCurrency,
+    },
   );
   const parsedTaskRate =
     draft.billableRateDraft.trim() === "" ? null : parseBillableRateAmount(draft.billableRateDraft);
   const billableRateAmountValid = draft.billableRateDraft.trim() === "" || parsedTaskRate !== null;
-  const effectiveRateAmount = resolveEffectiveBillableRate(
-    parsedTaskRate,
-    task.projectBillableRateAmount,
-    task.clientBillableRateAmount,
+  const effectiveRate = catalogWinningRate(
+    {
+      billableRateAmount: parsedTaskRate,
+      sourceBillableRateAmount: parsedTaskRate,
+      currency: draft.billableRateCurrency,
+    },
+    {
+      billableRateAmount: task.projectBillableRateAmount,
+      sourceBillableRateAmount: task.projectSourceBillableRateAmount,
+      currency: task.projectCurrency,
+    },
+    {
+      billableRateAmount: task.clientBillableRateAmount,
+      sourceBillableRateAmount: task.clientSourceBillableRateAmount,
+      currency: task.clientCurrency,
+    },
   );
-  const rateCurrency = task.clientCurrency || "USD";
+  const agencyCurrency = fxRatesQuery.data?.agencyCurrency ?? (task.clientCurrency || "USD");
+  const ratePreviewAmount =
+    parsedTaskRate != null && draft.billableRateCurrency !== agencyCurrency
+      ? previewConvertedRate(
+          parsedTaskRate,
+          draft.billableRateCurrency,
+          agencyCurrency,
+          fxRatesQuery.data?.items ?? [],
+        )
+      : null;
 
   const canSubmit = canSaveMyTasksEdit({
     draft,
@@ -142,6 +188,10 @@ export function useAgencyMyTasksEditDialog({
     setDraft((prev) => ({ ...prev, billableRateDraft: value }));
   }
 
+  function setBillableRateCurrency(value: string) {
+    setDraft((prev) => ({ ...prev, billableRateCurrency: value }));
+  }
+
   function onCancel() {
     onOpenChange(false);
   }
@@ -152,7 +202,9 @@ export function useAgencyMyTasksEditDialog({
     setEditError(null);
     try {
       const rateChanged =
-        isOwner && baseline.billableRateDraft.trim() !== draft.billableRateDraft.trim();
+        isOwner &&
+        (baseline.billableRateDraft.trim() !== draft.billableRateDraft.trim() ||
+          baseline.billableRateCurrency !== draft.billableRateCurrency);
       const billableRateAmount = rateChanged
         ? draft.billableRateDraft.trim() === ""
           ? null
@@ -169,7 +221,7 @@ export function useAgencyMyTasksEditDialog({
         ...(rateChanged
           ? {
               billableRateAmount,
-              currency: rateCurrency,
+              currency: billableRateAmount == null ? undefined : draft.billableRateCurrency,
             }
           : {}),
       });
@@ -194,9 +246,14 @@ export function useAgencyMyTasksEditDialog({
     isOwner,
     billableRateDraft: draft.billableRateDraft,
     setBillableRateDraft,
-    parentRateAmount,
-    effectiveRateAmount,
-    rateCurrency,
+    billableRateCurrency: draft.billableRateCurrency,
+    setBillableRateCurrency,
+    parentRateAmount: parentRate.amount,
+    parentRateCurrency: parentRate.currency,
+    effectiveRateAmount: effectiveRate.amount,
+    effectiveRateCurrency: effectiveRate.currency,
+    agencyCurrency,
+    ratePreviewAmount,
     canSubmit,
     pending,
     editError,

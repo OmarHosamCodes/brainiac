@@ -8,7 +8,12 @@ import {
   agencyFocusRingClass,
   agencyLabelClass,
 } from "@/features/shared/agency-ui";
-import { formatRate, parseBillableRateAmount } from "@/features/shared/format-rate";
+import {
+  AGENCY_CURRENCY_OPTIONS,
+  catalogRateAmount,
+  formatRate,
+  parseBillableRateAmount,
+} from "@/features/shared/format-rate";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
 import { cn } from "@/lib/utils";
@@ -70,6 +75,8 @@ export function AgencyClientsTableView({
     setEditCategoryDraft,
     editBillableRateDraft,
     setEditBillableRateDraft,
+    editCurrencyDraft,
+    setEditCurrencyDraft,
     saveClientEdits,
     createProjectClientId,
     setCreateProjectClientId,
@@ -206,10 +213,22 @@ export function AgencyClientsTableView({
                       <span
                         className={cn(
                           "font-mono font-bold tabular-nums",
-                          client.billableRateAmount === null ? "text-dimmed" : "text-highlighted",
+                          catalogRateAmount(
+                            client.sourceBillableRateAmount,
+                            client.billableRateAmount,
+                          ) === null
+                            ? "text-dimmed"
+                            : "text-highlighted",
                         )}
                       >
-                        {formatRate(client.billableRateAmount, client.currency, { perHour: true })}
+                        {formatRate(
+                          catalogRateAmount(
+                            client.sourceBillableRateAmount,
+                            client.billableRateAmount,
+                          ),
+                          client.currency,
+                          { perHour: true },
+                        )}
                       </span>
                     </td>
                     <td className="px-3 py-3">
@@ -351,16 +370,36 @@ export function AgencyClientsTableView({
                                     >
                                       Catalog rate / hour
                                     </Label>
-                                    <Input
-                                      id={`edit-client-rate-${client.id}`}
-                                      value={editBillableRateDraft}
-                                      onChange={(e) => setEditBillableRateDraft(e.target.value)}
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      placeholder="Leave blank if not set"
-                                      className="mt-1"
-                                    />
+                                    <div className="mt-1 flex gap-2">
+                                      <Input
+                                        id={`edit-client-rate-${client.id}`}
+                                        value={editBillableRateDraft}
+                                        onChange={(e) => setEditBillableRateDraft(e.target.value)}
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="Leave blank if not set"
+                                        className="min-w-0 flex-1"
+                                      />
+                                      <Select
+                                        value={editCurrencyDraft}
+                                        onValueChange={setEditCurrencyDraft}
+                                      >
+                                        <SelectTrigger
+                                          aria-label="Rate currency"
+                                          className="w-[5.5rem] shrink-0"
+                                        >
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {AGENCY_CURRENCY_OPTIONS.map((code) => (
+                                            <SelectItem key={code} value={code}>
+                                              {code}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
                                   </div>
                                 </div>
                                 <Button

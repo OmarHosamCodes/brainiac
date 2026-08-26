@@ -20,6 +20,7 @@ describe("myTasksEditDraftFromTask", () => {
       assigneeUserIds: ["u1", "u2"],
       estimateMinutes: 60,
       billableRateDraft: "",
+      billableRateCurrency: "USD",
     });
   });
 
@@ -29,10 +30,15 @@ describe("myTasksEditDraftFromTask", () => {
     );
   });
 
-  test("formats billable rate draft from minor units", () => {
+  test("formats billable rate draft from source minor units", () => {
     expect(
-      myTasksEditDraftFromTask({ ...task, billableRateAmount: 15_000 }).billableRateDraft,
-    ).toBe("150");
+      myTasksEditDraftFromTask({
+        ...task,
+        billableRateAmount: 101_880,
+        sourceBillableRateAmount: 2_000,
+        currency: "USD",
+      }).billableRateDraft,
+    ).toBe("20");
   });
 });
 
@@ -54,6 +60,9 @@ describe("isMyTasksEditDraftDirty", () => {
     expect(isMyTasksEditDraftDirty(baseline, { ...baseline, assignedToTeam: true })).toBe(true);
     expect(isMyTasksEditDraftDirty(baseline, { ...baseline, assigneeUserIds: ["u1"] })).toBe(true);
     expect(isMyTasksEditDraftDirty(baseline, { ...baseline, billableRateDraft: "100" })).toBe(true);
+    expect(isMyTasksEditDraftDirty(baseline, { ...baseline, billableRateCurrency: "EGP" })).toBe(
+      true,
+    );
   });
 });
 

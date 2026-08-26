@@ -9,7 +9,7 @@ import {
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
-import { parseBillableRateAmount } from "@/features/shared/format-rate";
+import { catalogRateAmount, parseBillableRateAmount } from "@/features/shared/format-rate";
 import {
   selectIsClientMutationPending,
   selectIsContactMutationPending,
@@ -29,6 +29,7 @@ export type AgencyClientsTableClient = {
   name: string;
   category: AgencyClientCategory;
   billableRateAmount: number | null;
+  sourceBillableRateAmount: number | null;
   currency: string;
   archivedAt: string | null;
 };
@@ -61,6 +62,8 @@ export type AgencyClientsTableViewModel = {
   setEditCategoryDraft: (value: AgencyClientCategory) => void;
   editBillableRateDraft: string;
   setEditBillableRateDraft: (value: string) => void;
+  editCurrencyDraft: string;
+  setEditCurrencyDraft: (value: string) => void;
   saveClientEdits: (clientId: string) => void;
   createProjectClientId: string;
   setCreateProjectClientId: (id: string) => void;
@@ -88,6 +91,7 @@ export function useAgencyClientsTable({
   const [editNameDraft, setEditNameDraft] = useState("");
   const [editCategoryDraft, setEditCategoryDraft] = useState<AgencyClientCategory>("external");
   const [editBillableRateDraft, setEditBillableRateDraft] = useState("");
+  const [editCurrencyDraft, setEditCurrencyDraft] = useState("USD");
 
   const workSchedule = useTeamWorkSchedule(teamId);
   const teamQuery = useQuery({
@@ -179,11 +183,14 @@ export function useAgencyClientsTable({
   function openEdit(clientId: string) {
     const client = clients.find((entry) => entry.id === clientId);
     if (client) {
+      const catalogAmount = catalogRateAmount(
+        client.sourceBillableRateAmount,
+        client.billableRateAmount,
+      );
       setEditNameDraft(client.name);
       setEditCategoryDraft(client.category);
-      setEditBillableRateDraft(
-        client.billableRateAmount === null ? "" : String(client.billableRateAmount / 100),
-      );
+      setEditBillableRateDraft(catalogAmount === null ? "" : String(catalogAmount / 100));
+      setEditCurrencyDraft(client.currency);
     }
     setEditClientId(clientId);
   }
@@ -204,12 +211,18 @@ export function useAgencyClientsTable({
       name?: string;
       category?: AgencyClientCategory;
       billableRateAmount?: number | null;
+      currency?: string;
     } = { teamId, clientId };
 
     if (name !== client.name) patch.name = name;
     if (editCategoryDraft !== client.category) patch.category = editCategoryDraft;
-    if (billableRateAmount !== client.billableRateAmount) {
+    const catalogAmount = catalogRateAmount(
+      client.sourceBillableRateAmount,
+      client.billableRateAmount,
+    );
+    if (billableRateAmount !== catalogAmount || editCurrencyDraft !== client.currency) {
       patch.billableRateAmount = billableRateAmount;
+      patch.currency = editCurrencyDraft;
     }
 
     setEditClientId("");
@@ -271,6 +284,8 @@ export function useAgencyClientsTable({
     setEditCategoryDraft,
     editBillableRateDraft,
     setEditBillableRateDraft,
+    editCurrencyDraft,
+    setEditCurrencyDraft,
     saveClientEdits,
     createProjectClientId,
     setCreateProjectClientId,

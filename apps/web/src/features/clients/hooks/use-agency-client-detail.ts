@@ -8,7 +8,11 @@ import {
 } from "@/features/clients/client-contact-completeness";
 import { agencyManagementHref } from "@/features/shared/agency-management-sections";
 import { useAgencyClientsQuery, useAgencyProjectsQuery } from "@/features/shared/agency-queries";
-import { parseBillableRateAmount } from "@/features/shared/format-rate";
+import {
+  catalogRateAmount,
+  parseBillableRateAmount,
+  previewConvertedRate,
+} from "@/features/shared/format-rate";
 import {
   selectIsClientMutationPending,
   selectIsContactMutationPending,
@@ -48,6 +52,7 @@ export type AgencyClientDetailViewModel = {
     name: string;
     category: "internal" | "external";
     billableRateAmount: number | null;
+    sourceBillableRateAmount: number | null;
     currency: string;
     archivedAt: string | null;
   } | null;
@@ -74,6 +79,10 @@ export type AgencyClientDetailViewModel = {
   setEditCategoryDraft: (value: "internal" | "external") => void;
   editBillableRateDraft: string;
   setEditBillableRateDraft: (value: string) => void;
+  editCurrencyDraft: string;
+  setEditCurrencyDraft: (value: string) => void;
+  agencyCurrency: string;
+  ratePreviewAmount: number | null;
   saveCommercial: () => void;
   isClientMutationPending: boolean;
   canViewBilling: boolean;
@@ -119,6 +128,7 @@ export function useAgencyClientDetail({
   const [editNameDraft, setEditNameDraft] = useState("");
   const [editCategoryDraft, setEditCategoryDraft] = useState<"internal" | "external">("external");
   const [editBillableRateDraft, setEditBillableRateDraft] = useState("");
+  const [editCurrencyDraft, setEditCurrencyDraft] = useState("USD");
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
   const teamQuery = useQuery({
@@ -142,6 +152,13 @@ export function useAgencyClientDetail({
     archiveFilter: "all",
   });
 
+  const fxRatesQuery = useQuery({
+    ...orpc.agencyOps.fxRates.list.queryOptions({
+      input: { teamId },
+    }),
+    enabled: Boolean(teamId) && isOwner,
+  });
+
   const summary = summaryQuery.data;
   const client = summary?.client ?? null;
 
@@ -163,9 +180,12 @@ export function useAgencyClientDetail({
     if (!client) return;
     setEditNameDraft(client.name);
     setEditCategoryDraft(client.category);
-    setEditBillableRateDraft(
-      client.billableRateAmount === null ? "" : String(client.billableRateAmount / 100),
+    const catalogAmount = catalogRateAmount(
+      client.sourceBillableRateAmount,
+      client.billableRateAmount,
     );
+    setEditBillableRateDraft(catalogAmount === null ? "" : String(catalogAmount / 100));
+    setEditCurrencyDraft(client.currency);
   }, [client]);
 
   const projects = useMemo(
@@ -216,12 +236,18 @@ export function useAgencyClientDetail({
       name?: string;
       category?: "internal" | "external";
       billableRateAmount?: number | null;
+      currency?: string;
     } = { teamId, clientId: client.id };
 
     if (name !== client.name) patch.name = name;
     if (editCategoryDraft !== client.category) patch.category = editCategoryDraft;
-    if (billableRateAmount !== client.billableRateAmount) {
+    const catalogAmount = catalogRateAmount(
+      client.sourceBillableRateAmount,
+      client.billableRateAmount,
+    );
+    if (billableRateAmount !== catalogAmount || editCurrencyDraft !== client.currency) {
       patch.billableRateAmount = billableRateAmount;
+      patch.currency = editCurrencyDraft;
     }
     if (Object.keys(patch).length === 2) return;
     void agencyOps.updateClient(patch).then(() => {
@@ -254,6 +280,17 @@ export function useAgencyClientDetail({
   const isLoading = summaryQuery.isPending || projectsQuery.isPending;
   const isError = summaryQuery.isError;
   const errorMessage = getErrorMessage(summaryQuery.error, "Try refreshing.");
+  const agencyCurrency = fxRatesQuery.data?.agencyCurrency ?? client?.currency ?? "USD";
+  const parsedRateDraft = parseBillableRateAmount(editBillableRateDraft);
+  const ratePreviewAmount =
+    parsedRateDraft != null && editCurrencyDraft !== agencyCurrency
+      ? previewConvertedRate(
+          parsedRateDraft,
+          editCurrencyDraft,
+          agencyCurrency,
+          fxRatesQuery.data?.items ?? [],
+        )
+      : null;
 
   return {
     teamId,
@@ -299,6 +336,10 @@ export function useAgencyClientDetail({
     setEditCategoryDraft,
     editBillableRateDraft,
     setEditBillableRateDraft,
+    editCurrencyDraft,
+    setEditCurrencyDraft,
+    agencyCurrency,
+    ratePreviewAmount,
     saveCommercial,
     isClientMutationPending,
     canViewBilling: summary?.billing.canView ?? false,

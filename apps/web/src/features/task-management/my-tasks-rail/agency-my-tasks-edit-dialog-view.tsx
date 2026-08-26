@@ -4,10 +4,11 @@ import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { agencyInputPlaceholderClass } from "@/features/shared/agency-ui";
 import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
-import { formatRate } from "@/features/shared/format-rate";
+import { AGENCY_CURRENCY_OPTIONS, formatRate } from "@/features/shared/format-rate";
 import type { AgencyMyTasksEditDialogViewModel } from "@/features/task-management/hooks/use-agency-my-tasks-edit-dialog";
 import { AgencyMyTasksEstimatePopover } from "@/features/task-management/my-tasks-rail/agency-my-tasks-estimate-popover";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 
 type AgencyMyTasksEditDialogViewProps = {
   open: boolean;
@@ -35,9 +36,14 @@ export function AgencyMyTasksEditDialogView({
     isOwner,
     billableRateDraft,
     setBillableRateDraft,
+    billableRateCurrency,
+    setBillableRateCurrency,
     parentRateAmount,
+    parentRateCurrency,
     effectiveRateAmount,
-    rateCurrency,
+    effectiveRateCurrency,
+    agencyCurrency,
+    ratePreviewAmount,
     canSubmit,
     pending,
     editError,
@@ -102,28 +108,54 @@ export function AgencyMyTasksEditDialogView({
                 <Label htmlFor={`${formId}-task-rate`} className="text-[11px] font-bold">
                   Task rate / hour
                 </Label>
-                <Input
-                  id={`${formId}-task-rate`}
-                  value={billableRateDraft}
-                  onChange={(event) => setBillableRateDraft(event.target.value)}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="Inherit project/client rate"
-                  disabled={pending}
-                  className="h-9"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id={`${formId}-task-rate`}
+                    value={billableRateDraft}
+                    onChange={(event) => setBillableRateDraft(event.target.value)}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Inherit project/client rate"
+                    disabled={pending}
+                    className="h-9 min-w-0 flex-1"
+                  />
+                  <Select
+                    value={billableRateCurrency}
+                    onValueChange={setBillableRateCurrency}
+                    disabled={pending}
+                  >
+                    <SelectTrigger aria-label="Rate currency" className="h-9 w-[5.5rem] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AGENCY_CURRENCY_OPTIONS.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {ratePreviewAmount != null ? (
+                  <p className="text-[11px] text-muted">
+                    ≈ {formatRate(ratePreviewAmount, agencyCurrency, { perHour: true })}
+                  </p>
+                ) : null}
                 <p className="text-[11px] text-muted">
-                  Parent default: {formatRate(parentRateAmount, rateCurrency, { perHour: true })}
+                  Parent default:{" "}
+                  {formatRate(parentRateAmount, parentRateCurrency, { perHour: true })}
                 </p>
                 <p className="text-[11px] text-muted">
-                  Effective now: {formatRate(effectiveRateAmount, rateCurrency, { perHour: true })}
+                  Effective now:{" "}
+                  {formatRate(effectiveRateAmount, effectiveRateCurrency, { perHour: true })}
                 </p>
               </div>
             ) : (
               <div className="space-y-1 border-t border-default pt-3 text-[11px] text-muted">
                 <p>
-                  Effective rate: {formatRate(effectiveRateAmount, rateCurrency, { perHour: true })}
+                  Effective rate:{" "}
+                  {formatRate(effectiveRateAmount, effectiveRateCurrency, { perHour: true })}
                 </p>
               </div>
             )}

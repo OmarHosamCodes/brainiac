@@ -49,11 +49,6 @@ describe("isRedundantMyTasksAdd", () => {
         nextAssignedToTeam: false,
         nextAssigneeUserIds: ["me", "sam"],
         estimateMinutes: null,
-        billableRateAmount: null,
-        currency: "USD",
-        projectBillableRateAmount: null,
-        clientBillableRateAmount: null,
-        clientCurrency: "USD",
       }),
     ).toBe(true);
   });
@@ -65,11 +60,6 @@ describe("isRedundantMyTasksAdd", () => {
         nextAssignedToTeam: false,
         nextAssigneeUserIds: ["me", "sam", "pat"],
         estimateMinutes: null,
-        billableRateAmount: null,
-        currency: "USD",
-        projectBillableRateAmount: null,
-        clientBillableRateAmount: null,
-        clientCurrency: "USD",
       }),
     ).toBe(false);
     expect(
@@ -89,11 +79,6 @@ describe("isRedundantMyTasksAdd", () => {
         nextAssignedToTeam: false,
         nextAssigneeUserIds: ["me"],
         estimateMinutes: null,
-        billableRateAmount: null,
-        currency: "USD",
-        projectBillableRateAmount: null,
-        clientBillableRateAmount: null,
-        clientCurrency: "USD",
       }),
     ).toBe(false);
   });

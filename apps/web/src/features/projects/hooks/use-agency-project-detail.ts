@@ -2,8 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { parseBillableRateAmount } from "@/features/shared/format-rate";
-import { resolveEffectiveBillableRate } from "@orch/api/routers/agency-ops/billing/client-billable-income";
+import {
+  catalogRateAmount,
+  catalogWinningRate,
+  parseBillableRateAmount,
+  previewConvertedRate,
+} from "@/features/shared/format-rate";
 import { useAgencyProjectJourney } from "@/features/projects/use-agency-project-journey";
 import {
   selectIsProjectMutationPending,
@@ -33,10 +37,13 @@ export type AgencyProjectDetailViewModel = {
     clientName: string;
     deletedAt: string | null;
     billableRateAmount: number | null;
+    sourceBillableRateAmount: number | null;
     currency: string;
     clientBillableRateAmount: number | null;
+    clientSourceBillableRateAmount: number | null;
     clientCurrency: string;
     effectiveBillableRateAmount: number | null;
+    effectiveBillableRateCurrency: string;
   } | null;
   projectBudget: {
     projectId: string;
@@ -75,6 +82,10 @@ export type AgencyProjectDetailViewModel = {
   canvasNodeHref: string | null;
   editBillableRateDraft: string;
   onEditBillableRateDraftChange: (value: string) => void;
+  editCurrencyDraft: string;
+  onEditCurrencyDraftChange: (value: string) => void;
+  agencyCurrency: string;
+  ratePreviewAmount: number | null;
   saveProjectRate: () => void;
   canSaveProjectRate: boolean;
 };
@@ -110,6 +121,7 @@ export function useAgencyProjectDetail({
   const [journeyExpandedMobile, setJourneyExpandedMobile] = useState(true);
   const [pendingTrashConfirm, setPendingTrashConfirm] = useState(false);
   const [editBillableRateDraft, setEditBillableRateDraft] = useState("");
+  const [editCurrencyDraft, setEditCurrencyDraft] = useState("USD");
 
   const journeyState = useAgencyProjectJourney(teamId, projectId, {
     enabled: Boolean(teamId && projectId),
@@ -128,28 +140,51 @@ export function useAgencyProjectDetail({
     enabled: Boolean(teamId),
   });
 
+  const fxRatesQuery = useQuery({
+    ...orpc.agencyOps.fxRates.list.queryOptions({
+      input: { teamId },
+    }),
+    enabled: Boolean(teamId) && isOwner,
+  });
+
   const project = (projectsQuery.data?.items ?? []).find((entry) => entry.id === projectId) ?? null;
 
   useEffect(() => {
     if (!project) {
       setEditBillableRateDraft("");
+      setEditCurrencyDraft("USD");
       return;
     }
-    if (project.billableRateAmount == null) {
-      setEditBillableRateDraft("");
-      return;
-    }
-    setEditBillableRateDraft(String(project.billableRateAmount / 100));
-  }, [project?.billableRateAmount, project?.id]);
+    const catalogAmount = catalogRateAmount(
+      project.sourceBillableRateAmount,
+      project.billableRateAmount,
+    );
+    setEditBillableRateDraft(catalogAmount === null ? "" : String(catalogAmount / 100));
+    setEditCurrencyDraft(
+      project.billableRateAmount != null ? project.currency : project.clientCurrency,
+    );
+  }, [
+    project?.id,
+    project?.billableRateAmount,
+    project?.sourceBillableRateAmount,
+    project?.currency,
+    project?.clientCurrency,
+  ]);
 
   const parsedProjectRate = parseBillableRateAmount(editBillableRateDraft);
   const nextProjectRate = editBillableRateDraft.trim() === "" ? null : parsedProjectRate;
+  const savedCatalogAmount = catalogRateAmount(
+    project?.sourceBillableRateAmount,
+    project?.billableRateAmount,
+  );
+  const projectCurrencyChanged =
+    nextProjectRate != null && editCurrencyDraft !== (project?.currency ?? project?.clientCurrency);
   const canSaveProjectRate =
     Boolean(project) &&
     isOwner &&
     !isProjectMutationPending &&
     (editBillableRateDraft.trim() === "" || parsedProjectRate !== null) &&
-    nextProjectRate !== (project?.billableRateAmount ?? null);
+    (nextProjectRate !== savedCatalogAmount || projectCurrencyChanged);
 
   function saveProjectRate() {
     if (!project || !teamId || !canSaveProjectRate) return;
@@ -161,7 +196,7 @@ export function useAgencyProjectDetail({
         teamId,
         projectId: project.id,
         billableRateAmount,
-        currency: project.clientCurrency,
+        currency: billableRateAmount == null ? undefined : editCurrencyDraft,
       })
       .then(() => void projectsQuery.refetch());
   }
@@ -298,6 +333,34 @@ export function useAgencyProjectDetail({
     });
   }
 
+  const agencyCurrency = fxRatesQuery.data?.agencyCurrency ?? project?.clientCurrency ?? "USD";
+  const ratePreviewAmount =
+    parsedProjectRate != null && editCurrencyDraft !== agencyCurrency
+      ? previewConvertedRate(
+          parsedProjectRate,
+          editCurrencyDraft,
+          agencyCurrency,
+          fxRatesQuery.data?.items ?? [],
+        )
+      : null;
+  const clientCatalogAmount = catalogRateAmount(
+    project?.clientSourceBillableRateAmount,
+    project?.clientBillableRateAmount,
+  );
+  const effectiveCatalog = catalogWinningRate(
+    { billableRateAmount: null },
+    {
+      billableRateAmount: nextProjectRate,
+      sourceBillableRateAmount: nextProjectRate,
+      currency: editCurrencyDraft,
+    },
+    {
+      billableRateAmount: project?.clientBillableRateAmount ?? null,
+      sourceBillableRateAmount: project?.clientSourceBillableRateAmount,
+      currency: project?.clientCurrency,
+    },
+  );
+
   return {
     teamId,
     projectId,
@@ -312,14 +375,13 @@ export function useAgencyProjectDetail({
           clientName: project.clientName,
           deletedAt: project.deletedAt ?? null,
           billableRateAmount: project.billableRateAmount,
+          sourceBillableRateAmount: project.sourceBillableRateAmount,
           currency: project.currency,
-          clientBillableRateAmount: project.clientBillableRateAmount,
+          clientBillableRateAmount: clientCatalogAmount,
+          clientSourceBillableRateAmount: project.clientSourceBillableRateAmount,
           clientCurrency: project.clientCurrency,
-          effectiveBillableRateAmount: resolveEffectiveBillableRate(
-            null,
-            project.billableRateAmount,
-            project.clientBillableRateAmount,
-          ),
+          effectiveBillableRateAmount: effectiveCatalog.amount,
+          effectiveBillableRateCurrency: effectiveCatalog.currency,
         }
       : null,
     projectBudget,
@@ -347,6 +409,10 @@ export function useAgencyProjectDetail({
     canvasNodeHref: linkedCanvasHref,
     editBillableRateDraft,
     onEditBillableRateDraftChange: setEditBillableRateDraft,
+    editCurrencyDraft,
+    onEditCurrencyDraftChange: setEditCurrencyDraft,
+    agencyCurrency,
+    ratePreviewAmount,
     saveProjectRate,
     canSaveProjectRate,
   };

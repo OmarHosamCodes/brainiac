@@ -17,7 +17,12 @@ import {
   agencyLabelClass,
   agencyPanelClass,
 } from "@/features/shared/agency-ui";
-import { formatRate, parseBillableRateAmount } from "@/features/shared/format-rate";
+import {
+  AGENCY_CURRENCY_OPTIONS,
+  catalogRateAmount,
+  formatRate,
+  parseBillableRateAmount,
+} from "@/features/shared/format-rate";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/utils/format-duration";
@@ -148,6 +153,10 @@ export function AgencyClientDetailView({
     setEditCategoryDraft,
     editBillableRateDraft,
     setEditBillableRateDraft,
+    editCurrencyDraft,
+    setEditCurrencyDraft,
+    agencyCurrency,
+    ratePreviewAmount,
     saveCommercial,
     isClientMutationPending,
     canViewBilling,
@@ -164,7 +173,8 @@ export function AgencyClientDetailView({
   } = viewModel;
 
   const readyToInvoice = canViewBilling && monthUninvoicedDurationSeconds > 0;
-  const rateMissing = client?.billableRateAmount === null;
+  const rateMissing =
+    catalogRateAmount(client?.sourceBillableRateAmount, client?.billableRateAmount) === null;
   const contactIncomplete = contactCompleteness !== "complete";
 
   return (
@@ -421,16 +431,38 @@ export function AgencyClientDetailView({
                       <Label htmlFor={`client-rate-${clientId}`} className="text-[11px] font-bold">
                         Catalog rate / hour
                       </Label>
-                      <Input
-                        id={`client-rate-${clientId}`}
-                        value={editBillableRateDraft}
-                        onChange={(e) => setEditBillableRateDraft(e.target.value)}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Leave blank if not set"
-                        className="mt-1"
-                      />
+                      <div className="mt-1 flex gap-2">
+                        <Input
+                          id={`client-rate-${clientId}`}
+                          value={editBillableRateDraft}
+                          onChange={(e) => setEditBillableRateDraft(e.target.value)}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="Leave blank if not set"
+                          className="min-w-0 flex-1"
+                        />
+                        <Select value={editCurrencyDraft} onValueChange={setEditCurrencyDraft}>
+                          <SelectTrigger
+                            aria-label="Rate currency"
+                            className="w-[5.5rem] shrink-0"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AGENCY_CURRENCY_OPTIONS.map((code) => (
+                              <SelectItem key={code} value={code}>
+                                {code}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {ratePreviewAmount != null ? (
+                        <p className="mt-1 text-[11px] text-muted">
+                          ≈ {formatRate(ratePreviewAmount, agencyCurrency, { perHour: true })}
+                        </p>
+                      ) : null}
                     </div>
                     <Button
                       type="submit"
@@ -452,7 +484,14 @@ export function AgencyClientDetailView({
                     <div className="flex justify-between gap-3">
                       <dt className="text-muted">Rate</dt>
                       <dd className="font-mono font-bold tabular-nums text-highlighted">
-                        {formatRate(client.billableRateAmount, client.currency, { perHour: true })}
+                        {formatRate(
+                          catalogRateAmount(
+                            client.sourceBillableRateAmount,
+                            client.billableRateAmount,
+                          ),
+                          client.currency,
+                          { perHour: true },
+                        )}
                       </dd>
                     </div>
                     <div className="flex justify-between gap-3">
