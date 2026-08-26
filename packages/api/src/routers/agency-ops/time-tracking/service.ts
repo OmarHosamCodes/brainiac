@@ -1868,3 +1868,126 @@ export async function updateAnyAgencyTimeEntry(
 
   return mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id));
 }
+
+export async function deleteAnyAgencyTimeEntry(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    entryId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const now = new Date();
+  const [deleted] = await db
+    .update(agencyOpsTimeEntry)
+    .set({
+      deletedAt: now,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .returning({ id: agencyOpsTimeEntry.id });
+
+  if (!deleted) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  return {
+    entryId: deleted.id,
+    deleted: true,
+  };
+}
+
+export async function duplicateAnyAgencyTimeEntry(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    entryId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const [source] = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      journeyStepId: agencyOpsTimeEntry.journeyStepId,
+      description: agencyOpsTimeEntry.description,
+      isBillable: agencyOpsTimeEntry.isBillable,
+      isWaste: agencyOpsTimeEntry.isWaste,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+    })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!source) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  const tagRows = await db
+    .select({ tagId: agencyOpsTimeEntryTag.tagId })
+    .from(agencyOpsTimeEntryTag)
+    .where(eq(agencyOpsTimeEntryTag.timeEntryId, source.id));
+  const tagIds = tagRows.map((row) => row.tagId);
+
+  const now = new Date();
+  const [created] = await db.transaction(async (tx) => {
+    const [entry] = await tx
+      .insert(agencyOpsTimeEntry)
+      .values({
+        id: createWorkspaceId("agency-time"),
+        teamId: source.teamId,
+        projectId: source.projectId,
+        taskId: source.taskId,
+        journeyStepId: source.journeyStepId,
+        userId: source.userId,
+        source: "manual",
+        description: source.description,
+        isBillable: source.isBillable,
+        isWaste: source.isWaste,
+        startedAt: source.startedAt,
+        endedAt: source.endedAt,
+        durationSeconds: source.durationSeconds,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: agencyOpsTimeEntry.id });
+
+    if (entry && tagIds.length > 0) {
+      await tx
+        .insert(agencyOpsTimeEntryTag)
+        .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
+    }
+
+    return [entry];
+  });
+
+  if (!created) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
+  const record = await fetchAgencyTimeEntryRecord(created.id);
+  if (!record) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  return record;
+}

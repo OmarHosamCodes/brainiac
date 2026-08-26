@@ -18,6 +18,8 @@ import {
   exportAgencyReportsCsv,
   listAllAgencyTimeEntries,
   updateAnyAgencyTimeEntry,
+  deleteAnyAgencyTimeEntry,
+  duplicateAnyAgencyTimeEntry,
 } from "./service";
 import {
   createSavedReport,
@@ -95,6 +97,31 @@ export const reportsRouter = {
           await updateAnyAgencyTimeEntry(context.session.user.id, input),
         );
         return entry;
+      }),
+    deleteEntry: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          entryId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            entryId: z.string().min(1),
+            deleted: z.boolean(),
+          })
+          .parse(await deleteAnyAgencyTimeEntry(context.session.user.id, input));
+      }),
+    duplicateEntry: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          entryId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return agencyTimeEntrySchema.parse(
+          await duplicateAnyAgencyTimeEntry(context.session.user.id, input),
+        );
       }),
     saved: {
       create: protectedProProcedure

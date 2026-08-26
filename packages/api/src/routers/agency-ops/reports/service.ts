@@ -571,6 +571,8 @@ export async function exportAgencyReportsCsv(
 import {
   listAllAgencyTimeEntries as listAllTimeEntries,
   updateAnyAgencyTimeEntry as updateAnyTimeEntry,
+  deleteAnyAgencyTimeEntry as deleteAnyTimeEntry,
+  duplicateAnyAgencyTimeEntry as duplicateAnyTimeEntry,
 } from "../time-tracking/service";
 
 export async function listAllAgencyTimeEntries(
@@ -585,4 +587,18 @@ export async function updateAnyAgencyTimeEntry(
   input: Parameters<typeof updateAnyTimeEntry>[1],
 ) {
   return updateAnyTimeEntry(actorUserId, input);
+}
+
+export async function deleteAnyAgencyTimeEntry(
+  actorUserId: string,
+  input: Parameters<typeof deleteAnyTimeEntry>[1],
+) {
+  return deleteAnyTimeEntry(actorUserId, input);
+}
+
+export async function duplicateAnyAgencyTimeEntry(
+  actorUserId: string,
+  input: Parameters<typeof duplicateAnyTimeEntry>[1],
+) {
+  return duplicateAnyTimeEntry(actorUserId, input);
 }
