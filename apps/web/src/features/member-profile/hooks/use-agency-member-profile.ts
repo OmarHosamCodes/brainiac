@@ -5,7 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "@/lib/navigation";
 import { toast } from "sonner";
 
-import type { AgencyMemberProfileViewModel, LeaveType } from "@/features/member-profile/agency-member-profile-types";
+import type {
+  AgencyMemberProfileViewModel,
+  LeaveType,
+} from "@/features/member-profile/agency-member-profile-types";
 import {
   emptyHrDraft,
   leaveRangeLabel,
@@ -17,9 +20,7 @@ import {
 import { buildMemberProfileView } from "@/features/member-profile/to-member-profile-view";
 import { buildMemberProfileGaugeDetail } from "@/features/member-profile/to-gauge-detail-context";
 import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";
-import {
-  useMemberProfileAlerts,
-} from "@/features/member-profile/hooks/use-member-profile-alerts";
+import { useMemberProfileAlerts } from "@/features/member-profile/hooks/use-member-profile-alerts";
 import { useAgencyMemberProfileStore } from "@/features/member-profile/stores/agency-member-profile";
 import type { AlertPeriodTarget } from "@/features/member-profile/member-profile-alert-period";
 import { resolveAlertPeriodTarget } from "@/features/member-profile/member-profile-alert-period";
@@ -51,6 +52,7 @@ import {
 import {
   canShiftProfilePeriodMonth,
   resolveDefaultProfilePeriodMonthStart,
+  resolveProfilePaceParams,
   resolveProfilePeriodMonthBounds,
   shiftProfilePeriodMonthWithinBounds,
 } from "@/features/member-profile/member-profile-period";
@@ -387,8 +389,45 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     customToDate,
   );
 
-  const canGoPrevCalendarMonth = canShiftProfilePeriodMonth(periodMonthStart, -1, periodMonthBounds);
+  const canGoPrevCalendarMonth = canShiftProfilePeriodMonth(
+    periodMonthStart,
+    -1,
+    periodMonthBounds,
+  );
   const canGoNextCalendarMonth = canShiftProfilePeriodMonth(periodMonthStart, 1, periodMonthBounds);
+
+  const monthlyMinHours = tenurePolicy?.monthlyMinHours ?? 200;
+  const quarterlyMinHours = tenurePolicy?.quarterlyMinHours ?? 525;
+  const requiredDailyHours =
+    tenurePolicy?.requiredDailyHours ?? DEFAULT_WORK_SCHEDULE.requiredDailyHours;
+  const offDayReduceHours = tenurePolicy?.offDayReduceHours ?? 8;
+  const paceParams = useMemo(
+    () =>
+      resolveProfilePaceParams({
+        rangeStartKey,
+        rangeEndKey,
+        tenureEnabled,
+        fiscalCalendar,
+        monthlyMinHours,
+        quarterlyMinHours,
+        effectiveRangePreset,
+        effectiveTenureMonthIndexes,
+        tenureQuarterMonths,
+        anchorDateKey: today,
+      }),
+    [
+      effectiveRangePreset,
+      effectiveTenureMonthIndexes,
+      fiscalCalendar,
+      monthlyMinHours,
+      quarterlyMinHours,
+      rangeEndKey,
+      rangeStartKey,
+      tenureEnabled,
+      tenureQuarterMonths,
+      today,
+    ],
+  );
 
   const onCalendarPrevMonth = useCallback(() => {
     const next = shiftProfilePeriodMonthWithinBounds(
@@ -421,22 +460,17 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       serverUrl,
       today,
       periodLabel,
-      monthlyMinHours: tenurePolicy?.monthlyMinHours ?? 200,
-      quarterlyMinHours: tenurePolicy?.quarterlyMinHours ?? 525,
+      paceParams,
       effectiveRangePreset,
       effectiveTenureMonthIndexes,
-      tenureQuarterMonths,
       expandedDays,
       selectedHeatDate,
       weekStartsOn,
       weekendDurationDays,
       rangeStartKey,
       rangeEndKey,
-      tenureEnabled,
-      fiscalCalendar,
-      requiredDailyHours:
-        tenurePolicy?.requiredDailyHours ?? DEFAULT_WORK_SCHEDULE.requiredDailyHours,
-      offDayReduceHours: tenurePolicy?.offDayReduceHours ?? 8,
+      requiredDailyHours,
+      offDayReduceHours,
       departments: (departmentsQuery.data?.items ?? []).map((item) => ({
         id: item.id,
         name: item.name,
@@ -451,21 +485,17 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
     effectiveRangePreset,
     effectiveTenureMonthIndexes,
     expandedDays,
-    fiscalCalendar,
     onCalendarNextMonth,
     onCalendarPrevMonth,
     canGoNextCalendarMonth,
     canGoPrevCalendarMonth,
+    offDayReduceHours,
+    paceParams,
     periodLabel,
     profileQuery.data,
+    requiredDailyHours,
     selectedHeatDate,
     serverUrl,
-    tenureEnabled,
-    tenurePolicy?.monthlyMinHours,
-    tenurePolicy?.quarterlyMinHours,
-    tenurePolicy?.offDayReduceHours,
-    tenurePolicy?.requiredDailyHours,
-    tenureQuarterMonths,
     today,
     subjectUserId,
     weekStartsOn,
@@ -485,32 +515,18 @@ export function useAgencyMemberProfile(subjectUserId: string): AgencyMemberProfi
       today,
       weekStartsOn,
       weekendDurationDays,
-      monthlyMinHours: tenurePolicy?.monthlyMinHours ?? 200,
-      quarterlyMinHours: tenurePolicy?.quarterlyMinHours ?? 525,
-      offDayReduceHours: tenurePolicy?.offDayReduceHours ?? 8,
-      requiredDailyHours:
-        tenurePolicy?.requiredDailyHours ?? DEFAULT_WORK_SCHEDULE.requiredDailyHours,
-      effectiveRangePreset,
-      effectiveTenureMonthIndexes,
-      tenureQuarterMonths,
-      rangeStartKey,
-      rangeEndKey,
-      tenureEnabled,
-      fiscalCalendar,
+      offDayReduceHours,
+      requiredDailyHours,
+      paceParams,
     });
   }, [
     openGaugeKey,
     periodLabel,
     profile,
     profileQuery.data,
-    rangeEndKey,
-    rangeStartKey,
-    tenureEnabled,
-    fiscalCalendar,
-    effectiveRangePreset,
-    effectiveTenureMonthIndexes,
-    tenureQuarterMonths,
-    tenurePolicy,
+    paceParams,
+    offDayReduceHours,
+    requiredDailyHours,
     today,
     weekStartsOn,
     weekendDurationDays,

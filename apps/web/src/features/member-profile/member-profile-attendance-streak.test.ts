@@ -15,6 +15,7 @@ describe("computeAttendanceStreak", () => {
         { date: "2026-08-05", totalSeconds: 0, off: null }, // Wed
       ],
       calendarDays: [],
+      periodRange: { startKey: "2026-08-05", endKey: "2026-08-10" },
     });
     expect(result.currentStreak).toBe(2);
   });
@@ -39,6 +40,7 @@ describe("computeAttendanceStreak", () => {
         { date: "2026-08-05", totalSeconds: 3600, off: null },
       ],
       calendarDays: [],
+      periodRange: { startKey: "2026-08-05", endKey: "2026-08-10" },
     });
     expect(result.currentStreak).toBe(2);
   });
@@ -52,6 +54,7 @@ describe("computeAttendanceStreak", () => {
         { date: "2026-08-07", totalSeconds: 3600, off: null },
       ],
       calendarDays: [],
+      periodRange: { startKey: "2026-08-07", endKey: "2026-08-10" },
     });
     expect(result.currentStreak).toBe(1);
   });
@@ -69,6 +72,7 @@ describe("computeAttendanceStreak", () => {
         { date: "2026-08-08", inMonth: true, status: "weekend" },
         { date: "2026-08-11", inMonth: true, status: "present" },
       ],
+      periodRange: { startKey: "2026-08-04", endKey: "2026-08-11" },
     });
     expect(result.bestInMonth).toBe(3);
     expect(result.monthPresentDays).toBe(4);
@@ -83,6 +87,7 @@ describe("computeAttendanceStreak", () => {
         { date: "2026-08-06", totalSeconds: 0, off: null },
       ],
       calendarDays: [],
+      periodRange: { startKey: "2026-08-03", endKey: "2026-08-10" },
     });
     expect(result.segments).toHaveLength(7);
     expect(result.segments.at(-1)).toBe("present");
@@ -106,5 +111,20 @@ describe("computeAttendanceStreak", () => {
     expect(result.bestInMonth).toBe(2);
     expect(result.monthPresentDays).toBe(4);
     expect(result.monthWorkingDays).toBe(5);
+  });
+
+  test("holidays are excluded from period working days", () => {
+    const result = computeAttendanceStreak({
+      anchorDate: "2026-08-07",
+      schedule,
+      heatDays: [
+        { date: "2026-08-03", totalSeconds: 3600, off: null },
+        { date: "2026-08-04", totalSeconds: 3600, off: null },
+      ],
+      calendarDays: [{ date: "2026-08-05", inMonth: true, status: "holiday" }],
+      periodRange: { startKey: "2026-08-03", endKey: "2026-08-05" },
+    });
+    expect(result.monthPresentDays).toBe(2);
+    expect(result.monthWorkingDays).toBe(2);
   });
 });

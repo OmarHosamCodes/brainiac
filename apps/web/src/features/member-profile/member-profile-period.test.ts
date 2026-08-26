@@ -4,7 +4,6 @@ import { toFiscalCalendar } from "@orch/api/routers/agency-ops/resourcing/tenure
 import {
   canShiftProfilePeriodMonth,
   clampDateKeyToRange,
-  isSingleMonthProfilePeriod,
   resolveDefaultProfilePeriodMonthStart,
   resolveProfilePaceParams,
   resolveProfilePeriodMonthBounds,
@@ -19,31 +18,50 @@ const calendarPolicy = {
 
 const fiscalCalendar = toFiscalCalendar(calendarPolicy);
 
+const quarterMonths = [
+  {
+    index: 0 as const,
+    label: "June",
+    from: "2026-06-26T00:00:00.000Z",
+    toExclusive: "2026-07-26T00:00:00.000Z",
+  },
+  {
+    index: 1 as const,
+    label: "July",
+    from: "2026-07-26T00:00:00.000Z",
+    toExclusive: "2026-08-26T00:00:00.000Z",
+  },
+  {
+    index: 2 as const,
+    label: "August",
+    from: "2026-08-26T00:00:00.000Z",
+    toExclusive: "2026-09-26T00:00:00.000Z",
+  },
+];
+
+function paceInput(
+  patch: Partial<Parameters<typeof resolveProfilePaceParams>[0]> = {},
+): Parameters<typeof resolveProfilePaceParams>[0] {
+  return {
+    rangeStartKey: "2026-06-26",
+    rangeEndKey: "2026-08-27",
+    tenureEnabled: true,
+    fiscalCalendar,
+    monthlyMinHours: 200,
+    quarterlyMinHours: 525,
+    effectiveRangePreset: "tenure",
+    effectiveTenureMonthIndexes: [],
+    tenureQuarterMonths: quarterMonths,
+    anchorDateKey: "2026-08-27",
+    ...patch,
+  };
+}
+
 describe("clampDateKeyToRange", () => {
   test("clamps below start and above end", () => {
     expect(clampDateKeyToRange("2026-06-01", "2026-07-01", "2026-07-31")).toBe("2026-07-01");
     expect(clampDateKeyToRange("2026-08-15", "2026-07-01", "2026-07-31")).toBe("2026-07-31");
     expect(clampDateKeyToRange("2026-07-15", "2026-07-01", "2026-07-31")).toBe("2026-07-15");
-  });
-});
-
-describe("isSingleMonthProfilePeriod", () => {
-  test("returns true for a single tenure month", () => {
-    expect(
-      isSingleMonthProfilePeriod("2026-07-26", "2026-08-25", true, fiscalCalendar),
-    ).toBe(true);
-  });
-
-  test("returns false when range spans two tenure months", () => {
-    expect(
-      isSingleMonthProfilePeriod("2026-06-26", "2026-08-25", true, fiscalCalendar),
-    ).toBe(false);
-  });
-
-  test("uses calendar months when tenure is disabled", () => {
-    const calendar = toFiscalCalendar({ fiscalYearStartMonth: 1, fiscalYearStartDay: 1 });
-    expect(isSingleMonthProfilePeriod("2026-07-01", "2026-07-31", false, calendar)).toBe(true);
-    expect(isSingleMonthProfilePeriod("2026-07-01", "2026-08-15", false, calendar)).toBe(false);
   });
 });
 
@@ -75,9 +93,9 @@ describe("shiftProfilePeriodMonthWithinBounds", () => {
   const bounds = { firstStartKey: "2026-06-26", lastStartKey: "2026-08-26" };
 
   test("shifts one tenure month forward inside bounds", () => {
-    expect(
-      shiftProfilePeriodMonthWithinBounds("2026-06-26", 1, bounds, true, fiscalCalendar),
-    ).toBe("2026-07-26");
+    expect(shiftProfilePeriodMonthWithinBounds("2026-06-26", 1, bounds, true, fiscalCalendar)).toBe(
+      "2026-07-26",
+    );
   });
 
   test("returns null when shift would leave bounds", () => {
@@ -114,41 +132,8 @@ describe("resolveDefaultProfilePeriodMonthStart", () => {
 });
 
 describe("resolveProfilePaceParams", () => {
-  const quarterMonths = [
-    {
-      index: 0 as const,
-      label: "June",
-      from: "2026-06-26T00:00:00.000Z",
-      toExclusive: "2026-07-26T00:00:00.000Z",
-    },
-    {
-      index: 1 as const,
-      label: "July",
-      from: "2026-07-26T00:00:00.000Z",
-      toExclusive: "2026-08-26T00:00:00.000Z",
-    },
-    {
-      index: 2 as const,
-      label: "August",
-      from: "2026-08-26T00:00:00.000Z",
-      toExclusive: "2026-09-26T00:00:00.000Z",
-    },
-  ];
-
   test("uses full fiscal quarter bounds and quarterly minimum for Q3 selection", () => {
-    const pace = resolveProfilePaceParams({
-      rangeStartKey: "2026-06-26",
-      rangeEndKey: "2026-08-27",
-      tenureEnabled: true,
-      fiscalCalendar,
-      monthlyMinHours: 200,
-      quarterlyMinHours: 525,
-      effectiveRangePreset: "tenure",
-      effectiveTenureMonthIndexes: [],
-      tenureQuarterMonths: quarterMonths,
-      anchorDateKey: "2026-08-27",
-    });
-
+    const pace = resolveProfilePaceParams(paceInput());
     expect(pace.paceStartKey).toBe("2026-06-26");
     expect(pace.paceEndKey).toBe("2026-09-25");
     expect(pace.baseMinHours).toBe(525);
@@ -156,21 +141,57 @@ describe("resolveProfilePaceParams", () => {
   });
 
   test("uses selected tenure months for partial quarter selection", () => {
-    const pace = resolveProfilePaceParams({
-      rangeStartKey: "2026-06-26",
-      rangeEndKey: "2026-07-20",
-      tenureEnabled: true,
-      fiscalCalendar,
-      monthlyMinHours: 200,
-      quarterlyMinHours: 525,
-      effectiveRangePreset: "tenure",
-      effectiveTenureMonthIndexes: [0],
-      tenureQuarterMonths: quarterMonths,
-      anchorDateKey: "2026-08-27",
-    });
-
+    const pace = resolveProfilePaceParams(
+      paceInput({
+        rangeStartKey: "2026-06-26",
+        rangeEndKey: "2026-07-20",
+        effectiveTenureMonthIndexes: [0],
+      }),
+    );
     expect(pace.paceStartKey).toBe("2026-06-26");
     expect(pace.paceEndKey).toBe("2026-07-25");
+    expect(pace.baseMinHours).toBe(200);
+    expect(pace.isSingleMonth).toBe(true);
+  });
+
+  test("last30 that crosses months keeps one monthly minimum and the selected range", () => {
+    const pace = resolveProfilePaceParams(
+      paceInput({
+        rangeStartKey: "2026-07-28",
+        rangeEndKey: "2026-08-27",
+        effectiveRangePreset: "last30",
+      }),
+    );
+    expect(pace.paceStartKey).toBe("2026-07-28");
+    expect(pace.paceEndKey).toBe("2026-08-27");
+    expect(pace.baseMinHours).toBe(200);
+    expect(pace.isSingleMonth).toBe(false);
+  });
+
+  test("week inside one month does not expand to the full month", () => {
+    const pace = resolveProfilePaceParams(
+      paceInput({
+        rangeStartKey: "2026-08-24",
+        rangeEndKey: "2026-08-30",
+        effectiveRangePreset: "week",
+      }),
+    );
+    expect(pace.paceStartKey).toBe("2026-08-24");
+    expect(pace.paceEndKey).toBe("2026-08-30");
+    expect(pace.baseMinHours).toBe(200);
+    expect(pace.isSingleMonth).toBe(false);
+  });
+
+  test("month preset uses the tenure month window and monthly minimum", () => {
+    const pace = resolveProfilePaceParams(
+      paceInput({
+        rangeStartKey: "2026-07-26",
+        rangeEndKey: "2026-08-20",
+        effectiveRangePreset: "month",
+      }),
+    );
+    expect(pace.paceStartKey).toBe("2026-07-26");
+    expect(pace.paceEndKey).toBe("2026-08-25");
     expect(pace.baseMinHours).toBe(200);
     expect(pace.isSingleMonth).toBe(true);
   });

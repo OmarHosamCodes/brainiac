@@ -39,7 +39,7 @@ export function computeAttendanceStreak(input: {
   schedule: WorkSchedule;
   heatDays: HeatDay[];
   calendarDays: CalendarDay[];
-  periodRange?: { startKey: string; endKey: string } | null;
+  periodRange: { startKey: string; endKey: string };
 }): AttendanceStreakModel {
   const heatByDate = new Map(input.heatDays.map((day) => [day.date, day]));
   const calendarByDate = new Map(input.calendarDays.map((day) => [day.date, day]));
@@ -70,9 +70,12 @@ export function computeAttendanceStreak(input: {
     break;
   }
 
-  const coverageStats = input.periodRange
-    ? computePeriodCoverageStats(input.periodRange, input.schedule, heatByDate, calendarByDate)
-    : computeMonthCoverageStats(input.calendarDays);
+  const coverageStats = computePeriodCoverageStats(
+    input.periodRange,
+    input.schedule,
+    heatByDate,
+    calendarByDate,
+  );
 
   const segments: StreakSegmentState[] = [];
   let segCursor = streakAnchor;
@@ -87,9 +90,7 @@ export function computeAttendanceStreak(input: {
       segments.unshift("future");
     } else {
       const dayState = resolveDayState(segCursor, heatByDate, calendarByDate);
-      segments.unshift(
-        dayState.off ? "off" : dayState.present ? "present" : ("missed" as const),
-      );
+      segments.unshift(dayState.off ? "off" : dayState.present ? "present" : "missed");
     }
     segCursor = addDaysToDateKey(segCursor, -1);
   }
@@ -100,28 +101,6 @@ export function computeAttendanceStreak(input: {
     monthPresentDays: coverageStats.presentDays,
     monthWorkingDays: coverageStats.workingDays,
     segments,
-  };
-}
-
-function computeMonthCoverageStats(calendarDays: CalendarDay[]): {
-  bestPresentRun: number;
-  presentDays: number;
-  workingDays: number;
-} {
-  const inMonthWorking = calendarDays
-    .filter(
-      (day) =>
-        day.inMonth &&
-        day.status !== "weekend" &&
-        day.status !== "holiday" &&
-        day.status !== "leave",
-    )
-    .sort((a, b) => a.date.localeCompare(b.date));
-  const presentDays = inMonthWorking.filter((day) => day.status === "present").length;
-  return {
-    bestPresentRun: longestPresentRun(inMonthWorking.map((day) => day.status === "present")),
-    presentDays,
-    workingDays: inMonthWorking.length,
   };
 }
 
@@ -157,9 +136,7 @@ function resolveDayState(
 ): { present: boolean; off: boolean } {
   const heat = heatByDate.get(dateKey);
   const cal = calendarByDate.get(dateKey);
-  const off = Boolean(
-    heat?.off ?? (cal?.status === "leave" || cal?.status === "holiday"),
-  );
+  const off = Boolean(heat?.off ?? (cal?.status === "leave" || cal?.status === "holiday"));
   const seconds = heat?.totalSeconds ?? (cal?.status === "present" ? 1 : 0);
   return { present: seconds > 0, off };
 }

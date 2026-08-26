@@ -133,6 +133,12 @@ export function getCurrentTenureQuarterMonths(
   });
 }
 
+export function normalizeTenureMonthIndexes(monthIndexes: number[]): Array<0 | 1 | 2> {
+  return [...new Set(monthIndexes)]
+    .filter((index): index is 0 | 1 | 2 => index === 0 || index === 1 || index === 2)
+    .sort((left, right) => left - right);
+}
+
 export function getCurrentTenurePeriodRange(
   policy: TenurePolicyCalendar | null | undefined,
   now = new Date(),
@@ -149,9 +155,7 @@ export function getCurrentTenurePeriodRange(
   const quarterLabel = fiscalQuarterLabel(ref.fiscalYear, ref.fiscalQuarter);
   const quarterSimpleLabel = simpleTenurePeriodLabel(displayYear, ref.fiscalQuarter);
 
-  const uniqueIndexes = [...new Set(monthIndexes)]
-    .filter((index): index is 0 | 1 | 2 => index === 0 || index === 1 || index === 2)
-    .sort((left, right) => left - right);
+  const uniqueIndexes = normalizeTenureMonthIndexes(monthIndexes);
 
   if (uniqueIndexes.length === 0 || uniqueIndexes.length === 3) {
     return {

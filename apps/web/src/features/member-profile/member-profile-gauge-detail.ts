@@ -212,15 +212,14 @@ function shortHoursFromSeconds(totalSeconds: number): string {
 export function computeMonthPaceVisual(input: {
   dayHours: GaugeDayHours[];
   schedule: GaugeWorkSchedule;
-  monthlyMinHours: number;
-  baseMinHours?: number;
+  baseMinHours: number;
   offDayReduceHours: number;
   offDayKeys: ReadonlySet<string>;
   todayKey: string;
   periodStartKey: string;
   periodEndKey: string;
   periodLabel: string;
-  isSingleMonthScope?: boolean;
+  isSingleMonthScope: boolean;
 }): GaugeMonthPaceVisual | null {
   const projection = projectPeriodPace({
     startKey: input.periodStartKey,
@@ -231,7 +230,7 @@ export function computeMonthPaceVisual(input: {
       totalSeconds: day.totalSeconds,
     })),
     schedule: input.schedule,
-    baseMinHours: input.baseMinHours ?? input.monthlyMinHours,
+    baseMinHours: input.baseMinHours,
     offDayReduceHours: input.offDayReduceHours,
     offDayKeys: input.offDayKeys,
   });
@@ -249,9 +248,7 @@ export function computeMonthPaceVisual(input: {
   } = projection;
 
   const paceToMinHoursPerDay =
-    remainingWorkingDays > 0
-      ? Math.max(0, monthMinHours - loggedHours) / remainingWorkingDays
-      : 0;
+    remainingWorkingDays > 0 ? Math.max(0, monthMinHours - loggedHours) / remainingWorkingDays : 0;
   const paceToTargetHoursPerDay =
     remainingWorkingDays > 0
       ? Math.max(0, monthTargetHours - loggedHours) / remainingWorkingDays
@@ -279,7 +276,7 @@ export function computeMonthPaceVisual(input: {
     onTrackForMin: projectedHours >= monthMinHours,
     onTrackForTarget: projectedHours >= monthTargetHours,
     scaleMaxHours,
-    isSingleMonthScope: input.isSingleMonthScope ?? true,
+    isSingleMonthScope: input.isSingleMonthScope,
   };
 }
 
@@ -374,7 +371,10 @@ export function buildGaugeDetail(context: GaugeDetailContext): GaugeDetailModel 
                 ? gauge.tone
                 : "warning",
           ),
-          ratio: Math.min(1, monthPaceVisual.loggedHours / Math.max(monthPaceVisual.monthTargetHours, 1)),
+          ratio: Math.min(
+            1,
+            monthPaceVisual.loggedHours / Math.max(monthPaceVisual.monthTargetHours, 1),
+          ),
           stats: [],
           weekBarRatios: [],
           monthPaceVisual,
@@ -486,15 +486,10 @@ export function buildGaugeDetail(context: GaugeDetailContext): GaugeDetailModel 
       };
     }
     case "waste": {
-      const sortedWaste = [...context.wasteDays].sort(
-        (a, b) => b.totalSeconds - a.totalSeconds,
-      );
+      const sortedWaste = [...context.wasteDays].sort((a, b) => b.totalSeconds - a.totalSeconds);
       const allRows = sortedWaste.map((day) => ({
         label: day.label,
-        meta:
-          day.entryCount > 1
-            ? `${day.hoursLabel} · ${day.entryCount} entries`
-            : day.hoursLabel,
+        meta: day.entryCount > 1 ? `${day.hoursLabel} · ${day.entryCount} entries` : day.hoursLabel,
         date: day.date,
       }));
       const { visible, overflow } = capRows(allRows, ROW_CAP);
@@ -516,16 +511,17 @@ export function buildGaugeDetail(context: GaugeDetailContext): GaugeDetailModel 
           { label: "Share", value: `${share}%` },
           { label: "Logged", value: context.periodHoursLabel },
         ],
-        weekBarRatios: sortedWaste.length > 0
-          ? weekBarRatiosFromDays(
-              sortedWaste.map((day) => ({
-                date: day.date,
-                label: day.label,
-                hoursLabel: day.hoursLabel,
-                totalSeconds: day.totalSeconds,
-              })),
-            )
-          : [],
+        weekBarRatios:
+          sortedWaste.length > 0
+            ? weekBarRatiosFromDays(
+                sortedWaste.map((day) => ({
+                  date: day.date,
+                  label: day.label,
+                  hoursLabel: day.hoursLabel,
+                  totalSeconds: day.totalSeconds,
+                })),
+              )
+            : [],
         rowsHeading: visible.length > 0 ? "Waste days" : null,
         rows: visible,
         rowOverflowLabel: overflow > 0 ? overflowLabel(overflow, "days") : null,

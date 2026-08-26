@@ -1,15 +1,16 @@
-import type { FiscalCalendar } from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
 import {
   getFiscalQuarterForDate,
   getFiscalQuarterRange,
+  type FiscalCalendar,
 } from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
 import { addDaysToDateKey } from "@orch/api/routers/agency-ops/time-tracking/local-week-bounds";
 import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";
 import {
+  normalizeTenureMonthIndexes,
   resolveProfilePeriodMonth,
   shiftProfilePeriodMonth,
+  type TenureQuarterMonth,
 } from "@/features/resourcing/tenure-utils";
-import type { TenureQuarterMonth } from "@/features/resourcing/tenure-utils";
 
 export type ProfilePeriodMonthBounds = {
   firstStartKey: string;
@@ -23,39 +24,14 @@ export type ProfilePaceParams = {
   isSingleMonth: boolean;
 };
 
-export function isFullTenureQuarterSelection(monthIndexes: number[]): boolean {
-  const unique = [...new Set(monthIndexes)].filter(
-    (index): index is 0 | 1 | 2 => index === 0 || index === 1 || index === 2,
-  );
-  return unique.length === 0 || unique.length === 3;
-}
-
-export function clampDateKeyToRange(dateKey: string, rangeStartKey: string, rangeEndKey: string): string {
+export function clampDateKeyToRange(
+  dateKey: string,
+  rangeStartKey: string,
+  rangeEndKey: string,
+): string {
   if (dateKey < rangeStartKey) return rangeStartKey;
   if (dateKey > rangeEndKey) return rangeEndKey;
   return dateKey;
-}
-
-export function isSingleMonthProfilePeriod(
-  rangeStartKey: string,
-  rangeEndKey: string,
-  tenureEnabled: boolean,
-  calendar: FiscalCalendar,
-): boolean {
-  const start = resolveProfilePeriodMonth({
-    tenureEnabled,
-    calendar,
-    anchorDateKey: rangeStartKey,
-  });
-  const end = resolveProfilePeriodMonth({
-    tenureEnabled,
-    calendar,
-    anchorDateKey: rangeEndKey,
-  });
-  if (tenureEnabled) {
-    return start.fingerprint === end.fingerprint;
-  }
-  return start.startKey.slice(0, 7) === end.startKey.slice(0, 7);
 }
 
 export function resolveProfilePeriodMonthBounds(
@@ -123,44 +99,10 @@ export function resolveDefaultProfilePeriodMonthStart(
   }).startKey;
 }
 
-function countTenureMonthsBetween(
-  rangeStartKey: string,
-  rangeEndKey: string,
+function fiscalQuarterInclusiveKeys(
+  anchorDateKey: string,
   calendar: FiscalCalendar,
-): number {
-  const lastMonth = resolveProfilePeriodMonth({
-    tenureEnabled: true,
-    calendar,
-    anchorDateKey: rangeEndKey,
-  });
-  let count = 0;
-  let cursor = resolveProfilePeriodMonth({
-    tenureEnabled: true,
-    calendar,
-    anchorDateKey: rangeStartKey,
-  }).startKey;
-  while (cursor <= lastMonth.startKey) {
-    count += 1;
-    const next = shiftProfilePeriodMonth(cursor, 1, { tenureEnabled: true, calendar }).startKey;
-    if (next === cursor) break;
-    cursor = next;
-    if (count > 12) break;
-  }
-  return Math.max(1, count);
-}
-
-function countCalendarMonthsBetween(rangeStartKey: string, rangeEndKey: string): number {
-  const startYear = Number(rangeStartKey.slice(0, 4));
-  const startMonth = Number(rangeStartKey.slice(5, 7));
-  const endYear = Number(rangeEndKey.slice(0, 4));
-  const endMonth = Number(rangeEndKey.slice(5, 7));
-  return Math.max(1, (endYear - startYear) * 12 + (endMonth - startMonth) + 1);
-}
-
-function fiscalQuarterEndKey(anchorDateKey: string, calendar: FiscalCalendar): {
-  paceStartKey: string;
-  paceEndKey: string;
-} {
+): { paceStartKey: string; paceEndKey: string } {
   const ref = getFiscalQuarterForDate(new Date(`${anchorDateKey}T12:00:00.000Z`), calendar);
   const range = getFiscalQuarterRange(calendar, ref.fiscalYear, ref.fiscalQuarter);
   return {
@@ -173,9 +115,7 @@ function selectedTenureMonthsSpan(
   tenureQuarterMonths: TenureQuarterMonth[],
   monthIndexes: number[],
 ): { paceStartKey: string; paceEndKey: string; monthCount: number } | null {
-  const unique = [...new Set(monthIndexes)].filter(
-    (index): index is 0 | 1 | 2 => index === 0 || index === 1 || index === 2,
-  );
+  const unique = normalizeTenureMonthIndexes(monthIndexes);
   if (unique.length === 0 || unique.length === 3) return null;
   const selected = tenureQuarterMonths
     .filter((month) => unique.includes(month.index))
@@ -190,7 +130,15 @@ function selectedTenureMonthsSpan(
   };
 }
 
-/** Pace window + minimum hours for profile period-hours gauge (may extend past logged range end). */
+function rangePace(startKey: string, endKey: string, monthlyMinHours: number): ProfilePaceParams {
+  return {
+    paceStartKey: startKey,
+    paceEndKey: endKey,
+    baseMinHours: monthlyMinHours,
+    isSingleMonth: false,
+  };
+}
+
 export function resolveProfilePaceParams(input: {
   rangeStartKey: string;
   rangeEndKey: string;
@@ -203,43 +151,28 @@ export function resolveProfilePaceParams(input: {
   tenureQuarterMonths: TenureQuarterMonth[];
   anchorDateKey: string;
 }): ProfilePaceParams {
-  const singleMonth = isSingleMonthProfilePeriod(
-    input.rangeStartKey,
-    input.rangeEndKey,
-    input.tenureEnabled,
-    input.fiscalCalendar,
-  );
-
-  if (singleMonth) {
-    const month = resolveProfilePeriodMonth({
-      tenureEnabled: input.tenureEnabled,
-      calendar: input.fiscalCalendar,
-      anchorDateKey: input.rangeStartKey,
-    });
-    return {
-      paceStartKey: month.startKey,
-      paceEndKey: month.endKey,
-      baseMinHours: input.monthlyMinHours,
-      isSingleMonth: true,
-    };
-  }
-
-  if (input.tenureEnabled && input.effectiveRangePreset === "tenure") {
-    if (isFullTenureQuarterSelection(input.effectiveTenureMonthIndexes)) {
-      const quarter = fiscalQuarterEndKey(input.anchorDateKey, input.fiscalCalendar);
-      return {
-        paceStartKey: quarter.paceStartKey,
-        paceEndKey: quarter.paceEndKey,
-        baseMinHours: input.quarterlyMinHours,
-        isSingleMonth: false,
-      };
-    }
-
-    const selectedSpan = selectedTenureMonthsSpan(
-      input.tenureQuarterMonths,
-      input.effectiveTenureMonthIndexes,
-    );
-    if (selectedSpan) {
+  switch (input.effectiveRangePreset) {
+    case "tenure": {
+      if (!input.tenureEnabled) {
+        return rangePace(input.rangeStartKey, input.rangeEndKey, input.monthlyMinHours);
+      }
+      const unique = normalizeTenureMonthIndexes(input.effectiveTenureMonthIndexes);
+      if (unique.length === 0 || unique.length === 3) {
+        const quarter = fiscalQuarterInclusiveKeys(input.anchorDateKey, input.fiscalCalendar);
+        return {
+          paceStartKey: quarter.paceStartKey,
+          paceEndKey: quarter.paceEndKey,
+          baseMinHours: input.quarterlyMinHours,
+          isSingleMonth: false,
+        };
+      }
+      const selectedSpan = selectedTenureMonthsSpan(
+        input.tenureQuarterMonths,
+        input.effectiveTenureMonthIndexes,
+      );
+      if (!selectedSpan) {
+        return rangePace(input.rangeStartKey, input.rangeEndKey, input.monthlyMinHours);
+      }
       return {
         paceStartKey: selectedSpan.paceStartKey,
         paceEndKey: selectedSpan.paceEndKey,
@@ -247,16 +180,27 @@ export function resolveProfilePaceParams(input: {
         isSingleMonth: selectedSpan.monthCount === 1,
       };
     }
+    case "month": {
+      const month = resolveProfilePeriodMonth({
+        tenureEnabled: input.tenureEnabled,
+        calendar: input.fiscalCalendar,
+        anchorDateKey: input.rangeStartKey,
+      });
+      return {
+        paceStartKey: month.startKey,
+        paceEndKey: month.endKey,
+        baseMinHours: input.monthlyMinHours,
+        isSingleMonth: true,
+      };
+    }
+    case "today":
+    case "week":
+    case "last30":
+    case "custom":
+      return rangePace(input.rangeStartKey, input.rangeEndKey, input.monthlyMinHours);
+    default: {
+      const _exhaustive: never = input.effectiveRangePreset;
+      return _exhaustive;
+    }
   }
-
-  const monthSpan = input.tenureEnabled
-    ? countTenureMonthsBetween(input.rangeStartKey, input.rangeEndKey, input.fiscalCalendar)
-    : countCalendarMonthsBetween(input.rangeStartKey, input.rangeEndKey);
-
-  return {
-    paceStartKey: input.rangeStartKey,
-    paceEndKey: input.rangeEndKey,
-    baseMinHours: input.monthlyMinHours * monthSpan,
-    isSingleMonth: false,
-  };
 }

@@ -1,5 +1,4 @@
 import type { memberProfileSchema } from "@orch/api/routers/agency-ops/member-profile/schemas";
-import type { FiscalCalendar } from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
 import { DEFAULT_WORK_SCHEDULE } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import type { z } from "zod";
 
@@ -15,10 +14,8 @@ import {
   computeMonthPaceVisual,
   type GaugeDetailModel,
 } from "@/features/member-profile/member-profile-gauge-detail";
-import { isSingleMonthProfilePeriod, resolveProfilePaceParams } from "@/features/member-profile/member-profile-period";
+import type { ProfilePaceParams } from "@/features/member-profile/member-profile-period";
 import type { StatPlateKey } from "@/features/member-profile/member-profile-instrument-plate";
-import type { RangePreset } from "@/features/shared/command-bar/range-preset-chooser";
-import type { TenureQuarterMonth } from "@/features/resourcing/tenure-utils";
 
 type MemberProfileRecord = z.infer<typeof memberProfileSchema>;
 
@@ -31,17 +28,9 @@ export type BuildMemberProfileGaugeDetailInput = {
   today: string;
   weekStartsOn: number;
   weekendDurationDays: number;
-  monthlyMinHours: number;
-  quarterlyMinHours: number;
   offDayReduceHours: number;
   requiredDailyHours: number;
-  effectiveRangePreset: RangePreset;
-  effectiveTenureMonthIndexes: number[];
-  tenureQuarterMonths: TenureQuarterMonth[];
-  rangeStartKey: string;
-  rangeEndKey: string;
-  tenureEnabled: boolean;
-  fiscalCalendar: FiscalCalendar;
+  paceParams: ProfilePaceParams;
 };
 
 export function buildMemberProfileGaugeDetail(
@@ -114,42 +103,13 @@ export function buildMemberProfileGaugeDetail(
     }
   }
 
-  const singleMonthPeriod = isSingleMonthProfilePeriod(
-    input.rangeStartKey,
-    input.rangeEndKey,
-    input.tenureEnabled,
-    input.fiscalCalendar,
-  );
-  const paceParams = resolveProfilePaceParams({
-    rangeStartKey: input.rangeStartKey,
-    rangeEndKey: input.rangeEndKey,
-    tenureEnabled: input.tenureEnabled,
-    fiscalCalendar: input.fiscalCalendar,
-    monthlyMinHours: input.monthlyMinHours,
-    quarterlyMinHours: input.quarterlyMinHours,
-    effectiveRangePreset: input.effectiveRangePreset,
-    effectiveTenureMonthIndexes: input.effectiveTenureMonthIndexes,
-    tenureQuarterMonths: input.tenureQuarterMonths,
-    anchorDateKey: input.today,
-  });
-  const coverageLabel = singleMonthPeriod ? input.profile.calendar.label : input.periodLabel;
-  const periodStartKey = paceParams.paceStartKey;
-  const periodEndKey = paceParams.paceEndKey;
+  const coverageLabel = input.paceParams.isSingleMonth
+    ? input.profile.calendar.label
+    : input.periodLabel;
   const offDayKeys = new Set(
-    singleMonthPeriod
-      ? input.data.calendarMonth.days
-          .filter(
-            (day) =>
-              day.inMonth && (day.status === "leave" || day.status === "holiday") && day.leaveId,
-          )
-          .map((day) => day.date)
-      : input.data.heatMap.days.filter((day) => day.off).map((day) => day.date),
+    input.data.heatMap.days.filter((day) => day.off).map((day) => day.date),
   );
-
-  const paceDayHours = (singleMonthPeriod
-    ? input.data.calendarMonth.days.filter((day) => day.inMonth)
-    : input.data.heatMap.days
-  ).map((day) => {
+  const paceDayHours = input.data.heatMap.days.map((day) => {
     const date = new Date(`${day.date}T12:00:00.000Z`);
     const label = date.toLocaleDateString(undefined, {
       weekday: "short",
@@ -174,15 +134,14 @@ export function buildMemberProfileGaugeDetail(
             weekendDurationDays: input.weekendDurationDays,
             requiredDailyHours: input.requiredDailyHours,
           },
-          monthlyMinHours: input.monthlyMinHours,
-          baseMinHours: paceParams.baseMinHours,
+          baseMinHours: input.paceParams.baseMinHours,
           offDayReduceHours: input.offDayReduceHours,
           offDayKeys,
           todayKey: input.today,
-          periodStartKey,
-          periodEndKey,
+          periodStartKey: input.paceParams.paceStartKey,
+          periodEndKey: input.paceParams.paceEndKey,
           periodLabel: coverageLabel,
-          isSingleMonthScope: paceParams.isSingleMonth,
+          isSingleMonthScope: input.paceParams.isSingleMonth,
         })
       : null;
 

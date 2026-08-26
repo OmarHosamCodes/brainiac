@@ -1,5 +1,4 @@
 import { buildWeekHours } from "@orch/api/routers/agency-ops/member-profile/member-profile-hr";
-import type { FiscalCalendar } from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
 import { projectPeriodPace } from "@orch/api/routers/agency-ops/resourcing/work-schedule";
 import type { memberProfileSchema } from "@orch/api/routers/agency-ops/member-profile/schemas";
 import type { z } from "zod";
@@ -7,8 +6,7 @@ import type { z } from "zod";
 import type { MemberProfileViewData } from "@/features/member-profile/agency-member-profile-types";
 import type { AttendanceStreakModel } from "@/features/member-profile/member-profile-attendance-streak";
 import { computeAttendanceStreak } from "@/features/member-profile/member-profile-attendance-streak";
-import { isSingleMonthProfilePeriod, resolveProfilePaceParams } from "@/features/member-profile/member-profile-period";
-import type { TenureQuarterMonth } from "@/features/resourcing/tenure-utils";
+import type { ProfilePaceParams } from "@/features/member-profile/member-profile-period";
 import {
   activityKindLabel,
   employmentTypeLabel,
@@ -32,19 +30,15 @@ export type BuildMemberProfileViewInput = {
   serverUrl: string | null;
   today: string;
   periodLabel: string;
-  monthlyMinHours: number;
-  quarterlyMinHours: number;
+  paceParams: ProfilePaceParams;
   effectiveRangePreset: RangePreset;
   effectiveTenureMonthIndexes: number[];
-  tenureQuarterMonths: TenureQuarterMonth[];
   expandedDays: Record<string, boolean>;
   selectedHeatDate: string | null;
   weekStartsOn: number;
   weekendDurationDays: number;
   rangeStartKey: string;
   rangeEndKey: string;
-  tenureEnabled: boolean;
-  fiscalCalendar: FiscalCalendar;
   requiredDailyHours: number;
   offDayReduceHours: number;
   departments: Array<{ id: string; name: string }>;
@@ -106,12 +100,6 @@ export function buildMemberProfileView(input: BuildMemberProfileViewInput): Memb
   }
 
   const leaveAll = data.leaveBalances.all;
-  const singleMonthPeriod = isSingleMonthProfilePeriod(
-    input.rangeStartKey,
-    input.rangeEndKey,
-    input.tenureEnabled,
-    input.fiscalCalendar,
-  );
   const streakAnchor =
     input.today < input.rangeStartKey
       ? input.rangeStartKey
@@ -133,29 +121,13 @@ export function buildMemberProfileView(input: BuildMemberProfileViewInput): Memb
     schedule: { weekStartsOn: input.weekStartsOn, weekendDurationDays: input.weekendDurationDays },
     heatDays,
     calendarDays,
-    periodRange: singleMonthPeriod
-      ? null
-      : { startKey: input.rangeStartKey, endKey: input.rangeEndKey },
+    periodRange: { startKey: input.rangeStartKey, endKey: input.rangeEndKey },
   });
 
-  const offDayKeys = new Set(
-    data.heatMap.days.filter((day) => day.off).map((day) => day.date),
-  );
-  const paceParams = resolveProfilePaceParams({
-    rangeStartKey: input.rangeStartKey,
-    rangeEndKey: input.rangeEndKey,
-    tenureEnabled: input.tenureEnabled,
-    fiscalCalendar: input.fiscalCalendar,
-    monthlyMinHours: input.monthlyMinHours,
-    quarterlyMinHours: input.quarterlyMinHours,
-    effectiveRangePreset: input.effectiveRangePreset,
-    effectiveTenureMonthIndexes: input.effectiveTenureMonthIndexes,
-    tenureQuarterMonths: input.tenureQuarterMonths,
-    anchorDateKey: input.today,
-  });
+  const offDayKeys = new Set(data.heatMap.days.filter((day) => day.off).map((day) => day.date));
   const periodPaceProjection = projectPeriodPace({
-    startKey: paceParams.paceStartKey,
-    endKey: paceParams.paceEndKey,
+    startKey: input.paceParams.paceStartKey,
+    endKey: input.paceParams.paceEndKey,
     todayKey: input.today,
     daySeconds: data.heatMap.days.map((day) => ({
       dateKey: day.date,
@@ -166,15 +138,17 @@ export function buildMemberProfileView(input: BuildMemberProfileViewInput): Memb
       weekendDurationDays: input.weekendDurationDays,
       requiredDailyHours: input.requiredDailyHours,
     },
-    baseMinHours: paceParams.baseMinHours,
+    baseMinHours: input.paceParams.baseMinHours,
     offDayReduceHours: input.offDayReduceHours,
     offDayKeys,
   });
   const periodHoursTargetSeconds =
     periodPaceProjection != null
       ? Math.max(periodPaceProjection.monthMinHours, 1) * 3600
-      : Math.max(input.monthlyMinHours, 1) * 3600;
-  const streakSecondaryLabel = singleMonthPeriod ? data.calendarMonth.label : input.periodLabel;
+      : Math.max(input.paceParams.baseMinHours, 1) * 3600;
+  const streakSecondaryLabel = input.paceParams.isSingleMonth
+    ? data.calendarMonth.label
+    : input.periodLabel;
   const leaveGauges: MemberProfileViewData["leaveGauges"] = [
     {
       key: "leaves",
