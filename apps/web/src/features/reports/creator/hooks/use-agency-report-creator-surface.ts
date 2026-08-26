@@ -29,6 +29,7 @@ import { useAgencyReportCreator } from "@/features/reports/use-agency-report-cre
 import { useAgencyReportLabelContext } from "@/features/reports/use-agency-report-label-context";
 import { draftToIsoRange, type TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
 import { orpcClient } from "@/lib/orpc";
+import { resolveWasteTogglePatch } from "@/features/time-tracking/agency-entry-group-waste";
 import {
   invalidateAgencyDashboardQueries,
   invalidateAgencyEntriesQueries,
@@ -295,23 +296,26 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
         .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
       if (entries.length === 0 || !teamId) return;
 
-      const nextIsWaste = !entries.every((entry) => entry.isWaste === true);
-      for (const entry of entries) {
+      const patch = resolveWasteTogglePatch(entries);
+      if (!patch) return;
+      const { entryIds: idsToPatch, nextIsWaste } = patch;
+      const patchEntries = entries.filter((entry) => idsToPatch.includes(entry.id));
+      for (const entry of patchEntries) {
         creator.setTaskWaste(entry.id, entry.taskId ?? "", nextIsWaste);
       }
-      if (entries.length > 1) {
+      if (idsToPatch.length > 1) {
         toast.success(
           nextIsWaste
-            ? `Marked ${entries.length} entries as waste`
-            : `Unmarked ${entries.length} entries as waste`,
+            ? `Marked ${idsToPatch.length} entries as waste`
+            : `Unmarked ${idsToPatch.length} entries as waste`,
         );
       }
       try {
         await Promise.all(
-          entries.map((entry) =>
+          idsToPatch.map((entryId) =>
             orpcClient.agencyOps.reports.updateEntry({
               teamId,
-              entryId: entry.id,
+              entryId,
               isWaste: nextIsWaste,
             }),
           ),
@@ -323,7 +327,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
           invalidateAgencyDashboardQueries(teamId),
         ]);
       } catch (error) {
-        for (const entry of entries) {
+        for (const entry of patchEntries) {
           creator.setTaskWaste(entry.id, entry.taskId ?? "", !nextIsWaste);
         }
         toast.error("Couldn't update entry", {

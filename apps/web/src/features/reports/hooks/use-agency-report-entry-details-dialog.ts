@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import type { AgencyReportEntry } from "@/features/reports/agency-report-grouping";
 import {
+  applyReportEntriesWaste,
   reportRowAggregationKey,
   type ReportRowAggregationOptions,
 } from "@/features/reports/agency-report-grouping";
@@ -20,6 +21,7 @@ import {
   validateTimeEntryDraft,
   type TimeEntryDraft,
 } from "@/features/time-tracking/agency-time-entry";
+import { resolveWasteTogglePatch } from "@/features/time-tracking/agency-entry-group-waste";
 import type { AgencyDayBulkDraft } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
 import { useTeamWorkSchedule } from "@/features/shared/use-team-work-schedule";
 import {
@@ -39,7 +41,7 @@ import {
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { orpc } from "@/lib/orpc";
+import { orpc, orpcClient } from "@/lib/orpc";
 
 export function selectEntriesForDetailsRow(
   entries: AgencyReportEntry[],
@@ -340,7 +342,7 @@ export function useAgencyReportEntryDetailsDialog({
 
     setWastePending(true);
     try {
-      await saveBulkPatch(entryIds, { isWaste: true });
+      await persistReportEntriesWaste(entryIds, true);
       toast.success(
         entryIds.length === 1 ? "Marked as waste" : `Marked ${entryIds.length} entries as waste`,
       );
@@ -353,25 +355,63 @@ export function useAgencyReportEntryDetailsDialog({
     }
   }
 
+  async function persistReportEntriesWaste(entryIds: string[], nextIsWaste: boolean) {
+    if (!teamId || entryIds.length === 0) return;
+
+    const idSet = new Set(entryIds);
+    const snapshots = queryClient.getQueriesData<AgencyReportEntry[]>({
+      queryKey: ["agency-reports", "entries", teamId],
+    });
+    for (const [queryKey, data] of snapshots) {
+      if (!data) continue;
+      queryClient.setQueryData(queryKey, applyReportEntriesWaste(data, idSet, nextIsWaste));
+    }
+
+    try {
+      await Promise.all(
+        entryIds.map((entryId) =>
+          orpcClient.agencyOps.reports.updateEntry({
+            teamId,
+            entryId,
+            isWaste: nextIsWaste,
+          }),
+        ),
+      );
+      invalidateReportsEntries(teamId, queryClient);
+    } catch (error) {
+      for (const [queryKey, data] of snapshots) {
+        queryClient.setQueryData(queryKey, data);
+      }
+      throw error;
+    }
+  }
+
   async function toggleEntryWaste(entryId: string | readonly string[]) {
     if (!teamId || wastePending) return;
-    const entryIds = typeof entryId === "string" ? [entryId] : [...entryId];
-    const targets = entries.filter((item) => entryIds.includes(item.id));
-    if (targets.length === 0) return;
-    const nextIsWaste = !targets.every((entry) => entry.isWaste === true);
-    await saveBulkPatch(
-      targets.map((entry) => entry.id),
-      { isWaste: nextIsWaste },
-    );
-    toast.success(
-      targets.length === 1
-        ? nextIsWaste
-          ? "Marked as waste"
-          : "Unmarked as waste"
-        : nextIsWaste
-          ? `Marked ${targets.length} entries as waste`
-          : `Unmarked ${targets.length} entries as waste`,
-    );
+    const selectedIds = typeof entryId === "string" ? [entryId] : [...entryId];
+    const targets = entries.filter((item) => selectedIds.includes(item.id));
+    const patch = resolveWasteTogglePatch(targets);
+    if (!patch) return;
+
+    setWastePending(true);
+    try {
+      await persistReportEntriesWaste(patch.entryIds, patch.nextIsWaste);
+      toast.success(
+        patch.entryIds.length === 1
+          ? patch.nextIsWaste
+            ? "Marked as waste"
+            : "Unmarked as waste"
+          : patch.nextIsWaste
+            ? `Marked ${patch.entryIds.length} entries as waste`
+            : `Unmarked ${patch.entryIds.length} entries as waste`,
+      );
+    } catch (error) {
+      toast.error("Couldn't update waste", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      setWastePending(false);
+    }
   }
 
   async function saveBulkPatch(
@@ -386,6 +426,10 @@ export function useAgencyReportEntryDetailsDialog({
     },
   ) {
     if (!teamId || entryIds.length === 0 || Object.keys(patch).length === 0) return;
+    if (patch.isWaste !== undefined && Object.keys(patch).length === 1) {
+      await persistReportEntriesWaste(entryIds, patch.isWaste);
+      return;
+    }
     await agencyTimeTrackingStore.updateEntriesBulk({
       teamId,
       entryIds,

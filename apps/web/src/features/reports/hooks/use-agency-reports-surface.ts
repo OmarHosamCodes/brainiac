@@ -214,10 +214,11 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     async (row: AggregatedReportRow) => {
       if (!teamId || row.entries.length === 0) return;
 
-      const nextIsWaste = !(
-        row.entries.every((entry) => entry.isWaste === true) || row.taskIsWaste === true
-      );
-      const entryIds = row.entries.map((entry) => entry.id);
+      const nextIsWaste = !row.entries.every((entry) => entry.isWaste === true);
+      const entryIds = nextIsWaste
+        ? row.entries.map((entry) => entry.id)
+        : row.entries.filter((entry) => entry.isWaste === true).map((entry) => entry.id);
+      if (entryIds.length === 0) return;
       const snapshots = queryClient.getQueriesData<AgencyReportEntry[]>({
         queryKey: ["agency-reports", "entries", teamId],
       });
@@ -228,19 +229,19 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
           applyReportEntriesWaste(data, new Set(entryIds), nextIsWaste),
         );
       }
-      if (row.entries.length > 1) {
+      if (entryIds.length > 1) {
         toast.success(
           nextIsWaste
-            ? `Marked ${row.entries.length} entries as waste`
-            : `Unmarked ${row.entries.length} entries as waste`,
+            ? `Marked ${entryIds.length} entries as waste`
+            : `Unmarked ${entryIds.length} entries as waste`,
         );
       }
       try {
         await Promise.all(
-          row.entries.map((entry) =>
+          entryIds.map((entryId) =>
             orpcClient.agencyOps.reports.updateEntry({
               teamId,
-              entryId: entry.id,
+              entryId,
               isWaste: nextIsWaste,
             }),
           ),
