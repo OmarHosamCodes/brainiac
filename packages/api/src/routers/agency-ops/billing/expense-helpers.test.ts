@@ -232,7 +232,7 @@ describe("planExpensePayment", () => {
       templatePaidAmount: 0,
       templateStatus: "due",
       writeOccurrence: true,
-      nextTemplateAmount: 0,
+      resetTemplateAmount: true,
     });
     if (!plan.ok) throw new Error("expected ok");
     expect(plan.nextDueAt?.toISOString()).toBe("2026-09-24T00:00:00.000Z");
@@ -253,7 +253,7 @@ describe("planExpensePayment", () => {
     expect(plan).toMatchObject({
       ok: true,
       occurrenceAmount: 30_000,
-      nextTemplateAmount: 0,
+      resetTemplateAmount: true,
     });
   });
 
@@ -443,16 +443,18 @@ describe("buildSubscriptionCycleRecords", () => {
 describe("planExpenseKindFields", () => {
   const now = new Date("2026-08-27T00:00:00.000Z");
   const due = new Date("2026-08-23T00:00:00.000Z");
+  const occurredAt = new Date("2026-08-10T00:00:00.000Z");
 
   const subscriptionBase = {
     existingKind: "subscription" as const,
     nextKind: "subscription" as const,
     paidAmount: 0,
-    existingAmountMode: "fixed" as const,
-    existingPeriod: "monthly" as const,
-    existingStartsAt: due,
-    existingNextDueAt: due,
-    existingOccurredAt: null,
+    hasPaidOccurrence: false,
+    amountMode: "fixed" as const,
+    period: "monthly" as const,
+    startsAt: due,
+    nextDueAt: due,
+    occurredAt: null,
     now,
   };
 
@@ -460,11 +462,12 @@ describe("planExpenseKindFields", () => {
     existingKind: "one_time" as const,
     nextKind: "one_time" as const,
     paidAmount: 0,
-    existingAmountMode: "fixed" as const,
-    existingPeriod: null,
-    existingStartsAt: null,
-    existingNextDueAt: null,
-    existingOccurredAt: new Date("2026-08-10T00:00:00.000Z"),
+    hasPaidOccurrence: false,
+    amountMode: "fixed" as const,
+    period: null,
+    startsAt: null,
+    nextDueAt: null,
+    occurredAt,
     now,
   };
 
@@ -480,13 +483,16 @@ describe("planExpenseKindFields", () => {
     });
   });
 
-  test("same-kind one-time applies occurredAt", () => {
-    const occurredAt = new Date("2026-08-15T00:00:00.000Z");
-    expect(planExpenseKindFields({ ...oneTimeBase, occurredAt })).toMatchObject({
+  test("same-kind one-time applies occurredAt and clears leftover cadence", () => {
+    const nextOccurredAt = new Date("2026-08-15T00:00:00.000Z");
+    expect(planExpenseKindFields({ ...oneTimeBase, occurredAt: nextOccurredAt })).toMatchObject({
       ok: true,
       kind: "one_time",
       amountMode: "fixed",
-      occurredAt,
+      period: null,
+      startsAt: null,
+      nextDueAt: null,
+      occurredAt: nextOccurredAt,
     });
   });
 
@@ -500,15 +506,28 @@ describe("planExpenseKindFields", () => {
     ).toEqual({ ok: false, error: EXPENSE_KIND_CHANGE_PAID_ERROR });
   });
 
-  test("subscription to one-time clears cadence and uses next due as occurredAt", () => {
-    expect(planExpenseKindFields({ ...subscriptionBase, nextKind: "one_time" })).toMatchObject({
+  test("rejects kind change after a recorded occurrence even when template paidAmount is 0", () => {
+    expect(
+      planExpenseKindFields({
+        ...subscriptionBase,
+        nextKind: "one_time",
+        paidAmount: 0,
+        hasPaidOccurrence: true,
+      }),
+    ).toEqual({ ok: false, error: EXPENSE_KIND_CHANGE_PAID_ERROR });
+  });
+
+  test("subscription to one-time clears cadence and uses now when occurredAt is missing", () => {
+    expect(
+      planExpenseKindFields({ ...subscriptionBase, nextKind: "one_time", occurredAt: null }),
+    ).toMatchObject({
       ok: true,
       kind: "one_time",
       amountMode: "fixed",
       period: null,
       startsAt: null,
       nextDueAt: null,
-      occurredAt: due,
+      occurredAt: now,
     });
   });
 
@@ -538,6 +557,7 @@ describe("planExpenseKindFields", () => {
         nextKind: "subscription",
         period: "monthly",
         startsAt,
+        nextDueAt: null,
       }),
     ).toMatchObject({
       ok: true,

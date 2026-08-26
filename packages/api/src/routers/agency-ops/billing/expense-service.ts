@@ -317,35 +317,42 @@ export async function updateExpense(
     throw new ORPCError("BAD_REQUEST", { message: "Name is required." });
   }
 
+  const nextKind = input.kind ?? existing.kind;
+  let hasPaidOccurrence = false;
+  if (nextKind !== existing.kind) {
+    const [occurrence] = await db
+      .select({ id: agencyOpsExpenseOccurrence.id })
+      .from(agencyOpsExpenseOccurrence)
+      .where(eq(agencyOpsExpenseOccurrence.expenseId, existing.id))
+      .limit(1);
+    hasPaidOccurrence = Boolean(occurrence);
+  }
+
   const kindPlan = planExpenseKindFields({
     existingKind: existing.kind,
-    nextKind: input.kind ?? existing.kind,
+    nextKind,
     paidAmount: existing.paidAmount ?? 0,
-    existingAmountMode: existing.amountMode ?? "fixed",
-    existingPeriod: existing.period ?? null,
-    existingStartsAt: existing.startsAt,
-    existingNextDueAt: existing.nextDueAt,
-    existingOccurredAt: existing.occurredAt,
-    amountMode: input.amountMode,
-    period: input.period,
+    hasPaidOccurrence,
+    amountMode: input.amountMode ?? existing.amountMode ?? "fixed",
+    period: input.period !== undefined ? input.period : (existing.period ?? null),
     startsAt:
       input.startsAt !== undefined
         ? input.startsAt
           ? parseIsoDateTime(input.startsAt, "startsAt")
           : null
-        : undefined,
+        : existing.startsAt,
     nextDueAt:
       input.nextDueAt !== undefined
         ? input.nextDueAt
           ? parseIsoDateTime(input.nextDueAt, "nextDueAt")
           : null
-        : undefined,
+        : existing.nextDueAt,
     occurredAt:
       input.occurredAt !== undefined
         ? input.occurredAt
           ? parseIsoDateTime(input.occurredAt, "occurredAt")
           : null
-        : undefined,
+        : existing.occurredAt,
     now: new Date(),
   });
   if (!kindPlan.ok) {
@@ -384,7 +391,13 @@ export async function updateExpense(
   }
 
   const amount = money.amount;
-  if (amountMode === "fixed" && (!Number.isInteger(amount) || amount <= 0)) {
+  if (amountMode === "variable") {
+    if (!Number.isInteger(amount) || amount < 0) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Amount must be a non-negative integer (minor units).",
+      });
+    }
+  } else if (!Number.isInteger(amount) || amount <= 0) {
     throw new ORPCError("BAD_REQUEST", {
       message: "Amount must be a positive integer (minor units).",
     });
@@ -497,9 +510,7 @@ export async function recordExpensePayment(
         paidAmount: plan.templatePaidAmount,
         status: plan.templateStatus,
         nextDueAt: plan.nextDueAt,
-        ...(plan.nextTemplateAmount !== null
-          ? { amount: plan.nextTemplateAmount, sourceAmount: plan.nextTemplateAmount }
-          : {}),
+        ...(plan.resetTemplateAmount ? { amount: 0, sourceAmount: 0 } : {}),
         updatedAt: new Date(),
       })
       .where(eq(agencyOpsExpense.id, existing.id))
