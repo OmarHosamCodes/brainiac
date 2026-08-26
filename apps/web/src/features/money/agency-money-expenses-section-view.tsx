@@ -459,9 +459,9 @@ function MoneyExpensesPanelContent({
                     ))}
                   </SelectContent>
                 </Select>
-                {create.kindHint ? (
+                {create.kindLocked ? (
                   <CardDescription className="text-[11px] text-pretty">
-                    {create.kindHint}
+                    Type can&apos;t change after a payment has been recorded.
                   </CardDescription>
                 ) : null}
               </div>

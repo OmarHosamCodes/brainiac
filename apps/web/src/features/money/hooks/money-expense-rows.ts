@@ -9,6 +9,17 @@ import {
   type MoneyExpenseRecord,
 } from "@/features/billing/money-expense-form";
 
+function expenseRemainingLabel(
+  amountMode: MoneyExpenseAmountMode,
+  amount: number,
+  remainingAmount: number,
+  currency: string,
+  amountLabel: string,
+): string {
+  if (amountMode === "variable" && amount <= 0) return amountLabel;
+  return formatMoneyExpenseAmount(remainingAmount, currency);
+}
+
 export type MoneySubscriptionCycleRecord = {
   id: string;
   expenseId: string;
@@ -45,10 +56,13 @@ export function toExpenseRow(record: MoneyExpenseRecord) {
     status: record.status,
     statusLabel: moneyExpenseStatusLabel(record.status),
     remainingAmount: record.remainingAmount,
-    remainingLabel:
-      amountMode === "variable" && record.amount <= 0
-        ? amountLabel
-        : formatMoneyExpenseAmount(record.remainingAmount, record.currency),
+    remainingLabel: expenseRemainingLabel(
+      amountMode,
+      record.amount,
+      record.remainingAmount,
+      record.currency,
+      amountLabel,
+    ),
     currency: record.currency,
     canRecordPayment: record.status === "due" || record.status === "partial",
     note: record.note || null,
@@ -86,10 +100,13 @@ export function toSubscriptionCycleRow(record: MoneySubscriptionCycleRecord) {
     status,
     statusLabel: moneyExpenseStatusLabel(status),
     remainingAmount: record.remainingAmount,
-    remainingLabel:
-      amountMode === "variable" && record.amount <= 0
-        ? amountLabel
-        : formatMoneyExpenseAmount(record.remainingAmount, record.currency),
+    remainingLabel: expenseRemainingLabel(
+      amountMode,
+      record.amount,
+      record.remainingAmount,
+      record.currency,
+      amountLabel,
+    ),
     currency: record.currency,
     canRecordPayment: record.canRecordPayment,
     note: record.note || null,

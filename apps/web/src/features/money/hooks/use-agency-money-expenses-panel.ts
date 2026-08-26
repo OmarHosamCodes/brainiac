@@ -421,9 +421,14 @@ export function useAgencyMoneyExpensesPanel({
     return Promise.all([expensesQuery.refetch(), subscriptionCyclesQuery.refetch()]);
   }
 
-  const expenseEditorPaidAmount =
-    expenseRecords.find((item) => item.id === expenseEditorId)?.paidAmount ?? 0;
-  const kindLocked = Boolean(expenseEditorId && expenseEditorPaidAmount > 0);
+  const expenseEditorRecord = expenseRecords.find((item) => item.id === expenseEditorId);
+  const kindLocked = Boolean(
+    expenseEditorId &&
+    ((expenseEditorRecord?.paidAmount ?? 0) > 0 ||
+      ((subscriptionCyclesQuery.data ?? []) as MoneySubscriptionCycleRecord[]).some(
+        (cycle) => cycle.expenseId === expenseEditorId && cycle.paidAmount > 0,
+      )),
+  );
 
   const expensesPanel = {
     periodSpendLabel: expensesPeriodSpendLabel,
@@ -464,7 +469,6 @@ export function useAgencyMoneyExpensesPanel({
       title: expenseEditorId ? "Edit expense" : "Add expense",
       submitLabel: expenseEditorId ? "Save" : "Add",
       kindLocked,
-      kindHint: kindLocked ? "Finish the current payment before changing type." : null,
       name: expenseName,
       onNameChange: setExpenseName,
       kind: expenseKind,

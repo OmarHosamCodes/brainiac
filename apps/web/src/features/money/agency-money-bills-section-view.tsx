@@ -53,6 +53,7 @@ import {
   MoneyPanelFilterRow,
   MoneyPanelMetricBlock,
   MoneyPanelTitleRow,
+  MoneyPeriodFxLine,
 } from "./money-panel-chrome";
 
 const billInstrumentRowClass =
@@ -762,7 +763,13 @@ function MoneyBillsCreateMenu({
   );
 }
 
-function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }) {
+function BillsSection({
+  bills,
+  periodFx,
+}: {
+  bills: AgencyMoneySurfaceViewModel["bills"];
+  periodFx: AgencyMoneySurfaceViewModel["periodFx"];
+}) {
   const isExpensesParty = bills.partyFilter === "expenses";
   const panelTitle = isExpensesParty ? "Expenses" : "Bills";
   const expensesPanel = bills.expensesPanel;
@@ -832,6 +839,13 @@ function BillsSection({ bills }: { bills: AgencyMoneySurfaceViewModel["bills"] }
             onOpenExpense={bills.createMenu.onOpenExpense}
           />
         </MoneyPanelTitleRow>
+
+        <MoneyPeriodFxLine
+          label={periodFx.label}
+          canApplyCurrent={periodFx.canApplyCurrent}
+          applying={periodFx.applying}
+          onApplyCurrent={periodFx.onApplyCurrent}
+        />
 
         {isExpensesParty && expensesPanel.periodSpendLabel ? (
           <MoneyPanelMetricBlock

@@ -16,6 +16,7 @@ export function MoneyStatsSection({
   onSelectMetric,
   onRetry,
   metricHint,
+  periodFx,
 }: {
   status: AgencyMoneySurfaceViewModel["scoreboardStatus"];
   errorMessage: string;
@@ -23,6 +24,7 @@ export function MoneyStatsSection({
   onSelectMetric: AgencyMoneySurfaceViewModel["onSelectMetric"];
   onRetry: AgencyMoneySurfaceViewModel["onRetryScoreboard"];
   metricHint?: MoneyStatsMetricHint | null;
+  periodFx?: AgencyMoneySurfaceViewModel["periodFx"];
 }) {
   if (status === "loading") {
     return (
@@ -48,6 +50,7 @@ export function MoneyStatsSection({
 
   return (
     <div className="flex flex-col gap-3">
+      {periodFx?.label ? <p className="text-xs text-muted">{periodFx.label}</p> : null}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Money period stats">
         {statsCards.map((card) => (
           <MoneyStatsPlate key={card.id} card={card} onSelectMetric={onSelectMetric} />

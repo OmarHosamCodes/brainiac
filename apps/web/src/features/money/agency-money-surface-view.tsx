@@ -32,6 +32,7 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
     onSelectMetric,
     moneySettings,
     bills,
+    periodFx,
     isOwner,
     isRolePending,
     isRoleError,
@@ -146,8 +147,9 @@ export function AgencyMoneySurfaceView({ viewModel }: AgencyMoneySurfaceViewProp
             onSelectMetric={onSelectMetric}
             onRetry={onRetryScoreboard}
             metricHint={lastStatsMetricHint}
+            periodFx={periodFx}
           />
-          <BillsSection bills={bills} />
+          <BillsSection bills={bills} periodFx={periodFx} />
           <MoneySettingsDialog settings={moneySettings} />
         </>
       )}

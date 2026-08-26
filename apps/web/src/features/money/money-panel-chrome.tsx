@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { agencyFocusRingClass, agencyMetricClass } from "@/features/shared/agency-ui";
 import { moneyBaseTransition } from "@/features/money/money-motion";
 import { cn } from "@/lib/utils";
+import { Button } from "@/ui/button";
 
 export const moneyPanelHeaderClass = "flex flex-col gap-3 border-b border-default p-5 pb-4";
 
@@ -121,6 +122,37 @@ export function MoneyPanelFilterRow({ label, children }: { label?: string; child
       aria-label={label}
     >
       {children}
+    </div>
+  );
+}
+
+export function MoneyPeriodFxLine({
+  label,
+  canApplyCurrent,
+  applying,
+  onApplyCurrent,
+}: {
+  label: string | null;
+  canApplyCurrent: boolean;
+  applying: boolean;
+  onApplyCurrent: () => void;
+}) {
+  if (!label && !canApplyCurrent) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      {label ? <p className="text-xs text-muted">{label}</p> : null}
+      {canApplyCurrent ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-muted"
+          disabled={applying}
+          onClick={onApplyCurrent}
+        >
+          Update from current FX
+        </Button>
+      ) : null}
     </div>
   );
 }

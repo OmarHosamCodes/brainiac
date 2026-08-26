@@ -18,6 +18,11 @@ import { useAgencyMoneyBills } from "@/features/money/hooks/use-agency-money-bil
 import { useAgencyMoneyExpensesPanel } from "@/features/money/hooks/use-agency-money-expenses-panel";
 import { useAgencyMoneyScoreboard } from "@/features/money/hooks/use-agency-money-scoreboard";
 import { useAgencyMoneySettings } from "@/features/money/hooks/use-agency-money-settings";
+import { formatPeriodFxLockLabel } from "@/features/money/money-period-fx-label";
+import {
+  selectIsInvoiceMutationPending,
+  useAgencyOpsStore,
+} from "@/features/shared/stores/agency-ops";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { orpc } from "@/lib/orpc";
 
@@ -154,6 +159,32 @@ export function useAgencyMoneySurface(teamId: string) {
     updateMoneySearch,
   });
 
+  const periodFxQuery = useQuery({
+    ...orpc.agencyOps.fxRates.listPeriod.queryOptions({
+      input: {
+        teamId,
+        periodStart: periodRange.from,
+        periodEnd: periodRange.to,
+      },
+    }),
+    enabled: Boolean(teamId) && isOwner,
+  });
+  const applyCurrentFxToPeriod = useAgencyOpsStore((state) => state.applyCurrentFxToPeriod);
+  const applyingPeriodFx = useAgencyOpsStore(selectIsInvoiceMutationPending);
+  const periodFx = {
+    label: formatPeriodFxLockLabel(periodFxQuery.data?.items ?? []),
+    canApplyCurrent: Boolean(isOwner && periodFxQuery.data?.canApplyCurrent),
+    applying: applyingPeriodFx,
+    onApplyCurrent: () => {
+      if (!teamId || !periodFxQuery.data?.canApplyCurrent) return;
+      void applyCurrentFxToPeriod({
+        teamId,
+        periodStart: periodRange.from,
+        periodEnd: periodRange.to,
+      });
+    },
+  };
+
   return {
     teamId,
     isOwner,
@@ -191,5 +222,6 @@ export function useAgencyMoneySurface(teamId: string) {
       ...bills,
       expensesPanel: expenses.expensesPanel,
     },
+    periodFx,
   };
 }
