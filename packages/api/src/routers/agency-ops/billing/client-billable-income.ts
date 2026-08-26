@@ -1,5 +1,7 @@
 /** Price tracked time for Money income (billable rates; waste tracked separately). */
 
+import { resolveMoneyValue, type MoneyFxRateRow } from "./money-currency";
+
 export function amountFromDurationAndRate(durationSeconds: number, rateAmount: number): number {
   if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
     throw new Error("durationSeconds must be a non-negative number.");
@@ -21,6 +23,44 @@ export function resolveEffectiveBillableRate(
   if (projectRateAmount != null) return projectRateAmount;
   if (clientRateAmount != null) return clientRateAmount;
   return null;
+}
+
+export type BillableRateLevel = {
+  /** Null means inherit from the next level. */
+  billableRateAmount: number | null;
+  sourceBillableRateAmount?: number | null;
+  currency?: string | null;
+};
+
+/**
+ * Pick the winning catalog rate (task → project → client), then convert source × FX
+ * into agency minor units. Falls back to the stored agency amount when source is missing.
+ */
+export function convertWinningBillableRate(
+  task: BillableRateLevel,
+  project: BillableRateLevel,
+  client: BillableRateLevel,
+  agencyCurrency: string,
+  rates: readonly MoneyFxRateRow[],
+): number | null {
+  const winning =
+    task.billableRateAmount != null
+      ? task
+      : project.billableRateAmount != null
+        ? project
+        : client.billableRateAmount != null
+          ? client
+          : null;
+  if (!winning || winning.billableRateAmount == null) return null;
+  if (winning.sourceBillableRateAmount != null && winning.currency) {
+    return resolveMoneyValue({
+      sourceAmount: winning.sourceBillableRateAmount,
+      sourceCurrency: winning.currency,
+      agencyCurrency,
+      rates,
+    }).amount;
+  }
+  return winning.billableRateAmount;
 }
 
 function rateBucketKey(projectId: string, effectiveRate: number | null): string {

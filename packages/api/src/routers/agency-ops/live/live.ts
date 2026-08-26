@@ -51,9 +51,13 @@ const agencyProjectTaskLiveSchema = z.object({
   isWaste: z.boolean(),
   estimateMinutes: z.number().int().min(1).max(1440).nullable(),
   billableRateAmount: z.number().int().nonnegative().nullable(),
+  sourceBillableRateAmount: z.number().int().nonnegative().nullable(),
   currency: z.string().min(1),
   projectBillableRateAmount: z.number().int().nonnegative().nullable(),
+  projectSourceBillableRateAmount: z.number().int().nonnegative().nullable(),
+  projectCurrency: z.string().min(1),
   clientBillableRateAmount: z.number().int().nonnegative().nullable(),
+  clientSourceBillableRateAmount: z.number().int().nonnegative().nullable(),
   clientCurrency: z.string().min(1),
   createdByUserId: z.string().min(1),
   assignees: z.array(agencyProjectTaskAssigneeLiveSchema),
@@ -332,9 +336,13 @@ export async function publishAgencyTaskUpdated(
     isWaste: boolean;
     estimateMinutes: number | null;
     billableRateAmount: number | null;
+    sourceBillableRateAmount: number | null;
     currency: string;
     projectBillableRateAmount: number | null;
+    projectSourceBillableRateAmount: number | null;
+    projectCurrency: string;
     clientBillableRateAmount: number | null;
+    clientSourceBillableRateAmount: number | null;
     clientCurrency: string;
     createdByUserId: string;
     assignees: Array<{

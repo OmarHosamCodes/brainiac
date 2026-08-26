@@ -32,8 +32,10 @@ import {
 } from "./expense-service";
 import { getMoneySettings, upsertMoneySettings } from "./money-settings-service";
 import {
+  applyCurrentFxToPeriod,
   deleteFxRate,
   listFxRates,
+  listPeriodFx,
   setAgencyCurrency,
   suggestFxRate,
   upsertFxRate,
@@ -1039,6 +1041,50 @@ export const billingRouter = {
             provider: z.literal("frankfurter"),
           })
           .parse(await suggestFxRate(context.session.user.id, input));
+      }),
+    listPeriod: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            items: z.array(
+              z.object({
+                fromCurrency: z.string().length(3),
+                toCurrency: z.string().length(3),
+                rate: z.string().min(1),
+                fxAsOf: z.string().datetime().nullable(),
+              }),
+            ),
+            canApplyCurrent: z.boolean(),
+          })
+          .parse(await listPeriodFx(context.session.user.id, input));
+      }),
+    applyCurrentToPeriod: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            items: z.array(
+              z.object({
+                fromCurrency: z.string().length(3),
+                toCurrency: z.string().length(3),
+                rate: z.string().min(1),
+                fxAsOf: z.string().datetime().nullable(),
+              }),
+            ),
+            canApplyCurrent: z.boolean(),
+          })
+          .parse(await applyCurrentFxToPeriod(context.session.user.id, input));
       }),
   },
 };

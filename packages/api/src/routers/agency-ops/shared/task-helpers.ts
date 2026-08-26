@@ -42,9 +42,13 @@ export function mapProjectTaskRow(row: {
   isWaste: boolean;
   estimateMinutes: number | null;
   billableRateAmount: number | null;
+  sourceBillableRateAmount: number | null;
   currency: string;
   projectBillableRateAmount: number | null;
+  projectSourceBillableRateAmount: number | null;
+  projectCurrency: string;
   clientBillableRateAmount: number | null;
+  clientSourceBillableRateAmount: number | null;
   clientCurrency: string;
   createdByUserId: string;
   assignees: AgencyProjectTaskAssigneeRecord[];
@@ -67,9 +71,13 @@ export function mapProjectTaskRow(row: {
     isWaste: row.isWaste,
     estimateMinutes: row.estimateMinutes,
     billableRateAmount: row.billableRateAmount,
+    sourceBillableRateAmount: row.sourceBillableRateAmount,
     currency: row.currency,
     projectBillableRateAmount: row.projectBillableRateAmount,
+    projectSourceBillableRateAmount: row.projectSourceBillableRateAmount,
+    projectCurrency: row.projectCurrency,
     clientBillableRateAmount: row.clientBillableRateAmount,
+    clientSourceBillableRateAmount: row.clientSourceBillableRateAmount,
     clientCurrency: row.clientCurrency,
     createdByUserId: row.createdByUserId,
     assignees: row.assignees,
@@ -267,9 +275,13 @@ export async function buildProjectTaskRecord(
     isWaste: boolean;
     estimateMinutes: number | null;
     billableRateAmount: number | null;
+    sourceBillableRateAmount: number | null;
     currency: string;
     projectBillableRateAmount: number | null;
+    projectSourceBillableRateAmount: number | null;
+    projectCurrency: string;
     clientBillableRateAmount: number | null;
+    clientSourceBillableRateAmount: number | null;
     clientCurrency: string;
     createdByUserId: string;
     dueDate: Date | null;
@@ -338,6 +350,7 @@ export const projectTaskColumns = {
   isWaste: agencyOpsProjectTask.isWaste,
   estimateMinutes: agencyOpsProjectTask.estimateMinutes,
   billableRateAmount: agencyOpsProjectTask.billableRateAmount,
+  sourceBillableRateAmount: agencyOpsProjectTask.sourceBillableRateAmount,
   currency: agencyOpsProjectTask.currency,
   createdByUserId: agencyOpsProjectTask.createdByUserId,
   dueDate: agencyOpsProjectTask.dueDate,
@@ -348,7 +361,10 @@ export const projectTaskColumns = {
 export const projectTaskSelectWithParentRates = {
   ...projectTaskColumns,
   projectBillableRateAmount: agencyOpsProject.billableRateAmount,
+  projectSourceBillableRateAmount: agencyOpsProject.sourceBillableRateAmount,
+  projectCurrency: agencyOpsProject.currency,
   clientBillableRateAmount: agencyOpsClient.billableRateAmount,
+  clientSourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
   clientCurrency: agencyOpsClient.currency,
 } as const;
 
@@ -363,6 +379,7 @@ export type ProjectTaskRow = {
   isWaste: boolean;
   estimateMinutes: number | null;
   billableRateAmount: number | null;
+  sourceBillableRateAmount: number | null;
   currency: string;
   createdByUserId: string;
   dueDate: Date | null;
@@ -372,7 +389,10 @@ export type ProjectTaskRow = {
 
 export type ProjectTaskRowWithParentRates = ProjectTaskRow & {
   projectBillableRateAmount: number | null;
+  projectSourceBillableRateAmount: number | null;
+  projectCurrency: string;
   clientBillableRateAmount: number | null;
+  clientSourceBillableRateAmount: number | null;
   clientCurrency: string;
 };
 
@@ -385,7 +405,10 @@ export async function attachParentRates(
     .select({
       id: agencyOpsProject.id,
       billableRateAmount: agencyOpsProject.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsProject.sourceBillableRateAmount,
+      currency: agencyOpsProject.currency,
       clientBillableRateAmount: agencyOpsClient.billableRateAmount,
+      clientSourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
       clientCurrency: agencyOpsClient.currency,
     })
     .from(agencyOpsProject)
@@ -397,7 +420,10 @@ export async function attachParentRates(
     return {
       ...row,
       projectBillableRateAmount: parent?.billableRateAmount ?? null,
+      projectSourceBillableRateAmount: parent?.sourceBillableRateAmount ?? null,
+      projectCurrency: parent?.currency ?? "USD",
       clientBillableRateAmount: parent?.clientBillableRateAmount ?? null,
+      clientSourceBillableRateAmount: parent?.clientSourceBillableRateAmount ?? null,
       clientCurrency: parent?.clientCurrency ?? "USD",
     };
   });

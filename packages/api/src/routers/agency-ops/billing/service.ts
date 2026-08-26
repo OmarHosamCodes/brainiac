@@ -27,6 +27,7 @@ import { invoicePeriodTotalsFromRows } from "./invoice-period-totals";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import {
   aggregateExternalBillableIncome,
+  convertWinningBillableRate,
   priceClientInvoiceProjects,
   type ClientBillableIncomeRow,
 } from "./client-billable-income";
@@ -35,7 +36,8 @@ import {
   type PeriodBillClientActivity,
   type PeriodBillMemberActivity,
 } from "./period-bill-activity";
-import { getAgencyCurrency, loadMoneyResolveContext } from "./money-fx-service";
+import { getAgencyCurrency, ensurePeriodFx, loadMoneyResolveContext } from "./money-fx-service";
+import { MoneyCurrencyError, type MoneyFxRateRow } from "./money-currency";
 import { paginateItems, type PaginatedItems } from "./list-pagination";
 import { resolveEntryWaste } from "../shared/waste-helpers";
 
@@ -48,6 +50,31 @@ type AgencyMemberRateRecord = {
   currency: string;
   effectiveFrom: string | null;
 };
+
+function periodAgencyBillableRate(
+  task: { billableRateAmount: number | null; sourceBillableRateAmount: number | null; currency: string | null },
+  project: {
+    billableRateAmount: number | null;
+    sourceBillableRateAmount: number | null;
+    currency: string | null;
+  },
+  client: {
+    billableRateAmount: number | null;
+    sourceBillableRateAmount: number | null;
+    currency: string | null;
+  },
+  agencyCurrency: string,
+  rates: readonly MoneyFxRateRow[],
+): number | null {
+  try {
+    return convertWinningBillableRate(task, project, client, agencyCurrency, rates);
+  } catch (error) {
+    if (error instanceof MoneyCurrencyError) {
+      throw new ORPCError("BAD_REQUEST", { message: error.message });
+    }
+    throw error;
+  }
+}
 
 export async function listMemberRates(
   actorUserId: string,
@@ -454,6 +481,8 @@ export async function createInvoice(
       id: agencyOpsClient.id,
       name: agencyOpsClient.name,
       billableRateAmount: agencyOpsClient.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
+      currency: agencyOpsClient.currency,
     })
     .from(agencyOpsClient)
     .where(and(eq(agencyOpsClient.id, input.clientId), eq(agencyOpsClient.teamId, input.teamId)))
@@ -470,6 +499,15 @@ export async function createInvoice(
     throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
   }
 
+  const [periodRates, agency] = await Promise.all([
+    ensurePeriodFx(actorUserId, {
+      teamId: input.teamId,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+    }),
+    getAgencyCurrency(actorUserId, { teamId: input.teamId }),
+  ]);
+
   const rawEntries = await db
     .select({
       projectId: agencyOpsTimeEntry.projectId,
@@ -479,7 +517,11 @@ export async function createInvoice(
       taskIsWaste: agencyOpsProjectTask.isWaste,
       taskTitle: agencyOpsProjectTask.title,
       taskRateAmount: agencyOpsProjectTask.billableRateAmount,
+      taskSourceBillableRateAmount: agencyOpsProjectTask.sourceBillableRateAmount,
+      taskCurrency: agencyOpsProjectTask.currency,
       projectRateAmount: agencyOpsProject.billableRateAmount,
+      projectSourceBillableRateAmount: agencyOpsProject.sourceBillableRateAmount,
+      projectCurrency: agencyOpsProject.currency,
     })
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
@@ -494,16 +536,37 @@ export async function createInvoice(
       ),
     );
 
-  const entries = rawEntries.map((row) => ({
-    projectId: row.projectId,
-    projectName: row.projectName,
-    durationSeconds: row.durationSeconds,
-    isWaste: resolveEntryWaste(row),
-    taskRateAmount: row.taskRateAmount,
-    projectRateAmount: row.projectRateAmount,
-  }));
+  const entries = rawEntries.map((row) => {
+    const agencyRate = periodAgencyBillableRate(
+      {
+        billableRateAmount: row.taskRateAmount,
+        sourceBillableRateAmount: row.taskSourceBillableRateAmount,
+        currency: row.taskCurrency,
+      },
+      {
+        billableRateAmount: row.projectRateAmount,
+        sourceBillableRateAmount: row.projectSourceBillableRateAmount,
+        currency: row.projectCurrency,
+      },
+      {
+        billableRateAmount: clientRow.billableRateAmount,
+        sourceBillableRateAmount: clientRow.sourceBillableRateAmount,
+        currency: clientRow.currency,
+      },
+      agency.currency,
+      periodRates,
+    );
+    return {
+      projectId: row.projectId,
+      projectName: row.projectName,
+      durationSeconds: row.durationSeconds,
+      isWaste: resolveEntryWaste(row),
+      taskRateAmount: agencyRate,
+      projectRateAmount: null,
+    };
+  });
 
-  const pricedProjects = priceClientInvoiceProjects(entries, clientRow.billableRateAmount);
+  const pricedProjects = priceClientInvoiceProjects(entries, null);
   if (!pricedProjects.ok) {
     throw new ORPCError("BAD_REQUEST", {
       message: `${clientRow.name} has no billable rate set. Set the client rate before creating an invoice.`,
@@ -715,6 +778,8 @@ async function loadPeriodClientBillableRows(
   teamId: string,
   periodStart: Date,
   periodEnd: Date,
+  agencyCurrency: string,
+  rates: readonly MoneyFxRateRow[],
 ): Promise<ClientBillableIncomeRow[]> {
   const rows = await db
     .select({
@@ -728,8 +793,14 @@ async function loadPeriodClientBillableRows(
       taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
       taskRateAmount: agencyOpsProjectTask.billableRateAmount,
+      taskSourceBillableRateAmount: agencyOpsProjectTask.sourceBillableRateAmount,
+      taskCurrency: agencyOpsProjectTask.currency,
       projectRateAmount: agencyOpsProject.billableRateAmount,
+      projectSourceBillableRateAmount: agencyOpsProject.sourceBillableRateAmount,
+      projectCurrency: agencyOpsProject.currency,
       clientRateAmount: agencyOpsClient.billableRateAmount,
+      clientSourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
+      clientCurrency: agencyOpsClient.currency,
     })
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
@@ -744,17 +815,38 @@ async function loadPeriodClientBillableRows(
       ),
     );
 
-  return rows.map((row) => ({
-    clientId: row.clientId,
-    clientName: row.clientName,
-    category: row.category,
-    projectId: row.projectId,
-    durationSeconds: row.durationSeconds,
-    isWaste: resolveEntryWaste(row),
-    taskRateAmount: row.taskRateAmount,
-    projectRateAmount: row.projectRateAmount,
-    clientRateAmount: row.clientRateAmount,
-  }));
+  return rows.map((row) => {
+    const agencyRate = periodAgencyBillableRate(
+      {
+        billableRateAmount: row.taskRateAmount,
+        sourceBillableRateAmount: row.taskSourceBillableRateAmount,
+        currency: row.taskCurrency,
+      },
+      {
+        billableRateAmount: row.projectRateAmount,
+        sourceBillableRateAmount: row.projectSourceBillableRateAmount,
+        currency: row.projectCurrency,
+      },
+      {
+        billableRateAmount: row.clientRateAmount,
+        sourceBillableRateAmount: row.clientSourceBillableRateAmount,
+        currency: row.clientCurrency,
+      },
+      agencyCurrency,
+      rates,
+    );
+    return {
+      clientId: row.clientId,
+      clientName: row.clientName,
+      category: row.category,
+      projectId: row.projectId,
+      durationSeconds: row.durationSeconds,
+      isWaste: resolveEntryWaste(row),
+      taskRateAmount: agencyRate,
+      projectRateAmount: null,
+      clientRateAmount: null,
+    };
+  });
 }
 
 export async function sumPeriodExternalBillablePool(
@@ -769,10 +861,19 @@ export async function sumPeriodExternalBillablePool(
     throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
   }
 
-  const rows = await loadPeriodClientBillableRows(input.teamId, periodStart, periodEnd);
+  const [periodRates, agency] = await Promise.all([
+    ensurePeriodFx(actorUserId, input),
+    getAgencyCurrency(actorUserId, { teamId: input.teamId }),
+  ]);
+  const rows = await loadPeriodClientBillableRows(
+    input.teamId,
+    periodStart,
+    periodEnd,
+    agency.currency,
+    periodRates,
+  );
   const { billablePoolAmount } = aggregateExternalBillableIncome(rows);
-  const { currency } = await getAgencyCurrency(actorUserId, { teamId: input.teamId });
-  return { billablePoolAmount, currency };
+  return { billablePoolAmount, currency: agency.currency };
 }
 
 export async function listPeriodBillActivity(
@@ -787,8 +888,23 @@ export async function listPeriodBillActivity(
     throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
   }
 
+  const [periodRates, agency] = await Promise.all([
+    ensurePeriodFx(actorUserId, {
+      teamId: input.teamId,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+    }),
+    getAgencyCurrency(actorUserId, { teamId: input.teamId }),
+  ]);
+
   const [billableRows, memberPayableRows] = await Promise.all([
-    loadPeriodClientBillableRows(input.teamId, periodStart, periodEnd),
+    loadPeriodClientBillableRows(
+      input.teamId,
+      periodStart,
+      periodEnd,
+      agency.currency,
+      periodRates,
+    ),
     db
       .select({
         userId: agencyOpsTimeEntry.userId,

@@ -8,11 +8,13 @@ import {
   agencyOpsMoneyPendingAdjustment,
   agencyOpsMoneySettings,
   agencyOpsPayoutRun,
+  agencyOpsPeriodFx,
 } from "@orch/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { ORPCError } from "@orpc/server";
 import { createWorkspaceId } from "@orch/workspace";
 
+import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import {
   MoneyCurrencyError,
@@ -21,6 +23,7 @@ import {
   type MoneyFxRateRow,
   type ResolvedMoneyValue,
 } from "./money-currency";
+import { missingPeriodFxPairs, periodFxApplyBlockedMessage } from "./money-period-fx";
 import { invalidateMoneySettingsCache } from "./money-settings-cache";
 
 const ISO_CURRENCY = /^[A-Z]{3}$/;
@@ -32,6 +35,13 @@ export type AgencyFxRateRecord = {
   toCurrency: string;
   rate: string;
   updatedAt: string;
+};
+
+export type AgencyPeriodFxRecord = {
+  fromCurrency: string;
+  toCurrency: string;
+  rate: string;
+  fxAsOf: string | null;
 };
 
 function mapFxRow(row: typeof agencyOpsFxRate.$inferSelect): AgencyFxRateRecord {
@@ -138,6 +148,100 @@ async function listTeamFxRateRows(teamId: string): Promise<MoneyFxRateRow[]> {
     .from(agencyOpsFxRate)
     .where(eq(agencyOpsFxRate.teamId, teamId));
   return rows;
+}
+
+function mapPeriodFxRows(
+  rows: Array<{ fromCurrency: string; toCurrency: string; rate: string; fxAsOf: Date | null }>,
+): AgencyPeriodFxRecord[] {
+  return rows.map((row) => ({
+    fromCurrency: row.fromCurrency,
+    toCurrency: row.toCurrency,
+    rate: row.rate,
+    fxAsOf: row.fxAsOf?.toISOString() ?? null,
+  }));
+}
+
+async function loadPeriodFxRows(
+  teamId: string,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<Array<{ fromCurrency: string; toCurrency: string; rate: string; fxAsOf: Date | null }>> {
+  return db
+    .select({
+      fromCurrency: agencyOpsPeriodFx.fromCurrency,
+      toCurrency: agencyOpsPeriodFx.toCurrency,
+      rate: agencyOpsPeriodFx.rate,
+      fxAsOf: agencyOpsPeriodFx.fxAsOf,
+    })
+    .from(agencyOpsPeriodFx)
+    .where(
+      and(
+        eq(agencyOpsPeriodFx.teamId, teamId),
+        eq(agencyOpsPeriodFx.periodStart, periodStart),
+        eq(agencyOpsPeriodFx.periodEnd, periodEnd),
+      ),
+    );
+}
+
+async function periodHasInvoices(
+  teamId: string,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<boolean> {
+  const rows = await db
+    .select({ n: sql<number>`1` })
+    .from(agencyOpsInvoice)
+    .where(
+      and(
+        eq(agencyOpsInvoice.teamId, teamId),
+        eq(agencyOpsInvoice.periodStart, periodStart),
+        eq(agencyOpsInvoice.periodEnd, periodEnd),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+async function snapshotMissingPeriodFx(
+  teamId: string,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<MoneyFxRateRow[]> {
+  const current = await listTeamFxRateRows(teamId);
+  const snapshot = await loadPeriodFxRows(teamId, periodStart, periodEnd);
+  const missing = missingPeriodFxPairs(current, snapshot);
+  if (missing.length === 0) {
+    return snapshot.map((row) => ({
+      fromCurrency: row.fromCurrency,
+      toCurrency: row.toCurrency,
+      rate: row.rate,
+    }));
+  }
+
+  const now = new Date();
+  await db
+    .insert(agencyOpsPeriodFx)
+    .values(
+      missing.map((row) => ({
+        id: createWorkspaceId("agency-period-fx"),
+        teamId,
+        periodStart,
+        periodEnd,
+        fromCurrency: normalizeCurrencyCode(row.fromCurrency),
+        toCurrency: normalizeCurrencyCode(row.toCurrency),
+        rate: row.rate,
+        fxAsOf: now,
+        createdAt: now,
+      })),
+    )
+    .onConflictDoNothing();
+
+  const next = await loadPeriodFxRows(teamId, periodStart, periodEnd);
+  return next.map((row) => ({
+    fromCurrency: row.fromCurrency,
+    toCurrency: row.toCurrency,
+    rate: row.rate,
+  }));
 }
 
 /** Public read of agency currency (membership required). */
@@ -288,6 +392,88 @@ export async function deleteFxRate(
     throw new ORPCError("NOT_FOUND", { message: "FX rate was not found." });
   }
   return { ok: true };
+}
+
+export async function ensurePeriodFx(
+  actorUserId: string,
+  input: { teamId: string; periodStart: string; periodEnd: string },
+): Promise<MoneyFxRateRow[]> {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
+  const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
+  if (periodStart >= periodEnd) {
+    throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
+  }
+  return snapshotMissingPeriodFx(input.teamId, periodStart, periodEnd);
+}
+
+export async function listPeriodFx(
+  actorUserId: string,
+  input: { teamId: string; periodStart: string; periodEnd: string },
+): Promise<{ items: AgencyPeriodFxRecord[]; canApplyCurrent: boolean }> {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
+  const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
+  if (periodStart >= periodEnd) {
+    throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
+  }
+  await snapshotMissingPeriodFx(input.teamId, periodStart, periodEnd);
+  const rows = await loadPeriodFxRows(input.teamId, periodStart, periodEnd);
+  return {
+    items: mapPeriodFxRows(rows),
+    canApplyCurrent: !(await periodHasInvoices(input.teamId, periodStart, periodEnd)),
+  };
+}
+
+export async function applyCurrentFxToPeriod(
+  actorUserId: string,
+  input: { teamId: string; periodStart: string; periodEnd: string },
+): Promise<{ items: AgencyPeriodFxRecord[]; canApplyCurrent: boolean }> {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
+  const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
+  if (periodStart >= periodEnd) {
+    throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
+  }
+  const blocked = periodFxApplyBlockedMessage(
+    await periodHasInvoices(input.teamId, periodStart, periodEnd),
+  );
+  if (blocked) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: blocked,
+    });
+  }
+
+  const current = await listTeamFxRateRows(input.teamId);
+  const now = new Date();
+  await db
+    .delete(agencyOpsPeriodFx)
+    .where(
+      and(
+        eq(agencyOpsPeriodFx.teamId, input.teamId),
+        eq(agencyOpsPeriodFx.periodStart, periodStart),
+        eq(agencyOpsPeriodFx.periodEnd, periodEnd),
+      ),
+    );
+
+  if (current.length > 0) {
+    await db.insert(agencyOpsPeriodFx).values(
+      current.map((row) => ({
+        id: createWorkspaceId("agency-period-fx"),
+        teamId: input.teamId,
+        periodStart,
+        periodEnd,
+        fromCurrency: normalizeCurrencyCode(row.fromCurrency),
+        toCurrency: normalizeCurrencyCode(row.toCurrency),
+        rate: row.rate,
+        fxAsOf: now,
+        createdAt: now,
+      })),
+    );
+  }
+
+  const rows = await loadPeriodFxRows(input.teamId, periodStart, periodEnd);
+  return { items: mapPeriodFxRows(rows), canApplyCurrent: true };
 }
 
 export async function setAgencyCurrency(

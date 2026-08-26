@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   aggregateExternalBillableIncome,
   amountFromDurationAndRate,
+  convertWinningBillableRate,
   priceClientInvoiceProjects,
   resolveEffectiveBillableRate,
 } from "./client-billable-income";
@@ -24,6 +25,90 @@ describe("resolveEffectiveBillableRate", () => {
 
   test("inherits client rate when task and project are null", () => {
     expect(resolveEffectiveBillableRate(null, null, 10_000)).toBe(10_000);
+  });
+});
+
+describe("convertWinningBillableRate", () => {
+  const usdEgp = [{ fromCurrency: "USD", toCurrency: "EGP", rate: "50.94" }];
+
+  test("converts the winning USD source rate with period FX", () => {
+    expect(
+      convertWinningBillableRate(
+        { billableRateAmount: null },
+        { billableRateAmount: null },
+        {
+          billableRateAmount: 101_880,
+          sourceBillableRateAmount: 2_000,
+          currency: "USD",
+        },
+        "EGP",
+        usdEgp,
+      ),
+    ).toBe(101_880);
+  });
+
+  test("uses a later FX for the same static USD source", () => {
+    expect(
+      convertWinningBillableRate(
+        { billableRateAmount: null },
+        { billableRateAmount: null },
+        {
+          billableRateAmount: 101_880,
+          sourceBillableRateAmount: 2_000,
+          currency: "USD",
+        },
+        "EGP",
+        [{ fromCurrency: "USD", toCurrency: "EGP", rate: "51.2" }],
+      ),
+    ).toBe(102_400);
+  });
+
+  test("converts a task USD override instead of the client rate", () => {
+    expect(
+      convertWinningBillableRate(
+        {
+          billableRateAmount: 50_940,
+          sourceBillableRateAmount: 2_500,
+          currency: "USD",
+        },
+        { billableRateAmount: null },
+        {
+          billableRateAmount: 101_880,
+          sourceBillableRateAmount: 2_000,
+          currency: "USD",
+        },
+        "EGP",
+        usdEgp,
+      ),
+    ).toBe(127_350);
+  });
+
+  test("skips FX when the winning source is already agency currency", () => {
+    expect(
+      convertWinningBillableRate(
+        { billableRateAmount: null },
+        { billableRateAmount: null },
+        {
+          billableRateAmount: 10_000,
+          sourceBillableRateAmount: 10_000,
+          currency: "EGP",
+        },
+        "EGP",
+        usdEgp,
+      ),
+    ).toBe(10_000);
+  });
+
+  test("falls back to the stored agency amount when source is missing", () => {
+    expect(
+      convertWinningBillableRate(
+        { billableRateAmount: null },
+        { billableRateAmount: null },
+        { billableRateAmount: 10_000 },
+        "EGP",
+        usdEgp,
+      ),
+    ).toBe(10_000);
   });
 });
 

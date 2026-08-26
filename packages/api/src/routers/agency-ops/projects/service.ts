@@ -49,8 +49,10 @@ type AgencyProjectRecord = {
   name: string;
   colorHueId: number | null;
   billableRateAmount: number | null;
+  sourceBillableRateAmount: number | null;
   currency: string;
   clientBillableRateAmount: number | null;
+  clientSourceBillableRateAmount: number | null;
   clientCurrency: string;
   deletedAt: string | null;
   createdAt: string;
@@ -89,8 +91,10 @@ function mapProjectRow(row: {
   name: string;
   colorHueId: number | null;
   billableRateAmount: number | null;
+  sourceBillableRateAmount: number | null;
   currency: string;
   clientBillableRateAmount: number | null;
+  clientSourceBillableRateAmount: number | null;
   clientCurrency: string;
   deletedAt: Date | null;
   createdAt: Date;
@@ -104,8 +108,10 @@ function mapProjectRow(row: {
     name: row.name,
     colorHueId: row.colorHueId,
     billableRateAmount: row.billableRateAmount,
+    sourceBillableRateAmount: row.sourceBillableRateAmount,
     currency: row.currency,
     clientBillableRateAmount: row.clientBillableRateAmount,
+    clientSourceBillableRateAmount: row.clientSourceBillableRateAmount,
     clientCurrency: row.clientCurrency,
     deletedAt: row.deletedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
@@ -157,8 +163,10 @@ export async function listAgencyProjects(
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
       billableRateAmount: agencyOpsProject.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsProject.sourceBillableRateAmount,
       currency: agencyOpsProject.currency,
       clientBillableRateAmount: agencyOpsClient.billableRateAmount,
+      clientSourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
       clientCurrency: agencyOpsClient.currency,
       deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
@@ -252,6 +260,7 @@ export async function createAgencyProject(
     .select({
       name: agencyOpsClient.name,
       billableRateAmount: agencyOpsClient.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
       currency: agencyOpsClient.currency,
     })
     .from(agencyOpsClient)
@@ -261,9 +270,11 @@ export async function createAgencyProject(
   return mapProjectRow({
     ...created,
     billableRateAmount: null,
+    sourceBillableRateAmount: null,
     currency: "USD",
     clientName: client?.name ?? "Unknown",
     clientBillableRateAmount: client?.billableRateAmount ?? null,
+    clientSourceBillableRateAmount: client?.sourceBillableRateAmount ?? null,
     clientCurrency: client?.currency ?? "USD",
   });
 }
@@ -551,6 +562,7 @@ export async function createAgencyProjectWithJourney(
     .select({
       name: agencyOpsClient.name,
       billableRateAmount: agencyOpsClient.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
       currency: agencyOpsClient.currency,
     })
     .from(agencyOpsClient)
@@ -565,6 +577,7 @@ export async function createAgencyProjectWithJourney(
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
       billableRateAmount: agencyOpsProject.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsProject.sourceBillableRateAmount,
       currency: agencyOpsProject.currency,
       deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
@@ -583,6 +596,7 @@ export async function createAgencyProjectWithJourney(
       ...createdProject,
       clientName: client?.name ?? "Unknown",
       clientBillableRateAmount: client?.billableRateAmount ?? null,
+      clientSourceBillableRateAmount: client?.sourceBillableRateAmount ?? null,
       clientCurrency: client?.currency ?? "USD",
     }),
     journey: await buildAgencyProjectJourneyRecord(input.teamId, projectId, actorUserId),
@@ -988,6 +1002,7 @@ export async function updateAgencyProject(
       name: agencyOpsProject.name,
       colorHueId: agencyOpsProject.colorHueId,
       billableRateAmount: agencyOpsProject.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsProject.sourceBillableRateAmount,
       currency: agencyOpsProject.currency,
       deletedAt: agencyOpsProject.deletedAt,
       createdAt: agencyOpsProject.createdAt,
@@ -1002,6 +1017,7 @@ export async function updateAgencyProject(
     .select({
       name: agencyOpsClient.name,
       billableRateAmount: agencyOpsClient.billableRateAmount,
+      sourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
       currency: agencyOpsClient.currency,
     })
     .from(agencyOpsClient)
@@ -1012,6 +1028,7 @@ export async function updateAgencyProject(
     ...updated,
     clientName: client?.name ?? "Unknown",
     clientBillableRateAmount: client?.billableRateAmount ?? null,
+    clientSourceBillableRateAmount: client?.sourceBillableRateAmount ?? null,
     clientCurrency: client?.currency ?? "USD",
   });
 }

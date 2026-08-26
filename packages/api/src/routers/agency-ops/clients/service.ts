@@ -20,6 +20,7 @@ type AgencyClientRecord = {
   name: string;
   category: "internal" | "external";
   billableRateAmount: number | null;
+  sourceBillableRateAmount: number | null;
   currency: string;
   archivedAt: string | null;
   createdAt: string;
@@ -32,6 +33,7 @@ function mapClientRow(row: {
   name: string;
   category: "internal" | "external";
   billableRateAmount: number | null;
+  sourceBillableRateAmount: number | null;
   currency: string;
   archivedAt: Date | null;
   createdAt: Date;
@@ -43,6 +45,7 @@ function mapClientRow(row: {
     name: row.name,
     category: row.category,
     billableRateAmount: row.billableRateAmount,
+    sourceBillableRateAmount: row.sourceBillableRateAmount,
     currency: row.currency,
     archivedAt: row.archivedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
@@ -56,6 +59,7 @@ const clientSelect = {
   name: agencyOpsClient.name,
   category: agencyOpsClient.category,
   billableRateAmount: agencyOpsClient.billableRateAmount,
+  sourceBillableRateAmount: agencyOpsClient.sourceBillableRateAmount,
   currency: agencyOpsClient.currency,
   archivedAt: agencyOpsClient.archivedAt,
   createdAt: agencyOpsClient.createdAt,
