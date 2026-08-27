@@ -16,17 +16,22 @@ import { and, eq, gte, isNull, lte, sum } from "drizzle-orm";
 
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
+import { sumExpensesInPeriod } from "./expense-service";
 import {
   buildMoneyFormulaContext,
   evaluateFormulaValue,
   type MoneyFormulaPeriodFacts,
 } from "./money-formula-context";
+import { resolveEligibleMemberIds, resolveRuleCohortKey } from "./money-formula-rule";
 import { enabledFormulasSnapshot } from "./money-formula-templates";
 import { getMoneySettings } from "./money-settings-service";
-import { sumExpensesInPeriod } from "./expense-service";
-import { ensurePayoutPeriod, getPayoutSectionTotals, getPayoutSummary } from "./payout-service";
 import { PAYOUT_SECTION_META } from "./payout-section-keys";
-import { resolveEligibleMemberIds, resolveRuleCohortKey } from "./money-formula-rule";
+import {
+  ensurePayoutPeriod,
+  getPayoutSectionTotals,
+  getPayoutSummary,
+  pruneStaleFormulaPayoutLines,
+} from "./payout-service";
 import { getInvoiceSummary } from "./service";
 
 function formulaLineLabel(formula: AgencyOpsMoneyFormulaDef): string {
@@ -35,6 +40,10 @@ function formulaLineLabel(formula: AgencyOpsMoneyFormulaDef): string {
 
 function isPayoutSectionKey(value: string): value is AgencyOpsPayoutSectionKey {
   return value in PAYOUT_SECTION_META;
+}
+
+function enabledSectionFormulaKey(formulaId: string, sectionKey: string): string {
+  return `${formulaId}:${sectionKey}`;
 }
 
 async function ensureSection(
@@ -67,7 +76,7 @@ export async function syncFormulaPayoutLines(
     teamId: string;
     periodStart: string;
     periodEnd: string;
-    /** When true, refresh the pinned snapshot from current settings (draft runs only). */
+    /** When true, refresh the pinned snapshot from current settings. */
     refreshSnapshot?: boolean;
   },
 ): Promise<{ upserted: number; skipped: number }> {
@@ -91,7 +100,7 @@ export async function syncFormulaPayoutLines(
   let formulas: AgencyOpsMoneyFormulaDef[] =
     runRow.formulaSnapshotJson ?? enabledFormulasSnapshot(settings.calcOptions.formulas ?? []);
 
-  if (!runRow.formulaSnapshotJson || (input.refreshSnapshot && runRow.status === "draft")) {
+  if (!runRow.formulaSnapshotJson || input.refreshSnapshot) {
     formulas = enabledFormulasSnapshot(settings.calcOptions.formulas ?? []);
     await db
       .update(agencyOpsPayoutRun)
@@ -107,8 +116,18 @@ export async function syncFormulaPayoutLines(
       formula.sectionKey !== "salaries" &&
       formula.sectionKey !== "debt_discount",
   );
+  const enabledSectionFormulaKeys = new Set(
+    sectionFormulas.flatMap((formula) =>
+      formula.sectionKey ? [enabledSectionFormulaKey(formula.id, formula.sectionKey)] : [],
+    ),
+  );
 
   if (sectionFormulas.length === 0) {
+    await pruneStaleFormulaPayoutLines(actorUserId, {
+      teamId: input.teamId,
+      runId: run.id,
+      enabledSectionFormulaKeys,
+    });
     return { upserted: 0, skipped: 0 };
   }
 
@@ -244,6 +263,11 @@ export async function syncFormulaPayoutLines(
     }
   }
 
+  await pruneStaleFormulaPayoutLines(actorUserId, {
+    teamId: input.teamId,
+    runId: run.id,
+    enabledSectionFormulaKeys,
+  });
   return { upserted, skipped };
 }
 

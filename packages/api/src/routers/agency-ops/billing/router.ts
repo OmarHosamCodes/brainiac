@@ -15,6 +15,7 @@ import {
 import {
   createPayoutLine,
   createPayoutLineFromMember,
+  deletePayoutLine,
   ensurePayoutPeriod,
   getPayoutRun,
   getPayoutSummary,
@@ -582,6 +583,17 @@ export const billingRouter = {
         return payoutLineRecordSchema.parse(
           await updatePayoutLineStatus(context.session.user.id, input),
         );
+      }),
+    deleteLine: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          lineId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ id: z.string().min(1) })
+          .parse(await deletePayoutLine(context.session.user.id, input));
       }),
     syncFormulaLines: protectedProProcedure
       .input(

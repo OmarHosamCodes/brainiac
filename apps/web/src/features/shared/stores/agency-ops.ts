@@ -1991,6 +1991,47 @@ function createAgencyOpsActions(
     }
   }
 
+  async function deletePayoutLine(
+    payload: { teamId: string; lineId: string },
+    callbacks?: { onSuccess?: () => void },
+  ) {
+    set((state) => ({ ...state, invoiceMutationCount: state.invoiceMutationCount + 1 }));
+
+    try {
+      await orpcClient.agencyOps.payouts.deleteLine(payload);
+
+      await Promise.all([
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.summary.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.payouts.getRun.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.periodObligations.list.key(),
+        }),
+        getQueryClient().invalidateQueries({
+          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
+        }),
+      ]);
+
+      callbacks?.onSuccess?.();
+      toast.success("Adjustment removed");
+    } catch (error) {
+      toast.error("Couldn't remove adjustment", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
+    }
+  }
+
   async function recordPayoutPayment(
     payload: { teamId: string; lineId: string; amount: number },
     callbacks?: { onSuccess?: () => void },
@@ -2533,6 +2574,7 @@ function createAgencyOpsActions(
     createPayoutFromMember,
     createPayoutLine,
     updatePayoutLineStatus,
+    deletePayoutLine,
     recordPayoutPayment,
     upsertSalaryPoolTotal,
     recordSalaryPoolPayment,

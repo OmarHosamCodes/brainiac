@@ -257,6 +257,7 @@ function BillAdjustmentRow({
   isMutationPending,
   onOpenPayment,
   onMarkPaid,
+  onDismiss,
 }: {
   row: MoneyBillAdjustmentRow;
   searchTerm: string;
@@ -264,6 +265,7 @@ function BillAdjustmentRow({
   isMutationPending: boolean;
   onOpenPayment: (rowId: string) => void;
   onMarkPaid: (rowId: string) => void;
+  onDismiss: (rowId: string) => void;
 }) {
   return (
     <li className="group grid items-center gap-3 px-3 py-3 transition-colors hover:bg-elevated/40 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -320,6 +322,13 @@ function BillAdjustmentRow({
               Mark paid
             </Button>
           ) : null}
+          <BillIconAction
+            label="Dismiss adjustment"
+            disabled={pending || isMutationPending}
+            onClick={() => onDismiss(row.id)}
+          >
+            <X className="size-3.5" aria-hidden />
+          </BillIconAction>
         </div>
       </div>
     </li>
@@ -995,6 +1004,7 @@ function BillsSection({
                             isMutationPending={bills.isMutationPending}
                             onOpenPayment={bills.onOpenPayment}
                             onMarkPaid={bills.onMarkPaid}
+                            onDismiss={bills.onDismissAdjustment}
                           />
                         );
                       })}

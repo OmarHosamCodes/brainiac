@@ -12,7 +12,20 @@ import {
   type AgencyOpsPayoutRunStatus,
   type AgencyOpsPayoutSectionKey,
 } from "@orch/db/schema";
-import { and, asc, eq, gte, ilike, inArray, isNull, lte, or, sql, sum } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
 import { ORPCError } from "@orpc/server";
 import { createWorkspaceId } from "@orch/workspace";
 
@@ -33,6 +46,7 @@ import { payoutSalariesTotalsFromRows } from "./payout-period-totals";
 import { loadSalaryPoolPeriodTotals } from "./salary-pool-service";
 import { PAYOUT_SECTION_META, payoutSectionKeysForBillsParty } from "./payout-section-keys";
 import { enabledFormulasSnapshot } from "./money-formula-templates";
+import { staleFormulaPayoutLineIds } from "./money-formula-payout-prune";
 import { getMoneySettings } from "./money-settings-service";
 import { reportEntryIsWasteSql } from "../shared/waste-helpers";
 
@@ -142,6 +156,42 @@ async function syncPayoutRunStatus(runId: string) {
     .update(agencyOpsPayoutRun)
     .set({ status: nextStatus, updatedAt: new Date() })
     .where(eq(agencyOpsPayoutRun.id, runId));
+}
+
+export async function pruneStaleFormulaPayoutLines(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    runId: string;
+    enabledSectionFormulaKeys: ReadonlySet<string>;
+  },
+): Promise<void> {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const lines = await db
+    .select({
+      id: agencyOpsPayoutLine.id,
+      sourceFormulaId: agencyOpsPayoutLine.sourceFormulaId,
+      sectionKey: agencyOpsPayoutSection.key,
+      status: agencyOpsPayoutLine.status,
+    })
+    .from(agencyOpsPayoutLine)
+    .innerJoin(agencyOpsPayoutSection, eq(agencyOpsPayoutSection.id, agencyOpsPayoutLine.sectionId))
+    .where(
+      and(
+        eq(agencyOpsPayoutSection.runId, input.runId),
+        isNotNull(agencyOpsPayoutLine.sourceFormulaId),
+      ),
+    );
+
+  const ids = staleFormulaPayoutLineIds({
+    lines,
+    enabledSectionFormulaKeys: input.enabledSectionFormulaKeys,
+  });
+  if (ids.length === 0) return;
+
+  await db.delete(agencyOpsPayoutLine).where(inArray(agencyOpsPayoutLine.id, ids));
+  await syncPayoutRunStatus(input.runId);
 }
 
 export async function ensurePayoutPeriod(
@@ -762,6 +812,22 @@ export async function updatePayoutLineStatus(
     userName: existing.userName,
     userAvatar: existing.userAvatar,
   });
+}
+
+export async function deletePayoutLine(
+  actorUserId: string,
+  input: { teamId: string; lineId: string },
+): Promise<{ id: string }> {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const existing = await loadPayoutLineForTeam(input.teamId, input.lineId);
+  if (!existing) {
+    throw new ORPCError("NOT_FOUND", { message: "Payout line was not found." });
+  }
+
+  await db.delete(agencyOpsPayoutLine).where(eq(agencyOpsPayoutLine.id, input.lineId));
+  await syncPayoutRunStatus(existing.run.id);
+  return { id: input.lineId };
 }
 
 export async function getPayoutSummary(

@@ -942,6 +942,10 @@ export function useAgencyMoneyBills({
     setMarkPaidTargetId(null);
   }
 
+  function onDismissAdjustment(rowId: string) {
+    void agencyOps.deletePayoutLine({ teamId, lineId: rowId });
+  }
+
   const selectedPreviewLines = useMemo(() => {
     if (!previewParty) return [];
     return previewParty.lines.filter((line) => selectedObligationIds.includes(line.id));
@@ -1110,6 +1114,7 @@ export function useAgencyMoneyBills({
     onSend: onSendBill,
     onMarkPaid: onRequestMarkBillPaid,
     onOpenPayment,
+    onDismissAdjustment,
     markPaidConfirm: {
       open: Boolean(markPaidTarget),
       onOpenChange: (open: boolean) => {
