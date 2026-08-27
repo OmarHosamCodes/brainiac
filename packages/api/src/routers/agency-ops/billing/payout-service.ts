@@ -12,20 +12,7 @@ import {
   type AgencyOpsPayoutRunStatus,
   type AgencyOpsPayoutSectionKey,
 } from "@orch/db/schema";
-import {
-  and,
-  asc,
-  eq,
-  gte,
-  ilike,
-  inArray,
-  isNotNull,
-  isNull,
-  lte,
-  or,
-  sql,
-  sum,
-} from "drizzle-orm";
+import { and, asc, eq, gte, ilike, inArray, isNull, lte, or, sql, sum } from "drizzle-orm";
 import { ORPCError } from "@orpc/server";
 import { createWorkspaceId } from "@orch/workspace";
 
@@ -46,7 +33,7 @@ import { payoutSalariesTotalsFromRows } from "./payout-period-totals";
 import { loadSalaryPoolPeriodTotals } from "./salary-pool-service";
 import { PAYOUT_SECTION_META, payoutSectionKeysForBillsParty } from "./payout-section-keys";
 import { enabledFormulasSnapshot } from "./money-formula-templates";
-import { staleFormulaPayoutLineIds } from "./money-formula-payout-prune";
+import { liveSectionFormulaKeys, payoutLineMayDelete } from "./money-formula-payout-prune";
 import { getMoneySettings } from "./money-settings-service";
 import { reportEntryIsWasteSql } from "../shared/waste-helpers";
 
@@ -70,6 +57,7 @@ export type AgencyPayoutLineRecord = {
   rateAmount: number;
   periodStart: string;
   periodEnd: string;
+  canDelete: boolean;
 };
 
 export type AgencyPayoutRunRecord = {
@@ -89,6 +77,7 @@ function mapPayoutLineRow(input: {
   sectionTitle: string;
   userName: string;
   userAvatar: string | null;
+  enabledSectionFormulaKeys?: ReadonlySet<string>;
 }): AgencyPayoutLineRecord {
   const paidAmount = input.line.paidAmount ?? 0;
   const label = input.line.label?.trim() || "";
@@ -116,6 +105,11 @@ function mapPayoutLineRow(input: {
     rateAmount: input.line.rateAmount,
     periodStart: input.run.periodStart.toISOString(),
     periodEnd: input.run.periodEnd.toISOString(),
+    canDelete: payoutLineMayDelete({
+      sectionKey: input.sectionKey,
+      sourceFormulaId: input.line.sourceFormulaId,
+      enabledSectionFormulaKeys: input.enabledSectionFormulaKeys ?? new Set(),
+    }),
   };
 }
 
@@ -158,39 +152,13 @@ async function syncPayoutRunStatus(runId: string) {
     .where(eq(agencyOpsPayoutRun.id, runId));
 }
 
-export async function pruneStaleFormulaPayoutLines(
+export async function deletePayoutLinesByIds(
   actorUserId: string,
-  input: {
-    teamId: string;
-    runId: string;
-    enabledSectionFormulaKeys: ReadonlySet<string>;
-  },
+  input: { teamId: string; runId: string; lineIds: string[] },
 ): Promise<void> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
-
-  const lines = await db
-    .select({
-      id: agencyOpsPayoutLine.id,
-      sourceFormulaId: agencyOpsPayoutLine.sourceFormulaId,
-      sectionKey: agencyOpsPayoutSection.key,
-      status: agencyOpsPayoutLine.status,
-    })
-    .from(agencyOpsPayoutLine)
-    .innerJoin(agencyOpsPayoutSection, eq(agencyOpsPayoutSection.id, agencyOpsPayoutLine.sectionId))
-    .where(
-      and(
-        eq(agencyOpsPayoutSection.runId, input.runId),
-        isNotNull(agencyOpsPayoutLine.sourceFormulaId),
-      ),
-    );
-
-  const ids = staleFormulaPayoutLineIds({
-    lines,
-    enabledSectionFormulaKeys: input.enabledSectionFormulaKeys,
-  });
-  if (ids.length === 0) return;
-
-  await db.delete(agencyOpsPayoutLine).where(inArray(agencyOpsPayoutLine.id, ids));
+  if (input.lineIds.length === 0) return;
+  await db.delete(agencyOpsPayoutLine).where(inArray(agencyOpsPayoutLine.id, input.lineIds));
   await syncPayoutRunStatus(input.runId);
 }
 
@@ -304,6 +272,9 @@ export async function listPayoutLines(
     throw new ORPCError("BAD_REQUEST", { message: "periodStart must be before periodEnd." });
   }
 
+  const settings = await getMoneySettings(actorUserId, { teamId: input.teamId });
+  const enabledSectionFormulaKeys = liveSectionFormulaKeys(settings.calcOptions.formulas ?? []);
+
   const filters = [
     eq(agencyOpsPayoutRun.teamId, input.teamId),
     eq(agencyOpsPayoutRun.periodStart, periodStart),
@@ -356,6 +327,7 @@ export async function listPayoutLines(
         sectionTitle: row.sectionTitle,
         userName: row.userName?.trim() || "Unknown",
         userAvatar: formatAvatarUrl(row.userAvatar),
+        enabledSectionFormulaKeys,
       }),
     )
     .sort((a, b) => a.userName.localeCompare(b.userName));
@@ -823,6 +795,17 @@ export async function deletePayoutLine(
   const existing = await loadPayoutLineForTeam(input.teamId, input.lineId);
   if (!existing) {
     throw new ORPCError("NOT_FOUND", { message: "Payout line was not found." });
+  }
+
+  const settings = await getMoneySettings(actorUserId, { teamId: input.teamId });
+  if (
+    !payoutLineMayDelete({
+      sectionKey: existing.sectionKey,
+      sourceFormulaId: existing.line.sourceFormulaId,
+      enabledSectionFormulaKeys: liveSectionFormulaKeys(settings.calcOptions.formulas ?? []),
+    })
+  ) {
+    throw new ORPCError("BAD_REQUEST", { message: "This line cannot be dismissed." });
   }
 
   await db.delete(agencyOpsPayoutLine).where(eq(agencyOpsPayoutLine.id, input.lineId));

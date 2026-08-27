@@ -26,6 +26,21 @@ export const TEAM_SECTION_KEYS: AgencyOpsPayoutSectionKey[] = [
   "paid_vacation",
 ];
 
+export function isPayoutSectionKey(value: string): value is AgencyOpsPayoutSectionKey {
+  return value in PAYOUT_SECTION_META;
+}
+
+/** Formula sync writes these; salaries and debt/discount stay manual. */
+export function isFormulaSyncedPayoutSection(key: AgencyOpsPayoutSectionKey): boolean {
+  return key !== "salaries" && key !== "debt_discount";
+}
+
+export function isAdjustmentSectionKey(
+  key: string,
+): key is (typeof ADJUSTMENT_SECTION_KEYS)[number] {
+  return (ADJUSTMENT_SECTION_KEYS as readonly string[]).includes(key);
+}
+
 export function payoutSectionKeysForBillsParty(
   party: "team" | "adjustments" | "all",
 ): AgencyOpsPayoutSectionKey[] | null {

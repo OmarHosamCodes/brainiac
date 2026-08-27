@@ -209,6 +209,7 @@ const payoutLineRecordSchema = z.object({
   rateAmount: z.number().int().nonnegative(),
   periodStart: z.string().datetime(),
   periodEnd: z.string().datetime(),
+  canDelete: z.boolean(),
 });
 
 const payoutRunRecordSchema = z.object({
