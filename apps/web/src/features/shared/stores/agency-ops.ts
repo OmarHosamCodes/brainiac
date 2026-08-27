@@ -314,6 +314,7 @@ type CreateExpensePayload = {
   amountMode?: "fixed" | "variable";
   currency?: string;
   startsAt?: string | null;
+  occurredAt?: string | null;
 };
 
 type UpdateExpensePayload = {
@@ -326,6 +327,7 @@ type UpdateExpensePayload = {
   amountMode?: "fixed" | "variable";
   period?: "weekly" | "monthly" | "quarterly" | "yearly" | null;
   startsAt?: string | null;
+  occurredAt?: string | null;
 };
 
 type CreatePayoutLinePayload = {
@@ -2145,6 +2147,7 @@ function createAgencyOpsActions(
         amountMode: payload.amountMode,
         currency: payload.currency,
         startsAt: payload.startsAt,
+        occurredAt: payload.occurredAt,
       });
 
       await Promise.all([

@@ -466,6 +466,46 @@ function MoneyExpensesPanelContent({
                 ) : null}
               </div>
 
+              {create.kind === "one_time" ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className={agencyFormFieldClass}>
+                    <Label
+                      htmlFor={`${create.formId}-occurred-at`}
+                      className={agencyFormLabelClass}
+                    >
+                      Date <span className="font-normal text-muted">(optional)</span>
+                    </Label>
+                    <MemberProfileDatePicker
+                      id={`${create.formId}-occurred-at`}
+                      value={create.occurredAt}
+                      onChange={create.onOccurredAtChange}
+                      aria-label="One-time expense date"
+                      className="h-9 rounded-xl"
+                    />
+                  </div>
+                  {create.occurredAt ? (
+                    <div className={agencyFormFieldClass}>
+                      <Label
+                        htmlFor={`${create.formId}-occurred-time`}
+                        className={agencyFormLabelClass}
+                      >
+                        Time <span className="font-normal text-muted">(optional)</span>
+                      </Label>
+                      <Input
+                        id={`${create.formId}-occurred-time`}
+                        type="time"
+                        value={create.occurredTime}
+                        onChange={(event) => create.onOccurredTimeChange(event.target.value)}
+                        className="h-9 rounded-xl border-default bg-default text-sm tabular-nums"
+                      />
+                    </div>
+                  ) : null}
+                  <CardDescription className="text-[11px] text-pretty sm:col-span-2">
+                    Leave blank to record as now. A date places this spend in that day.
+                  </CardDescription>
+                </div>
+              ) : null}
+
               {create.kind === "subscription" ? (
                 <>
                   <div className={agencyFormFieldClass}>

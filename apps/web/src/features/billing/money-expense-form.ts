@@ -154,6 +154,48 @@ export function formatMoneyExpenseDueDate(iso: string | null): string | null {
   }).format(date);
 }
 
+/** Date-only uses UTC midnight (same as subscription start). Time uses local clock. */
+export function moneyExpenseOccurredAtIso(dateKey: string, time = ""): string | null {
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey.trim());
+  if (!dateMatch) return null;
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]) - 1;
+  const day = Number(dateMatch[3]);
+  const timeMatch = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+  if (!timeMatch) {
+    return new Date(Date.UTC(year, month, day)).toISOString();
+  }
+  const hours = Number(timeMatch[1]);
+  const minutes = Number(timeMatch[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return new Date(year, month, day, hours, minutes, 0, 0).toISOString();
+}
+
+export function moneyExpenseOccurredAtInputs(iso: string | null): { date: string; time: string } {
+  if (!iso) return { date: "", time: "" };
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return { date: "", time: "" };
+  const isUtcMidnight =
+    date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0;
+  if (isUtcMidnight) {
+    return { date: date.toISOString().slice(0, 10), time: "" };
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return { date: `${year}-${month}-${day}`, time: `${hours}:${minutes}` };
+}
+
+export function moneyExpenseOneTimeMeta(occurredAt: string | null): string {
+  const formatted = formatMoneyExpenseDueDate(occurredAt);
+  if (!formatted) return "One-time";
+  const { time } = moneyExpenseOccurredAtInputs(occurredAt);
+  if (!time) return `One-time · ${formatted}`;
+  return `One-time · ${formatted} · ${time}`;
+}
+
 export function moneyExpenseSubscriptionMeta(record: {
   period: MoneyExpensePeriod | null;
   nextDueAt: string | null;

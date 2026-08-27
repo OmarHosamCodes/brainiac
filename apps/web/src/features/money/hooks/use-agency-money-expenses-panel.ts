@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   moneyExpenseAmountError,
   moneyExpenseCanSubmit,
+  moneyExpenseOccurredAtInputs,
+  moneyExpenseOccurredAtIso,
   moneyExpensePaymentCanSubmit,
   parseMoneyExpenseAmount,
   parseMoneyExpensePaymentAmount,
@@ -80,6 +82,8 @@ export function useAgencyMoneyExpensesPanel({
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseNote, setExpenseNote] = useState("");
   const [expenseStartsAt, setExpenseStartsAt] = useState("");
+  const [expenseOccurredAt, setExpenseOccurredAt] = useState("");
+  const [expenseOccurredTime, setExpenseOccurredTime] = useState("");
   const [expenseCreateSubmitted, setExpenseCreateSubmitted] = useState(false);
   const [expensePaymentId, setExpensePaymentId] = useState<string | null>(null);
   const [expensePaymentAmount, setExpensePaymentAmount] = useState("");
@@ -283,6 +287,8 @@ export function useAgencyMoneyExpensesPanel({
     setExpenseAmount("");
     setExpenseNote("");
     setExpenseStartsAt("");
+    setExpenseOccurredAt("");
+    setExpenseOccurredTime("");
     setExpenseCreateSubmitted(false);
   }
 
@@ -297,6 +303,9 @@ export function useAgencyMoneyExpensesPanel({
       setExpensePeriod(null);
       setExpenseStartsAt("");
       setExpenseAmountMode("fixed");
+    } else {
+      setExpenseOccurredAt("");
+      setExpenseOccurredTime("");
     }
   }
 
@@ -337,6 +346,9 @@ export function useAgencyMoneyExpensesPanel({
     );
     setExpenseNote(record.note);
     setExpenseStartsAt(record.startsAt ? toDateInputValue(new Date(record.startsAt)) : "");
+    const occurred = moneyExpenseOccurredAtInputs(record.occurredAt);
+    setExpenseOccurredAt(occurred.date);
+    setExpenseOccurredTime(occurred.time);
     setExpenseCreateOpen(true);
   }
 
@@ -367,6 +379,10 @@ export function useAgencyMoneyExpensesPanel({
       expenseKind === "subscription" && expenseStartsAt
         ? dateInputToIso(expenseStartsAt)
         : undefined;
+    const occurredAt =
+      expenseKind === "one_time"
+        ? moneyExpenseOccurredAtIso(expenseOccurredAt, expenseOccurredTime)
+        : null;
 
     if (expenseEditorId) {
       await agencyOps.updateExpense(
@@ -380,6 +396,7 @@ export function useAgencyMoneyExpensesPanel({
           amount,
           amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
           startsAt: expenseKind === "subscription" ? (startsAt ?? null) : null,
+          occurredAt: expenseKind === "one_time" ? occurredAt : null,
         },
         { onSuccess: () => onExpenseCreateOpenChange(false) },
       );
@@ -396,6 +413,7 @@ export function useAgencyMoneyExpensesPanel({
         amount,
         amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
         startsAt,
+        occurredAt: occurredAt ?? undefined,
       },
       { onSuccess: () => onExpenseCreateOpenChange(false) },
     );
@@ -482,6 +500,13 @@ export function useAgencyMoneyExpensesPanel({
       onAmountModeChange: setExpenseAmountMode,
       startsAt: expenseStartsAt,
       onStartsAtChange: setExpenseStartsAt,
+      occurredAt: expenseOccurredAt,
+      onOccurredAtChange: (next: string) => {
+        setExpenseOccurredAt(next);
+        if (!next) setExpenseOccurredTime("");
+      },
+      occurredTime: expenseOccurredTime,
+      onOccurredTimeChange: setExpenseOccurredTime,
       amount: expenseAmount,
       onAmountChange: setExpenseAmount,
       note: expenseNote,

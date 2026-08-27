@@ -1,6 +1,7 @@
 import {
   formatMoneyExpenseAmount,
   moneyExpenseAmountLabel,
+  moneyExpenseOneTimeMeta,
   moneyExpensePeriodLabel,
   moneyExpenseStatusLabel,
   moneyExpenseSubscriptionMeta,
@@ -39,7 +40,9 @@ export type MoneySubscriptionCycleRecord = {
 export function toExpenseRow(record: MoneyExpenseRecord) {
   const amountMode = record.amountMode ?? "fixed";
   const kindMeta =
-    record.kind === "subscription" ? moneyExpenseSubscriptionMeta(record) : "One-time";
+    record.kind === "subscription"
+      ? moneyExpenseSubscriptionMeta(record)
+      : moneyExpenseOneTimeMeta(record.occurredAt);
   const amountLabel = moneyExpenseAmountLabel({
     amountMode,
     amount: record.amount,

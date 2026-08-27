@@ -5,6 +5,9 @@ import {
   moneyExpenseAmountError,
   moneyExpenseAmountLabel,
   moneyExpenseCanSubmit,
+  moneyExpenseOccurredAtInputs,
+  moneyExpenseOccurredAtIso,
+  moneyExpenseOneTimeMeta,
   moneyExpensePeriodLabel,
   moneyExpenseStatusLabel,
   moneyExpenseSubscriptionMeta,
@@ -34,9 +37,9 @@ describe("moneyExpenseCanSubmit", () => {
     expect(moneyExpenseCanSubmit("Electricity", "subscription", "monthly", "20", "variable")).toBe(
       true,
     );
-    expect(moneyExpenseCanSubmit("Electricity", "subscription", "monthly", "nope", "variable")).toBe(
-      false,
-    );
+    expect(
+      moneyExpenseCanSubmit("Electricity", "subscription", "monthly", "nope", "variable"),
+    ).toBe(false);
     expect(moneyExpenseCanSubmit("Electricity", "subscription", null, "", "variable")).toBe(false);
     expect(moneyExpenseCanSubmit("Rent", "one_time", null, "", "variable")).toBe(false);
   });
@@ -117,6 +120,49 @@ describe("moneyExpenseStatusLabel", () => {
     expect(moneyExpenseStatusLabel("due")).toBe("Due");
     expect(moneyExpenseStatusLabel("partial")).toBe("Partial");
     expect(moneyExpenseStatusLabel("paid")).toBe("Paid");
+  });
+});
+
+describe("moneyExpenseOccurredAtIso", () => {
+  test("date-only stores UTC midnight", () => {
+    expect(moneyExpenseOccurredAtIso("2026-08-26")).toBe("2026-08-26T00:00:00.000Z");
+    expect(moneyExpenseOccurredAtIso("2026-08-26", "")).toBe("2026-08-26T00:00:00.000Z");
+  });
+
+  test("optional local time is encoded in ISO", () => {
+    const iso = moneyExpenseOccurredAtIso("2026-08-26", "15:55");
+    expect(iso).toBe(new Date(2026, 7, 26, 15, 55, 0, 0).toISOString());
+  });
+
+  test("rejects invalid time and missing date", () => {
+    expect(moneyExpenseOccurredAtIso("")).toBeNull();
+    expect(moneyExpenseOccurredAtIso("2026-08-26", "24:00")).toBeNull();
+  });
+});
+
+describe("moneyExpenseOccurredAtInputs", () => {
+  test("UTC midnight round-trips as date-only", () => {
+    expect(moneyExpenseOccurredAtInputs("2026-08-26T00:00:00.000Z")).toEqual({
+      date: "2026-08-26",
+      time: "",
+    });
+  });
+
+  test("local time round-trips", () => {
+    const iso = new Date(2026, 7, 26, 15, 55, 0, 0).toISOString();
+    expect(moneyExpenseOccurredAtInputs(iso)).toEqual({ date: "2026-08-26", time: "15:55" });
+  });
+});
+
+describe("moneyExpenseOneTimeMeta", () => {
+  test("falls back to One-time without a date", () => {
+    expect(moneyExpenseOneTimeMeta(null)).toBe("One-time");
+  });
+
+  test("includes date and optional time", () => {
+    expect(moneyExpenseOneTimeMeta("2026-08-26T00:00:00.000Z")).toContain("One-time ·");
+    const withTime = new Date(2026, 7, 26, 15, 55, 0, 0).toISOString();
+    expect(moneyExpenseOneTimeMeta(withTime)).toContain("15:55");
   });
 });
 
