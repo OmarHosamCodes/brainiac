@@ -53,7 +53,11 @@ export function moneyBillsStatusOptionsForParty(
 ): ReadonlyArray<MoneyBillsStatusOption> {
   switch (party) {
     case "all":
-      return [];
+      return [
+        { id: "paid", label: MONEY_BILLS_STATUS_LABELS.paid },
+        { id: "partial", label: MONEY_BILLS_STATUS_LABELS.partial },
+        { id: "outstanding", label: MONEY_BILLS_STATUS_LABELS.outstanding },
+      ];
     case "client":
       return [
         { id: "paid", label: MONEY_BILLS_STATUS_LABELS.paid },

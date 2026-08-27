@@ -30,6 +30,7 @@ import {
   moneyBillsAdjustmentCreateValid,
   moneyBillsCanRefundObligation,
   moneyBillsCreateFormValid,
+  moneyBillsDefaultAdjustTab,
   moneyBillsPartyShowsAdjustments,
   moneyBillsPartyShowsClients,
   moneyBillsPartyShowsExpenses,
@@ -652,7 +653,7 @@ export function useAgencyMoneyBills({
       partyTitle: group.title,
       line,
     });
-    setAdjustTab("pay");
+    setAdjustTab(moneyBillsDefaultAdjustTab(line));
     setAdjustAmount((line.openCents / 100).toFixed(2));
     setAdjustKind("discount");
     setAdjustNote("");
@@ -706,7 +707,9 @@ export function useAgencyMoneyBills({
             ? isClient
               ? "Partial collection recorded"
               : "Partial payment recorded"
-            : "Refund recorded";
+            : isClient
+              ? "Collection reversed"
+              : "Refund recorded";
       toast.success(label);
       onAdjustOpenChange(false);
     } catch (error) {
@@ -986,7 +989,10 @@ export function useAgencyMoneyBills({
       case "partial":
         return moneyBillsPaymentCanSubmit(adjustAmount, adjustTarget.line.openCents);
       case "refund":
-        return moneyBillsCanRefundObligation(adjustTarget.line.obligationKind);
+        return moneyBillsCanRefundObligation(
+          adjustTarget.line.obligationKind,
+          adjustTarget.line.receivedAmount,
+        );
       case "adjustments":
         return parseMoneyExpenseAmount(adjustAmount) !== null;
       default: {
@@ -1202,7 +1208,10 @@ export function useAgencyMoneyBills({
       statusLabel: adjustTarget?.line.statusLabel ?? "",
       isReady: adjustTarget?.line.obligationKind === "ready",
       canRefund: adjustTarget
-        ? moneyBillsCanRefundObligation(adjustTarget.line.obligationKind)
+        ? moneyBillsCanRefundObligation(
+            adjustTarget.line.obligationKind,
+            adjustTarget.line.receivedAmount,
+          )
         : false,
       remainingLabel: adjustTarget?.line.openLabel ?? "",
       currency: adjustTarget?.line.currency ?? "USD",

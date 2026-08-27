@@ -749,8 +749,23 @@ export function moneyBillsAdjustmentCreateValid(
 
 export function moneyBillsCanRefundObligation(
   obligationKind: "ready" | "invoice" | "payout",
+  receivedAmount = 0,
 ): boolean {
-  return obligationKind !== "ready";
+  return obligationKind !== "ready" && receivedAmount > 0;
+}
+
+export function moneyBillsDefaultAdjustTab(line: {
+  obligationKind: "ready" | "invoice" | "payout";
+  openCents: number;
+  receivedAmount: number;
+}): "pay" | "refund" {
+  if (
+    moneyBillsCanRefundObligation(line.obligationKind, line.receivedAmount) &&
+    line.openCents <= 0
+  ) {
+    return "refund";
+  }
+  return "pay";
 }
 
 export function moneyBillsCreateFormValid(

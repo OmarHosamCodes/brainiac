@@ -19,8 +19,12 @@ describe("Money bill URL filters", () => {
 });
 
 describe("moneyBillsStatusOptionsForParty", () => {
-  test("all has no status chips", () => {
-    expect(moneyBillsStatusOptionsForParty("all")).toEqual([]);
+  test("all exposes paid first so collected client money can be isolated", () => {
+    expect(moneyBillsStatusOptionsForParty("all").map((option) => option.id)).toEqual([
+      "paid",
+      "partial",
+      "outstanding",
+    ]);
   });
 
   test("clients statuses in product order", () => {
@@ -53,7 +57,7 @@ describe("moneyBillsStatusOptionsForParty", () => {
     expect(moneyBillsStatusAllowed("client", "refunded")).toBe(true);
     expect(moneyBillsStatusAllowed("team", "refunded")).toBe(false);
     expect(moneyBillsStatusAllowed("adjustments", "partial")).toBe(true);
-    expect(moneyBillsStatusAllowed("all", "paid")).toBe(false);
+    expect(moneyBillsStatusAllowed("all", "paid")).toBe(true);
   });
 });
 

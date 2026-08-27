@@ -13,6 +13,7 @@ import {
   moneyBillsAdjustmentCreateValid,
   moneyBillsCanRefundObligation,
   moneyBillsCreateFormValid,
+  moneyBillsDefaultAdjustTab,
   moneyBillsPartyShowsClients,
   moneyBillsPartyShowsMembers,
   moneyBillsPaymentCanSubmit,
@@ -423,10 +424,30 @@ describe("transactional amount rules", () => {
 });
 
 describe("moneyBillsCanRefundObligation", () => {
-  test("allows persisted documents and rejects Ready obligations", () => {
-    expect(moneyBillsCanRefundObligation("invoice")).toBe(true);
-    expect(moneyBillsCanRefundObligation("payout")).toBe(true);
-    expect(moneyBillsCanRefundObligation("ready")).toBe(false);
+  test("allows persisted documents with received cash and rejects Ready", () => {
+    expect(moneyBillsCanRefundObligation("invoice", 100)).toBe(true);
+    expect(moneyBillsCanRefundObligation("payout", 50)).toBe(true);
+    expect(moneyBillsCanRefundObligation("invoice", 0)).toBe(false);
+    expect(moneyBillsCanRefundObligation("ready", 100)).toBe(false);
+  });
+});
+
+describe("moneyBillsDefaultAdjustTab", () => {
+  test("opens uncollect when the line is fully collected", () => {
+    expect(
+      moneyBillsDefaultAdjustTab({
+        obligationKind: "invoice",
+        openCents: 0,
+        receivedAmount: 500,
+      }),
+    ).toBe("refund");
+    expect(
+      moneyBillsDefaultAdjustTab({
+        obligationKind: "invoice",
+        openCents: 200,
+        receivedAmount: 0,
+      }),
+    ).toBe("pay");
   });
 });
 

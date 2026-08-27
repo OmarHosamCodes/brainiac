@@ -252,7 +252,7 @@ export function AgencyMoneyBillsDialogs({ bills }: BillsDialogsProps) {
                   </TabsTrigger>
                   {adjust.canRefund ? (
                     <TabsTrigger value="refund" className="flex-1">
-                      Refund
+                      {adjust.partyType === "client" ? "Uncollect" : "Refund"}
                     </TabsTrigger>
                   ) : null}
                   <TabsTrigger value="adjustments" className="flex-1">
@@ -320,10 +320,15 @@ export function AgencyMoneyBillsDialogs({ bills }: BillsDialogsProps) {
 
                 <TabsContent value="refund" className="mt-4">
                   <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-pretty">
-                    <p className="font-medium text-highlighted">Refund this obligation</p>
+                    <p className="font-medium text-highlighted">
+                      {adjust.partyType === "client"
+                        ? "Uncollect this invoice"
+                        : "Refund this obligation"}
+                    </p>
                     <p className="mt-1 text-xs text-muted">
-                      Marks the line refunded and updates bill status. This cannot be undone from
-                      here.
+                      {adjust.partyType === "client"
+                        ? "Moves received amount back to remaining so the bill is outstanding again."
+                        : "Clears paid amount and returns the line to outstanding."}
                     </p>
                   </div>
                 </TabsContent>
@@ -414,7 +419,9 @@ export function AgencyMoneyBillsDialogs({ bills }: BillsDialogsProps) {
                   : adjust.tab === "adjustments"
                     ? "Save adjustment"
                     : adjust.tab === "refund"
-                      ? "Confirm refund"
+                      ? adjust.partyType === "client"
+                        ? "Uncollect"
+                        : "Confirm refund"
                       : adjust.tab === "pay"
                         ? adjust.partyType === "client"
                           ? "Collect"
