@@ -4,6 +4,7 @@ import {
   invoiceBillStatus,
   invoiceRemainingAmount,
   invoiceStatusAfterReceived,
+  invoiceStatusAfterUncollect,
   invoiceStatusesForBillFilter,
 } from "./invoice-bill-status";
 
@@ -45,5 +46,15 @@ describe("invoiceStatusAfterReceived", () => {
 
   test("refunded stays refunded", () => {
     expect(invoiceStatusAfterReceived(1000, 500, "refunded")).toBe("refunded");
+  });
+});
+
+describe("invoiceStatusAfterUncollect", () => {
+  test("paid and refunded return to sent", () => {
+    expect(invoiceStatusAfterUncollect("paid")).toBe("sent");
+    expect(invoiceStatusAfterUncollect("partial")).toBe("sent");
+    expect(invoiceStatusAfterUncollect("refunded")).toBe("sent");
+    expect(invoiceStatusAfterUncollect("sent")).toBe("sent");
+    expect(invoiceStatusAfterUncollect("draft")).toBe("draft");
   });
 });

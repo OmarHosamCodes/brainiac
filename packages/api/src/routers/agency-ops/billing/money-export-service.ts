@@ -25,7 +25,7 @@ import {
   type MoneyCarryClientObligation,
   type MoneyCarryMemberObligation,
 } from "./money-bill-carry";
-import { invoiceRemainingAmount } from "./invoice-bill-status";
+import { invoiceRemainingAmount, invoiceStatusAfterUncollect } from "./invoice-bill-status";
 import {
   clearPendingAdjustmentsForParty,
   listPendingAdjustments,
@@ -260,7 +260,7 @@ async function softExportMemberReady(
   }
 }
 
-async function refundInvoice(actorUserId: string, input: { teamId: string; invoiceId: string }) {
+async function refundInvoice(_actorUserId: string, input: { teamId: string; invoiceId: string }) {
   const [existing] = await db
     .select({
       receivedAmount: agencyOpsInvoice.receivedAmount,
@@ -274,17 +274,21 @@ async function refundInvoice(actorUserId: string, input: { teamId: string; invoi
     throw new ORPCError("NOT_FOUND", { message: "Invoice was not found." });
   }
   if ((existing.receivedAmount ?? 0) <= 0) {
-    throw new ORPCError("BAD_REQUEST", { message: "Nothing to refund on this invoice." });
-  }
-  if (existing.status === "refunded") {
-    throw new ORPCError("BAD_REQUEST", { message: "Invoice is already refunded." });
+    throw new ORPCError("BAD_REQUEST", { message: "Nothing to uncollect on this invoice." });
   }
 
-  return updateInvoiceStatus(actorUserId, {
-    teamId: input.teamId,
-    invoiceId: input.invoiceId,
-    status: "refunded",
-  });
+  const now = new Date();
+  await db
+    .update(agencyOpsInvoice)
+    .set({
+      status: invoiceStatusAfterUncollect(existing.status),
+      receivedAmount: 0,
+      paidAt: null,
+      updatedAt: now,
+    })
+    .where(
+      and(eq(agencyOpsInvoice.id, input.invoiceId), eq(agencyOpsInvoice.teamId, input.teamId)),
+    );
 }
 
 async function refundPayoutLine(actorUserId: string, input: { teamId: string; lineId: string }) {

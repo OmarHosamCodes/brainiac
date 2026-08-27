@@ -61,3 +61,10 @@ export function invoiceStatusAfterReceived(
   if (receivedAmount >= amount) return "paid";
   return "partial";
 }
+
+/** Clear received cash: paid/partial/refunded return to sent. Draft stays draft. */
+export function invoiceStatusAfterUncollect(
+  current: AgencyOpsInvoiceStatus,
+): Extract<AgencyOpsInvoiceStatus, "draft" | "sent"> {
+  return current === "draft" ? "draft" : "sent";
+}
