@@ -1,5 +1,6 @@
 import { AlertTriangle, ListChecks, ListPlus, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { AgencyTaskGroupRow } from "@/features/task-management/task-list/agency-task-group-row";
 import { Button } from "@/ui/button";
@@ -7,6 +8,7 @@ import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 import { useAgencyProjectTasksQuery } from "@/features/shared/agency-queries";
 import { groupTasksByProjectTitle } from "@/features/task-management/agency-task-utils";
+import { teamDetailQueryOptions } from "@/features/team/team-queries";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 
@@ -15,6 +17,7 @@ type AgencyProjectTasksProps = {
   projectId: string;
   projectName: string;
   focusTaskId?: string;
+  isTrashed?: boolean;
 };
 
 export function AgencyProjectTasks({
@@ -22,14 +25,21 @@ export function AgencyProjectTasks({
   projectId,
   projectName,
   focusTaskId,
+  isTrashed = false,
 }: AgencyProjectTasksProps) {
   const agencyOps = useAgencyOpsStore();
   const isCreatingTask = useAgencyOpsStore(selectIsCreatingTask);
   const deletingTaskIds = useAgencyOpsStore((s) => s.deletingTaskIds);
+  const pendingTaskIds = useAgencyOpsStore((s) => s.pendingTaskIds);
   const [titleDraft, setTitleDraft] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState(focusTaskId ?? "");
 
   const tasksQuery = useAgencyProjectTasksQuery(teamId, { projectId });
+  const teamQuery = useQuery({
+    ...teamDetailQueryOptions(teamId),
+    enabled: Boolean(teamId),
+  });
+  const canEditTaskRate = teamQuery.data?.role === "owner" && !isTrashed;
 
   const tasks = tasksQuery.data?.items ?? [];
   const taskGroups = groupTasksByProjectTitle(tasks);
@@ -135,6 +145,8 @@ export function AgencyProjectTasks({
               selectedTaskId={selectedTaskId}
               highlightTaskId={focusTaskId}
               deletingTaskIds={deletingTaskIds}
+              isRowPending={(taskId) => pendingTaskIds.includes(taskId)}
+              canEditTaskRate={canEditTaskRate}
               onSelect={setSelectedTaskId}
               onDeleteInstance={(task) => void deleteTask(task)}
             />

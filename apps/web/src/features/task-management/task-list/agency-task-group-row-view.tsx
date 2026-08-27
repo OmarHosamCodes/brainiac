@@ -2,6 +2,7 @@ import { Check, ChevronDown, Trash2 } from "lucide-react";
 
 import type { AgencyTaskGroupRowViewModel } from "@/features/task-management/hooks/use-agency-task-group-row";
 import type { RenderAgencyTaskRow } from "@/features/task-management/hooks/use-agency-task-row";
+import { AgencyTaskRatePopover } from "@/features/task-management/task-list/agency-task-rate-popover";
 import {
   agencyFocusRingClass,
   agencyTaskRowCheckboxCheckedClass,
@@ -9,6 +10,7 @@ import {
 } from "@/features/shared/agency-ui";
 import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";
+import type { AgencyProjectTask } from "@/features/task-management/agency-work";
 
 type MemberStatus = "open" | "in_progress" | "done";
 
@@ -54,7 +56,22 @@ export function AgencyTaskGroupRowView({ viewModel, renderTaskRow }: AgencyTaskG
     singleInstanceTrackingState,
     instanceRows,
     onToggleExpanded,
+    canEditTaskRate = false,
+    isRowPending: isRowPendingFn,
   } = viewModel;
+
+  function rateControl(task: AgencyProjectTask) {
+    if (mode !== "project" || !teamId) return null;
+    return (
+      <AgencyTaskRatePopover
+        teamId={teamId}
+        task={task}
+        canEdit={canEditTaskRate}
+        disabled={isRowPendingFn?.(task.id) ?? false}
+        quietUntilHover
+      />
+    );
+  }
 
   if (singleInstance && mode === "work") {
     return renderTaskRow({
@@ -74,36 +91,39 @@ export function AgencyTaskGroupRowView({ viewModel, renderTaskRow }: AgencyTaskG
   }
 
   return (
-    <li>
-      <button
-        type="button"
-        className={cn(
-          "flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors hover:bg-default/50",
-          agencyFocusRingClass,
-          "motion-reduce:transition-none",
-        )}
-        aria-expanded={expanded}
-        onClick={onToggleExpanded}
-      >
-        <ChevronDown
+    <li className="group/task-rate-row">
+      <div className="flex w-full items-center gap-1 px-3 py-2 transition-colors hover:bg-default/50 motion-reduce:transition-none">
+        <button
+          type="button"
           className={cn(
-            "size-3.5 shrink-0 text-muted motion-safe:transition-transform motion-safe:duration-200",
-            expanded ? "" : "-rotate-90",
+            "flex min-w-0 flex-1 items-center gap-2 rounded-md text-left",
+            agencyFocusRingClass,
+            "motion-reduce:transition-none",
           )}
-          aria-hidden
-        />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-highlighted">
-          {group.title}
-        </span>
-        <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-          ×{group.instanceCount}
-        </span>
-        {progress.total > 0 ? (
-          <span className="shrink-0 text-[10px] font-semibold text-muted">
-            {progress.done}/{progress.total} done
+          aria-expanded={expanded}
+          onClick={onToggleExpanded}
+        >
+          <ChevronDown
+            className={cn(
+              "size-3.5 shrink-0 text-muted motion-safe:transition-transform motion-safe:duration-200",
+              expanded ? "" : "-rotate-90",
+            )}
+            aria-hidden
+          />
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-highlighted">
+            {group.title}
           </span>
-        ) : null}
-      </button>
+          <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+            ×{group.instanceCount}
+          </span>
+          {progress.total > 0 ? (
+            <span className="shrink-0 text-[10px] font-semibold text-muted">
+              {progress.done}/{progress.total} done
+            </span>
+          ) : null}
+        </button>
+        {singleInstance ? rateControl(singleInstance) : null}
+      </div>
 
       {expanded ? (
         <ul className="border-t border-default bg-default/30">
@@ -176,17 +196,20 @@ export function AgencyTaskGroupRowView({ viewModel, renderTaskRow }: AgencyTaskG
                       )}
                     </ul>
                   </div>
-                  {onDeleteInstance ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Delete task"
-                      disabled={deleting}
-                      onClick={() => onDeleteInstance(instance)}
-                    >
-                      <Trash2 />
-                    </Button>
-                  ) : null}
+                  <div className="flex shrink-0 items-center gap-1">
+                    {!singleInstance ? rateControl(instance) : null}
+                    {onDeleteInstance ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label="Delete task"
+                        disabled={deleting}
+                        onClick={() => onDeleteInstance(instance)}
+                      >
+                        <Trash2 />
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </li>
             );

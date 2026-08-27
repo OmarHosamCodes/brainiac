@@ -27,6 +27,8 @@ export type AgencyTaskGroupRowProps = {
   readOnly?: boolean;
   highlightTaskId?: string;
   getTaskTrackingState?: (taskId: string) => TaskTrackingState;
+  /** Project page: owners can edit catalog task rates inline. */
+  canEditTaskRate?: boolean;
 };
 
 function resolveViewerStatus(task: AgencyProjectTask): MemberStatus {

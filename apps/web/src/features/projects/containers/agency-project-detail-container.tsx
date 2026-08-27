@@ -26,6 +26,7 @@ export function AgencyProjectDetailContainer({
       projectId={projectId}
       projectName={viewModel.project.name}
       focusTaskId={focusTaskId}
+      isTrashed={viewModel.isTrashed}
     />
   ) : null;
 
