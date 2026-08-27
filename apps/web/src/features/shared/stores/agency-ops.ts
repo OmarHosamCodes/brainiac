@@ -26,6 +26,19 @@ import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimi
 import type { AgencyProjectJourney, AgencyProjectTask } from "@orch/api/schemas/agency-ops";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
+async function invalidateAgencyPayoutQueries(options?: { scoreboard?: boolean }) {
+  const queryClient = getQueryClient();
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: orpc.agencyOps.payouts.list.key() }),
+    queryClient.invalidateQueries({ queryKey: orpc.agencyOps.payouts.summary.key() }),
+    queryClient.invalidateQueries({ queryKey: orpc.agencyOps.payouts.getRun.key() }),
+    queryClient.invalidateQueries({ queryKey: orpc.agencyOps.periodObligations.list.key() }),
+    ...(options?.scoreboard
+      ? [queryClient.invalidateQueries({ queryKey: orpc.agencyOps.money.periodScoreboard.key() })]
+      : []),
+  ]);
+}
+
 // Shared types (mirrored from API shapes — keep in sync with oRPC output)
 // ---------------------------------------------------------------------------
 
@@ -1931,20 +1944,7 @@ function createAgencyOpsActions(
         cohortKey: payload.cohortKey,
       });
 
-      await Promise.all([
-        getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.payouts.list.key(),
-        }),
-        getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.payouts.summary.key(),
-        }),
-        getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.payouts.getRun.key(),
-        }),
-        getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.periodObligations.list.key(),
-        }),
-      ]);
+      await invalidateAgencyPayoutQueries({ scoreboard: true });
 
       callbacks?.onSuccess?.();
       toast.success("Adjustment added");
@@ -2000,23 +2000,7 @@ function createAgencyOpsActions(
     try {
       await orpcClient.agencyOps.payouts.deleteLine(payload);
 
-      await Promise.all([
-        getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.payouts.list.key(),
-        }),
-        getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.payouts.summary.key(),
-        }),
-        getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.payouts.getRun.key(),
-        }),
-        getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.periodObligations.list.key(),
-        }),
-        getQueryClient().invalidateQueries({
-          queryKey: orpc.agencyOps.money.periodScoreboard.key(),
-        }),
-      ]);
+      await invalidateAgencyPayoutQueries({ scoreboard: true });
 
       callbacks?.onSuccess?.();
       toast.success("Adjustment removed");

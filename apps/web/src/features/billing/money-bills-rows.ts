@@ -77,7 +77,9 @@ export type MoneyBillTeamPayoutSource = {
   periodEnd: string;
 };
 
-export type MoneyBillAdjustmentSource = MoneyBillTeamPayoutSource;
+export type MoneyBillAdjustmentSource = MoneyBillTeamPayoutSource & {
+  canDelete?: boolean;
+};
 
 export type MoneyBillRowBase = {
   id: string;
@@ -182,6 +184,7 @@ export type MoneyBillAdjustmentRow = MoneyBillRowBase & {
   paidLabel: string;
   remainingLabel: string;
   periodLabel: string;
+  canDismiss: boolean;
 };
 
 export type MoneyBillRow =
@@ -459,6 +462,7 @@ export function moneyBillRowFromAdjustmentLine(
     canRefund: false,
     canCreateInvoice: false,
     canCreatePayout: false,
+    canDismiss: payout.canDelete === true,
   };
 }
 

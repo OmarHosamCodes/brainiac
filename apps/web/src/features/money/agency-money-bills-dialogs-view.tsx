@@ -35,6 +35,7 @@ export function AgencyMoneyBillsDialogs({ bills }: BillsDialogsProps) {
   const adjustmentCreate = bills.adjustmentCreate;
   const payment = bills.payment;
   const markPaidConfirm = bills.markPaidConfirm;
+  const dismissConfirm = bills.dismissConfirm;
   const preview = bills.preview;
   const adjust = bills.adjust;
 
@@ -64,6 +65,36 @@ export function AgencyMoneyBillsDialogs({ bills }: BillsDialogsProps) {
               onClick={markPaidConfirm.onConfirm}
             >
               {markPaidConfirm.isPending ? "Recording…" : "Mark paid"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={dismissConfirm.open} onOpenChange={dismissConfirm.onOpenChange}>
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove this adjustment?</DialogTitle>
+            <DialogDescription>
+              Delete {dismissConfirm.partyName}
+              {dismissConfirm.amountLabel ? ` (${dismissConfirm.amountLabel})` : ""} from this
+              period, including any paid amount recorded on it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={dismissConfirm.isPending}
+              onClick={() => dismissConfirm.onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={dismissConfirm.isPending}
+              onClick={dismissConfirm.onConfirm}
+            >
+              {dismissConfirm.isPending ? "Removing…" : "Remove"}
             </Button>
           </DialogFooter>
         </DialogContent>

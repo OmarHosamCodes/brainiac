@@ -322,13 +322,15 @@ function BillAdjustmentRow({
               Mark paid
             </Button>
           ) : null}
-          <BillIconAction
-            label="Dismiss adjustment"
-            disabled={pending || isMutationPending}
-            onClick={() => onDismiss(row.id)}
-          >
-            <X className="size-3.5" aria-hidden />
-          </BillIconAction>
+          {row.canDismiss ? (
+            <BillIconAction
+              label="Dismiss adjustment"
+              disabled={pending || isMutationPending}
+              onClick={() => onDismiss(row.id)}
+            >
+              <X className="size-3.5" aria-hidden />
+            </BillIconAction>
+          ) : null}
         </div>
       </div>
     </li>

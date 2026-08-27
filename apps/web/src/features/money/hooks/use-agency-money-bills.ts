@@ -166,6 +166,7 @@ export function useAgencyMoneyBills({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [pendingActionInvoiceId, setPendingActionInvoiceId] = useState<string | null>(null);
   const [markPaidTargetId, setMarkPaidTargetId] = useState<string | null>(null);
+  const [dismissTargetId, setDismissTargetId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewParty, setPreviewParty] = useState<MoneyPreviewParty | null>(null);
   const [selectedObligationIds, setSelectedObligationIds] = useState<string[]>([]);
@@ -470,6 +471,7 @@ export function useAgencyMoneyBills({
       ? `Enter an amount greater than zero and no more than ${paymentRow.remainingLabel}.`
       : null;
   const markPaidTarget = markPaidTargetId ? resolvePaymentTarget(markPaidTargetId) : null;
+  const dismissTarget = dismissTargetId ? resolvePaymentTarget(dismissTargetId) : null;
 
   const billsIsLoading = showsExpenses
     ? expensesStatus === "loading"
@@ -942,8 +944,24 @@ export function useAgencyMoneyBills({
     setMarkPaidTargetId(null);
   }
 
+  async function runDismissAdjustment(rowId: string) {
+    setPendingActionInvoiceId(rowId);
+    await agencyOps.deletePayoutLine(
+      { teamId, lineId: rowId },
+      { onSuccess: () => setPendingActionInvoiceId(null) },
+    );
+    setPendingActionInvoiceId(null);
+    setDismissTargetId(null);
+  }
+
   function onDismissAdjustment(rowId: string) {
-    void agencyOps.deletePayoutLine({ teamId, lineId: rowId });
+    const payout = (payoutsQuery.data?.items ?? []).find((line) => line.id === rowId);
+    if (!payout?.canDelete) return;
+    if (payout.status !== "draft") {
+      setDismissTargetId(rowId);
+      return;
+    }
+    void runDismissAdjustment(rowId);
   }
 
   const selectedPreviewLines = useMemo(() => {
@@ -1124,6 +1142,19 @@ export function useAgencyMoneyBills({
       amountLabel: markPaidTarget?.remainingLabel ?? "",
       isPending: isInvoiceMutationPending,
       onConfirm: () => void onConfirmMarkBillPaid(),
+    },
+    dismissConfirm: {
+      open: Boolean(dismissTarget),
+      onOpenChange: (open: boolean) => {
+        if (!open) setDismissTargetId(null);
+      },
+      partyName: dismissTarget?.partyName ?? "",
+      amountLabel: dismissTarget?.remainingLabel ?? "",
+      isPending: isInvoiceMutationPending,
+      onConfirm: () => {
+        if (!dismissTargetId) return;
+        void runDismissAdjustment(dismissTargetId);
+      },
     },
     salaryPool: salaryPoolViewModel,
     preview: {
