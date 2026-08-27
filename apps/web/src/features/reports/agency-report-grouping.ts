@@ -142,6 +142,18 @@ function resolveMergedAssignee(entries: AgencyReportEntry[]): { userId: string; 
   return { userId: first.userId, userName: "Multiple" };
 }
 
+/** Shared trimmed description when all entries agree; empty when mixed. */
+export function sharedReportRowDescription(
+  entries: readonly Pick<AgencyReportEntry, "description">[],
+): string {
+  if (entries.length === 0) return "";
+  const first = (entries[0]!.description ?? "").trim();
+  for (let index = 1; index < entries.length; index += 1) {
+    if ((entries[index]!.description ?? "").trim() !== first) return "";
+  }
+  return first;
+}
+
 export function aggregateSimilarReportRows(
   rows: AgencyReportEntry[],
   options: ReportRowAggregationOptions = {},
@@ -162,7 +174,7 @@ export function aggregateSimilarReportRows(
           ? normalizeReportTaskTitle(entry.taskTitle) || null
           : entry.taskTitle,
         taskIsWaste: entry.taskIsWaste,
-        description: mergeSameTaskNames ? "" : entry.description,
+        description: entry.description,
         userId: entry.userId,
         userName: entry.userName,
         durationSeconds: 0,
@@ -186,7 +198,7 @@ export function aggregateSimilarReportRows(
       const assignee = resolveMergedAssignee(aggregated.entries);
       aggregated.userId = assignee.userId;
       aggregated.userName = assignee.userName;
-      aggregated.description = "";
+      aggregated.description = sharedReportRowDescription(aggregated.entries);
     }
   }
 

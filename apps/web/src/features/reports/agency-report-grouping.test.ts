@@ -142,6 +142,52 @@ describe("aggregateSimilarReportRows", () => {
     expect(peeling?.entries.map((entry) => entry.id).sort()).toEqual(["e1", "e2"]);
   });
 
+  test("mergeSameTaskNames keeps shared description when all entries agree", () => {
+    const rows = aggregateSimilarReportRows(
+      [
+        makeEntry({
+          id: "e1",
+          taskId: "task-a",
+          taskTitle: "Peeling",
+          description: "prep",
+          durationSeconds: 1_800,
+        }),
+        makeEntry({
+          id: "e2",
+          taskId: "task-b",
+          taskTitle: "Peeling",
+          description: "  prep  ",
+          userId: "user-2",
+          userName: "Sam",
+          durationSeconds: 900,
+        }),
+      ],
+      { mergeSameTaskNames: true },
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.description).toBe("prep");
+    expect(rows[0]?.entryCount).toBe(2);
+  });
+
+  test("mergeSameTaskNames keeps description for a single entry", () => {
+    const rows = aggregateSimilarReportRows(
+      [
+        makeEntry({
+          id: "e1",
+          taskId: "task-a",
+          taskTitle: "Peeling",
+          description: "solo note",
+          durationSeconds: 600,
+        }),
+      ],
+      { mergeSameTaskNames: true },
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.description).toBe("solo note");
+  });
+
   test("mergeSameTaskNames keeps different titles separate and merges empty titles", () => {
     const rows = aggregateSimilarReportRows(
       [
