@@ -6,6 +6,7 @@ import {
   agencyErrorPanelClass,
   agencyFocusRingClass,
   agencyInputPlaceholderClass,
+  agencyMetricClass,
   agencyPanelClass,
 } from "@/features/shared/agency-ui";
 import {
@@ -19,7 +20,9 @@ import {
 import { type MoneyBillAdjustmentRow } from "@/features/billing/money-bills-rows";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Skeleton } from "@/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +42,6 @@ import {
   MoneyPanelCount,
   MoneyPanelFilterPill,
   MoneyPanelFilterRow,
-  MoneyPanelMetricBlock,
   MoneyPanelTitleRow,
   MoneyPeriodFxLine,
 } from "./money-panel-chrome";
@@ -144,6 +146,9 @@ function BillsSection({
   const countLabel = isExpensesParty ? expenseCountLabel : billCountLabel;
   const hasStatusFilters = !isExpensesParty && bills.statusOptions.length > 0;
   const hasExpenseFilters = isExpensesParty && expensesPanel.status === "ready";
+  const showExternalClientFilter =
+    (bills.partyFilter === "all" || bills.partyFilter === "client") &&
+    bills.clientCategoryFilter === "external";
   const showEmpty =
     !isExpensesParty &&
     !bills.isLoading &&
@@ -186,19 +191,54 @@ function BillsSection({
           headingId="money-bills-panel-heading"
           headingTabIndex={-1}
         >
-          <div className="relative min-w-48 flex-1 sm:max-w-72 sm:flex-none">
-            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-            <Input
-              value={bills.searchTerm}
-              onChange={(event) => bills.onSearchTermChange(event.target.value)}
-              placeholder={isExpensesParty ? "Search expenses" : "Search bills"}
-              aria-label={isExpensesParty ? "Search expenses" : "Search bills"}
-              className={cn(
-                "h-9 rounded-xl border-default bg-default pl-9 text-sm",
-                agencyInputPlaceholderClass,
-                bills.searchTerm.trim() ? "text-highlighted" : undefined,
-              )}
-            />
+          <div className="flex min-w-48 flex-1 items-center gap-2 sm:max-w-md sm:flex-none">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
+              <Input
+                value={bills.searchTerm}
+                onChange={(event) => bills.onSearchTermChange(event.target.value)}
+                placeholder={isExpensesParty ? "Search expenses" : "Search bills"}
+                aria-label={isExpensesParty ? "Search expenses" : "Search bills"}
+                className={cn(
+                  "h-9 rounded-xl border-default bg-default pl-9 text-sm",
+                  agencyInputPlaceholderClass,
+                  bills.searchTerm.trim() ? "text-highlighted" : undefined,
+                )}
+              />
+            </div>
+            {hasStatusFilters ? (
+              <>
+                <label htmlFor="money-bills-status-filter" className="sr-only">
+                  Status
+                </label>
+                <Select
+                  value={bills.statusFilter ?? "all"}
+                  onValueChange={(value) => {
+                    if (value === "all") {
+                      bills.onClearStatusFilter();
+                      return;
+                    }
+                    bills.onStatusFilterChange(value as MoneyBillsStatusFilter);
+                  }}
+                >
+                  <SelectTrigger
+                    id="money-bills-status-filter"
+                    size="sm"
+                    className="shrink-0 bg-default"
+                  >
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    <SelectItem value="all">All statuses</SelectItem>
+                    {bills.statusOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            ) : null}
           </div>
           {isExpensesParty ? (
             <Button
@@ -227,33 +267,57 @@ function BillsSection({
           onApplyCurrent={periodFx.onApplyCurrent}
         />
 
-        {isExpensesParty && expensesPanel.periodSpendLabel ? (
-          <MoneyPanelMetricBlock
-            label="Period spend"
-            value={expensesPanel.periodSpendLabel}
-            hint={insight}
-          />
-        ) : !isExpensesParty && bills.remainingLabel ? (
-          <MoneyPanelMetricBlock label="Remaining" value={bills.remainingLabel} hint={insight} />
-        ) : insight ? (
-          <p className="text-xs text-muted text-balance" aria-live="polite">
-            {insight}
-          </p>
-        ) : null}
+        <div className="overflow-x-auto">
+          <Tabs
+            value={bills.partyFilter}
+            onValueChange={(value) => bills.onPartyFilterChange(value as MoneyBillsPartyFilter)}
+          >
+            <TabsList aria-label="Bill party" className="min-w-max">
+              {bills.partyOptions.map((option) => (
+                <TabsTrigger key={option.id} value={option.id} className="px-3 text-xs">
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
 
-        <LayoutGroup id="bills-party-filters">
-          <MoneyPanelFilterRow label="Bill party">
-            {bills.partyOptions.map((option) => (
-              <MoneyPanelFilterPill
-                key={option.id}
-                label={option.label}
-                selected={bills.partyFilter === option.id}
-                onSelect={() => bills.onPartyFilterChange(option.id as MoneyBillsPartyFilter)}
-                layoutId="bills-party-filter-bg"
-              />
-            ))}
-          </MoneyPanelFilterRow>
-        </LayoutGroup>
+        {(isExpensesParty && expensesPanel.periodSpendLabel) ||
+        (!isExpensesParty && bills.remainingLabel) ||
+        insight ? (
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            {isExpensesParty && expensesPanel.periodSpendLabel ? (
+              <div className="flex min-w-0 items-baseline gap-2">
+                <span className="text-xs text-muted">Period spend</span>
+                <span
+                  className={cn(
+                    agencyMetricClass,
+                    "font-mono text-sm font-semibold tabular-nums text-highlighted",
+                  )}
+                >
+                  {expensesPanel.periodSpendLabel}
+                </span>
+              </div>
+            ) : !isExpensesParty && bills.remainingLabel ? (
+              <div className="flex min-w-0 items-baseline gap-2">
+                <span className="text-xs text-muted">Remaining</span>
+                <span
+                  className={cn(
+                    agencyMetricClass,
+                    "font-mono text-sm font-semibold tabular-nums text-highlighted",
+                  )}
+                >
+                  {bills.remainingLabel}
+                </span>
+              </div>
+            ) : null}
+            {insight ? (
+              <p className="min-w-0 text-xs text-muted text-balance sm:text-end" aria-live="polite">
+                {insight}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {hasExpenseFilters ? (
           <LayoutGroup id="expense-strip-filters">
@@ -271,35 +335,13 @@ function BillsSection({
           </LayoutGroup>
         ) : null}
 
-        {hasStatusFilters || (!isExpensesParty && bills.clientCategoryFilter === "external") ? (
-          <div className="flex flex-col gap-2">
-            {hasStatusFilters ? (
-              <LayoutGroup id="bills-status-filters">
-                <MoneyPanelFilterRow label="Bill status">
-                  {bills.statusOptions.map((option) => (
-                    <MoneyPanelFilterPill
-                      key={option.id}
-                      label={option.label}
-                      selected={bills.statusFilter === option.id}
-                      onSelect={() =>
-                        bills.onStatusFilterChange(option.id as MoneyBillsStatusFilter)
-                      }
-                      layoutId="bills-status-filter-bg"
-                    />
-                  ))}
-                </MoneyPanelFilterRow>
-              </LayoutGroup>
-            ) : null}
-
-            {!isExpensesParty && bills.clientCategoryFilter === "external" ? (
-              <div className="flex flex-wrap items-center gap-1.5">
-                <ActiveBillFilterChip
-                  label="External"
-                  clearLabel="Show internal clients too"
-                  onClear={bills.onClearClientCategoryFilter}
-                />
-              </div>
-            ) : null}
+        {showExternalClientFilter ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <ActiveBillFilterChip
+              label="External"
+              clearLabel="Show internal clients too"
+              onClear={bills.onClearClientCategoryFilter}
+            />
           </div>
         ) : null}
       </div>

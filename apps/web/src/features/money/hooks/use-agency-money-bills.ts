@@ -555,7 +555,7 @@ export function useAgencyMoneyBills({
   }
 
   function onStatusFilterChange(next: MoneyBillsStatusFilter) {
-    updateMoneySearch({ status: statusFilter === next ? null : next }, false);
+    updateMoneySearch({ status: next }, false);
   }
 
   function onClearStatusFilter() {
