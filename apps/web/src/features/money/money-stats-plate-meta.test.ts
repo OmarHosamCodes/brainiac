@@ -7,7 +7,6 @@ describe("moneyStatsPlateMeta", () => {
     expect(moneyStatsPlateMeta("income-cash")).toEqual({
       shortTitle: "Income",
       destinationHint: "Client bills",
-      tone: "info",
     });
   });
 

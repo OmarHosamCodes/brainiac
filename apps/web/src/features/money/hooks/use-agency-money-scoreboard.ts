@@ -11,7 +11,12 @@ import {
   amountToMajor,
   type MoneyStatsCardWithSource,
 } from "@/features/billing/money-stats-live";
+import type { InstrumentPlateTone } from "@/features/member-profile/member-profile-instrument-plate";
 import { moneyStatsMetricDestination } from "@/features/money/money-stats-plate-meta";
+import {
+  moneyStatsPlateSignal,
+  type MoneyStatsPlateGlyphSignal,
+} from "@/features/money/money-stats-plate-signal";
 import { formatMoneyStatsMetricValue } from "@/features/money/money-stats-plate-view";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { orpc } from "@/lib/orpc";
@@ -30,6 +35,8 @@ export type MoneyStatsCardViewModel = {
   secondary: Array<MoneyStatsMetricFixture & { source: "live" | "fixture" }>;
   collectedRatio: number | null;
   collectedLabel: string | null;
+  tone: InstrumentPlateTone;
+  glyph: MoneyStatsPlateGlyphSignal;
 };
 
 function buildCardViewModel(card: MoneyStatsCardWithSource): MoneyStatsCardViewModel {
@@ -49,6 +56,8 @@ function buildCardViewModel(card: MoneyStatsCardWithSource): MoneyStatsCardViewM
     }).format(collectedRatio)} collected`;
   }
 
+  const signal = moneyStatsPlateSignal(card.id, card.metrics, collectedRatio);
+
   return {
     id: card.id,
     title: card.title,
@@ -58,6 +67,8 @@ function buildCardViewModel(card: MoneyStatsCardWithSource): MoneyStatsCardViewM
     secondary,
     collectedRatio,
     collectedLabel,
+    tone: signal.tone,
+    glyph: signal.glyph,
   };
 }
 

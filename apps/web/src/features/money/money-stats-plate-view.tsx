@@ -110,12 +110,14 @@ export function MoneyStatsMetricRow({
 export function MoneyStatsPlate({
   card,
   onSelectMetric,
+  staggerIndex = 0,
 }: {
   card: MoneyStatsCardViewModel;
   onSelectMetric: AgencyMoneySurfaceViewModel["onSelectMetric"];
+  staggerIndex?: number;
 }) {
-  const { shortTitle, destinationHint, tone } = moneyStatsPlateMeta(card.id);
-  const ink = instrumentPlateInkClass(tone);
+  const { shortTitle, destinationHint } = moneyStatsPlateMeta(card.id);
+  const ink = instrumentPlateInkClass(card.tone);
   const collectedPct = card.collectedRatio === null ? null : Math.round(card.collectedRatio * 100);
   const allMetrics = [card.primary, ...card.secondary];
   const collectionTone =
@@ -126,7 +128,9 @@ export function MoneyStatsPlate({
       className={cn(
         instrumentPlateSurfaceClass(),
         "flex min-h-[15.5rem] flex-col gap-2 rounded-xl border px-4 py-3.5 transition-colors",
+        "animate-in fade-in fill-mode-both duration-300 motion-reduce:animate-none",
       )}
+      style={{ animationDelay: `${staggerIndex * 40}ms` }}
     >
       <header className="flex shrink-0 items-start justify-between gap-3">
         <h2 className={plateTitleClass}>{shortTitle}</h2>
@@ -134,12 +138,8 @@ export function MoneyStatsPlate({
       </header>
 
       <div className="flex min-h-[5.5rem] flex-1 flex-col justify-center gap-2.5 rounded-lg bg-muted/15 px-3 py-4">
-        <div className={cn("h-14 w-full shrink-0 sm:h-16", ink)}>
-          <MoneyStatsPlateGlyph
-            plateId={card.id}
-            collectedRatio={card.collectedRatio ?? 0}
-            className="h-full w-full"
-          />
+        <div className={cn("h-14 w-full shrink-0 transition-colors duration-300 sm:h-16", ink)}>
+          <MoneyStatsPlateGlyph glyph={card.glyph} className="h-full w-full" />
         </div>
 
         {collectedPct !== null ? (

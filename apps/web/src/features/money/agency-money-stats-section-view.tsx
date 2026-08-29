@@ -52,8 +52,13 @@ export function MoneyStatsSection({
     <div className="flex flex-col gap-3">
       {periodFx?.label ? <p className="text-xs text-muted">{periodFx.label}</p> : null}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Money period stats">
-        {statsCards.map((card) => (
-          <MoneyStatsPlate key={card.id} card={card} onSelectMetric={onSelectMetric} />
+        {statsCards.map((card, index) => (
+          <MoneyStatsPlate
+            key={card.id}
+            card={card}
+            onSelectMetric={onSelectMetric}
+            staggerIndex={index}
+          />
         ))}
       </section>
       <MoneyStatsMetricHintStrip hint={metricHint ?? null} />

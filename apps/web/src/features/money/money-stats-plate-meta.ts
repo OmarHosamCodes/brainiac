@@ -1,20 +1,18 @@
 import type { MoneyStatsCardId, MoneyStatsMetricId } from "@/features/billing/money-stats-fixtures";
-import type { InstrumentPlateTone } from "@/features/member-profile/member-profile-instrument-plate";
 
 export function moneyStatsPlateMeta(cardId: MoneyStatsCardId): {
   shortTitle: string;
   destinationHint: string;
-  tone: InstrumentPlateTone;
 } {
   switch (cardId) {
     case "income-cash":
-      return { shortTitle: "Income", destinationHint: "Client bills", tone: "info" };
+      return { shortTitle: "Income", destinationHint: "Client bills" };
     case "deductions":
-      return { shortTitle: "Deductions", destinationHint: "Outgoing", tone: "neutral" };
+      return { shortTitle: "Deductions", destinationHint: "Outgoing" };
     case "profitability":
-      return { shortTitle: "Profitability", destinationHint: "Adjustments", tone: "success" };
+      return { shortTitle: "Profitability", destinationHint: "Adjustments" };
     case "allocations":
-      return { shortTitle: "Allocations", destinationHint: "Formulas", tone: "info" };
+      return { shortTitle: "Allocations", destinationHint: "Formulas" };
     default: {
       const _exhaustive: never = cardId;
       return _exhaustive;
