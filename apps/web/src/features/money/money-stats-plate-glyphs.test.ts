@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { clampPlateRatio } from "./money-stats-plate-glyphs";
+import { clampPlateRatio } from "./money-stats-plate-signal";
 
 describe("clampPlateRatio", () => {
   test("clamps to 0-1", () => {
