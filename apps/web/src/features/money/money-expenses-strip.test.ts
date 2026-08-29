@@ -11,6 +11,7 @@ import {
   expenseStripMeta,
   filterExpenseStripItems,
   findExpenseStripItem,
+  moneyExpenseSettleLabel,
 } from "./money-expenses-strip";
 
 const sources = {
@@ -215,6 +216,14 @@ describe("findExpenseStripItem", () => {
   it("returns null when the selected id is missing", () => {
     expect(findExpenseStripItem(sources.allSubscriptions.items, "gone")).toBeNull();
     expect(findExpenseStripItem(sources.allSubscriptions.items, null)).toBeNull();
+  });
+});
+
+describe("moneyExpenseSettleLabel", () => {
+  it("returns Pay or Record only when payment can be recorded", () => {
+    expect(moneyExpenseSettleLabel({ canRecordPayment: true, kind: "subscription" })).toBe("Pay");
+    expect(moneyExpenseSettleLabel({ canRecordPayment: true, kind: "one_time" })).toBe("Record");
+    expect(moneyExpenseSettleLabel({ canRecordPayment: false, kind: "subscription" })).toBeNull();
   });
 });
 

@@ -62,6 +62,33 @@ export function moneyBillStatusBadgeVariant(
   }
 }
 
+export function moneyBillGroupSettleLabel(
+  party: "client" | "team",
+  remainingAmount: number,
+): "Collect" | "Pay" | null {
+  if (remainingAmount <= 0) return null;
+  return party === "client" ? "Collect" : "Pay";
+}
+
+export function moneyBillSalaryPoolSettleLabel(
+  remainingAmount: number,
+  canPay: boolean,
+): "Pay" | null {
+  if (!canPay || remainingAmount <= 0) return null;
+  return "Pay";
+}
+
+export function moneyBillAdjustmentSettleLabel(row: {
+  remainingAmount: number;
+  canRecordPayment: boolean;
+  canMarkPaid: boolean;
+}): "Record payment" | "Mark paid" | null {
+  if (row.remainingAmount <= 0) return null;
+  if (row.canRecordPayment) return "Record payment";
+  if (row.canMarkPaid) return "Mark paid";
+  return null;
+}
+
 export type MoneyBillsSheetCaptionInput = {
   kind: "group" | "adjustment" | "salary-pool" | "expense";
   remainingAmount: number;

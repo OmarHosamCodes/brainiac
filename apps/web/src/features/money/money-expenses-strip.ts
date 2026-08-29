@@ -21,6 +21,14 @@ export function expenseStatusVariant(
   }
 }
 
+export function moneyExpenseSettleLabel(item: {
+  canRecordPayment: boolean;
+  kind: "one_time" | "subscription";
+}): "Pay" | "Record" | null {
+  if (!item.canRecordPayment) return null;
+  return item.kind === "subscription" ? "Pay" : "Record";
+}
+
 export type ExpenseStripItem = {
   id: string;
   expenseId: string;

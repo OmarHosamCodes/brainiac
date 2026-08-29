@@ -3,9 +3,12 @@ import { describe, expect, test } from "bun:test";
 import { buildMoneyBillPersonGroups } from "./money-bill-obligation-rows";
 import { formatMoneyBillPeriod } from "./money-bills-rows";
 import {
+  moneyBillAdjustmentSettleLabel,
   moneyBillGroupCarryCount,
   moneyBillGroupPeriodLabel,
+  moneyBillGroupSettleLabel,
   moneyBillGroupStatusLabel,
+  moneyBillSalaryPoolSettleLabel,
   moneyBillStatusBadgeVariant,
   moneyBillTableShowsCarry,
   moneyBillTableShowsWaste,
@@ -334,6 +337,56 @@ describe("moneyBillStatusBadgeVariant", () => {
     expect(moneyBillStatusBadgeVariant("Partial")).toBe("outline");
     expect(moneyBillStatusBadgeVariant("Mixed")).toBe("outline");
     expect(moneyBillStatusBadgeVariant("Refunded")).toBe("outline");
+  });
+});
+
+describe("moneyBillGroupSettleLabel", () => {
+  test("returns Collect or Pay only when remaining is open", () => {
+    expect(moneyBillGroupSettleLabel("client", 1000)).toBe("Collect");
+    expect(moneyBillGroupSettleLabel("team", 1000)).toBe("Pay");
+    expect(moneyBillGroupSettleLabel("client", 0)).toBeNull();
+    expect(moneyBillGroupSettleLabel("team", 0)).toBeNull();
+  });
+});
+
+describe("moneyBillSalaryPoolSettleLabel", () => {
+  test("returns Pay only when remaining is open and the actor can pay", () => {
+    expect(moneyBillSalaryPoolSettleLabel(500, true)).toBe("Pay");
+    expect(moneyBillSalaryPoolSettleLabel(500, false)).toBeNull();
+    expect(moneyBillSalaryPoolSettleLabel(0, true)).toBeNull();
+  });
+});
+
+describe("moneyBillAdjustmentSettleLabel", () => {
+  test("prefers Record payment, then Mark paid, and hides when settled", () => {
+    expect(
+      moneyBillAdjustmentSettleLabel({
+        remainingAmount: 200,
+        canRecordPayment: true,
+        canMarkPaid: true,
+      }),
+    ).toBe("Record payment");
+    expect(
+      moneyBillAdjustmentSettleLabel({
+        remainingAmount: 200,
+        canRecordPayment: false,
+        canMarkPaid: true,
+      }),
+    ).toBe("Mark paid");
+    expect(
+      moneyBillAdjustmentSettleLabel({
+        remainingAmount: 200,
+        canRecordPayment: false,
+        canMarkPaid: false,
+      }),
+    ).toBeNull();
+    expect(
+      moneyBillAdjustmentSettleLabel({
+        remainingAmount: 0,
+        canRecordPayment: true,
+        canMarkPaid: true,
+      }),
+    ).toBeNull();
   });
 });
 
