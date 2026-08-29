@@ -343,7 +343,10 @@ export function AgencyMoneyBillDetailSheet({ bills }: { bills: BillsViewModel })
         if (!open) bills.onCloseDetail();
       }}
     >
-      <SheetContent side={bills.sheetSide} className="data-[side=right]:sm:max-w-lg">
+      <SheetContent
+        side={bills.sheetSide}
+        className="data-[side=bottom]:max-h-[calc(100dvh-1rem)] data-[side=right]:sm:max-w-lg"
+      >
         {group ? <GroupDetail group={group} bills={bills} /> : null}
         {adjustment ? <AdjustmentDetail row={adjustment} bills={bills} /> : null}
         {selection?.kind === "salary-pool" ? <SalaryPoolDetail bills={bills} /> : null}
