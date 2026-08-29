@@ -4,6 +4,7 @@ import {
   moneyBillsActiveFilterSummary,
   moneyBillsEmptyCopy,
   moneyBillsPartyFilterFromSearch,
+  moneyBillsSalaryPoolDetailVisible,
   moneyBillsStatusAllowed,
   moneyBillsStatusFilterFromSearch,
   moneyBillsStatusOptionsForParty,
@@ -93,6 +94,32 @@ describe("moneyBillsEmptyCopy", () => {
     expect(moneyBillsEmptyCopy("all", null).body).toBe(
       "When invoices or payouts land in this range, they'll appear here.",
     );
+  });
+});
+
+describe("moneyBillsSalaryPoolDetailVisible", () => {
+  test("all + pool", () => {
+    expect(moneyBillsSalaryPoolDetailVisible("all", true)).toBe(true);
+  });
+
+  test("team + pool", () => {
+    expect(moneyBillsSalaryPoolDetailVisible("team", true)).toBe(true);
+  });
+
+  test("client + pool", () => {
+    expect(moneyBillsSalaryPoolDetailVisible("client", true)).toBe(false);
+  });
+
+  test("adjustments + pool", () => {
+    expect(moneyBillsSalaryPoolDetailVisible("adjustments", true)).toBe(false);
+  });
+
+  test("expenses + pool", () => {
+    expect(moneyBillsSalaryPoolDetailVisible("expenses", true)).toBe(false);
+  });
+
+  test("all + no pool", () => {
+    expect(moneyBillsSalaryPoolDetailVisible("all", false)).toBe(false);
   });
 });
 

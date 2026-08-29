@@ -85,6 +85,14 @@ export function moneyBillsStatusAllowed(
   return moneyBillsStatusOptionsForParty(party).some((option) => option.id === status);
 }
 
+/** Salary-pool sheet/footer is on All and Team only — not Clients, Adjustments, or Expenses. */
+export function moneyBillsSalaryPoolDetailVisible(
+  party: MoneyBillsPartyFilter,
+  hasPool: boolean,
+): boolean {
+  return hasPool && (party === "all" || party === "team");
+}
+
 export type MoneyBillsEmptyCopy = {
   title: string;
   body: string;

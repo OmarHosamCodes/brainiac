@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   moneyBillsActiveFilterSummary,
   moneyBillsEmptyCopy,
+  moneyBillsSalaryPoolDetailVisible,
   moneyBillsStatusAllowed,
   moneyBillsStatusOptionsForParty,
   MONEY_BILLS_PARTY_OPTIONS,
@@ -378,11 +379,13 @@ export function useAgencyMoneyBills({
   useEffect(() => {
     if (!detailSelection) return;
     if (detailSelection.kind === "salary-pool") {
-      if (showsExpenses || !salaryPoolQuery.data?.pool) setDetailSelection(null);
+      if (!moneyBillsSalaryPoolDetailVisible(partyFilter, Boolean(salaryPoolQuery.data?.pool))) {
+        setDetailSelection(null);
+      }
       return;
     }
     if (!detailRow) setDetailSelection(null);
-  }, [detailRow, detailSelection, salaryPoolQuery.data?.pool, showsExpenses]);
+  }, [detailRow, detailSelection, partyFilter, salaryPoolQuery.data?.pool]);
 
   function onOpenRow(row: MoneyBillComposeDisplayRow) {
     switch (row.kind) {

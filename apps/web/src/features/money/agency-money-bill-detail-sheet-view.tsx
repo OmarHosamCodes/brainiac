@@ -190,6 +190,7 @@ function GroupDetail({
 function AdjustmentDetail({ row, bills }: { row: MoneyBillAdjustmentRow; bills: BillsViewModel }) {
   const disabled = bills.isMutationPending;
   const markPaidIsPrimary = !row.canRecordPayment && row.canMarkPaid;
+  const dismissIsPrimary = row.canDismiss && !row.canRecordPayment && !row.canMarkPaid;
 
   return (
     <>
@@ -217,7 +218,7 @@ function AdjustmentDetail({ row, bills }: { row: MoneyBillAdjustmentRow; bills: 
         {row.canDismiss ? (
           <Button
             type="button"
-            variant="ghost"
+            variant={dismissIsPrimary ? "default" : "ghost"}
             disabled={disabled}
             onClick={() => bills.onDismissAdjustment(row.id)}
           >
