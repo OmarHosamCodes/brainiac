@@ -1,5 +1,5 @@
+import { moneyBillsSheetCaption } from "@/features/billing/money-bills-table-columns";
 import {
-  type ExpenseStripItem,
   expenseStatusVariant,
   expenseStripMeta,
   findExpenseStripItem,
@@ -63,7 +63,14 @@ export function AgencyMoneyExpenseDetailSheet({ panel }: AgencyMoneyExpenseDetai
                 <SheetTitle>{item.name}</SheetTitle>
                 <Badge variant={expenseStatusVariant(item.status)}>{item.statusLabel}</Badge>
               </div>
-              <SheetDescription>Expense details</SheetDescription>
+              <SheetDescription>
+                {moneyBillsSheetCaption({
+                  kind: "expense",
+                  remainingAmount: item.remainingAmount,
+                  expenseKind: item.kind,
+                  expenseStatus: item.status,
+                })}
+              </SheetDescription>
               <div className="flex items-baseline justify-between gap-3 pt-3">
                 <span className="text-xs text-muted">Remaining</span>
                 <span
@@ -83,20 +90,12 @@ export function AgencyMoneyExpenseDetailSheet({ panel }: AgencyMoneyExpenseDetai
                   label="Kind"
                   value={item.kind === "subscription" ? "Subscription" : "One-time"}
                 />
-                <ExpenseDetailValue label="Meta" value={expenseStripMeta(item)} />
+                <ExpenseDetailValue label="Due" value={expenseStripMeta(item)} />
                 <ExpenseDetailValue label="Note" value={item.note?.trim() || "None"} />
                 <ExpenseDetailValue
                   label="Amount"
                   value={item.amountLabel}
                   className="font-mono tabular-nums"
-                />
-                <ExpenseDetailValue
-                  label="Remaining"
-                  value={item.remainingLabel}
-                  className={cn(
-                    "font-mono tabular-nums",
-                    item.remainingAmount > 0 ? "text-warning" : "text-muted",
-                  )}
                 />
               </dl>
             </div>
@@ -116,7 +115,7 @@ export function AgencyMoneyExpenseDetailSheet({ panel }: AgencyMoneyExpenseDetai
                   disabled={disabled}
                   onClick={() => panel.onOpenPayment(item.expenseId)}
                 >
-                  {item.kind === "subscription" ? "Pay" : "Record"}
+                  {disabled ? "Saving…" : item.kind === "subscription" ? "Pay" : "Record"}
                 </Button>
               ) : null}
             </SheetFooter>

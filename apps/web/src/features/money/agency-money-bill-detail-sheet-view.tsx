@@ -10,6 +10,12 @@ import {
   moneyBillsPickAdjustLine,
   type MoneyBillAdjustmentRow,
 } from "@/features/billing/money-bills-rows";
+import {
+  moneyBillGroupCarryCount,
+  moneyBillGroupStatusLabel,
+  moneyBillStatusBadgeVariant,
+  moneyBillsSheetCaption,
+} from "@/features/billing/money-bills-table-columns";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
@@ -30,13 +36,7 @@ import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surfa
 type BillsViewModel = AgencyMoneySurfaceViewModel["bills"];
 
 function StatusBadge({ label }: { label: string }) {
-  const variant = label === "Paid" ? "success" : label === "Outstanding" ? "warning" : "outline";
-  return <Badge variant={variant}>{label}</Badge>;
-}
-
-function groupStatusLabel(group: MoneyBillPersonGroup): string {
-  const firstStatus = group.lines[0]?.statusLabel ?? "Ready";
-  return group.lines.every((line) => line.statusLabel === firstStatus) ? firstStatus : "Mixed";
+  return <Badge variant={moneyBillStatusBadgeVariant(label)}>{label}</Badge>;
 }
 
 function DetailHeader({
@@ -160,11 +160,16 @@ function GroupDetail({ group, bills }: { group: MoneyBillPersonGroup; bills: Bil
     <>
       <DetailHeader
         title={group.title}
-        status={groupStatusLabel(group)}
+        status={moneyBillGroupStatusLabel(group)}
         remainingLabel={group.remainingLabel}
         hasRemaining={group.remainingAmount > 0}
         partyHref={partyHref}
-        description={`${group.lines.length} ${group.lines.length === 1 ? "bill line" : "bill lines"}`}
+        description={moneyBillsSheetCaption({
+          kind: "group",
+          remainingAmount: group.remainingAmount,
+          carryCount: moneyBillGroupCarryCount(group),
+          party: group.party,
+        })}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
         <ul aria-label={`${group.title} bill lines`}>
@@ -191,7 +196,7 @@ function GroupDetail({ group, bills }: { group: MoneyBillPersonGroup; bills: Bil
           {group.party === "client" ? "Preview invoice" : "Preview payslip"}
         </Button>
         <Button type="button" disabled={disabled} onClick={() => bills.onOpenAdjust(group)}>
-          {adjustLabel}
+          {disabled ? "Saving…" : adjustLabel}
         </Button>
       </SheetFooter>
     </>
@@ -210,7 +215,11 @@ function AdjustmentDetail({ row, bills }: { row: MoneyBillAdjustmentRow; bills: 
         status={row.statusLabel}
         remainingLabel={row.remainingLabel}
         hasRemaining={row.remainingAmount > 0}
-        description={`${row.sectionTitle} adjustment`}
+        description={moneyBillsSheetCaption({
+          kind: "adjustment",
+          remainingAmount: row.remainingAmount,
+          sectionTitle: row.sectionTitle,
+        })}
       />
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
         <dl className="grid grid-cols-2 gap-x-4 gap-y-5">
@@ -218,11 +227,6 @@ function AdjustmentDetail({ row, bills }: { row: MoneyBillAdjustmentRow; bills: 
           <LedgerAmount label="Period" value={row.periodLabel} />
           <LedgerAmount label="Amount" value={row.amountLabel} />
           <LedgerAmount label="Paid" value={row.paidLabel} />
-          <LedgerAmount
-            label="Remaining"
-            value={row.remainingLabel}
-            warning={row.remainingAmount > 0}
-          />
         </dl>
       </div>
       <SheetFooter className="border-t border-default bg-popover">
@@ -233,7 +237,7 @@ function AdjustmentDetail({ row, bills }: { row: MoneyBillAdjustmentRow; bills: 
             disabled={disabled}
             onClick={() => bills.onDismissAdjustment(row.id)}
           >
-            Dismiss
+            {dismissIsPrimary && disabled ? "Saving…" : "Dismiss"}
           </Button>
         ) : null}
         {row.canMarkPaid && !markPaidIsPrimary ? (
@@ -248,12 +252,12 @@ function AdjustmentDetail({ row, bills }: { row: MoneyBillAdjustmentRow; bills: 
         ) : null}
         {row.canRecordPayment ? (
           <Button type="button" disabled={disabled} onClick={() => bills.onOpenPayment(row.id)}>
-            Record payment
+            {disabled ? "Saving…" : "Record payment"}
           </Button>
         ) : null}
         {markPaidIsPrimary ? (
           <Button type="button" disabled={disabled} onClick={() => bills.onMarkPaid(row.id)}>
-            Mark paid
+            {disabled ? "Saving…" : "Mark paid"}
           </Button>
         ) : null}
       </SheetFooter>
@@ -274,7 +278,10 @@ function SalaryPoolDetail({ bills }: { bills: BillsViewModel }) {
         status={pool.statusLabel}
         remainingLabel={pool.remainingLabel}
         hasRemaining={pool.remainingAmount > 0}
-        description="Shared salary pool for the selected period"
+        description={moneyBillsSheetCaption({
+          kind: "salary-pool",
+          remainingAmount: pool.remainingAmount,
+        })}
       />
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
         <dl className="grid grid-cols-3 gap-4">
@@ -317,7 +324,7 @@ function SalaryPoolDetail({ bills }: { bills: BillsViewModel }) {
             disabled={disabled || !salaryPool.canSubmitPay}
             onClick={salaryPool.onPay}
           >
-            Pay
+            {disabled ? "Saving…" : "Pay"}
           </Button>
         </SheetFooter>
       ) : null}
