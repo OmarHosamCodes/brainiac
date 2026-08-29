@@ -617,22 +617,48 @@ function MoneyExpensesPanelContent({
                     "Amount"
                   )}
                 </Label>
-                <Input
-                  id={`${create.formId}-amount`}
-                  inputMode="decimal"
-                  value={create.amount}
-                  onChange={(event) => create.onAmountChange(event.target.value)}
-                  placeholder="0.00"
-                  className={cn(
-                    "h-9 rounded-xl border-default bg-default text-sm tabular-nums",
-                    agencyInputPlaceholderClass,
-                  )}
-                  required={create.kind !== "subscription" || create.amountMode === "fixed"}
-                  aria-invalid={Boolean(create.errors.amount)}
-                  aria-describedby={
-                    create.errors.amount ? `${create.formId}-amount-error` : undefined
-                  }
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id={`${create.formId}-amount`}
+                    inputMode="decimal"
+                    value={create.amount}
+                    onChange={(event) => create.onAmountChange(event.target.value)}
+                    placeholder="0.00"
+                    className={cn(
+                      "h-9 min-w-0 flex-1 rounded-xl border-default bg-default text-sm tabular-nums",
+                      agencyInputPlaceholderClass,
+                    )}
+                    required={create.kind !== "subscription" || create.amountMode === "fixed"}
+                    aria-invalid={Boolean(create.errors.amount)}
+                    aria-describedby={
+                      create.errors.amount
+                        ? `${create.formId}-amount-error`
+                        : create.amountPreview
+                          ? `${create.formId}-amount-preview`
+                          : undefined
+                    }
+                  />
+                  <Select value={create.currency} onValueChange={create.onCurrencyChange}>
+                    <SelectTrigger
+                      aria-label="Expense currency"
+                      className="h-9 w-[5.5rem] shrink-0 rounded-xl"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {create.currencyOptions.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {create.amountPreview ? (
+                  <p id={`${create.formId}-amount-preview`} className="text-[11px] text-muted">
+                    {create.amountPreview}
+                  </p>
+                ) : null}
                 {create.kind === "subscription" && create.amountMode === "variable" ? (
                   <CardDescription className="text-[11px] text-pretty">
                     Leave blank to enter the amount when you Pay. If you set one, it fills the first

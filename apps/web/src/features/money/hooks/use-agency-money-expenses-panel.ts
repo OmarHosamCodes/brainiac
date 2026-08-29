@@ -2,8 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  formatMoneyExpenseAmount,
   moneyExpenseAmountError,
   moneyExpenseCanSubmit,
+  moneyExpenseDraftAmount,
   moneyExpenseOccurredAtInputs,
   moneyExpenseOccurredAtIso,
   moneyExpensePaymentCanSubmit,
@@ -35,6 +37,7 @@ import {
   toSubscriptionCycleRow,
   type MoneySubscriptionCycleRecord,
 } from "@/features/money/hooks/money-expense-rows";
+import { AGENCY_CURRENCY_OPTIONS, previewConvertedRate } from "@/features/shared/format-rate";
 import {
   selectIsInvoiceMutationPending,
   useAgencyOpsStore,
@@ -84,6 +87,7 @@ export function useAgencyMoneyExpensesPanel({
   const [expenseStartsAt, setExpenseStartsAt] = useState("");
   const [expenseOccurredAt, setExpenseOccurredAt] = useState("");
   const [expenseOccurredTime, setExpenseOccurredTime] = useState("");
+  const [expenseCurrency, setExpenseCurrency] = useState<string | null>(null);
   const [expenseCreateSubmitted, setExpenseCreateSubmitted] = useState(false);
   const [expensePaymentId, setExpensePaymentId] = useState<string | null>(null);
   const [expensePaymentAmount, setExpensePaymentAmount] = useState("");
@@ -107,6 +111,13 @@ export function useAgencyMoneyExpensesPanel({
     enabled: Boolean(teamId) && isOwner,
   });
 
+  const fxRatesQuery = useQuery({
+    ...orpc.agencyOps.fxRates.list.queryOptions({
+      input: { teamId },
+    }),
+    enabled: Boolean(teamId) && isOwner,
+  });
+
   const subscriptionCyclesQuery = useQuery({
     ...orpc.agencyOps.expenses.subscriptionCycles.queryOptions({
       input: {
@@ -119,6 +130,20 @@ export function useAgencyMoneyExpensesPanel({
   });
 
   const expenseRecords = (expensesQuery.data?.items ?? []) as MoneyExpenseRecord[];
+  const agencyCurrency = fxRatesQuery.data?.agencyCurrency ?? "USD";
+  const currencyDraft = expenseCurrency ?? agencyCurrency;
+  const parsedExpenseAmount = parseMoneyExpenseAmount(expenseAmount);
+  const amountPreview =
+    parsedExpenseAmount != null && currencyDraft !== agencyCurrency
+      ? previewConvertedRate(
+          parsedExpenseAmount,
+          currencyDraft,
+          agencyCurrency,
+          fxRatesQuery.data?.items ?? [],
+        )
+      : null;
+  const amountPreviewLabel =
+    amountPreview != null ? `≈ ${formatMoneyExpenseAmount(amountPreview, agencyCurrency)}` : null;
   const expensesStatus =
     expensesQuery.isPending || subscriptionCyclesQuery.isPending
       ? ("loading" as const)
@@ -138,25 +163,27 @@ export function useAgencyMoneyExpensesPanel({
         ? filterSubscriptionCycles(
             (subscriptionCyclesQuery.data ?? []) as MoneySubscriptionCycleRecord[],
             subscriptionVisibility,
-          ).map(toSubscriptionCycleRow)
+          ).map((cycle) => toSubscriptionCycleRow(cycle, agencyCurrency))
         : [],
-    [expensesStatus, subscriptionCyclesQuery.data, subscriptionVisibility],
+    [agencyCurrency, expensesStatus, subscriptionCyclesQuery.data, subscriptionVisibility],
   );
   const recentExpenses = useMemo(
     () =>
       expensesStatus === "ready"
-        ? expenseRecords.filter((record) => record.kind === "one_time").map(toExpenseRow)
+        ? expenseRecords
+            .filter((record) => record.kind === "one_time")
+            .map((record) => toExpenseRow(record, agencyCurrency))
         : [],
-    [expenseRecords, expensesStatus],
+    [agencyCurrency, expenseRecords, expensesStatus],
   );
   const allSubscriptionExpenses = useMemo(
     () =>
       expensesStatus === "ready"
-        ? ((subscriptionCyclesQuery.data ?? []) as MoneySubscriptionCycleRecord[]).map(
-            toSubscriptionCycleRow,
+        ? ((subscriptionCyclesQuery.data ?? []) as MoneySubscriptionCycleRecord[]).map((cycle) =>
+            toSubscriptionCycleRow(cycle, agencyCurrency),
           )
         : [],
-    [expensesStatus, subscriptionCyclesQuery.data],
+    [agencyCurrency, expensesStatus, subscriptionCyclesQuery.data],
   );
 
   const expenseStripSources = useMemo(() => {
@@ -267,8 +294,8 @@ export function useAgencyMoneyExpensesPanel({
 
   const expensePaymentRow = useMemo(() => {
     const record = expenseRecords.find((item) => item.id === expensePaymentId);
-    return record ? toExpenseRow(record) : null;
-  }, [expensePaymentId, expenseRecords]);
+    return record ? toExpenseRow(record, agencyCurrency) : null;
+  }, [agencyCurrency, expensePaymentId, expenseRecords]);
 
   const expensePaymentCanSubmit = expensePaymentRow
     ? moneyExpensePaymentCanSubmit(
@@ -289,6 +316,7 @@ export function useAgencyMoneyExpensesPanel({
     setExpenseStartsAt("");
     setExpenseOccurredAt("");
     setExpenseOccurredTime("");
+    setExpenseCurrency(null);
     setExpenseCreateSubmitted(false);
   }
 
@@ -340,10 +368,9 @@ export function useAgencyMoneyExpensesPanel({
     setExpensePeriod(record.period);
     setExpenseAmountMode(record.amountMode ?? "fixed");
     setExpenseAmount(
-      record.amountMode === "variable" && record.amount <= 0
-        ? ""
-        : (record.amount / 100).toFixed(2),
+      moneyExpenseDraftAmount(record.amount, record.sourceAmount, record.amountMode ?? "fixed"),
     );
+    setExpenseCurrency(record.currency);
     setExpenseNote(record.note);
     setExpenseStartsAt(record.startsAt ? toDateInputValue(new Date(record.startsAt)) : "");
     const occurred = moneyExpenseOccurredAtInputs(record.occurredAt);
@@ -395,6 +422,7 @@ export function useAgencyMoneyExpensesPanel({
           note: expenseNote,
           amount,
           amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
+          currency: currencyDraft,
           startsAt: expenseKind === "subscription" ? (startsAt ?? null) : null,
           occurredAt: expenseKind === "one_time" ? occurredAt : null,
         },
@@ -412,6 +440,7 @@ export function useAgencyMoneyExpensesPanel({
         note: expenseNote,
         amount,
         amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
+        currency: currencyDraft,
         startsAt,
         occurredAt: occurredAt ?? undefined,
       },
@@ -509,6 +538,10 @@ export function useAgencyMoneyExpensesPanel({
       onOccurredTimeChange: setExpenseOccurredTime,
       amount: expenseAmount,
       onAmountChange: setExpenseAmount,
+      currency: currencyDraft,
+      currencyOptions: AGENCY_CURRENCY_OPTIONS,
+      onCurrencyChange: setExpenseCurrency,
+      amountPreview: amountPreviewLabel,
       note: expenseNote,
       onNoteChange: setExpenseNote,
       errors: expenseCreateErrors,
@@ -534,7 +567,7 @@ export function useAgencyMoneyExpensesPanel({
             : "Paying in full rolls the next due forward and hides this row until then."
           : "",
       remainingLabel: expensePaymentRow?.remainingLabel ?? "",
-      currency: expensePaymentRow?.currency ?? "USD",
+      currency: expensePaymentRow?.currency ?? agencyCurrency,
       amount: expensePaymentAmount,
       onAmountChange: setExpensePaymentAmount,
       validationMessage:

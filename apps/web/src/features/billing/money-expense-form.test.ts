@@ -5,6 +5,7 @@ import {
   moneyExpenseAmountError,
   moneyExpenseAmountLabel,
   moneyExpenseCanSubmit,
+  moneyExpenseDraftAmount,
   moneyExpenseOccurredAtInputs,
   moneyExpenseOccurredAtIso,
   moneyExpenseOneTimeMeta,
@@ -47,6 +48,20 @@ describe("moneyExpenseCanSubmit", () => {
   test("fixed subscription still needs amount", () => {
     expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly", "", "fixed")).toBe(false);
     expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly", "20", "fixed")).toBe(true);
+  });
+});
+
+describe("moneyExpenseDraftAmount", () => {
+  test("hydrates the source amount when present", () => {
+    expect(moneyExpenseDraftAmount(254_700, 5_000, "fixed")).toBe("50.00");
+  });
+
+  test("falls back to the ledger amount", () => {
+    expect(moneyExpenseDraftAmount(12_000, null, "fixed")).toBe("120.00");
+  });
+
+  test("variable with no amount stays blank", () => {
+    expect(moneyExpenseDraftAmount(0, 0, "variable")).toBe("");
   });
 });
 

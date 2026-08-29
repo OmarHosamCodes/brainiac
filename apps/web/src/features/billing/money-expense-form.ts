@@ -19,6 +19,7 @@ export type MoneyExpenseRecord = {
   paidAmount: number;
   remainingAmount: number;
   currency: string;
+  sourceAmount?: number | null;
   status: MoneyExpenseStatus;
   startsAt: string | null;
   nextDueAt: string | null;
@@ -117,6 +118,20 @@ export function moneyExpensePaymentCanSubmit(
   amountMode: MoneyExpenseAmountMode,
 ): boolean {
   return parseMoneyExpensePaymentAmount(value, remainingAmount, amountMode) !== null;
+}
+
+export function moneyExpenseSourceAmount(amount: number, sourceAmount?: number | null): number {
+  return sourceAmount ?? amount;
+}
+
+export function moneyExpenseDraftAmount(
+  amount: number,
+  sourceAmount: number | null | undefined,
+  amountMode: MoneyExpenseAmountMode,
+): string {
+  const source = moneyExpenseSourceAmount(amount, sourceAmount);
+  if (amountMode === "variable" && source <= 0) return "";
+  return (source / 100).toFixed(2);
 }
 
 export function formatMoneyExpenseAmount(amount: number, currency: string): string {

@@ -37,7 +37,7 @@ export type MoneySubscriptionCycleRecord = {
   canRecordPayment: boolean;
 };
 
-export function toExpenseRow(record: MoneyExpenseRecord) {
+export function toExpenseRow(record: MoneyExpenseRecord, agencyCurrency: string) {
   const amountMode = record.amountMode ?? "fixed";
   const kindMeta =
     record.kind === "subscription"
@@ -46,7 +46,7 @@ export function toExpenseRow(record: MoneyExpenseRecord) {
   const amountLabel = moneyExpenseAmountLabel({
     amountMode,
     amount: record.amount,
-    currency: record.currency,
+    currency: agencyCurrency,
   });
   return {
     id: record.id,
@@ -63,16 +63,19 @@ export function toExpenseRow(record: MoneyExpenseRecord) {
       amountMode,
       record.amount,
       record.remainingAmount,
-      record.currency,
+      agencyCurrency,
       amountLabel,
     ),
-    currency: record.currency,
+    currency: agencyCurrency,
     canRecordPayment: record.status === "due" || record.status === "partial",
     note: record.note || null,
   };
 }
 
-export function toSubscriptionCycleRow(record: MoneySubscriptionCycleRecord) {
+export function toSubscriptionCycleRow(
+  record: MoneySubscriptionCycleRecord,
+  agencyCurrency: string,
+) {
   const dateLabel = new Date(record.dueAt).toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
@@ -88,7 +91,7 @@ export function toSubscriptionCycleRow(record: MoneySubscriptionCycleRecord) {
   const amountLabel = moneyExpenseAmountLabel({
     amountMode,
     amount: record.amount,
-    currency: record.currency,
+    currency: agencyCurrency,
   });
   return {
     id: record.id,
@@ -107,10 +110,10 @@ export function toSubscriptionCycleRow(record: MoneySubscriptionCycleRecord) {
       amountMode,
       record.amount,
       record.remainingAmount,
-      record.currency,
+      agencyCurrency,
       amountLabel,
     ),
-    currency: record.currency,
+    currency: agencyCurrency,
     canRecordPayment: record.canRecordPayment,
     note: record.note || null,
   };
