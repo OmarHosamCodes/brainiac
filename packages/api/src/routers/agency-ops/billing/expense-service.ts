@@ -39,6 +39,7 @@ export type AgencyExpenseRecord = {
   paidAmount: number;
   remainingAmount: number;
   currency: string;
+  sourceAmount: number | null;
   status: AgencyOpsExpenseStatus;
   startsAt: string | null;
   nextDueAt: string | null;
@@ -61,6 +62,7 @@ function mapExpenseRow(row: typeof agencyOpsExpense.$inferSelect): AgencyExpense
     paidAmount,
     remainingAmount: expenseRemainingAmount(row.amount, paidAmount),
     currency: row.currency,
+    sourceAmount: row.sourceAmount ?? null,
     status: row.status,
     startsAt: row.startsAt?.toISOString() ?? null,
     nextDueAt: row.nextDueAt?.toISOString() ?? null,

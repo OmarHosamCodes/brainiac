@@ -234,6 +234,7 @@ const expenseRecordSchema = z.object({
   paidAmount: z.number().int().nonnegative(),
   remainingAmount: z.number().int().nonnegative(),
   currency: z.string().min(1),
+  sourceAmount: z.number().int().nonnegative().nullable(),
   status: expenseStatusSchema,
   startsAt: z.string().datetime().nullable(),
   nextDueAt: z.string().datetime().nullable(),
