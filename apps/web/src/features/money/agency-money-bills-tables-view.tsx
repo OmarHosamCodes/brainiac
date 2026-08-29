@@ -3,7 +3,6 @@ import { type KeyboardEvent, type ReactNode } from "react";
 import {
   moneyBillComposeHueId,
   type MoneyBillComposeDisplayRow,
-  type MoneyBillComposeSection,
   type MoneyBillPersonGroup,
 } from "@/features/billing/money-bill-obligation-rows";
 import {
@@ -41,7 +40,9 @@ type SalaryPoolTableViewModel = {
 };
 
 type AgencyMoneyBillsTablesViewProps = {
-  sections: ReadonlyArray<MoneyBillComposeSection>;
+  clientGroups: readonly MoneyBillPersonGroup[];
+  teamGroups: readonly MoneyBillPersonGroup[];
+  adjustments: readonly MoneyBillAdjustmentRow[];
   salaryPool: SalaryPoolTableViewModel;
   searchTerm: string;
   isMutationPending: boolean;
@@ -216,7 +217,7 @@ function PersonBillsTable({
   onOpenSalaryPool,
 }: {
   party: "client" | "team";
-  groups: MoneyBillPersonGroup[];
+  groups: readonly MoneyBillPersonGroup[];
   salaryPool: SalaryPoolTableViewModel;
   searchTerm: string;
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
@@ -298,7 +299,7 @@ function AdjustmentsTable({
   searchTerm,
   onOpenRow,
 }: {
-  rows: MoneyBillAdjustmentRow[];
+  rows: readonly MoneyBillAdjustmentRow[];
   searchTerm: string;
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
 }) {
@@ -334,8 +335,34 @@ function AdjustmentsTable({
   );
 }
 
+function TableSection({
+  title,
+  count,
+  showHeader,
+  children,
+}: {
+  title: string;
+  count: number;
+  showHeader: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-2" aria-label={title}>
+      {showHeader ? (
+        <div className="flex items-baseline justify-between gap-2 px-1">
+          <h3 className="text-sm font-medium text-highlighted">{title}</h3>
+          <span className="font-mono text-xs tabular-nums text-muted">{count}</span>
+        </div>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
 export function AgencyMoneyBillsTablesView({
-  sections,
+  clientGroups,
+  teamGroups,
+  adjustments,
   salaryPool,
   searchTerm,
   isMutationPending,
@@ -343,10 +370,10 @@ export function AgencyMoneyBillsTablesView({
   onOpenParty,
   onOpenSalaryPool,
 }: AgencyMoneyBillsTablesViewProps) {
-  const visibleSections = sections.filter(
-    (section) => section.rows.length > 0 || (section.id === "team" && salaryPool.pool),
-  );
-  const showSectionHeaders = visibleSections.length > 1;
+  const showClients = clientGroups.length > 0;
+  const showTeam = teamGroups.length > 0 || Boolean(salaryPool.pool);
+  const showAdjustments = adjustments.length > 0;
+  const showSectionHeaders = Number(showClients) + Number(showTeam) + Number(showAdjustments) > 1;
 
   return (
     <div
@@ -354,43 +381,45 @@ export function AgencyMoneyBillsTablesView({
       aria-label="Bill tables"
       aria-busy={isMutationPending}
     >
-      {visibleSections.map((section) => {
-        const personGroups = section.rows.filter(
-          (row): row is MoneyBillPersonGroup => row.kind === "person-group",
-        );
-        const adjustmentRows = section.rows.filter(
-          (row): row is MoneyBillAdjustmentRow => row.kind === "adjustment",
-        );
-        const rowCount = section.rows.length + (section.id === "team" && salaryPool.pool ? 1 : 0);
-
-        return (
-          <section key={section.id} className="flex flex-col gap-2" aria-label={section.title}>
-            {showSectionHeaders ? (
-              <div className="flex items-baseline justify-between gap-2 px-1">
-                <h3 className="text-sm font-medium text-highlighted">{section.title}</h3>
-                <span className="font-mono text-xs tabular-nums text-muted">{rowCount}</span>
-              </div>
-            ) : null}
-            {section.id === "adjustments" ? (
-              <AdjustmentsTable
-                rows={adjustmentRows}
-                searchTerm={searchTerm}
-                onOpenRow={onOpenRow}
-              />
-            ) : (
-              <PersonBillsTable
-                party={section.id === "clients" ? "client" : "team"}
-                groups={personGroups}
-                salaryPool={salaryPool}
-                searchTerm={searchTerm}
-                onOpenRow={onOpenRow}
-                onOpenParty={onOpenParty}
-                onOpenSalaryPool={onOpenSalaryPool}
-              />
-            )}
-          </section>
-        );
-      })}
+      {showClients ? (
+        <TableSection title="Clients" count={clientGroups.length} showHeader={showSectionHeaders}>
+          <PersonBillsTable
+            party="client"
+            groups={clientGroups}
+            salaryPool={salaryPool}
+            searchTerm={searchTerm}
+            onOpenRow={onOpenRow}
+            onOpenParty={onOpenParty}
+            onOpenSalaryPool={onOpenSalaryPool}
+          />
+        </TableSection>
+      ) : null}
+      {showTeam ? (
+        <TableSection
+          title="Team"
+          count={teamGroups.length + (salaryPool.pool ? 1 : 0)}
+          showHeader={showSectionHeaders}
+        >
+          <PersonBillsTable
+            party="team"
+            groups={teamGroups}
+            salaryPool={salaryPool}
+            searchTerm={searchTerm}
+            onOpenRow={onOpenRow}
+            onOpenParty={onOpenParty}
+            onOpenSalaryPool={onOpenSalaryPool}
+          />
+        </TableSection>
+      ) : null}
+      {showAdjustments ? (
+        <TableSection
+          title="Adjustments"
+          count={adjustments.length}
+          showHeader={showSectionHeaders}
+        >
+          <AdjustmentsTable rows={adjustments} searchTerm={searchTerm} onOpenRow={onOpenRow} />
+        </TableSection>
+      ) : null}
     </div>
   );
 }

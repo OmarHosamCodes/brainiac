@@ -16,6 +16,7 @@ import {
   moneyBillComposeListInsight,
   type MoneyBillPersonGroup,
 } from "@/features/billing/money-bill-obligation-rows";
+import { type MoneyBillAdjustmentRow } from "@/features/billing/money-bills-rows";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
@@ -152,7 +153,15 @@ function BillsSection({
     bills.partyFilter === "adjustments" || bills.partyFilter === "team"
       ? { label: "Add adjustment or cost", onClick: bills.createMenu.onOpenAdjustment }
       : { label: "Create invoice", onClick: bills.createMenu.onOpenInvoice };
-  const sections = bills.displaySections;
+  const clientGroups = bills.rows.filter(
+    (row): row is MoneyBillPersonGroup => row.kind === "person-group" && row.party === "client",
+  );
+  const teamGroups = bills.rows.filter(
+    (row): row is MoneyBillPersonGroup => row.kind === "person-group" && row.party === "team",
+  );
+  const adjustments = bills.rows.filter(
+    (row): row is MoneyBillAdjustmentRow => row.kind === "adjustment",
+  );
   const insight = isExpensesParty
     ? expensesPanel.strip.insight
     : moneyBillComposeListInsight(bills.rows);
@@ -332,7 +341,9 @@ function BillsSection({
         !bills.isError &&
         (bills.rows.length > 0 || bills.salaryPool.pool) ? (
           <AgencyMoneyBillsTablesView
-            sections={sections}
+            clientGroups={clientGroups}
+            teamGroups={teamGroups}
+            adjustments={adjustments}
             salaryPool={bills.salaryPool}
             searchTerm={bills.searchTerm}
             isMutationPending={bills.isMutationPending}
