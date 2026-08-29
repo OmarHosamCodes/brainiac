@@ -1,95 +1,185 @@
-# Task 2 Report: Tables view
+# Task 2 Report — Wire queue into send and mount MessageQueue
 
-**Status:** DONE_WITH_CONCERNS
+**Branch:** `omarhosamcodes/cloud-agent-1786657271032-f0r08`  
+**Commit:** `de1f3e86`  
+**Status:** DONE
 
-## Commit
+## Summary
 
-- `2eb83a62 feat: render bills as per-surface tables`
+Task 2 wires the Task 1 FIFO message queue into `useWorkspaceAgent.sendMessage` and mounts the installed `MessageQueue` component in the Thread composer. While a turn is streaming, non-empty composer text is enqueued instead of being dropped. When streaming ends, a guarded `useEffect` drains the queue one message at a time. Stop still calls `stopGeneration()`; queued items remain until cancelled or drained.
 
-## Implemented
+## TDD steps executed
 
-- Replaced the non-expense Bills instrument lists with stacked shadcn tables for Clients, Team, and Adjustments.
-- Added responsive overflow, sticky primitive headers, status and carry badges, conditional Waste columns, neutral numeric columns, and warning-only positive remaining amounts.
-- Added client initials and team avatars, highlighted search matches, party links that stop row propagation, and keyboard-accessible row activation.
-- Moved the salary pool into the Team table footer and removed the former list/card-only view helpers.
-- Kept header chrome, loading/error/empty states, expenses, dialogs, and Task 3 row actions unchanged.
+### Step 1 — Failing test
 
-## Verification
+Added `nextSendAction` tests to `workspace-agent-message-queue.test.ts`:
 
-- `bun test apps/web/src/features/billing/money-bills-table-columns.test.ts`: 11 passed, 0 failed.
-- Touched-file `oxfmt` and `oxlint`: passed.
-- `bun run check-types`: passed across all 8 executed workspace tasks.
-- `git show --check HEAD`: passed.
-- The new view is 396 lines, below the brief's concern threshold.
+- sends immediately when idle → `"send"`
+- queues when streaming → `"queue"`
+- drops empty idle sends → `"ignore"`
 
-## Self-review
+### Step 2 — Verify failure
 
-- Confirmed each required column and conditional Waste behavior.
-- Confirmed All renders only non-empty visible sections and section headings include counts.
-- Confirmed row Enter/Space behavior and party-button event isolation.
-- Confirmed Task 2 mount callbacks remain no-ops for rows and salary pool until Task 3.
-- Confirmed only the two requested product files were committed.
+```
+bun test apps/web/src/features/workspace-agent/workspace-agent-message-queue.test.ts
+```
+
+Result: **FAIL** — `Export named 'nextSendAction' not found`
+
+### Step 3 — Implementation
+
+**`workspace-agent-message-queue.ts`**
+
+- Added `nextSendAction(input)` returning `"send" | "queue" | "ignore"` per brief.
+
+**`hooks/use-workspace-agent.ts`**
+
+- `queuedMessages` state (`QueuedAgentMessage[]`).
+- `sendMessage` uses `nextSendAction`; `"queue"` path enqueues and clears draft; `"ignore"` returns `false`.
+- `drainLockRef` + `useEffect` dequeues head when `!isStreaming` and queue non-empty, then calls `sendMessage({ text: next.text })`.
+- `onCancelQueuedMessage` removes by id via `cancelQueuedAgentMessage`.
+- `runningQueueLabel` = last assistant `getMessageText` snippet or `"Working…"`.
+- Exported `queuedMessages`, `runningQueueLabel`, `onCancelQueuedMessage` on the hook return object.
+
+**`workspace-agent-thread-composer-view.tsx`**
+
+- New props: `isStreaming`, `queuedMessages`, `runningQueueLabel`, `onCancelQueuedMessage`.
+- Renders `MessageQueue` from `@/components/elements/message-queue` above `ThreadComposer` when `isStreaming || queuedMessages.length > 0`.
+
+**`workspace-agent-view.tsx`**
+
+- Passes queue props from view model into `WorkspaceAgentThreadComposerView` composer slot.
+
+**Not changed:** `chat-panel-view.tsx` (composer reached via existing slot in `workspace-agent-view.tsx`). Stop behavior unchanged.
+
+### Step 4 — Verify pass
+
+```
+bun test apps/web/src/features/workspace-agent/workspace-agent-message-queue.test.ts
+```
+
+Result: **7 pass, 0 fail**
+
+Additional validation:
+
+```
+bun run check-types
+```
+
+Result: **8/8 packages successful**
+
+### Step 5 — Commit
+
+```
+de1f3e86 feat: queue Orch sends while a turn is streaming
+```
+
+## Files touched
+
+| File                                       | Change                                                 |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `workspace-agent-message-queue.ts`         | `nextSendAction`                                       |
+| `workspace-agent-message-queue.test.ts`    | `nextSendAction` tests                                 |
+| `hooks/use-workspace-agent.ts`             | queue state, send classification, drain effect, labels |
+| `workspace-agent-thread-composer-view.tsx` | `MessageQueue` mount + props                           |
+| `workspace-agent-view.tsx`                 | pass queue props to composer                           |
+
+## Behavior notes
+
+- **Enqueue while streaming:** User submits text during an active turn → message appended to FIFO (max 5), draft cleared, returns `true`.
+- **Drain on idle:** When `isStreaming` becomes false and queue has items, head is dequeued and sent automatically; `drainLockRef` prevents double-send races.
+- **Cancel:** `onCancelQueuedMessage` removes a queued item without affecting the in-flight turn.
+- **Stop:** `stopGeneration()` unchanged; queue persists for later drain or user cancel.
+- **UI:** `MessageQueue` shows running label + queued list with cancel buttons above the composer toolbar.
+
+## Out of scope (later tasks)
+
+- Composer `canSend` / assistant-ui runtime send gating while streaming (may still block submit at UI layer until a later task).
+- Attachment-only sends while idle: `nextSendAction` returns `"ignore"` for empty text per brief; attachment-only path not extended in this task.
 
 ## Concerns
 
-- `bun run check:conventions` still reports 8 pre-existing violations in task-management, workspace-agent, and workspace-knowledge files.
-- `bun run check:golden` reports existing inventory drift and expects inventory entries for Task 1 files plus the new tables view. Inventory maintenance was left out to keep this task scoped to the requested product files.
+None blocking. Manual browser verification of MessageQueue during a live stream was not performed in this environment (no authenticated dev session); unit tests and typecheck pass.
 
-## Review fix
+---
 
-**Status:** DONE_WITH_CONCERNS
+## Review fix — attachment-only idle sends
 
-### What changed
+**Commit:** `bf9b3ca0`  
+**Status:** DONE
 
-- Narrowed `AgencyMoneyBillsTablesView` to explicit `clientGroups`, `teamGroups`, and `adjustments` collections. The tables view no longer imports or consumes `MoneyBillComposeSection`.
-- `agency-money-bills-section-view.tsx` splits those arrays from `bills.rows` and still passes no-op `onOpenRow` / `onOpenSalaryPool`.
-- Section titles + counts render only when more than one of {clients, team, adjustments} is visible. Team is visible when `teamGroups.length > 0` or `salaryPool.pool` is set. Empty surfaces are skipped.
-- Added inventory rows for `agency-money-bills-tables-view.tsx`, `money-bills-table-columns.ts`, and `money-bills-table-columns.test.ts`.
-- Also corrected three pre-existing inventory rows so `bun run check:golden` could pass without a full regenerate: `agency-task-rate-popover.tsx` (missing; web-query semantics), `agency-project-tasks.tsx` (evidence), `money-formula-payout-prune.ts` (api-service layer).
+### Change
 
-### Covering tests
+Extended `nextSendAction` with optional `attachmentsLength`. Empty text with zero attachments stays `"ignore"`; empty text with attachments is `"send"` when idle and `"ignore"` when streaming (queue remains text-only). Wired `sendMessage` to pass `attachments.length`.
 
-**`bun test apps/web/src/features/billing/money-bills-table-columns.test.ts`** — pass (11 pass, 0 fail)
+### Tests
 
 ```
-bun test v1.3.14 (0d9b296a)
-
-apps/web/src/features/billing/money-bills-table-columns.test.ts:
-(pass) moneyBillGroupCarryCount > counts carry lines only
-(pass) moneyBillGroupCarryCount > returns zero when no carry lines
-(pass) moneyBillGroupPeriodLabel > formats a single non-carry period
-(pass) moneyBillGroupPeriodLabel > ignores carry periods when non-carry lines share one range
-(pass) moneyBillGroupPeriodLabel > returns Mixed when non-carry lines span multiple periods
-(pass) moneyBillGroupPeriodLabel > falls back to carry lines when no non-carry lines exist
-(pass) moneyBillGroupPeriodLabel > returns Mixed for carry-only lines with multiple periods
-(pass) moneyBillGroupPeriodLabel > returns empty string when lines are empty
-(pass) moneyBillTableShowsWaste > returns false for empty rows
-(pass) moneyBillTableShowsWaste > returns false when all waste amounts are zero
-(pass) moneyBillTableShowsWaste > returns true when any waste amount is positive
-
- 11 pass
- 0 fail
- 18 expect() calls
-Ran 11 tests across 1 file. [56.00ms]
+bun test apps/web/src/features/workspace-agent/workspace-agent-message-queue.test.ts
 ```
 
-**`bun run check:golden`** — pass
+Result: **10 pass, 0 fail**
 
-```
-$ node scripts/check-golden-file-inventory.mjs
-check-golden: 1426 artifacts semantically validated across 28 domains
-```
+New cases:
 
-**`bun run check-types`** — pass (8/8 packages; `web:check-types` cache miss after the prop change)
-
-```
-Tasks:    8 successful, 8 total
-Cached:    7 cached, 8 total
-Time:    24.765s
-```
-
-Touched-view `oxfmt` / `oxlint` also passed.
+- sends attachment-only when idle → `"send"`
+- ignores attachment-only while streaming → `"ignore"`
+- queues text with attachments while streaming → `"queue"`
 
 ### Concerns
 
-- Golden inventory for this branch now includes three unrelated pre-existing corrections (task-rate popover, project-tasks evidence, formula payout prune layer) because `check:golden` still failed after adding only the Task 2 files. A full inventory regenerate was not used.
+None. Attachment-only while streaming is intentionally `"ignore"` until queued messages support attachments.
+
+---
+
+## Review fix — composer send while streaming
+
+**Commit:** `e22bfc9e`  
+**Status:** DONE
+
+### Problem
+
+`MessageQueue` and hook `sendMessage` already enqueue while `isStreaming`, but `ComposerAction` hid `ComposerPrimitive.Send` whenever `thread.isRunning`, so users could not submit follow-ups from the live Thread composer.
+
+### Change
+
+**`thread.tsx`**
+
+- Added optional `onSendWhileRunning?: (text: string) => boolean | Promise<boolean>` on `ThreadComposer`.
+- While `thread.isRunning`, render a custom Send button (not `ComposerPrimitive.Send`) that reads composer text via `unstable_useComposerInput`, calls `onSendWhileRunning`, and clears input when it returns `true`.
+- Kept `ComposerPrimitive.Cancel` (Stop) visible alongside the running Send control.
+
+**`workspace-agent-thread-composer-view.tsx`**
+
+- Added `onSend` prop; passes `onSendWhileRunning={(text) => onSend({ text })}` to `ThreadComposer`.
+
+**`workspace-agent-view.tsx`**
+
+- Passes `onSend={view.sendMessage}` into the composer view.
+
+**`workspace-agent-composer-send-while-running.ts`**
+
+- `shouldShowComposerSendWhileRunning` and `canComposerSendWhileRunning` helpers (unit-tested).
+
+### Tests
+
+```
+bun test apps/web/src/features/workspace-agent/workspace-agent-message-queue.test.ts
+```
+
+Result: **12 pass, 0 fail**
+
+New cases:
+
+- `shouldShowComposerSendWhileRunning` — running + handler only
+- `canComposerSendWhileRunning` — non-empty trimmed text
+
+```
+bun run check-types
+```
+
+Result: **8/8 packages successful**
+
+### Concerns
+
+Enter-to-send while streaming may still route through assistant-ui runtime gating; button Send is the supported path for this fix. Manual browser verification during a live stream was not performed in this environment.

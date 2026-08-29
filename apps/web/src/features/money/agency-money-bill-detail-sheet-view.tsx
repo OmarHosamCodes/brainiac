@@ -271,7 +271,7 @@ function SalaryPoolDetail({ bills }: { bills: BillsViewModel }) {
     <>
       <DetailHeader
         title="Team salaries"
-        status={pool.remainingAmount > 0 ? "Outstanding" : "Paid"}
+        status={pool.statusLabel}
         remainingLabel={pool.remainingLabel}
         hasRemaining={pool.remainingAmount > 0}
         description="Shared salary pool for the selected period"

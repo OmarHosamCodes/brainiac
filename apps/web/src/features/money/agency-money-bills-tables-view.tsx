@@ -39,6 +39,7 @@ type SalaryPoolTableViewModel = {
     paidLabel: string;
     remainingLabel: string;
     remainingAmount: number;
+    statusLabel: string;
   } | null;
 };
 
@@ -285,7 +286,9 @@ function PersonBillsTable({
               selected={selectedRowId === "salary-pool"}
             >
               <TableCell className="font-medium text-highlighted">Team salaries</TableCell>
-              <TableCell />
+              <TableCell>
+                <BillStatusBadge label={salaryPool.pool.statusLabel} />
+              </TableCell>
               <TableCell />
               <TableCell />
               <MoneyCell label={salaryPool.pool.totalLabel} highlighted />

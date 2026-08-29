@@ -7,6 +7,8 @@ import {
   moneyBillsActiveFilterSummary,
   moneyBillsEmptyCopy,
   moneyBillsSalaryPoolDetailVisible,
+  moneyBillsSalaryPoolMatchesStatus,
+  moneyBillsSalaryPoolStatus,
   moneyBillsStatusAllowed,
   moneyBillsStatusOptionsForParty,
   MONEY_BILLS_PARTY_OPTIONS,
@@ -282,6 +284,18 @@ export function useAgencyMoneyBills({
     enabled: Boolean(teamId),
   });
 
+  const salaryPool = salaryPoolQuery.data?.pool ?? null;
+  const salaryPoolStatus = salaryPool
+    ? moneyBillsSalaryPoolStatus(salaryPool.paidAmount, salaryPool.remainingAmount)
+    : null;
+  const visibleSalaryPool =
+    salaryPool &&
+    moneyBillsSalaryPoolDetailVisible(partyFilter, true) &&
+    salaryPoolStatus &&
+    moneyBillsSalaryPoolMatchesStatus(statusFilter, salaryPoolStatus)
+      ? salaryPool
+      : null;
+
   const statusOptions = useMemo(() => moneyBillsStatusOptionsForParty(partyFilter), [partyFilter]);
 
   const billsClientCategoryFilterActive =
@@ -365,8 +379,7 @@ export function useAgencyMoneyBills({
   ]);
 
   const visibleDetailSelection =
-    detailSelection?.kind === "salary-pool" &&
-    !moneyBillsSalaryPoolDetailVisible(partyFilter, Boolean(salaryPoolQuery.data?.pool))
+    detailSelection?.kind === "salary-pool" && !visibleSalaryPool
       ? null
       : detailSelection;
 
@@ -385,13 +398,11 @@ export function useAgencyMoneyBills({
   useEffect(() => {
     if (!detailSelection) return;
     if (detailSelection.kind === "salary-pool") {
-      if (!moneyBillsSalaryPoolDetailVisible(partyFilter, Boolean(salaryPoolQuery.data?.pool))) {
-        setDetailSelection(null);
-      }
+      if (!visibleSalaryPool) setDetailSelection(null);
       return;
     }
     if (!detailRow) setDetailSelection(null);
-  }, [detailRow, detailSelection, partyFilter, salaryPoolQuery.data?.pool]);
+  }, [detailRow, detailSelection, visibleSalaryPool]);
 
   function onOpenRow(row: MoneyBillComposeDisplayRow) {
     switch (row.kind) {
@@ -1086,7 +1097,7 @@ export function useAgencyMoneyBills({
   }
 
   const salaryPoolViewModel = useMemo(() => {
-    const pool = salaryPoolQuery.data?.pool ?? null;
+    const pool = visibleSalaryPool;
     const currency = pool?.currency ?? scoreboardCurrency;
     const canPay = pool != null && pool.remainingAmount > 0 && canManageMoney;
     const payAmount = pool
@@ -1099,6 +1110,12 @@ export function useAgencyMoneyBills({
             paidLabel: formatMoneyAmount(pool.paidAmount, currency),
             remainingLabel: formatMoneyAmount(pool.remainingAmount, currency),
             remainingAmount: pool.remainingAmount,
+            statusLabel:
+              salaryPoolStatus === "paid"
+                ? "Paid"
+                : salaryPoolStatus === "partial"
+                  ? "Partial"
+                  : "Outstanding",
             currency,
           }
         : null,
@@ -1118,7 +1135,8 @@ export function useAgencyMoneyBills({
     scoreboardCurrency,
     salaryPoolPayAmount,
     salaryPoolPayPending,
-    salaryPoolQuery.data?.pool,
+    salaryPoolStatus,
+    visibleSalaryPool,
   ]);
 
   const billDisplaySections = useMemo(() => {

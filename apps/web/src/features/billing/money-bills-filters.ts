@@ -93,6 +93,35 @@ export function moneyBillsSalaryPoolDetailVisible(
   return hasPool && (party === "all" || party === "team");
 }
 
+export type MoneyBillsSalaryPoolStatus = "paid" | "partial" | "outstanding";
+
+export function moneyBillsSalaryPoolStatus(
+  paidAmount: number,
+  remainingAmount: number,
+): MoneyBillsSalaryPoolStatus {
+  if (remainingAmount <= 0) return "paid";
+  return paidAmount > 0 ? "partial" : "outstanding";
+}
+
+export function moneyBillsSalaryPoolMatchesStatus(
+  statusFilter: MoneyBillsStatusFilter | null,
+  poolStatus: MoneyBillsSalaryPoolStatus,
+): boolean {
+  if (statusFilter === null) return true;
+  switch (statusFilter) {
+    case "paid":
+    case "partial":
+    case "outstanding":
+      return statusFilter === poolStatus;
+    case "refunded":
+      return false;
+    default: {
+      const _exhaustive: never = statusFilter;
+      return _exhaustive;
+    }
+  }
+}
+
 export type MoneyBillsEmptyCopy = {
   title: string;
   body: string;

@@ -5,6 +5,8 @@ import {
   moneyBillsEmptyCopy,
   moneyBillsPartyFilterFromSearch,
   moneyBillsSalaryPoolDetailVisible,
+  moneyBillsSalaryPoolMatchesStatus,
+  moneyBillsSalaryPoolStatus,
   moneyBillsStatusAllowed,
   moneyBillsStatusFilterFromSearch,
   moneyBillsStatusOptionsForParty,
@@ -120,6 +122,50 @@ describe("moneyBillsSalaryPoolDetailVisible", () => {
 
   test("all + no pool", () => {
     expect(moneyBillsSalaryPoolDetailVisible("all", false)).toBe(false);
+  });
+});
+
+describe("moneyBillsSalaryPoolStatus", () => {
+  test("unpaid pool is outstanding", () => {
+    expect(moneyBillsSalaryPoolStatus(0, 10_000)).toBe("outstanding");
+  });
+
+  test("partially paid pool is partial", () => {
+    expect(moneyBillsSalaryPoolStatus(2_500, 7_500)).toBe("partial");
+  });
+
+  test("pool with no remaining amount is paid", () => {
+    expect(moneyBillsSalaryPoolStatus(10_000, 0)).toBe("paid");
+  });
+});
+
+describe("moneyBillsSalaryPoolMatchesStatus", () => {
+  test("no status filter shows every pool status", () => {
+    expect(moneyBillsSalaryPoolMatchesStatus(null, "outstanding")).toBe(true);
+    expect(moneyBillsSalaryPoolMatchesStatus(null, "partial")).toBe(true);
+    expect(moneyBillsSalaryPoolMatchesStatus(null, "paid")).toBe(true);
+  });
+
+  test("outstanding filter hides a paid pool", () => {
+    expect(moneyBillsSalaryPoolMatchesStatus("outstanding", "paid")).toBe(false);
+  });
+
+  test("paid filter hides outstanding and partial pools", () => {
+    expect(moneyBillsSalaryPoolMatchesStatus("paid", "outstanding")).toBe(false);
+    expect(moneyBillsSalaryPoolMatchesStatus("paid", "partial")).toBe(false);
+    expect(moneyBillsSalaryPoolMatchesStatus("paid", "paid")).toBe(true);
+  });
+
+  test("partial filter shows only partial pools", () => {
+    expect(moneyBillsSalaryPoolMatchesStatus("partial", "outstanding")).toBe(false);
+    expect(moneyBillsSalaryPoolMatchesStatus("partial", "partial")).toBe(true);
+    expect(moneyBillsSalaryPoolMatchesStatus("partial", "paid")).toBe(false);
+  });
+
+  test("refunded filter never shows a pool", () => {
+    expect(moneyBillsSalaryPoolMatchesStatus("refunded", "outstanding")).toBe(false);
+    expect(moneyBillsSalaryPoolMatchesStatus("refunded", "partial")).toBe(false);
+    expect(moneyBillsSalaryPoolMatchesStatus("refunded", "paid")).toBe(false);
   });
 });
 
