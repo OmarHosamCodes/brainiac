@@ -19,7 +19,7 @@ export type MoneyStatsMetricId =
 
 export type MoneyStatsMetricKind = "currency" | "percent";
 
-export type MoneyStatsMetricTone = "default" | "positive" | "caution";
+export type MoneyStatsMetricTone = "default" | "positive" | "caution" | "danger";
 
 export type MoneyStatsMetricFixture = {
   id: MoneyStatsMetricId;

@@ -2,6 +2,7 @@ import type {
   MoneyStatsCardId,
   MoneyStatsMetricFixture,
   MoneyStatsMetricId,
+  MoneyStatsMetricTone,
 } from "@/features/billing/money-stats-fixtures";
 import type { InstrumentPlateTone } from "@/features/member-profile/member-profile-instrument-plate";
 
@@ -39,6 +40,38 @@ function profitabilityArcRatio(profit: number, roi: number): number {
   // Map ROI into [0.15, 1]: 0 → 0.15 floor when still profitable; ≥100% → full arc.
   if (roi < 0) return 0.15;
   return clampPlateRatio(0.15 + 0.85 * Math.min(1, roi));
+}
+
+/** Live metric ink from the period amount — overrides fixture tones. */
+export function moneyStatsLiveMetricTone(
+  metricId: MoneyStatsMetricId,
+  amount: number,
+): MoneyStatsMetricTone {
+  switch (metricId) {
+    case "received":
+      return amount > 0 ? "positive" : "default";
+    case "remaining":
+      return amount > 0 ? "caution" : "default";
+    case "team-profit":
+    case "roi":
+    case "profit-loss-share":
+      if (amount < 0) return "danger";
+      if (amount > 0) return "positive";
+      return "default";
+    case "total-income":
+    case "salaries":
+    case "expenses":
+    case "debt-discount":
+    case "paid-vacation":
+    case "device-compensation":
+    case "charity":
+    case "pbc":
+      return "default";
+    default: {
+      const _exhaustive: never = metricId;
+      return _exhaustive;
+    }
+  }
 }
 
 export function moneyStatsPlateSignal(

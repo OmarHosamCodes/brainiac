@@ -53,6 +53,8 @@ function toneValueClass(tone: MoneyStatsMetricTone | undefined): string {
       return "text-success";
     case "caution":
       return "text-warning";
+    case "danger":
+      return "text-destructive";
     case "default":
     case undefined:
       return "text-foreground";

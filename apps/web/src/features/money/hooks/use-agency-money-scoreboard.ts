@@ -14,6 +14,7 @@ import {
 import type { InstrumentPlateTone } from "@/features/member-profile/member-profile-instrument-plate";
 import { moneyStatsMetricDestination } from "@/features/money/money-stats-plate-meta";
 import {
+  moneyStatsLiveMetricTone,
   moneyStatsPlateSignal,
   type MoneyStatsPlateGlyphSignal,
 } from "@/features/money/money-stats-plate-signal";
@@ -39,10 +40,20 @@ export type MoneyStatsCardViewModel = {
   glyph: MoneyStatsPlateGlyphSignal;
 };
 
+function withLiveMetricTone<T extends MoneyStatsMetricFixture>(metric: T): T {
+  return {
+    ...metric,
+    tone: moneyStatsLiveMetricTone(metric.id, metric.amount),
+  };
+}
+
 function buildCardViewModel(card: MoneyStatsCardWithSource): MoneyStatsCardViewModel {
-  const primary =
-    card.metrics.find((metric) => metric.id === card.primaryMetricId) ?? card.metrics[0]!;
-  const secondary = card.metrics.filter((metric) => metric.id !== primary.id);
+  const primary = withLiveMetricTone(
+    card.metrics.find((metric) => metric.id === card.primaryMetricId) ?? card.metrics[0]!,
+  );
+  const secondary = card.metrics
+    .filter((metric) => metric.id !== primary.id)
+    .map((metric) => withLiveMetricTone(metric));
 
   let collectedRatio: number | null = null;
   let collectedLabel: string | null = null;

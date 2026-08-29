@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 
 import type { MoneyStatsMetricFixture } from "@/features/billing/money-stats-fixtures";
 
-import { moneyStatsPlateSignal, sharesAgainstMax } from "./money-stats-plate-signal";
+import {
+  moneyStatsLiveMetricTone,
+  moneyStatsPlateSignal,
+  sharesAgainstMax,
+} from "./money-stats-plate-signal";
 
 function metric(id: MoneyStatsMetricFixture["id"], amount: number): MoneyStatsMetricFixture {
   return { id, label: id, kind: id === "roi" ? "percent" : "currency", amount };
@@ -130,5 +134,21 @@ describe("moneyStatsPlateSignal", () => {
     );
     expect(signal.tone).toBe("info");
     expect(signal.glyph).toEqual({ kind: "allocations", blocks: [1, 0.5, 0] });
+  });
+});
+
+describe("moneyStatsLiveMetricTone", () => {
+  test("received and remaining follow cash state", () => {
+    expect(moneyStatsLiveMetricTone("received", 0)).toBe("default");
+    expect(moneyStatsLiveMetricTone("received", 10)).toBe("positive");
+    expect(moneyStatsLiveMetricTone("remaining", 10)).toBe("caution");
+    expect(moneyStatsLiveMetricTone("remaining", 0)).toBe("default");
+  });
+
+  test("profit and ROI use destructive when negative", () => {
+    expect(moneyStatsLiveMetricTone("team-profit", -1)).toBe("danger");
+    expect(moneyStatsLiveMetricTone("roi", -0.2)).toBe("danger");
+    expect(moneyStatsLiveMetricTone("team-profit", 50)).toBe("positive");
+    expect(moneyStatsLiveMetricTone("roi", 1.1)).toBe("positive");
   });
 });
