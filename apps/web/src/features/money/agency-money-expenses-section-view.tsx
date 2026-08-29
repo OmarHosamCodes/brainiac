@@ -18,6 +18,7 @@ import {
 import {
   expenseStatusVariant,
   expenseStripMeta,
+  moneyExpenseSettleLabel,
   type ExpenseStripItem,
 } from "@/features/money/money-expenses-strip";
 import { ExpenseStripGlyph } from "@/features/money/money-expense-strip-glyphs";
@@ -44,6 +45,7 @@ import { Textarea } from "@/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import { AgencyMoneyExpenseDetailSheet } from "./agency-money-expense-detail-sheet-view";
+import { MoneyTableActionsCell } from "./agency-money-table-actions-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 
 function formatExpenseStartPreview(value: string): string {
@@ -66,12 +68,16 @@ function ExpenseTable({
   items,
   searchTerm,
   selectedRowId,
+  settleDisabled,
   onOpenExpenseRow,
+  onSettleExpense,
 }: {
   items: ExpenseStripItem[];
   searchTerm: string;
   selectedRowId: string | null;
+  settleDisabled: boolean;
   onOpenExpenseRow: (rowId: string) => void;
+  onSettleExpense: (expenseId: string) => void;
 }) {
   function onRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, rowId: string) {
     if (event.target !== event.currentTarget) return;
@@ -95,6 +101,9 @@ function ExpenseTable({
               </TableHead>
               <TableHead scope="col" className="w-32 text-right">
                 Remaining
+              </TableHead>
+              <TableHead scope="col" className="text-right">
+                Actions
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -145,6 +154,13 @@ function ExpenseTable({
                 >
                   {item.remainingLabel}
                 </TableCell>
+                <MoneyTableActionsCell
+                  settleLabel={moneyExpenseSettleLabel(item)}
+                  settleDisabled={settleDisabled}
+                  onSettle={() => onSettleExpense(item.expenseId)}
+                  detailsLabel={`Details for ${item.name}`}
+                  onOpenDetails={() => onOpenExpenseRow(item.id)}
+                />
               </TableRow>
             ))}
           </TableBody>
@@ -161,17 +177,21 @@ function ExpenseTableSkeleton() {
         <Table className="min-w-[48rem]">
           <TableHeader className="border-b border-default/50">
             <TableRow>
-              {["Expense", "Kind", "Status", "Due", "Amount", "Remaining"].map((column) => (
-                <TableHead
-                  key={column}
-                  scope="col"
-                  className={
-                    column === "Amount" || column === "Remaining" ? "text-right" : undefined
-                  }
-                >
-                  {column}
-                </TableHead>
-              ))}
+              {["Expense", "Kind", "Status", "Due", "Amount", "Remaining", "Actions"].map(
+                (column) => (
+                  <TableHead
+                    key={column}
+                    scope="col"
+                    className={
+                      column === "Amount" || column === "Remaining" || column === "Actions"
+                        ? "text-right"
+                        : undefined
+                    }
+                  >
+                    {column}
+                  </TableHead>
+                ),
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,6 +217,12 @@ function ExpenseTableSkeleton() {
                 </TableCell>
                 <TableCell>
                   <Skeleton className="ml-auto h-4 w-20 rounded-md" />
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-1">
+                    <Skeleton className="h-7 w-16 rounded-2xl" />
+                    <Skeleton className="size-7 rounded-2xl" />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -242,7 +268,9 @@ function MoneyExpensesPanelContent({
             items={strip.items}
             searchTerm={searchTerm}
             selectedRowId={panel.selectedRowId}
+            settleDisabled={create.isPending || payment.isPending}
             onOpenExpenseRow={panel.onOpenExpenseRow}
+            onSettleExpense={panel.onOpenPayment}
           />
         ) : strip.empty ? (
           <motion.div
