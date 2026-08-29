@@ -1,5 +1,6 @@
 import {
   type ExpenseStripItem,
+  expenseStatusVariant,
   expenseStripMeta,
   findExpenseStripItem,
 } from "@/features/money/money-expenses-strip";
@@ -22,23 +23,6 @@ type ExpensesPanelViewModel = AgencyMoneySurfaceViewModel["bills"]["expensesPane
 type AgencyMoneyExpenseDetailSheetProps = {
   panel: ExpensesPanelViewModel;
 };
-
-function expenseStatusVariant(
-  status: ExpenseStripItem["status"],
-): "success" | "warning" | "outline" {
-  switch (status) {
-    case "paid":
-      return "success";
-    case "due":
-      return "warning";
-    case "partial":
-      return "outline";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
 
 function ExpenseDetailValue({
   label,

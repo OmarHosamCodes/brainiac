@@ -4,6 +4,23 @@ export type ExpenseStripFilter = "due" | "paid" | "all";
 
 export type ExpenseStripStatus = "due" | "partial" | "paid";
 
+export function expenseStatusVariant(
+  status: ExpenseStripStatus,
+): "success" | "warning" | "outline" {
+  switch (status) {
+    case "paid":
+      return "success";
+    case "due":
+      return "warning";
+    case "partial":
+      return "outline";
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
 export type ExpenseStripItem = {
   id: string;
   expenseId: string;

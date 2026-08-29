@@ -17,6 +17,7 @@ import {
   agencyMetricClass,
 } from "@/features/shared/agency-ui";
 import {
+  expenseStatusVariant,
   expenseStripAmountLabel,
   expenseStripMeta,
   type ExpenseStripItem,
@@ -60,9 +61,7 @@ function formatExpenseStartPreview(value: string): string {
 }
 
 function ExpenseStatusBadge({ item }: { item: ExpenseStripItem }) {
-  const variant =
-    item.status === "paid" ? "success" : item.status === "due" ? "warning" : "outline";
-  return <Badge variant={variant}>{item.statusLabel}</Badge>;
+  return <Badge variant={expenseStatusVariant(item.status)}>{item.statusLabel}</Badge>;
 }
 
 function ExpenseTable({

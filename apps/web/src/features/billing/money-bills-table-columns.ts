@@ -30,8 +30,6 @@ export function moneyBillGroupPeriodLabel(group: Pick<MoneyBillPersonGroup, "lin
   return periodLabelFromLines(sourceLines);
 }
 
-export function moneyBillTableShowsWaste(
-  rows: ReadonlyArray<{ wasteAmount: number }>,
-): boolean {
+export function moneyBillTableShowsWaste(rows: ReadonlyArray<{ wasteAmount: number }>): boolean {
   return rows.some((row) => row.wasteAmount > 0);
 }
