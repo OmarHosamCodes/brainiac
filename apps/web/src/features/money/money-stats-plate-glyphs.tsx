@@ -72,28 +72,32 @@ function DeductionsStackGlyph({
   );
 }
 
-/** Semicircle track length for r=24 from (8,26) to (56,26). */
-const PROFIT_ARC_LENGTH = Math.PI * 24;
+/** Original dual-overlap instrument arcs (flatter A48 silhouette). */
+const PROFIT_TRACK_PATH = "M8 26A48 48 0 0 1 56 26";
+const PROFIT_PROGRESS_PATH = "M8 26A48 48 0 0 1 50 7";
 
 function ProfitArcGlyph({ arcRatio, className }: { arcRatio: number; className?: string }) {
   const r = clampPlateRatio(arcRatio);
-  const dashoffset = PROFIT_ARC_LENGTH * (1 - r);
 
   return (
     <svg viewBox="0 0 64 32" className={className} aria-hidden fill="none">
       <path
-        d="M8 26A24 24 0 0 1 56 26"
-        className="stroke-current opacity-25"
-        strokeWidth="5"
+        d={PROFIT_TRACK_PATH}
+        className="stroke-current opacity-30"
+        strokeWidth="4.5"
         strokeLinecap="round"
       />
       <path
-        d="M8 26A24 24 0 0 1 56 26"
+        d={PROFIT_PROGRESS_PATH}
         className={cn("stroke-current", glyphMotionClass)}
-        strokeWidth="5"
+        strokeWidth="4.5"
         strokeLinecap="round"
-        strokeDasharray={PROFIT_ARC_LENGTH}
-        style={{ strokeDashoffset: dashoffset }}
+        pathLength={1}
+        strokeDasharray={1}
+        style={{
+          strokeDashoffset: 1 - r,
+          opacity: r <= 0 ? 0 : 1,
+        }}
       />
     </svg>
   );
