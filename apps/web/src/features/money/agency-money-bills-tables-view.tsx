@@ -6,9 +6,12 @@ import {
   type MoneyBillPersonGroup,
 } from "@/features/billing/money-bill-obligation-rows";
 import {
+  moneyBillAdjustmentSettleLabel,
   moneyBillGroupCarryCount,
+  moneyBillGroupSettleLabel,
   moneyBillGroupStatusLabel,
   moneyBillGroupPeriodLabel,
+  moneyBillSalaryPoolSettleLabel,
   moneyBillStatusBadgeVariant,
   moneyBillTableShowsCarry,
   moneyBillTableShowsWaste,
@@ -32,6 +35,8 @@ import {
 } from "@/ui/table";
 import { cn } from "@/lib/utils";
 
+import { MoneyTableActionsCell } from "./agency-money-table-actions-view";
+
 type SalaryPoolTableViewModel = {
   pool: {
     totalLabel: string;
@@ -40,6 +45,7 @@ type SalaryPoolTableViewModel = {
     remainingAmount: number;
     statusLabel: string;
   } | null;
+  canPay: boolean;
 };
 
 type AgencyMoneyBillsTablesViewProps = {
@@ -52,6 +58,8 @@ type AgencyMoneyBillsTablesViewProps = {
   selectedRowId?: string | null;
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
   onOpenSalaryPool: () => void;
+  onSettleGroup: (group: MoneyBillPersonGroup) => void;
+  onSettleAdjustment: (row: MoneyBillAdjustmentRow) => void;
 };
 
 const tableWrapperClass = "overflow-x-auto rounded-dense border border-default/55 bg-default";
@@ -66,9 +74,11 @@ function BillsTableHeader({ columns }: { columns: string[] }) {
             key={column}
             scope="col"
             className={
-              ["Total", "Received", "Paid", "Waste", "Remaining", "Amount"].includes(column)
-                ? "w-32 text-right"
-                : undefined
+              column === "Actions"
+                ? "text-right"
+                : ["Total", "Received", "Paid", "Waste", "Remaining", "Amount"].includes(column)
+                  ? "w-32 text-right"
+                  : undefined
             }
           >
             {column}
@@ -191,16 +201,20 @@ function PersonBillsTable({
   groups,
   salaryPool,
   searchTerm,
+  isMutationPending,
   onOpenRow,
   onOpenSalaryPool,
+  onSettleGroup,
   selectedRowId,
 }: {
   party: "client" | "team";
   groups: readonly MoneyBillPersonGroup[];
   salaryPool: SalaryPoolTableViewModel;
   searchTerm: string;
+  isMutationPending: boolean;
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
   onOpenSalaryPool: () => void;
+  onSettleGroup: (group: MoneyBillPersonGroup) => void;
   selectedRowId?: string | null;
 }) {
   const isTeam = party === "team";
@@ -222,6 +236,7 @@ function PersonBillsTable({
             receivedHeading,
             ...(showWaste ? ["Waste"] : []),
             "Remaining",
+            "Actions",
           ]}
         />
         <TableBody>
@@ -248,6 +263,13 @@ function PersonBillsTable({
               <MoneyCell label={group.receivedLabel} />
               {showWaste ? <MoneyCell label={group.wasteLabel} /> : null}
               <MoneyCell label={group.remainingLabel} remainingAmount={group.remainingAmount} />
+              <MoneyTableActionsCell
+                settleLabel={moneyBillGroupSettleLabel(group.party, group.remainingAmount)}
+                settleDisabled={isMutationPending}
+                onSettle={() => onSettleGroup(group)}
+                detailsLabel={`Details for ${group.title}`}
+                onOpenDetails={() => onOpenRow(group)}
+              />
             </InteractiveBillRow>
           ))}
         </TableBody>
@@ -272,6 +294,16 @@ function PersonBillsTable({
                 label={salaryPool.pool.remainingLabel}
                 remainingAmount={salaryPool.pool.remainingAmount}
               />
+              <MoneyTableActionsCell
+                settleLabel={moneyBillSalaryPoolSettleLabel(
+                  salaryPool.pool.remainingAmount,
+                  salaryPool.canPay,
+                )}
+                settleDisabled={isMutationPending}
+                onSettle={onOpenSalaryPool}
+                detailsLabel="Details for Team salaries"
+                onOpenDetails={onOpenSalaryPool}
+              />
             </InteractiveBillRow>
           </TableFooter>
         ) : null}
@@ -283,19 +315,23 @@ function PersonBillsTable({
 function AdjustmentsTable({
   rows,
   searchTerm,
+  isMutationPending,
   onOpenRow,
+  onSettleAdjustment,
   selectedRowId,
 }: {
   rows: readonly MoneyBillAdjustmentRow[];
   searchTerm: string;
+  isMutationPending: boolean;
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
+  onSettleAdjustment: (row: MoneyBillAdjustmentRow) => void;
   selectedRowId?: string | null;
 }) {
   return (
     <div className={tableWrapperClass}>
       <Table className="min-w-[48rem]" aria-label="Bill adjustments">
         <BillsTableHeader
-          columns={["Title", "Type", "Status", "Period", "Amount", "Paid", "Remaining"]}
+          columns={["Title", "Type", "Status", "Period", "Amount", "Paid", "Remaining", "Actions"]}
         />
         <TableBody>
           {rows.map((row) => (
@@ -316,6 +352,13 @@ function AdjustmentsTable({
               <MoneyCell label={row.amountLabel} highlighted />
               <MoneyCell label={row.paidLabel} />
               <MoneyCell label={row.remainingLabel} remainingAmount={row.remainingAmount} />
+              <MoneyTableActionsCell
+                settleLabel={moneyBillAdjustmentSettleLabel(row)}
+                settleDisabled={isMutationPending}
+                onSettle={() => onSettleAdjustment(row)}
+                detailsLabel={`Details for ${row.title}`}
+                onOpenDetails={() => onOpenRow(row)}
+              />
             </InteractiveBillRow>
           ))}
         </TableBody>
@@ -358,6 +401,8 @@ export function AgencyMoneyBillsTablesView({
   selectedRowId,
   onOpenRow,
   onOpenSalaryPool,
+  onSettleGroup,
+  onSettleAdjustment,
 }: AgencyMoneyBillsTablesViewProps) {
   const showClients = clientGroups.length > 0;
   const showTeam = teamGroups.length > 0 || Boolean(salaryPool.pool);
@@ -377,8 +422,10 @@ export function AgencyMoneyBillsTablesView({
             groups={clientGroups}
             salaryPool={salaryPool}
             searchTerm={searchTerm}
+            isMutationPending={isMutationPending}
             onOpenRow={onOpenRow}
             onOpenSalaryPool={onOpenSalaryPool}
+            onSettleGroup={onSettleGroup}
             selectedRowId={selectedRowId}
           />
         </TableSection>
@@ -394,8 +441,10 @@ export function AgencyMoneyBillsTablesView({
             groups={teamGroups}
             salaryPool={salaryPool}
             searchTerm={searchTerm}
+            isMutationPending={isMutationPending}
             onOpenRow={onOpenRow}
             onOpenSalaryPool={onOpenSalaryPool}
+            onSettleGroup={onSettleGroup}
             selectedRowId={selectedRowId}
           />
         </TableSection>
@@ -409,7 +458,9 @@ export function AgencyMoneyBillsTablesView({
           <AdjustmentsTable
             rows={adjustments}
             searchTerm={searchTerm}
+            isMutationPending={isMutationPending}
             onOpenRow={onOpenRow}
+            onSettleAdjustment={onSettleAdjustment}
             selectedRowId={selectedRowId}
           />
         </TableSection>

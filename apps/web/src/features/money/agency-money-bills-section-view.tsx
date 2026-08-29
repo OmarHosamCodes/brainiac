@@ -79,12 +79,14 @@ function BillsTableSkeleton() {
         <Table className="min-w-[48rem]">
           <TableHeader className="border-b border-default/50">
             <TableRow>
-              {["Party", "Status", "Period", "Total", "Remaining"].map((column) => (
+              {["Party", "Status", "Period", "Total", "Remaining", "Actions"].map((column) => (
                 <TableHead
                   key={column}
                   scope="col"
                   className={
-                    column === "Total" || column === "Remaining" ? "text-right" : undefined
+                    column === "Total" || column === "Remaining" || column === "Actions"
+                      ? "text-right"
+                      : undefined
                   }
                 >
                   {column}
@@ -112,6 +114,12 @@ function BillsTableSkeleton() {
                 </TableCell>
                 <TableCell>
                   <Skeleton className="ml-auto h-4 w-20 rounded-md" />
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-1">
+                    <Skeleton className="h-7 w-16 rounded-2xl" />
+                    <Skeleton className="size-7 rounded-2xl" />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -378,6 +386,14 @@ function BillsSection({
             selectedRowId={bills.selectedRowId}
             onOpenRow={bills.onOpenRow}
             onOpenSalaryPool={bills.onOpenSalaryPool}
+            onSettleGroup={bills.onOpenAdjust}
+            onSettleAdjustment={(row) => {
+              if (row.canRecordPayment) {
+                bills.onOpenPayment(row.id);
+                return;
+              }
+              bills.onMarkPaid(row.id);
+            }}
           />
         ) : null}
 
