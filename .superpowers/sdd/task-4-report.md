@@ -1,3 +1,31 @@
+# Task 4 report: Bills chrome restack
+
+**Branch:** `feat/bills-tables`
+**Commit:** `e7817511` (`feat: restack bills chrome with tabs and status select`)
+
+## Summary
+
+- Replaced party filter pills with controlled shadcn Tabs for All, Clients, Team, Adjustments, and Expenses, with horizontal overflow on narrow screens.
+- Replaced bill status pills with an accessible shadcn Select beside search. Selecting a status now sets it; All statuses clears it.
+- Compacted Remaining / Period spend and insight into one quiet summary row while preserving the insight live region.
+- Preserved search, count / All expenses, Add menu, FX line, the scoped External chip, and the existing expense Due / Paid / All pills.
+- Left bill tables, bill detail sheet internals, and the expense strip body unchanged.
+
+## Verification
+
+- `bunx oxfmt --write` on both touched files: pass
+- `bunx oxlint` on both touched files: pass
+- `bun test apps/web/src/features/billing/money-bills-filters.test.ts`: 20 pass, 0 fail
+- `bun run check-types`: pass
+- Browser: verified named party tabs, labeled status combobox, Expenses hiding status, All expenses remaining available, and expense strip pills remaining intact.
+- `bun run check:conventions`: blocked by 8 pre-existing violations in task-management, workspace-agent, and workspace-knowledge files; no violation references either touched file.
+
+## Concerns
+
+No Task 4 blocker. The unrelated `.superpowers/sdd/progress.md` and `docs/superpowers/plans/2026-08-29-bills-tables.md` worktree changes were not committed.
+
+---
+
 # Task 4 report — DraftRestore chip in the composer
 
 **Branch:** `omarhosamcodes/cloud-agent-1786657271032-f0r08`  

@@ -47,3 +47,25 @@ Canvas Task 4: complete (commits bc67b5ae..6a07b0bc, review Approved). Important
 Canvas Task 5: complete (commit 7742ec35 inventory). Browser smoke skipped.
 
 All four plans complete (composer, search, agency, canvas). Prompt library out of scope.
+
+---
+
+Plan: docs/superpowers/plans/2026-08-29-bills-tables.md
+
+Task 1: complete (commits 45d3943e..4650b1a5, review Approved). Minors: tests couple to group builder; missing same-period non-carry uniqueness case; dead `if (!line)` after size===1.
+Task 2: complete (commits 4650b1a5..615e2f48, review Approved after prop-boundary + golden inventory fix). Minors: onOpenRow still MoneyBillComposeDisplayRow; PersonBillsTable takes salaryPool on client table; status badge thinner than old chips; three unrelated inventory rows.
+Task 3: complete (commits 615e2f48..f1ac3b51, review Approved after salary-pool visibility fix). Minors: salary footer can still render from cached pool on Clients/Adjustments; close-via-effect can flash one frame.
+Task 4: complete (commits f1ac3b51..e7817511, review Approved). Minors: compact remaining inlined vs chrome helper; search+status cluster wraps earlier; Select value casts.
+Task 5: complete (commits e7817511..474bdb50, review Approved after strip-item id selection). Minor: ExpenseStatusBadge nested ternary vs exhaustive switch in sheet.
+Task 6: complete (verify only, no commits; 47 tests, types, golden pass; check/conventions fail only on 8 pre-existing non-Money files). Browser on worktree :7012 at 2534×1426. Salary pool and error state data-blocked.
+Final review 45d3943e..474bdb50: With fixes (no Critical). Important: salary-pool leak, paid CTA mismatch, pending-adjustments missing from sheet, sheets not bottom on mobile, party not a Link. Fix pass in flight.
+Fix pass: `4c448fba` (68 tests, types pass). Re-review of `45d3943e..4c448fba` in flight.
+Re-review: five prior Importants fixed. New Important: unbounded mobile bottom sheet height. Cap-height fix in flight.
+Height cap: `d7cd2ba4` (68 tests, types pass). Re-review of `45d3943e..d7cd2ba4` in flight.
+Re-review: height cap Fixed. New Important: salary pool ignores status filter and labels partial as Outstanding. Fix in flight.
+Salary-pool status: `c22009d0` (76 tests, types pass). Re-review of `45d3943e..c22009d0` in flight.
+Re-review: salary-pool Fixed. Important: `use-money-detail-sheet-side.ts` missing from golden inventory. Inventory fix in flight.
+Golden inventory: `31130250` (check:golden 1429, exit 0). Re-review of `45d3943e..31130250` in flight.
+Re-review: inventory Fixed; no Critical/Important. Merge nits: oxfmt on waste helper, exhaustive ExpenseStatusBadge. Fix in flight.
+Fmt/badge: `d7a07492`. Re-review of `45d3943e..d7a07492` in flight.
+Final review `45d3943e..d7a07492`: Ready to merge Yes. No Critical/Important remaining.
