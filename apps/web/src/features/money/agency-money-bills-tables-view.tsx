@@ -7,18 +7,18 @@ import {
 } from "@/features/billing/money-bill-obligation-rows";
 import {
   moneyBillGroupCarryCount,
+  moneyBillGroupStatusLabel,
   moneyBillGroupPeriodLabel,
+  moneyBillStatusBadgeVariant,
+  moneyBillTableShowsCarry,
   moneyBillTableShowsWaste,
 } from "@/features/billing/money-bills-table-columns";
 import {
-  moneyBillClientHref,
   moneyBillInitials,
-  moneyBillMemberHref,
   type MoneyBillAdjustmentRow,
 } from "@/features/billing/money-bills-rows";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
-import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import { Badge } from "@/ui/badge";
 import {
@@ -30,7 +30,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/ui/table";
-import { Link } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 type SalaryPoolTableViewModel = {
@@ -106,22 +105,12 @@ function BillClientMark({ title, hueId }: { title: string; hueId: string }) {
       aria-hidden
     >
       {moneyBillInitials(title)}
-      <span
-        className="absolute -right-0.5 -bottom-0.5 size-2 rounded-full bg-[var(--project-hue)] ring-2 ring-default dark:bg-[var(--project-hue-dark)]"
-        aria-hidden
-      />
     </span>
   );
 }
 
 function BillStatusBadge({ label }: { label: string }) {
-  const variant = label === "Paid" ? "success" : label === "Outstanding" ? "warning" : "outline";
-  return <Badge variant={variant}>{label}</Badge>;
-}
-
-function groupStatusLabel(group: MoneyBillPersonGroup): string {
-  const firstStatus = group.lines[0]?.statusLabel ?? "Ready";
-  return group.lines.every((line) => line.statusLabel === firstStatus) ? firstStatus : "Mixed";
+  return <Badge variant={moneyBillStatusBadgeVariant(label)}>{label}</Badge>;
 }
 
 function CarryCell({ group }: { group: MoneyBillPersonGroup }) {
@@ -157,6 +146,7 @@ function InteractiveBillRow({
   return (
     <TableRow
       tabIndex={0}
+      aria-haspopup="dialog"
       aria-label={label}
       aria-selected={selected}
       className={cn(
@@ -174,13 +164,6 @@ function InteractiveBillRow({
 
 function PartyCell({ group, searchTerm }: { group: MoneyBillPersonGroup; searchTerm: string }) {
   const hueId = moneyBillComposeHueId(group);
-  const href =
-    group.party === "client" && group.clientId
-      ? moneyBillClientHref(group.clientId)
-      : group.party === "team" && group.userId
-        ? moneyBillMemberHref(group.userId)
-        : null;
-  const title = <AgencySearchHighlight text={group.title} query={searchTerm} />;
 
   return (
     <TableCell>
@@ -195,21 +178,9 @@ function PartyCell({ group, searchTerm }: { group: MoneyBillPersonGroup; searchT
         ) : (
           <BillClientMark title={group.title} hueId={hueId ?? group.id} />
         )}
-        {href ? (
-          <Link
-            to={href}
-            className={cn(
-              "min-w-0 truncate rounded-sm text-left font-medium text-highlighted hover:underline",
-              agencyFocusRingClass,
-            )}
-            onClick={(event) => event.stopPropagation()}
-            aria-label={`Open ${group.title}`}
-          >
-            {title}
-          </Link>
-        ) : (
-          <span className="min-w-0 truncate font-medium text-highlighted">{title}</span>
-        )}
+        <span className="min-w-0 truncate font-medium text-highlighted">
+          <AgencySearchHighlight text={group.title} query={searchTerm} />
+        </span>
       </div>
     </TableCell>
   );
@@ -233,6 +204,7 @@ function PersonBillsTable({
   selectedRowId?: string | null;
 }) {
   const isTeam = party === "team";
+  const showCarry = moneyBillTableShowsCarry(groups);
   const showWaste = moneyBillTableShowsWaste(groups);
   const partyHeading = isTeam ? "Member" : "Party";
   const receivedHeading = isTeam ? "Paid" : "Received";
@@ -245,7 +217,7 @@ function PersonBillsTable({
             partyHeading,
             "Status",
             "Period",
-            "Carry",
+            ...(showCarry ? ["Carry"] : []),
             "Total",
             receivedHeading,
             ...(showWaste ? ["Waste"] : []),
@@ -262,14 +234,16 @@ function PersonBillsTable({
             >
               <PartyCell group={group} searchTerm={searchTerm} />
               <TableCell>
-                <BillStatusBadge label={groupStatusLabel(group)} />
+                <BillStatusBadge label={moneyBillGroupStatusLabel(group)} />
               </TableCell>
               <TableCell className="whitespace-nowrap text-muted">
                 {moneyBillGroupPeriodLabel(group)}
               </TableCell>
-              <TableCell>
-                <CarryCell group={group} />
-              </TableCell>
+              {showCarry ? (
+                <TableCell>
+                  <CarryCell group={group} />
+                </TableCell>
+              ) : null}
               <MoneyCell label={group.totalLabel} highlighted />
               <MoneyCell label={group.receivedLabel} />
               {showWaste ? <MoneyCell label={group.wasteLabel} /> : null}
@@ -290,7 +264,7 @@ function PersonBillsTable({
                 <BillStatusBadge label={salaryPool.pool.statusLabel} />
               </TableCell>
               <TableCell />
-              <TableCell />
+              {showCarry ? <TableCell /> : null}
               <MoneyCell label={salaryPool.pool.totalLabel} highlighted />
               <MoneyCell label={salaryPool.pool.paidLabel} />
               {showWaste ? <TableCell /> : null}
