@@ -2,7 +2,14 @@ import {
   type MoneyBillObligationLine,
   type MoneyBillPersonGroup,
 } from "@/features/billing/money-bill-obligation-rows";
-import { type MoneyBillAdjustmentRow } from "@/features/billing/money-bills-rows";
+import {
+  formatMoneyAmount,
+  moneyBillClientHref,
+  moneyBillMemberHref,
+  moneyBillsAdjustCtaLabel,
+  moneyBillsPickAdjustLine,
+  type MoneyBillAdjustmentRow,
+} from "@/features/billing/money-bills-rows";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
@@ -15,16 +22,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/ui/sheet";
+import { Link } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 
 type BillsViewModel = AgencyMoneySurfaceViewModel["bills"];
-
-type AgencyMoneyBillDetailSheetProps = {
-  bills: BillsViewModel;
-  onOpenParty: (group: MoneyBillPersonGroup) => void;
-};
 
 function StatusBadge({ label }: { label: string }) {
   const variant = label === "Paid" ? "success" : label === "Outstanding" ? "warning" : "outline";
@@ -41,28 +44,28 @@ function DetailHeader({
   status,
   remainingLabel,
   hasRemaining,
-  onOpenParty,
+  partyHref,
   description,
 }: {
   title: string;
   status: string;
   remainingLabel: string;
   hasRemaining: boolean;
-  onOpenParty?: () => void;
+  partyHref?: string | null;
   description: string;
 }) {
   return (
     <SheetHeader className="border-b border-default pr-14">
       <div className="flex flex-wrap items-center gap-2">
-        {onOpenParty ? (
+        {partyHref ? (
           <SheetTitle asChild>
-            <button
-              type="button"
+            <Link
+              to={partyHref}
               className="rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              onClick={onOpenParty}
+              onClick={(event) => event.stopPropagation()}
             >
               {title}
-            </button>
+            </Link>
           </SheetTitle>
         ) : (
           <SheetTitle>{title}</SheetTitle>
@@ -138,20 +141,20 @@ function ObligationLine({ line }: { line: MoneyBillObligationLine }) {
   );
 }
 
-function GroupDetail({
-  group,
-  bills,
-  onOpenParty,
-}: {
-  group: MoneyBillPersonGroup;
-  bills: BillsViewModel;
-  onOpenParty: (group: MoneyBillPersonGroup) => void;
-}) {
+function GroupDetail({ group, bills }: { group: MoneyBillPersonGroup; bills: BillsViewModel }) {
   const lines = [
     ...group.lines.filter((line) => !line.isCarry),
     ...group.lines.filter((line) => line.isCarry),
   ];
   const disabled = bills.isMutationPending;
+  const adjustLine = moneyBillsPickAdjustLine(group.lines);
+  const adjustLabel = adjustLine ? moneyBillsAdjustCtaLabel(group.party, adjustLine) : "Adjust";
+  const partyHref =
+    group.party === "client" && group.clientId
+      ? moneyBillClientHref(group.clientId)
+      : group.party === "team" && group.userId
+        ? moneyBillMemberHref(group.userId)
+        : null;
 
   return (
     <>
@@ -160,7 +163,7 @@ function GroupDetail({
         status={groupStatusLabel(group)}
         remainingLabel={group.remainingLabel}
         hasRemaining={group.remainingAmount > 0}
-        onOpenParty={() => onOpenParty(group)}
+        partyHref={partyHref}
         description={`${group.lines.length} ${group.lines.length === 1 ? "bill line" : "bill lines"}`}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -169,6 +172,14 @@ function GroupDetail({
             <ObligationLine key={line.id} line={line} />
           ))}
         </ul>
+        {group.pendingAdjustmentCents !== 0 ? (
+          <div className="flex items-center justify-between gap-3 border-t border-default px-6 py-4">
+            <span className="text-xs text-muted">Pending adjustments</span>
+            <span className="font-mono text-sm font-medium tabular-nums text-highlighted">
+              {formatMoneyAmount(group.pendingAdjustmentCents, group.currency)}
+            </span>
+          </div>
+        ) : null}
       </div>
       <SheetFooter className="border-t border-default bg-popover">
         <Button
@@ -180,7 +191,7 @@ function GroupDetail({
           {group.party === "client" ? "Preview invoice" : "Preview payslip"}
         </Button>
         <Button type="button" disabled={disabled} onClick={() => bills.onOpenAdjust(group)}>
-          {group.party === "client" ? "Collect" : "Pay"}
+          {adjustLabel}
         </Button>
       </SheetFooter>
     </>
@@ -314,10 +325,7 @@ function SalaryPoolDetail({ bills }: { bills: BillsViewModel }) {
   );
 }
 
-export function AgencyMoneyBillDetailSheet({
-  bills,
-  onOpenParty,
-}: AgencyMoneyBillDetailSheetProps) {
+export function AgencyMoneyBillDetailSheet({ bills }: { bills: BillsViewModel }) {
   const selection = bills.detailSelection;
   const group =
     selection?.kind === "group" && bills.detailRow?.kind === "person-group"
@@ -335,8 +343,8 @@ export function AgencyMoneyBillDetailSheet({
         if (!open) bills.onCloseDetail();
       }}
     >
-      <SheetContent side="right" className="data-[side=right]:sm:max-w-lg">
-        {group ? <GroupDetail group={group} bills={bills} onOpenParty={onOpenParty} /> : null}
+      <SheetContent side={bills.sheetSide} className="data-[side=right]:sm:max-w-lg">
+        {group ? <GroupDetail group={group} bills={bills} /> : null}
         {adjustment ? <AdjustmentDetail row={adjustment} bills={bills} /> : null}
         {selection?.kind === "salary-pool" ? <SalaryPoolDetail bills={bills} /> : null}
       </SheetContent>

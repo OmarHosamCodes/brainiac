@@ -11,7 +11,9 @@ import {
   moneyBillTableShowsWaste,
 } from "@/features/billing/money-bills-table-columns";
 import {
+  moneyBillClientHref,
   moneyBillInitials,
+  moneyBillMemberHref,
   type MoneyBillAdjustmentRow,
 } from "@/features/billing/money-bills-rows";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
@@ -28,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/ui/table";
+import { Link } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 type SalaryPoolTableViewModel = {
@@ -48,7 +51,6 @@ type AgencyMoneyBillsTablesViewProps = {
   isMutationPending: boolean;
   selectedRowId?: string | null;
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
-  onOpenParty: (row: MoneyBillPersonGroup) => void;
   onOpenSalaryPool: () => void;
 };
 
@@ -169,16 +171,15 @@ function InteractiveBillRow({
   );
 }
 
-function PartyCell({
-  group,
-  searchTerm,
-  onOpenParty,
-}: {
-  group: MoneyBillPersonGroup;
-  searchTerm: string;
-  onOpenParty: (row: MoneyBillPersonGroup) => void;
-}) {
+function PartyCell({ group, searchTerm }: { group: MoneyBillPersonGroup; searchTerm: string }) {
   const hueId = moneyBillComposeHueId(group);
+  const href =
+    group.party === "client" && group.clientId
+      ? moneyBillClientHref(group.clientId)
+      : group.party === "team" && group.userId
+        ? moneyBillMemberHref(group.userId)
+        : null;
+  const title = <AgencySearchHighlight text={group.title} query={searchTerm} />;
 
   return (
     <TableCell>
@@ -193,20 +194,21 @@ function PartyCell({
         ) : (
           <BillClientMark title={group.title} hueId={hueId ?? group.id} />
         )}
-        <button
-          type="button"
-          className={cn(
-            "min-w-0 truncate rounded-sm text-left font-medium text-highlighted hover:underline",
-            agencyFocusRingClass,
-          )}
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpenParty(group);
-          }}
-          aria-label={`Open ${group.title}`}
-        >
-          <AgencySearchHighlight text={group.title} query={searchTerm} />
-        </button>
+        {href ? (
+          <Link
+            to={href}
+            className={cn(
+              "min-w-0 truncate rounded-sm text-left font-medium text-highlighted hover:underline",
+              agencyFocusRingClass,
+            )}
+            onClick={(event) => event.stopPropagation()}
+            aria-label={`Open ${group.title}`}
+          >
+            {title}
+          </Link>
+        ) : (
+          <span className="min-w-0 truncate font-medium text-highlighted">{title}</span>
+        )}
       </div>
     </TableCell>
   );
@@ -218,7 +220,6 @@ function PersonBillsTable({
   salaryPool,
   searchTerm,
   onOpenRow,
-  onOpenParty,
   onOpenSalaryPool,
   selectedRowId,
 }: {
@@ -227,7 +228,6 @@ function PersonBillsTable({
   salaryPool: SalaryPoolTableViewModel;
   searchTerm: string;
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
-  onOpenParty: (row: MoneyBillPersonGroup) => void;
   onOpenSalaryPool: () => void;
   selectedRowId?: string | null;
 }) {
@@ -259,7 +259,7 @@ function PersonBillsTable({
               onOpen={() => onOpenRow(group)}
               selected={selectedRowId === group.id}
             >
-              <PartyCell group={group} searchTerm={searchTerm} onOpenParty={onOpenParty} />
+              <PartyCell group={group} searchTerm={searchTerm} />
               <TableCell>
                 <BillStatusBadge label={groupStatusLabel(group)} />
               </TableCell>
@@ -380,7 +380,6 @@ export function AgencyMoneyBillsTablesView({
   isMutationPending,
   selectedRowId,
   onOpenRow,
-  onOpenParty,
   onOpenSalaryPool,
 }: AgencyMoneyBillsTablesViewProps) {
   const showClients = clientGroups.length > 0;
@@ -402,7 +401,6 @@ export function AgencyMoneyBillsTablesView({
             salaryPool={salaryPool}
             searchTerm={searchTerm}
             onOpenRow={onOpenRow}
-            onOpenParty={onOpenParty}
             onOpenSalaryPool={onOpenSalaryPool}
             selectedRowId={selectedRowId}
           />
@@ -420,7 +418,6 @@ export function AgencyMoneyBillsTablesView({
             salaryPool={salaryPool}
             searchTerm={searchTerm}
             onOpenRow={onOpenRow}
-            onOpenParty={onOpenParty}
             onOpenSalaryPool={onOpenSalaryPool}
             selectedRowId={selectedRowId}
           />

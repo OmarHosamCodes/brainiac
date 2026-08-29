@@ -37,6 +37,7 @@ import {
   moneyBillsPartyShowsClients,
   moneyBillsPartyShowsExpenses,
   moneyBillsPartyShowsMembers,
+  moneyBillsPickAdjustLine,
   moneyBillsPaymentCanSubmit,
   parseMoneyBillPaymentAmount,
   type MoneyBillAdjustmentRow,
@@ -52,6 +53,8 @@ import {
 import { toDateInputValue } from "@/features/shared/use-agency-time-range-filters";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { orpc, orpcClient } from "@/lib/orpc";
+
+import { useMoneyDetailSheetSide } from "./use-money-detail-sheet-side";
 
 const BILL_CREATE_FORM_ID = "agency-money-bill-create";
 const BILL_PAYMENT_FORM_ID = "agency-money-bill-payment";
@@ -99,10 +102,6 @@ function partyTypeFromGroup(group: MoneyBillPersonGroup): "client" | "member" {
 
 function partyIdFromGroup(group: MoneyBillPersonGroup): string | null {
   return group.clientId ?? group.userId ?? null;
-}
-
-function pickAdjustLine(lines: MoneyBillObligationLine[]): MoneyBillObligationLine | null {
-  return lines.find((line) => line.openCents > 0) ?? lines[0] ?? null;
 }
 
 type UseAgencyMoneyBillsArgs = {
@@ -153,6 +152,7 @@ export function useAgencyMoneyBills({
   const queryClient = useQueryClient();
   const agencyOps = useAgencyOpsStore();
   const isInvoiceMutationPending = useAgencyOpsStore(selectIsInvoiceMutationPending);
+  const sheetSide = useMoneyDetailSheetSide();
 
   const [clientCategoryFilter, setClientCategoryFilter] =
     useState<MoneyBillsClientCategoryFilter>("external");
@@ -199,7 +199,7 @@ export function useAgencyMoneyBills({
     !showsExpenses && (showsClientBills || showsMemberBills || showsAdjustmentBills);
   const loadsPayoutLines = showsMemberBills || showsAdjustmentBills;
   const loadsPeriodObligations = showsClientBills || showsMemberBills;
-  const loadsSalaryPool = showsMemberBills || showsAdjustmentBills;
+  const loadsSalaryPool = moneyBillsSalaryPoolDetailVisible(partyFilter, true);
 
   const teamBillStatus =
     statusFilter === "outstanding" || statusFilter === "partial" || statusFilter === "paid"
@@ -364,17 +364,23 @@ export function useAgencyMoneyBills({
     statusFilter,
   ]);
 
+  const visibleDetailSelection =
+    detailSelection?.kind === "salary-pool" &&
+    !moneyBillsSalaryPoolDetailVisible(partyFilter, Boolean(salaryPoolQuery.data?.pool))
+      ? null
+      : detailSelection;
+
   const detailRow = useMemo<MoneyBillPersonGroup | MoneyBillAdjustmentRow | null>(() => {
-    if (!detailSelection || detailSelection.kind === "salary-pool") return null;
+    if (!visibleDetailSelection || visibleDetailSelection.kind === "salary-pool") return null;
     return (
       billRows.find((row) => {
-        if (row.id !== detailSelection.id) return false;
-        return detailSelection.kind === "group"
+        if (row.id !== visibleDetailSelection.id) return false;
+        return visibleDetailSelection.kind === "group"
           ? row.kind === "person-group"
           : row.kind === "adjustment";
       }) ?? null
     );
-  }, [billRows, detailSelection]);
+  }, [billRows, visibleDetailSelection]);
 
   useEffect(() => {
     if (!detailSelection) return;
@@ -710,7 +716,7 @@ export function useAgencyMoneyBills({
   }
 
   function onOpenAdjust(group: MoneyBillPersonGroup) {
-    const line = pickAdjustLine(group.lines);
+    const line = moneyBillsPickAdjustLine(group.lines);
     if (!line) return;
     onOpenAdjustLine(group, line);
   }
@@ -1155,13 +1161,16 @@ export function useAgencyMoneyBills({
     remainingLabel: billsRemainingLabel,
     rows: billRows,
     displaySections: billDisplaySections,
-    detailSelection,
+    detailSelection: visibleDetailSelection,
     detailRow,
     selectedRowId:
-      detailSelection?.kind === "salary-pool" ? "salary-pool" : (detailSelection?.id ?? null),
+      visibleDetailSelection?.kind === "salary-pool"
+        ? "salary-pool"
+        : (visibleDetailSelection?.id ?? null),
     onOpenRow,
     onOpenSalaryPool: () => setDetailSelection({ kind: "salary-pool" }),
     onCloseDetail: () => setDetailSelection(null),
+    sheetSide,
     isLoading: billsIsLoading,
     isError: billsIsError,
     errorMessage: billsErrorMessage,

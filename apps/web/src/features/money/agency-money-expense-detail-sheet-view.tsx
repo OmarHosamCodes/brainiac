@@ -68,7 +68,7 @@ export function AgencyMoneyExpenseDetailSheet({ panel }: AgencyMoneyExpenseDetai
         if (!open) panel.onCloseExpenseDetail();
       }}
     >
-      <SheetContent side="right" className="data-[side=right]:sm:max-w-lg">
+      <SheetContent side={panel.sheetSide} className="data-[side=right]:sm:max-w-lg">
         {item ? (
           <>
             <SheetHeader className="border-b border-default pr-14">

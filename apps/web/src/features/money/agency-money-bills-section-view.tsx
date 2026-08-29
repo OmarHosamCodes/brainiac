@@ -9,6 +9,7 @@ import {
   agencyPanelClass,
 } from "@/features/shared/agency-ui";
 import {
+  moneyBillsSalaryPoolDetailVisible,
   type MoneyBillsPartyFilter,
   type MoneyBillsStatusFilter,
 } from "@/features/billing/money-bills-filters";
@@ -146,12 +147,18 @@ function BillsSection({
   const showExternalClientFilter =
     (bills.partyFilter === "all" || bills.partyFilter === "client") &&
     bills.clientCategoryFilter === "external";
+  const visibleSalaryPool = moneyBillsSalaryPoolDetailVisible(
+    bills.partyFilter,
+    Boolean(bills.salaryPool.pool),
+  )
+    ? bills.salaryPool
+    : { ...bills.salaryPool, pool: null };
   const showEmpty =
     !isExpensesParty &&
     !bills.isLoading &&
     !bills.isError &&
     bills.rows.length === 0 &&
-    !bills.salaryPool.pool;
+    !visibleSalaryPool.pool;
   const emptyAction =
     bills.partyFilter === "adjustments" || bills.partyFilter === "team"
       ? { label: "Add adjustment or cost", onClick: bills.createMenu.onOpenAdjustment }
@@ -168,14 +175,6 @@ function BillsSection({
   const insight = isExpensesParty
     ? expensesPanel.strip.insight
     : moneyBillComposeListInsight(bills.rows);
-
-  function onOpenParty(row: MoneyBillPersonGroup) {
-    if (row.party === "client" && row.clientId) {
-      bills.onOpenClient(row.clientId);
-      return;
-    }
-    if (row.party === "team" && row.userId) bills.onOpenMember(row.userId);
-  }
 
   return (
     <section
@@ -391,17 +390,16 @@ function BillsSection({
         {!isExpensesParty &&
         !bills.isLoading &&
         !bills.isError &&
-        (bills.rows.length > 0 || bills.salaryPool.pool) ? (
+        (bills.rows.length > 0 || visibleSalaryPool.pool) ? (
           <AgencyMoneyBillsTablesView
             clientGroups={clientGroups}
             teamGroups={teamGroups}
             adjustments={adjustments}
-            salaryPool={bills.salaryPool}
+            salaryPool={visibleSalaryPool}
             searchTerm={bills.searchTerm}
             isMutationPending={bills.isMutationPending}
             selectedRowId={bills.selectedRowId}
             onOpenRow={bills.onOpenRow}
-            onOpenParty={onOpenParty}
             onOpenSalaryPool={bills.onOpenSalaryPool}
           />
         ) : null}
@@ -430,7 +428,7 @@ function BillsSection({
         ) : null}
       </div>
 
-      <AgencyMoneyBillDetailSheet bills={bills} onOpenParty={onOpenParty} />
+      <AgencyMoneyBillDetailSheet bills={bills} />
       <AgencyMoneyBillsDialogs bills={bills} />
     </section>
   );

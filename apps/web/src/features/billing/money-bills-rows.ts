@@ -758,14 +758,41 @@ export function moneyBillsDefaultAdjustTab(line: {
   obligationKind: "ready" | "invoice" | "payout";
   openCents: number;
   receivedAmount: number;
-}): "pay" | "refund" {
-  if (
-    moneyBillsCanRefundObligation(line.obligationKind, line.receivedAmount) &&
-    line.openCents <= 0
-  ) {
+}): "pay" | "refund" | "adjustments" {
+  if (line.openCents > 0) return "pay";
+  if (moneyBillsCanRefundObligation(line.obligationKind, line.receivedAmount)) {
     return "refund";
   }
-  return "pay";
+  return "adjustments";
+}
+
+export function moneyBillsPickAdjustLine<T extends { openCents: number }>(
+  lines: readonly T[],
+): T | null {
+  return lines.find((line) => line.openCents > 0) ?? lines[0] ?? null;
+}
+
+export function moneyBillsAdjustCtaLabel(
+  party: "client" | "team",
+  line: {
+    obligationKind: "ready" | "invoice" | "payout";
+    openCents: number;
+    receivedAmount: number;
+  },
+): "Collect" | "Pay" | "Uncollect" | "Refund" | "Adjust" {
+  const defaultTab = moneyBillsDefaultAdjustTab(line);
+  switch (defaultTab) {
+    case "pay":
+      return party === "client" ? "Collect" : "Pay";
+    case "refund":
+      return party === "client" ? "Uncollect" : "Refund";
+    case "adjustments":
+      return "Adjust";
+    default: {
+      const _exhaustive: never = defaultTab;
+      return _exhaustive;
+    }
+  }
 }
 
 export function moneyBillsCreateFormValid(

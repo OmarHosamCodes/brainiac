@@ -5,6 +5,7 @@ import {
   filterMoneyBillRowsByClientCategory,
   formatMoneyAmount,
   groupMoneyBillRows,
+  moneyBillsAdjustCtaLabel,
   moneyBillInitials,
   moneyBillListInsight,
   moneyBillPartyHref,
@@ -448,6 +449,44 @@ describe("moneyBillsDefaultAdjustTab", () => {
         receivedAmount: 0,
       }),
     ).toBe("pay");
+    expect(
+      moneyBillsDefaultAdjustTab({
+        obligationKind: "ready",
+        openCents: 0,
+        receivedAmount: 0,
+      }),
+    ).toBe("adjustments");
+  });
+});
+
+describe("moneyBillsAdjustCtaLabel", () => {
+  test("labels open client and team groups by their settlement action", () => {
+    const openLine = {
+      obligationKind: "invoice" as const,
+      openCents: 200,
+      receivedAmount: 0,
+    };
+    expect(moneyBillsAdjustCtaLabel("client", openLine)).toBe("Collect");
+    expect(moneyBillsAdjustCtaLabel("team", { ...openLine, obligationKind: "payout" })).toBe("Pay");
+  });
+
+  test("labels paid client and team groups by their reverse action", () => {
+    const paidLine = {
+      obligationKind: "invoice" as const,
+      openCents: 0,
+      receivedAmount: 500,
+    };
+    expect(moneyBillsAdjustCtaLabel("client", paidLine)).toBe("Uncollect");
+    expect(moneyBillsAdjustCtaLabel("team", { ...paidLine, obligationKind: "payout" })).toBe(
+      "Refund",
+    );
+    expect(
+      moneyBillsAdjustCtaLabel("team", {
+        obligationKind: "ready",
+        openCents: 0,
+        receivedAmount: 0,
+      }),
+    ).toBe("Adjust");
   });
 });
 
