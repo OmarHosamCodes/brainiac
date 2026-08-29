@@ -68,19 +68,19 @@ function ExpenseStatusBadge({ item }: { item: ExpenseStripItem }) {
 function ExpenseTable({
   items,
   searchTerm,
-  selectedExpenseId,
+  selectedRowId,
   onOpenExpenseRow,
 }: {
   items: ExpenseStripItem[];
   searchTerm: string;
-  selectedExpenseId: string | null;
-  onOpenExpenseRow: (expenseId: string) => void;
+  selectedRowId: string | null;
+  onOpenExpenseRow: (rowId: string) => void;
 }) {
-  function onRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, expenseId: string) {
+  function onRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, rowId: string) {
     if (event.target !== event.currentTarget) return;
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    onOpenExpenseRow(expenseId);
+    onOpenExpenseRow(rowId);
   }
 
   return (
@@ -104,16 +104,16 @@ function ExpenseTable({
           <TableBody>
             {items.map((item) => (
               <TableRow
-                key={`${item.id}-${item.expenseId}`}
+                key={item.id}
                 tabIndex={0}
                 aria-label={`${item.name}. ${item.statusLabel}. Remaining ${item.remainingLabel}.`}
-                aria-selected={selectedExpenseId === item.expenseId}
+                aria-selected={selectedRowId === item.id}
                 className={cn(
                   "cursor-pointer border-b border-default transition-colors last:border-b-0 hover:bg-elevated/35 focus-visible:bg-elevated/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
-                  selectedExpenseId === item.expenseId && "bg-elevated/40",
+                  selectedRowId === item.id && "bg-elevated/40",
                 )}
-                onClick={() => onOpenExpenseRow(item.expenseId)}
-                onKeyDown={(event) => onRowKeyDown(event, item.expenseId)}
+                onClick={() => onOpenExpenseRow(item.id)}
+                onKeyDown={(event) => onRowKeyDown(event, item.id)}
               >
                 <TableCell>
                   <div className="flex min-w-48 items-center gap-2.5">
@@ -245,7 +245,7 @@ function MoneyExpensesPanelContent({
           <ExpenseTable
             items={strip.items}
             searchTerm={searchTerm}
-            selectedExpenseId={panel.selectedExpenseId}
+            selectedRowId={panel.selectedRowId}
             onOpenExpenseRow={panel.onOpenExpenseRow}
           />
         ) : strip.empty ? (

@@ -10,6 +10,7 @@ import {
   expenseStripItemMatchesSearch,
   expenseStripMeta,
   filterExpenseStripItems,
+  findExpenseStripItem,
 } from "./money-expenses-strip";
 
 const sources = {
@@ -189,6 +190,31 @@ describe("expenseStripMeta", () => {
         note: null,
       }),
     ).toBe("Monthly · Next 15 Aug 2026");
+  });
+});
+
+describe("findExpenseStripItem", () => {
+  it("looks up the matching cycle when two items share an expenseId", () => {
+    const dueCycle = sources.allSubscriptions.items[0]!;
+    const paidCycle = {
+      ...dueCycle,
+      id: "sub-paid-cycle",
+      status: "paid" as const,
+      statusLabel: "Paid",
+      remainingAmount: 0,
+      remainingLabel: "EGP 0",
+      canRecordPayment: false,
+    };
+    const items = [dueCycle, paidCycle];
+
+    expect(findExpenseStripItem(items, "sub-paid-cycle")?.id).toBe("sub-paid-cycle");
+    expect(findExpenseStripItem(items, "sub-paid-cycle")?.expenseId).toBe(dueCycle.expenseId);
+    expect(findExpenseStripItem(items, "sub-due")?.id).toBe("sub-due");
+  });
+
+  it("returns null when the selected id is missing", () => {
+    expect(findExpenseStripItem(sources.allSubscriptions.items, "gone")).toBeNull();
+    expect(findExpenseStripItem(sources.allSubscriptions.items, null)).toBeNull();
   });
 });
 

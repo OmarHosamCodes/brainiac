@@ -149,6 +149,14 @@ export function filterExpenseStripItems(
   return items.filter((item) => expenseStripItemMatchesSearch(item, normalized));
 }
 
+export function findExpenseStripItem(
+  items: ReadonlyArray<ExpenseStripItem>,
+  selectedId: string | null,
+): ExpenseStripItem | null {
+  if (!selectedId) return null;
+  return items.find((item) => item.id === selectedId) ?? null;
+}
+
 export function expenseStripInsight(expenses: ExpenseStripSources): string | null {
   const allItems = [...expenses.recent.items, ...expenses.allSubscriptions.items];
   const dueCount = allItems.filter((item) => item.status !== "paid").length;

@@ -1,4 +1,8 @@
-import { type ExpenseStripItem, expenseStripMeta } from "@/features/money/money-expenses-strip";
+import {
+  type ExpenseStripItem,
+  expenseStripMeta,
+  findExpenseStripItem,
+} from "@/features/money/money-expenses-strip";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
@@ -54,8 +58,7 @@ function ExpenseDetailValue({
 }
 
 export function AgencyMoneyExpenseDetailSheet({ panel }: AgencyMoneyExpenseDetailSheetProps) {
-  const item =
-    panel.strip.items.find((candidate) => candidate.expenseId === panel.selectedExpenseId) ?? null;
+  const item = findExpenseStripItem(panel.strip.items, panel.selectedRowId);
   const disabled = panel.create.isPending || panel.payment.isPending;
 
   return (
