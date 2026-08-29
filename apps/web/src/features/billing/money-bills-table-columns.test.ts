@@ -5,7 +5,11 @@ import { formatMoneyBillPeriod } from "./money-bills-rows";
 import {
   moneyBillGroupCarryCount,
   moneyBillGroupPeriodLabel,
+  moneyBillGroupStatusLabel,
+  moneyBillStatusBadgeVariant,
+  moneyBillTableShowsCarry,
   moneyBillTableShowsWaste,
+  moneyBillsSheetCaption,
 } from "./money-bills-table-columns";
 
 function personGroupFromClients(
@@ -285,5 +289,112 @@ describe("moneyBillTableShowsWaste", () => {
 
   test("returns true when any waste amount is positive", () => {
     expect(moneyBillTableShowsWaste([{ wasteAmount: 0 }, { wasteAmount: 150 }])).toBe(true);
+  });
+});
+
+describe("moneyBillTableShowsCarry", () => {
+  test("returns false when no group has carry", () => {
+    expect(moneyBillTableShowsCarry([{ lines: [{ isCarry: false }] }])).toBe(false);
+  });
+
+  test("returns true when any group has a carry line", () => {
+    expect(
+      moneyBillTableShowsCarry([
+        { lines: [{ isCarry: false }] },
+        { lines: [{ isCarry: true }] },
+      ]),
+    ).toBe(true);
+  });
+});
+
+describe("moneyBillGroupStatusLabel", () => {
+  test("returns the shared status when every line matches", () => {
+    expect(
+      moneyBillGroupStatusLabel({
+        lines: [{ statusLabel: "Outstanding" }, { statusLabel: "Outstanding" }],
+      }),
+    ).toBe("Outstanding");
+  });
+
+  test("returns Mixed when statuses differ", () => {
+    expect(
+      moneyBillGroupStatusLabel({
+        lines: [{ statusLabel: "Outstanding" }, { statusLabel: "Paid" }],
+      }),
+    ).toBe("Mixed");
+  });
+
+  test("returns Ready when lines are empty", () => {
+    expect(moneyBillGroupStatusLabel({ lines: [] })).toBe("Ready");
+  });
+});
+
+describe("moneyBillStatusBadgeVariant", () => {
+  test("maps action and settlement states", () => {
+    expect(moneyBillStatusBadgeVariant("Paid")).toBe("success");
+    expect(moneyBillStatusBadgeVariant("Outstanding")).toBe("warning");
+    expect(moneyBillStatusBadgeVariant("Ready")).toBe("default");
+    expect(moneyBillStatusBadgeVariant("Partial")).toBe("outline");
+    expect(moneyBillStatusBadgeVariant("Mixed")).toBe("outline");
+    expect(moneyBillStatusBadgeVariant("Refunded")).toBe("outline");
+  });
+});
+
+describe("moneyBillsSheetCaption", () => {
+  test("names the collect job when a client still owes, including prior periods", () => {
+    expect(
+      moneyBillsSheetCaption({
+        kind: "group",
+        remainingAmount: 1200,
+        carryCount: 2,
+        party: "client",
+      }),
+    ).toBe("Open balance, including prior periods");
+  });
+
+  test("names the pay job when a team member still has remaining", () => {
+    expect(
+      moneyBillsSheetCaption({
+        kind: "group",
+        remainingAmount: 500,
+        carryCount: 0,
+        party: "team",
+      }),
+    ).toBe("Open balance for this period");
+  });
+
+  test("names settled when remaining is zero", () => {
+    expect(
+      moneyBillsSheetCaption({
+        kind: "group",
+        remainingAmount: 0,
+        carryCount: 0,
+        party: "client",
+      }),
+    ).toBe("Settled for this period");
+  });
+
+  test("names adjustment and expense jobs", () => {
+    expect(
+      moneyBillsSheetCaption({
+        kind: "adjustment",
+        remainingAmount: 100,
+        sectionTitle: "Debt",
+      }),
+    ).toBe("Debt still open");
+    expect(
+      moneyBillsSheetCaption({
+        kind: "salary-pool",
+        remainingAmount: 800,
+      }),
+    ).toBe("Shared salary pool still open");
+    expect(
+      moneyBillsSheetCaption({
+        kind: "expense",
+        remainingAmount: 230,
+        expenseKind: "subscription",
+        expenseStatus: "due",
+      }),
+    ).toBe("Subscription due this period");
   });
 });

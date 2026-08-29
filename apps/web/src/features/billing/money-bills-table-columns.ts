@@ -33,3 +33,71 @@ export function moneyBillGroupPeriodLabel(group: Pick<MoneyBillPersonGroup, "lin
 export function moneyBillTableShowsWaste(rows: ReadonlyArray<{ wasteAmount: number }>): boolean {
   return rows.some((row) => row.wasteAmount > 0);
 }
+
+export function moneyBillTableShowsCarry(
+  groups: ReadonlyArray<{ lines: ReadonlyArray<{ isCarry: boolean }> }>,
+): boolean {
+  return groups.some((group) => group.lines.some((line) => line.isCarry));
+}
+
+export function moneyBillGroupStatusLabel(
+  group: Pick<MoneyBillPersonGroup, "lines"> | { lines: ReadonlyArray<{ statusLabel: string }> },
+): string {
+  const firstStatus = group.lines[0]?.statusLabel ?? "Ready";
+  return group.lines.every((line) => line.statusLabel === firstStatus) ? firstStatus : "Mixed";
+}
+
+export function moneyBillStatusBadgeVariant(
+  label: string,
+): "success" | "warning" | "default" | "outline" {
+  switch (label) {
+    case "Paid":
+      return "success";
+    case "Outstanding":
+      return "warning";
+    case "Ready":
+      return "default";
+    default:
+      return "outline";
+  }
+}
+
+export type MoneyBillsSheetCaptionInput = {
+  kind: "group" | "adjustment" | "salary-pool" | "expense";
+  remainingAmount: number;
+  carryCount?: number;
+  party?: "client" | "team";
+  sectionTitle?: string;
+  expenseKind?: "subscription" | "one_time";
+  expenseStatus?: "paid" | "due" | "partial";
+};
+
+export function moneyBillsSheetCaption(input: MoneyBillsSheetCaptionInput): string {
+  switch (input.kind) {
+    case "group": {
+      if (input.remainingAmount <= 0) return "Settled for this period";
+      if ((input.carryCount ?? 0) > 0) return "Open balance, including prior periods";
+      return "Open balance for this period";
+    }
+    case "adjustment":
+      return input.remainingAmount > 0
+        ? `${input.sectionTitle ?? "Adjustment"} still open`
+        : `${input.sectionTitle ?? "Adjustment"} settled`;
+    case "salary-pool":
+      return input.remainingAmount > 0
+        ? "Shared salary pool still open"
+        : "Shared salary pool settled";
+    case "expense": {
+      if (input.expenseStatus === "paid" || input.remainingAmount <= 0) {
+        return "Recorded in this period";
+      }
+      return input.expenseKind === "subscription"
+        ? "Subscription due this period"
+        : "One-time expense still open";
+    }
+    default: {
+      const _exhaustive: never = input.kind;
+      return _exhaustive;
+    }
+  }
+}
