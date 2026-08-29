@@ -13,12 +13,10 @@ import {
   agencyFormFieldClass,
   agencyFormLabelClass,
   agencyInputPlaceholderClass,
-  agencyLabelClass,
   agencyMetricClass,
 } from "@/features/shared/agency-ui";
 import {
   expenseStatusVariant,
-  expenseStripAmountLabel,
   expenseStripMeta,
   type ExpenseStripItem,
 } from "@/features/money/money-expenses-strip";
@@ -91,7 +89,7 @@ function ExpenseTable({
               <TableHead scope="col">Expense</TableHead>
               <TableHead scope="col">Kind</TableHead>
               <TableHead scope="col">Status</TableHead>
-              <TableHead scope="col">Due/meta</TableHead>
+              <TableHead scope="col">Due</TableHead>
               <TableHead scope="col" className="w-32 text-right">
                 Amount
               </TableHead>
@@ -163,7 +161,7 @@ function ExpenseTableSkeleton() {
         <Table className="min-w-[48rem]">
           <TableHeader className="border-b border-default/50">
             <TableRow>
-              {["Expense", "Kind", "Status", "Due/meta", "Amount", "Remaining"].map((column) => (
+              {["Expense", "Kind", "Status", "Due", "Amount", "Remaining"].map((column) => (
                 <TableHead
                   key={column}
                   scope="col"
@@ -217,7 +215,6 @@ function MoneyExpensesPanelContent({
   searchTerm: string;
 }) {
   const create = panel.create;
-  const details = panel.details;
   const payment = panel.payment;
   const strip = panel.strip;
 
@@ -271,140 +268,6 @@ function MoneyExpensesPanelContent({
       </div>
 
       <AgencyMoneyExpenseDetailSheet panel={panel} />
-
-      <Dialog open={details.open} onOpenChange={details.onOpenChange}>
-        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
-          <DialogHeader className="space-y-1 border-b border-default px-5 py-4 pr-14 text-left">
-            <DialogTitle className="text-base font-bold text-highlighted">
-              {details.title}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted">
-              {details.totalCount === 0
-                ? "Nothing logged yet"
-                : `${details.totalCount} ${details.totalCount === 1 ? "expense" : "expenses"}`}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-            {details.totalCount === 0 ? (
-              <div className="border-y border-dashed border-default py-8 text-center">
-                <h3 className="text-sm font-semibold text-highlighted">
-                  <AgencySearchHighlight text={details.emptyTitle} query={searchTerm} />
-                </h3>
-                <p className="mt-1 text-sm text-muted text-balance">
-                  <AgencySearchHighlight text={details.emptyBody} query={searchTerm} />
-                </p>
-              </div>
-            ) : (
-              <div className="flex flex-col">
-                {details.sections.map((section) => (
-                  <section
-                    key={section.id}
-                    className="border-t border-default py-4 first:border-t-0 first:pt-0 last:pb-0"
-                  >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <h3
-                        className={cn(
-                          agencyLabelClass,
-                          "text-xs font-medium tracking-wide text-muted uppercase",
-                        )}
-                      >
-                        {section.title}
-                      </h3>
-                      <span className="font-mono text-xs text-muted tabular-nums">
-                        {section.items.length}
-                      </span>
-                    </div>
-                    <div className="pt-2">
-                      {section.items.length === 0 ? (
-                        <p className="text-xs text-muted">None in this group.</p>
-                      ) : (
-                        <ul className="flex flex-col divide-y divide-default border-y border-default">
-                          {section.items.map((item) => (
-                            <li
-                              key={item.id}
-                              className="flex items-center gap-3 py-2.5 transition-colors duration-150 hover:bg-elevated/25 motion-reduce:transition-none"
-                            >
-                              <ExpenseStripGlyph kind={item.kind} />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                                  <Button
-                                    type="button"
-                                    variant="link"
-                                    size="sm"
-                                    className="-my-2 min-h-10 max-w-full truncate px-0 py-2 text-xs font-medium text-highlighted sm:my-0 sm:min-h-0 sm:py-0 sm:text-sm"
-                                    onClick={() => panel.onOpenEdit(item.expenseId)}
-                                  >
-                                    <span dir="auto">
-                                      <AgencySearchHighlight text={item.name} query={searchTerm} />
-                                    </span>
-                                  </Button>
-                                  <Badge
-                                    variant="secondary"
-                                    className="h-5 rounded-md px-1.5 text-[0.6875rem]"
-                                  >
-                                    {item.statusLabel}
-                                  </Badge>
-                                </div>
-                                <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
-                                  <AgencySearchHighlight
-                                    text={expenseStripMeta(item)}
-                                    query={searchTerm}
-                                  />
-                                </p>
-                                {item.note ? (
-                                  <p className="truncate text-[11px] text-muted/80" dir="auto">
-                                    <AgencySearchHighlight text={item.note} query={searchTerm} />
-                                  </p>
-                                ) : null}
-                              </div>
-                              <div className="flex shrink-0 flex-col items-end gap-0.5 text-end">
-                                <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-highlighted">
-                                  {expenseStripAmountLabel(item)}
-                                </span>
-                                {item.canRecordPayment ? (
-                                  <Button
-                                    type="button"
-                                    variant="link"
-                                    size="sm"
-                                    className="min-h-10 px-0 py-2 text-[11px] font-semibold text-muted hover:text-highlighted sm:min-h-0 sm:py-0"
-                                    onClick={() => panel.onOpenPayment(item.expenseId)}
-                                    aria-label={`${item.kind === "subscription" ? "Pay" : "Record payment"} ${item.name}`}
-                                  >
-                                    {item.kind === "subscription" ? "Pay" : "Record"}
-                                  </Button>
-                                ) : null}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
-            <DialogClose asChild>
-              <Button type="button" variant="ghost" size="sm">
-                Close
-              </Button>
-            </DialogClose>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                details.onOpenChange(false);
-                panel.onOpenCreate();
-              }}
-            >
-              Add expense
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={create.open} onOpenChange={create.onOpenChange}>
         <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">

@@ -81,7 +81,6 @@ export function useAgencyMoneyExpensesPanel({
 
   const [expenseCreateOpen, setExpenseCreateOpen] = useState(false);
   const [expenseEditorId, setExpenseEditorId] = useState<string | null>(null);
-  const [expenseDetailsOpen, setExpenseDetailsOpen] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [expenseName, setExpenseName] = useState("");
   const [expenseKind, setExpenseKind] = useState<MoneyExpenseKind>("one_time");
@@ -257,25 +256,6 @@ export function useAgencyMoneyExpensesPanel({
   const expenseStripInsightLabel = useMemo(
     () => (expensesStatus === "ready" ? expenseStripInsight(expenseStripSources) : null),
     [expenseStripSources, expensesStatus],
-  );
-
-  const expenseDetailsSections = useMemo(
-    () =>
-      expensesStatus === "ready"
-        ? [
-            {
-              id: "upcoming" as const,
-              title: "Subscriptions",
-              items: filterExpenseStripItems(upcomingExpenses, searchTerm),
-            },
-            {
-              id: "recent" as const,
-              title: "One-time expenses",
-              items: filterExpenseStripItems(recentExpenses, searchTerm),
-            },
-          ]
-        : [],
-    [expensesStatus, recentExpenses, searchTerm, upcomingExpenses],
   );
 
   function onExpenseStripFilterChange(next: ExpenseStripFilter) {
@@ -508,20 +488,6 @@ export function useAgencyMoneyExpensesPanel({
       itemCount: expenseStripVisibleItems.length,
       insight: expenseStripInsightLabel,
       empty: expenseStripEmpty,
-    },
-    details: {
-      open: expenseDetailsOpen,
-      onOpenChange: setExpenseDetailsOpen,
-      title: "All expenses",
-      emptyTitle: searchTerm.trim() ? "No matching expenses" : "No expenses yet",
-      emptyBody: searchTerm.trim()
-        ? `Nothing matches “${searchTerm.trim()}” in this view.`
-        : "Add a one-time expense or subscription to see it here.",
-      sections: expenseDetailsSections,
-      totalCount:
-        expensesStatus === "ready"
-          ? expenseDetailsSections.reduce((sum, section) => sum + section.items.length, 0)
-          : 0,
     },
     create: {
       open: expenseCreateOpen,
