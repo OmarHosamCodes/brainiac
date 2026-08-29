@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
 
@@ -17,6 +17,7 @@ import {
   buildMoneyBillPersonGroups,
   filterComposeRowsByClientCategory,
   groupMoneyBillComposeDisplayRows,
+  type MoneyBillComposeDisplayRow,
   type MoneyBillObligationLine,
   type MoneyBillPersonGroup,
   type MoneyPendingAdjustmentSource,
@@ -37,6 +38,7 @@ import {
   moneyBillsPartyShowsMembers,
   moneyBillsPaymentCanSubmit,
   parseMoneyBillPaymentAmount,
+  type MoneyBillAdjustmentRow,
 } from "@/features/billing/money-bills-rows";
 import {
   moneyExpenseAmountError,
@@ -83,6 +85,12 @@ type MoneySettleAction = "pay" | "partial" | "refund";
 type MoneyExportMode = "combine" | "split";
 type MoneyPendingAdjustKind = "discount" | "surcharge" | "debt";
 type MoneyAdjustTab = MoneySettleAction | "adjustments";
+
+export type BillsDetailSelection =
+  | { kind: "group"; id: string }
+  | { kind: "adjustment"; id: string }
+  | { kind: "salary-pool" }
+  | null;
 
 function partyTypeFromGroup(group: MoneyBillPersonGroup): "client" | "member" {
   return group.party === "client" ? "client" : "member";
@@ -180,6 +188,7 @@ export function useAgencyMoneyBills({
   const [adjustNote, setAdjustNote] = useState("");
   const [adjustSubmitted, setAdjustSubmitted] = useState(false);
   const [composeActionPending, setComposeActionPending] = useState(false);
+  const [detailSelection, setDetailSelection] = useState<BillsDetailSelection>(null);
 
   const showsClientBills = moneyBillsPartyShowsClients(partyFilter);
   const showsMemberBills = moneyBillsPartyShowsMembers(partyFilter);
@@ -353,6 +362,42 @@ export function useAgencyMoneyBills({
     showsMemberBills,
     statusFilter,
   ]);
+
+  const detailRow = useMemo<MoneyBillPersonGroup | MoneyBillAdjustmentRow | null>(() => {
+    if (!detailSelection || detailSelection.kind === "salary-pool") return null;
+    return (
+      billRows.find((row) => {
+        if (row.id !== detailSelection.id) return false;
+        return detailSelection.kind === "group"
+          ? row.kind === "person-group"
+          : row.kind === "adjustment";
+      }) ?? null
+    );
+  }, [billRows, detailSelection]);
+
+  useEffect(() => {
+    if (!detailSelection) return;
+    if (detailSelection.kind === "salary-pool") {
+      if (showsExpenses || !salaryPoolQuery.data?.pool) setDetailSelection(null);
+      return;
+    }
+    if (!detailRow) setDetailSelection(null);
+  }, [detailRow, detailSelection, salaryPoolQuery.data?.pool, showsExpenses]);
+
+  function onOpenRow(row: MoneyBillComposeDisplayRow) {
+    switch (row.kind) {
+      case "person-group":
+        setDetailSelection({ kind: "group", id: row.id });
+        return;
+      case "adjustment":
+        setDetailSelection({ kind: "adjustment", id: row.id });
+        return;
+      default: {
+        const _exhaustive: never = row;
+        void _exhaustive;
+      }
+    }
+  }
 
   async function invalidateMoneyComposeQueries() {
     await Promise.all([
@@ -1107,6 +1152,13 @@ export function useAgencyMoneyBills({
     remainingLabel: billsRemainingLabel,
     rows: billRows,
     displaySections: billDisplaySections,
+    detailSelection,
+    detailRow,
+    selectedRowId:
+      detailSelection?.kind === "salary-pool" ? "salary-pool" : (detailSelection?.id ?? null),
+    onOpenRow,
+    onOpenSalaryPool: () => setDetailSelection({ kind: "salary-pool" }),
+    onCloseDetail: () => setDetailSelection(null),
     isLoading: billsIsLoading,
     isError: billsIsError,
     errorMessage: billsErrorMessage,

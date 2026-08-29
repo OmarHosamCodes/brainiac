@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 import { MoneyListGhostPreview } from "./agency-money-shared-view";
 import { MoneyExpensesPanelContent } from "./agency-money-expenses-section-view";
+import { AgencyMoneyBillDetailSheet } from "./agency-money-bill-detail-sheet-view";
 import { AgencyMoneyBillsDialogs } from "./agency-money-bills-dialogs-view";
 import { AgencyMoneyBillsTablesView } from "./agency-money-bills-tables-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
@@ -347,9 +348,10 @@ function BillsSection({
             salaryPool={bills.salaryPool}
             searchTerm={bills.searchTerm}
             isMutationPending={bills.isMutationPending}
-            onOpenRow={() => undefined}
+            selectedRowId={bills.selectedRowId}
+            onOpenRow={bills.onOpenRow}
             onOpenParty={onOpenParty}
-            onOpenSalaryPool={() => undefined}
+            onOpenSalaryPool={bills.onOpenSalaryPool}
           />
         ) : null}
 
@@ -377,6 +379,7 @@ function BillsSection({
         ) : null}
       </div>
 
+      <AgencyMoneyBillDetailSheet bills={bills} onOpenParty={onOpenParty} />
       <AgencyMoneyBillsDialogs bills={bills} />
     </section>
   );

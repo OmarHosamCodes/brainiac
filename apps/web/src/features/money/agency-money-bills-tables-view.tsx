@@ -46,6 +46,7 @@ type AgencyMoneyBillsTablesViewProps = {
   salaryPool: SalaryPoolTableViewModel;
   searchTerm: string;
   isMutationPending: boolean;
+  selectedRowId?: string | null;
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
   onOpenParty: (row: MoneyBillPersonGroup) => void;
   onOpenSalaryPool: () => void;
@@ -135,11 +136,13 @@ function InteractiveBillRow({
   onOpen,
   children,
   className,
+  selected = false,
 }: {
   label: string;
   onOpen: () => void;
   children: ReactNode;
   className?: string;
+  selected?: boolean;
 }) {
   function onKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
     if (event.target !== event.currentTarget) return;
@@ -152,8 +155,10 @@ function InteractiveBillRow({
     <TableRow
       tabIndex={0}
       aria-label={label}
+      aria-selected={selected}
       className={cn(
         "cursor-pointer border-b border-default transition-colors last:border-b-0 hover:bg-elevated/35 focus-visible:bg-elevated/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
+        selected && "bg-elevated/40",
         className,
       )}
       onClick={onOpen}
@@ -215,6 +220,7 @@ function PersonBillsTable({
   onOpenRow,
   onOpenParty,
   onOpenSalaryPool,
+  selectedRowId,
 }: {
   party: "client" | "team";
   groups: readonly MoneyBillPersonGroup[];
@@ -223,6 +229,7 @@ function PersonBillsTable({
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
   onOpenParty: (row: MoneyBillPersonGroup) => void;
   onOpenSalaryPool: () => void;
+  selectedRowId?: string | null;
 }) {
   const isTeam = party === "team";
   const showWaste = moneyBillTableShowsWaste(groups);
@@ -250,6 +257,7 @@ function PersonBillsTable({
               key={group.id}
               label={`${group.title}. Remaining ${group.remainingLabel}.`}
               onOpen={() => onOpenRow(group)}
+              selected={selectedRowId === group.id}
             >
               <PartyCell group={group} searchTerm={searchTerm} onOpenParty={onOpenParty} />
               <TableCell>
@@ -274,6 +282,7 @@ function PersonBillsTable({
               label={`Team salaries. Remaining ${salaryPool.pool.remainingLabel}.`}
               onOpen={onOpenSalaryPool}
               className="border-t border-default"
+              selected={selectedRowId === "salary-pool"}
             >
               <TableCell className="font-medium text-highlighted">Team salaries</TableCell>
               <TableCell />
@@ -298,10 +307,12 @@ function AdjustmentsTable({
   rows,
   searchTerm,
   onOpenRow,
+  selectedRowId,
 }: {
   rows: readonly MoneyBillAdjustmentRow[];
   searchTerm: string;
   onOpenRow: (row: MoneyBillComposeDisplayRow) => void;
+  selectedRowId?: string | null;
 }) {
   return (
     <div className={tableWrapperClass}>
@@ -315,6 +326,7 @@ function AdjustmentsTable({
               key={row.id}
               label={`${row.title}. Remaining ${row.remainingLabel}.`}
               onOpen={() => onOpenRow(row)}
+              selected={selectedRowId === row.id}
             >
               <TableCell className="min-w-48 font-medium text-highlighted">
                 <AgencySearchHighlight text={row.title} query={searchTerm} />
@@ -366,6 +378,7 @@ export function AgencyMoneyBillsTablesView({
   salaryPool,
   searchTerm,
   isMutationPending,
+  selectedRowId,
   onOpenRow,
   onOpenParty,
   onOpenSalaryPool,
@@ -391,6 +404,7 @@ export function AgencyMoneyBillsTablesView({
             onOpenRow={onOpenRow}
             onOpenParty={onOpenParty}
             onOpenSalaryPool={onOpenSalaryPool}
+            selectedRowId={selectedRowId}
           />
         </TableSection>
       ) : null}
@@ -408,6 +422,7 @@ export function AgencyMoneyBillsTablesView({
             onOpenRow={onOpenRow}
             onOpenParty={onOpenParty}
             onOpenSalaryPool={onOpenSalaryPool}
+            selectedRowId={selectedRowId}
           />
         </TableSection>
       ) : null}
@@ -417,7 +432,12 @@ export function AgencyMoneyBillsTablesView({
           count={adjustments.length}
           showHeader={showSectionHeaders}
         >
-          <AdjustmentsTable rows={adjustments} searchTerm={searchTerm} onOpenRow={onOpenRow} />
+          <AdjustmentsTable
+            rows={adjustments}
+            searchTerm={searchTerm}
+            onOpenRow={onOpenRow}
+            selectedRowId={selectedRowId}
+          />
         </TableSection>
       ) : null}
     </div>
