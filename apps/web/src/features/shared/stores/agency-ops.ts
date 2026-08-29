@@ -325,6 +325,7 @@ type UpdateExpensePayload = {
   note?: string;
   amount?: number;
   amountMode?: "fixed" | "variable";
+  currency?: string;
   period?: "weekly" | "monthly" | "quarterly" | "yearly" | null;
   startsAt?: string | null;
   occurredAt?: string | null;
