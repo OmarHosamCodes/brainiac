@@ -318,9 +318,10 @@ export const agencyTimeTrackerStatusZoneClass =
 /** Tracker right cluster — single-height rail with hairline separators. */
 export const agencyTimeTrackerRailClass = "flex h-full shrink-0 items-center";
 
-export const agencyTimeTrackerRailCellClass = "flex shrink-0 items-center gap-1.5 px-2";
+export const agencyTimeTrackerRailCellClass = "flex shrink-0 items-center gap-2 px-2.5";
 
-export const agencyTimeTrackerRailDividerClass = "h-6 w-px shrink-0 bg-border";
+export const agencyTimeTrackerRailDividerClass =
+  "h-6 w-px shrink-0 self-center bg-border data-vertical:h-6 data-vertical:w-px data-vertical:self-center";
 
 export const agencyTimeTrackerInnerDividerClass = agencyTimeTrackerRailDividerClass;
 
@@ -392,10 +393,10 @@ export const agencyTimeTrackerProjectEmptyTriggerClass = cn(
 );
 
 export const agencyTimeTrackerPrimaryActionClass =
-  "inline-flex h-9 max-h-9 min-h-9 min-w-[4.75rem] shrink-0 items-center justify-center rounded-md bg-primary px-3.5 text-xs font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary/90";
+  "inline-flex h-9 max-h-9 min-h-9 min-w-[4.75rem] shrink-0 items-center justify-center rounded-2xl bg-primary px-4 text-xs font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary/80";
 
 export const agencyTimeTrackerStopActionClass =
-  "inline-flex h-9 max-h-9 min-h-9 min-w-[4.75rem] shrink-0 items-center justify-center rounded-md bg-destructive px-3.5 text-xs font-semibold uppercase tracking-wide text-primary-foreground hover:bg-destructive/90";
+  "inline-flex h-9 max-h-9 min-h-9 min-w-[4.75rem] shrink-0 items-center justify-center rounded-2xl bg-destructive px-4 text-xs font-semibold uppercase tracking-wide text-primary-foreground hover:bg-destructive/90";
 
 export const agencyTimeTrackerIconActionClass = cn(
   "inline-flex size-9 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
@@ -429,12 +430,6 @@ export const agencyTimeEntryMultiChildClass = "border-b border-dotted border-bor
 /** Bottom rule for expanded multi-entry wrappers (matches row separators). */
 export const agencyTimeEntryGroupBorderClass = "border-b border-dotted border-border/40";
 
-/** Inline time inputs in entry rows. */
-export const agencyTimeEntryTimeInputClass = cn(
-  "h-7 w-full min-w-0 appearance-none border-0 bg-transparent px-0 font-mono text-xs font-medium tabular-nums text-muted shadow-none focus-visible:ring-0 focus-visible:text-highlighted",
-  "[&::-webkit-calendar-picker-indicator]:hidden",
-);
-
 /** Clockify-style free-text start/end — plain like multi range; border only on hover/focus. */
 export const agencyTimeEntryClockTimeInputClass = cn(
   // Override shared Input defaults (rounded-4xl, bg-input/30, focus ring).
@@ -443,6 +438,18 @@ export const agencyTimeEntryClockTimeInputClass = cn(
   "transition-colors hover:border-border",
   "focus-visible:border-primary focus-visible:bg-transparent focus-visible:text-highlighted focus-visible:ring-0",
   "disabled:cursor-not-allowed disabled:opacity-60",
+);
+
+/** Tracker manual-add clocks — same Clockify labels as entry rows, sized to the 52px bar. */
+export const agencyTimeTrackerClockTimeInputClass = cn(
+  agencyTimeEntryClockTimeInputClass,
+  "h-9 w-[5.25rem] rounded-md text-sm",
+);
+
+/** Tracker manual-add date trigger — labeled ghost, not a native date input. */
+export const agencyTimeTrackerDateTriggerClass = cn(
+  "h-9 min-w-0 shrink-0 rounded-2xl px-2.5 text-sm font-medium text-muted-foreground",
+  "hover:bg-muted hover:text-foreground",
 );
 
 export const agencyTimeEntryDurationInputClass = cn(
