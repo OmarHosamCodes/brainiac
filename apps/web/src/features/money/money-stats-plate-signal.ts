@@ -61,8 +61,7 @@ export function moneyStatsPlateSignal(
     case "deductions": {
       const salaries = metricAmount(metrics, "salaries");
       const expenses = metricAmount(metrics, "expenses");
-      const other =
-        metricAmount(metrics, "debt-discount") + metricAmount(metrics, "paid-vacation");
+      const other = metricAmount(metrics, "debt-discount") + metricAmount(metrics, "paid-vacation");
       const shares = sharesAgainstMax([salaries, expenses, other]);
       return {
         tone: "neutral",
@@ -89,13 +88,8 @@ export function moneyStatsPlateSignal(
       const charity = metricAmount(metrics, "charity");
       const pbc = metricAmount(metrics, "pbc");
       const shares = sharesAgainstMax([device, charity, pbc]);
-      const blocks: [number, number, number] = [
-        shares[0] ?? 0,
-        shares[1] ?? 0,
-        shares[2] ?? 0,
-      ];
-      const tone: InstrumentPlateTone =
-        device > 0 || charity > 0 || pbc > 0 ? "info" : "neutral";
+      const blocks: [number, number, number] = [shares[0] ?? 0, shares[1] ?? 0, shares[2] ?? 0];
+      const tone: InstrumentPlateTone = device > 0 || charity > 0 || pbc > 0 ? "info" : "neutral";
       return { tone, glyph: { kind: "allocations", blocks } };
     }
     default: {

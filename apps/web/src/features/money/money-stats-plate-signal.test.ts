@@ -4,10 +4,7 @@ import type { MoneyStatsMetricFixture } from "@/features/billing/money-stats-fix
 
 import { moneyStatsPlateSignal, sharesAgainstMax } from "./money-stats-plate-signal";
 
-function metric(
-  id: MoneyStatsMetricFixture["id"],
-  amount: number,
-): MoneyStatsMetricFixture {
+function metric(id: MoneyStatsMetricFixture["id"], amount: number): MoneyStatsMetricFixture {
   return { id, label: id, kind: id === "roi" ? "percent" : "currency", amount };
 }
 
