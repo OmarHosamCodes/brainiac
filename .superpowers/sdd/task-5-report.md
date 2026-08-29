@@ -1,31 +1,32 @@
-# Task 5 report — `@` and `/` trigger parser
+# Task 5 report: Bills expenses table and sheet
 
 ## Status
 
-**Complete.** Parser-only changes in `workspace-agent-mentions.ts` plus co-located tests. No hook, view, plan, or API edits.
+Complete. Expenses now use the Bills table grammar, row selection opens a right-side detail
+sheet, and the Due/Paid/All pills are a header Select. Existing create, edit, payment, and all
+expenses dialogs remain in place.
 
-## What changed
+## Changes
 
-- Added `getActiveWorkspaceAgentTrigger` with shared regex for `@` and `/` at end-of-draft (after whitespace or open punctuation).
-- Refactored `getActiveWorkspaceAgentMention` and `stripActiveWorkspaceAgentMention` as thin wrappers (`at` only / delegate to trigger strip).
-- Added `stripActiveWorkspaceAgentTrigger` for generic trigger removal.
-- Added `getWorkspaceAgentSlashSuggestions` for Agency project/task label substring matching with selected-id filtering.
-- Preserved `getWorkspaceAgentMentionSuggestions` and scoring helpers unchanged.
-
-## Tests
-
-```
-bun test apps/web/src/features/workspace-agent/workspace-agent-mentions.test.ts
-```
-
-5 pass, 0 fail — `@` detection, `/` detection, closed trigger null, strip trigger, slash suggestions (substring + skip selected).
+- Added a keyboard-accessible expenses table with neutral glyphs, status badges, numeric columns,
+  selected-row highlighting, and a table-shaped loading skeleton.
+- Added `agency-money-expense-detail-sheet-view.tsx` with expense metadata and Edit plus Pay or
+  Record footer actions.
+- Added expense selection state to the panel hook and automatic closure when filtering or search
+  removes the selected expense.
+- Regenerated the golden source inventory for the new presentational view.
 
 ## Verification
 
-- `bun run check-types` — pass
-- `use-workspace-agent.ts` compiles unchanged (wrappers preserved)
+- Targeted expense strip, bills filter, and table column tests: 45 pass, 0 fail.
+- `bun run check-types`: pass.
+- Touched-file oxlint and oxfmt checks: pass.
+- `bun run check:golden`: pass.
+- Browser verification: expenses table rendered with two live rows; row click opened the expected
+  sheet with Edit and Record actions.
 
 ## Concerns
 
-- Slash suggestions use simple `includes` substring match (no scoring/ranking like node mentions); Task 6 popover wiring may want richer ordering later.
-- Trigger regex treats `@` and `/` only when preceded by start-of-string or `[\s([{:;,]` — edge cases with other punctuation are unchanged from plan spec.
+- `bun run check` and `bun run check:conventions` remain blocked by eight pre-existing golden view
+  violations in task management, workspace agent, and workspace knowledge files. No violation
+  points to the Task 5 files.

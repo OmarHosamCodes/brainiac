@@ -78,6 +78,7 @@ export function useAgencyMoneyExpensesPanel({
   const [expenseCreateOpen, setExpenseCreateOpen] = useState(false);
   const [expenseEditorId, setExpenseEditorId] = useState<string | null>(null);
   const [expenseDetailsOpen, setExpenseDetailsOpen] = useState(false);
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [expenseName, setExpenseName] = useState("");
   const [expenseKind, setExpenseKind] = useState<MoneyExpenseKind>("one_time");
   const [expensePeriod, setExpensePeriod] = useState<MoneyExpensePeriod | null>(null);
@@ -231,6 +232,15 @@ export function useAgencyMoneyExpensesPanel({
     () => filterExpenseStripItems(expenseStripItems, searchTerm),
     [expenseStripItems, searchTerm],
   );
+
+  useEffect(() => {
+    if (
+      selectedExpenseId &&
+      !expenseStripVisibleItems.some((item) => item.expenseId === selectedExpenseId)
+    ) {
+      setSelectedExpenseId(null);
+    }
+  }, [expenseStripVisibleItems, selectedExpenseId]);
 
   const expenseStripEmpty = useMemo(
     () =>
@@ -485,6 +495,9 @@ export function useAgencyMoneyExpensesPanel({
     onOpenCreate: () => onExpenseCreateOpenChange(true),
     onOpenEdit: onOpenExpenseEdit,
     onOpenPayment: onOpenExpensePayment,
+    selectedExpenseId,
+    onOpenExpenseRow: setSelectedExpenseId,
+    onCloseExpenseDetail: () => setSelectedExpenseId(null),
     strip: {
       filter: expenseStripFilter,
       filterOptions: EXPENSE_STRIP_FILTERS,

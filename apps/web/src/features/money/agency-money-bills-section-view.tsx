@@ -1,4 +1,3 @@
-import { LayoutGroup } from "motion/react";
 import { ChevronDown, FileText, Plus, Receipt, Search, SlidersHorizontal, X } from "lucide-react";
 
 import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
@@ -40,8 +39,6 @@ import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surfa
 import {
   moneyPanelHeaderClass,
   MoneyPanelCount,
-  MoneyPanelFilterPill,
-  MoneyPanelFilterRow,
   MoneyPanelTitleRow,
   MoneyPeriodFxLine,
 } from "./money-panel-chrome";
@@ -239,6 +236,34 @@ function BillsSection({
                 </Select>
               </>
             ) : null}
+            {hasExpenseFilters ? (
+              <>
+                <label htmlFor="money-expenses-filter" className="sr-only">
+                  Expense filter
+                </label>
+                <Select
+                  value={expensesPanel.strip.filter}
+                  onValueChange={(value) =>
+                    expensesPanel.strip.onFilterChange(value as typeof expensesPanel.strip.filter)
+                  }
+                >
+                  <SelectTrigger
+                    id="money-expenses-filter"
+                    size="sm"
+                    className="shrink-0 bg-default"
+                  >
+                    <SelectValue placeholder="All expenses" />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    {expensesPanel.strip.filterOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            ) : null}
           </div>
           {isExpensesParty ? (
             <Button
@@ -317,22 +342,6 @@ function BillsSection({
               </p>
             ) : null}
           </div>
-        ) : null}
-
-        {hasExpenseFilters ? (
-          <LayoutGroup id="expense-strip-filters">
-            <MoneyPanelFilterRow label="Expense filters">
-              {expensesPanel.strip.filterOptions.map((option) => (
-                <MoneyPanelFilterPill
-                  key={option.id}
-                  label={option.label}
-                  selected={expensesPanel.strip.filter === option.id}
-                  onSelect={() => expensesPanel.strip.onFilterChange(option.id)}
-                  layoutId="expense-strip-filter-bg"
-                />
-              ))}
-            </MoneyPanelFilterRow>
-          </LayoutGroup>
         ) : null}
 
         {showExternalClientFilter ? (

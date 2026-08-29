@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-08-26 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-08-29 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 916 |
+| golden-feature | 925 |
 | server-operation | 16 |
 | shared-infrastructure | 465 |
 | static-presentation | 22 |
@@ -33,7 +33,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 14 |
-| billing | 127 |
+| billing | 135 |
 | ci | 2 |
 | clients | 13 |
 | configuration | 3 |
@@ -51,7 +51,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | repository | 13 |
 | resourcing | 44 |
 | server-platform | 23 |
-| task-management | 99 |
+| task-management | 100 |
 | team | 19 |
 | time-tracking | 110 |
 | web-platform | 250 |
@@ -413,6 +413,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/money/agency-money-bills-dialogs-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-bills-section-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-bills-tables-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/money/agency-money-expense-detail-sheet-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-expenses-section-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-settings-dialog-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-shared-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -420,8 +421,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/money/agency-money-surface-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-surface.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/containers/agency-money-surface-container.tsx` | billing | container | golden-feature | billing-domain | Feature-owned billing artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
-| `apps/web/src/features/money/hooks/money-expense-rows.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/money/hooks/money-expense-rows.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/money/hooks/money-expense-rows.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/money/hooks/use-agency-money-bills.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/money/hooks/use-agency-money-expenses-panel.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/money/hooks/use-agency-money-scoreboard.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |

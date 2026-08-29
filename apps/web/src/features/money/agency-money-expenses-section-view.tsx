@@ -1,5 +1,5 @@
-import { type FormEvent } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { type FormEvent, type KeyboardEvent } from "react";
+import { motion } from "motion/react";
 
 import {
   moneyExpensePeriodLabel,
@@ -22,7 +22,7 @@ import {
   type ExpenseStripItem,
 } from "@/features/money/money-expenses-strip";
 import { ExpenseStripGlyph } from "@/features/money/money-expense-strip-glyphs";
-import { moneyBaseTransition, moneyExpenseStripItemVariants } from "@/features/money/money-motion";
+import { moneyBaseTransition } from "@/features/money/money-motion";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardTitle } from "@/ui/card";
@@ -40,17 +40,12 @@ import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Separator } from "@/ui/separator";
 import { Skeleton } from "@/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { Textarea } from "@/ui/textarea";
 import { cn } from "@/lib/utils";
 
+import { AgencyMoneyExpenseDetailSheet } from "./agency-money-expense-detail-sheet-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
-
-const expenseStripRowClass =
-  "group/row flex items-center gap-3 px-5 py-3 transition-colors duration-150 hover:bg-elevated/25 focus-within:bg-elevated/25 motion-reduce:transition-none";
-
-function expenseStripAmountClass(item: ExpenseStripItem): string {
-  return item.status === "paid" ? "text-muted" : "text-highlighted";
-}
 
 function formatExpenseStartPreview(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
@@ -64,98 +59,154 @@ function formatExpenseStartPreview(value: string): string {
   });
 }
 
-function ExpenseStripRow({
-  item,
-  index,
+function ExpenseStatusBadge({ item }: { item: ExpenseStripItem }) {
+  const variant =
+    item.status === "paid" ? "success" : item.status === "due" ? "warning" : "outline";
+  return <Badge variant={variant}>{item.statusLabel}</Badge>;
+}
+
+function ExpenseTable({
+  items,
   searchTerm,
-  onOpenEdit,
-  onOpenPayment,
+  selectedExpenseId,
+  onOpenExpenseRow,
 }: {
-  item: ExpenseStripItem;
-  index: number;
+  items: ExpenseStripItem[];
   searchTerm: string;
-  onOpenEdit: (expenseId: string) => void;
-  onOpenPayment: (expenseId: string) => void;
+  selectedExpenseId: string | null;
+  onOpenExpenseRow: (expenseId: string) => void;
 }) {
-  const paymentLabel = item.kind === "subscription" ? "Pay" : "Record";
-  const amountColumnLabel = item.canRecordPayment
-    ? "Remaining"
-    : item.status === "paid"
-      ? "Paid"
-      : null;
+  function onRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, expenseId: string) {
+    if (event.target !== event.currentTarget) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onOpenExpenseRow(expenseId);
+  }
 
   return (
-    <motion.li
-      layout={false}
-      custom={index}
-      variants={moneyExpenseStripItemVariants}
-      initial="hidden"
-      animate="show"
-      exit="exit"
-      className={expenseStripRowClass}
-      aria-label={`${item.name}. ${item.statusLabel}. ${item.amountLabel}.`}
-    >
-      <ExpenseStripGlyph kind={item.kind} />
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            className="-my-2 min-h-10 max-w-full truncate px-0 py-2 text-start text-xs font-medium text-highlighted sm:my-0 sm:min-h-0 sm:py-0 sm:text-sm"
-            onClick={() => onOpenEdit(item.expenseId)}
-            title={item.name}
-          >
-            <span dir="auto">
-              <AgencySearchHighlight text={item.name} query={searchTerm} />
-            </span>
-          </Button>
-          <Badge variant="secondary" className="h-5 rounded-md px-1.5 text-[0.6875rem]">
-            {item.statusLabel}
-          </Badge>
-        </div>
-        <p className="mt-0.5 truncate font-mono text-[0.6875rem] leading-snug text-muted tabular-nums sm:text-xs">
-          <AgencySearchHighlight text={expenseStripMeta(item)} query={searchTerm} />
-        </p>
-        {item.note ? (
-          <p className="truncate text-[11px] text-muted/80" dir="auto">
-            <AgencySearchHighlight text={item.note} query={searchTerm} />
-          </p>
-        ) : null}
+    <div className="px-4 pt-4">
+      <div className="overflow-x-auto rounded-dense border border-default/55 bg-default">
+        <Table className="min-w-[48rem]" aria-label="Expenses">
+          <TableHeader className="border-b border-default/50">
+            <TableRow>
+              <TableHead scope="col">Expense</TableHead>
+              <TableHead scope="col">Kind</TableHead>
+              <TableHead scope="col">Status</TableHead>
+              <TableHead scope="col">Due/meta</TableHead>
+              <TableHead scope="col" className="w-32 text-right">
+                Amount
+              </TableHead>
+              <TableHead scope="col" className="w-32 text-right">
+                Remaining
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => (
+              <TableRow
+                key={`${item.id}-${item.expenseId}`}
+                tabIndex={0}
+                aria-label={`${item.name}. ${item.statusLabel}. Remaining ${item.remainingLabel}.`}
+                aria-selected={selectedExpenseId === item.expenseId}
+                className={cn(
+                  "cursor-pointer border-b border-default transition-colors last:border-b-0 hover:bg-elevated/35 focus-visible:bg-elevated/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
+                  selectedExpenseId === item.expenseId && "bg-elevated/40",
+                )}
+                onClick={() => onOpenExpenseRow(item.expenseId)}
+                onKeyDown={(event) => onRowKeyDown(event, item.expenseId)}
+              >
+                <TableCell>
+                  <div className="flex min-w-48 items-center gap-2.5">
+                    <ExpenseStripGlyph kind={item.kind} />
+                    <span className="min-w-0 truncate font-medium text-highlighted" dir="auto">
+                      <AgencySearchHighlight text={item.name} query={searchTerm} />
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-muted">
+                  {item.kind === "subscription" ? "Subscription" : "One-time"}
+                </TableCell>
+                <TableCell>
+                  <ExpenseStatusBadge item={item} />
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-muted">
+                  <AgencySearchHighlight text={expenseStripMeta(item)} query={searchTerm} />
+                </TableCell>
+                <TableCell
+                  className={cn(
+                    "whitespace-nowrap text-right font-mono tabular-nums",
+                    item.status === "paid" ? "text-muted" : "text-highlighted",
+                  )}
+                >
+                  {item.amountLabel}
+                </TableCell>
+                <TableCell
+                  className={cn(
+                    "whitespace-nowrap text-right font-mono tabular-nums",
+                    item.remainingAmount > 0 ? "text-warning" : "text-muted",
+                  )}
+                >
+                  {item.remainingLabel}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-0.5 text-end">
-        {amountColumnLabel ? (
-          <div className="text-[0.625rem] font-medium tracking-[0.06em] text-muted uppercase">
-            {amountColumnLabel}
-          </div>
-        ) : null}
-        <span
-          className={cn(
-            agencyMetricClass,
-            "whitespace-nowrap font-mono text-sm font-semibold tabular-nums sm:text-base",
-            expenseStripAmountClass(item),
-          )}
-        >
-          {expenseStripAmountLabel(item)}
-        </span>
-        {item.canRecordPayment ? (
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            className={cn(
-              "min-h-10 shrink-0 px-0 py-2 text-[11px] font-semibold text-muted sm:min-h-0 sm:py-0",
-              "opacity-80 transition-opacity duration-150 hover:text-highlighted group-hover/row:opacity-100 group-focus-within/row:opacity-100",
-              "motion-reduce:transition-none",
-            )}
-            onClick={() => onOpenPayment(item.expenseId)}
-            aria-label={`${paymentLabel} ${item.name}`}
-          >
-            {paymentLabel}
-          </Button>
-        ) : null}
+    </div>
+  );
+}
+
+function ExpenseTableSkeleton() {
+  return (
+    <div className="px-4 pt-4" aria-busy="true" aria-label="Loading expenses">
+      <div className="overflow-x-auto rounded-dense border border-default/55 bg-default">
+        <Table className="min-w-[48rem]">
+          <TableHeader className="border-b border-default/50">
+            <TableRow>
+              {["Expense", "Kind", "Status", "Due/meta", "Amount", "Remaining"].map((column) => (
+                <TableHead
+                  key={column}
+                  scope="col"
+                  className={
+                    column === "Amount" || column === "Remaining" ? "text-right" : undefined
+                  }
+                >
+                  {column}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 4 }, (_, index) => (
+              <TableRow key={index} className="border-b border-default last:border-b-0">
+                <TableCell>
+                  <div className="flex items-center gap-2.5">
+                    <Skeleton className="size-9 shrink-0 rounded-xl" />
+                    <Skeleton className="h-4 w-32 rounded-md" />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-20 rounded-md" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-28 rounded-md" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="ml-auto h-4 w-20 rounded-md" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="ml-auto h-4 w-20 rounded-md" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
-    </motion.li>
+    </div>
   );
 }
 
@@ -175,25 +226,7 @@ function MoneyExpensesPanelContent({
     <>
       <div className="flex flex-col">
         {panel.status === "loading" ? (
-          <div
-            className="flex flex-col divide-y divide-default"
-            aria-busy="true"
-            aria-label="Loading expenses"
-          >
-            {Array.from({ length: 4 }, (_, index) => (
-              <div key={index} className="flex items-center gap-3 px-5 py-3">
-                <Skeleton className="size-9 shrink-0 rounded-xl" />
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <Skeleton className="h-4 w-32 max-w-[55%] rounded-md" />
-                  <Skeleton className="h-3 w-44 max-w-[70%] rounded-md" />
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <Skeleton className="h-2.5 w-8 rounded-md" />
-                  <Skeleton className="h-4 w-16 rounded-md" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ExpenseTableSkeleton />
         ) : panel.status === "error" ? (
           <div className={cn(agencyErrorPanelClass, "m-5")} role="alert">
             <p className="text-sm font-medium text-highlighted">Couldn’t load expenses</p>
@@ -209,20 +242,12 @@ function MoneyExpensesPanelContent({
             </Button>
           </div>
         ) : strip.items.length > 0 ? (
-          <ul className="flex flex-col divide-y divide-default pb-2">
-            <AnimatePresence initial={false} mode="popLayout">
-              {strip.items.map((item, index) => (
-                <ExpenseStripRow
-                  key={`${strip.filter}-${item.id}`}
-                  item={item}
-                  index={index}
-                  searchTerm={searchTerm}
-                  onOpenEdit={panel.onOpenEdit}
-                  onOpenPayment={panel.onOpenPayment}
-                />
-              ))}
-            </AnimatePresence>
-          </ul>
+          <ExpenseTable
+            items={strip.items}
+            searchTerm={searchTerm}
+            selectedExpenseId={panel.selectedExpenseId}
+            onOpenExpenseRow={panel.onOpenExpenseRow}
+          />
         ) : strip.empty ? (
           <motion.div
             key={`${strip.filter}-empty`}
@@ -245,6 +270,8 @@ function MoneyExpensesPanelContent({
           </motion.div>
         ) : null}
       </div>
+
+      <AgencyMoneyExpenseDetailSheet panel={panel} />
 
       <Dialog open={details.open} onOpenChange={details.onOpenChange}>
         <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
@@ -741,7 +768,7 @@ function MoneyExpensesPanelContent({
                       "mt-1 font-mono text-2xl font-semibold tabular-nums text-highlighted",
                     )}
                   >
-                    {payment.heroValue || "—"}
+                    {payment.heroValue || "Not set"}
                   </CardTitle>
                   {payment.heroHint ? (
                     <CardDescription className="mt-2 text-[11px] text-pretty">
