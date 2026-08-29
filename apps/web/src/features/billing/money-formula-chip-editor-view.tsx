@@ -162,9 +162,7 @@ function NumberChip({
         disabled={isSaving}
         className="h-6 w-24 border-0 bg-transparent px-1 py-0 font-mono text-xs shadow-none focus-visible:ring-0"
         aria-label={
-          unit === "amount"
-            ? `Amount chip ${index + 1} in ${currency}`
-            : `Number chip ${index + 1}`
+          unit === "amount" ? `Amount chip ${index + 1} in ${currency}` : `Number chip ${index + 1}`
         }
       />
       {unit === "amount" ? (
@@ -217,8 +215,7 @@ export function MoneyFormulaChipEditorView({
     const token = formula.tokens[index];
     if (!token || token.kind !== "number") return;
     const unit = moneyFormulaNumberChipUnit(formula.tokens, index, formula.output);
-    const value =
-      unit === "amount" ? majorToFormulaAmount(rawMajorOrScalar) : rawMajorOrScalar;
+    const value = unit === "amount" ? majorToFormulaAmount(rawMajorOrScalar) : rawMajorOrScalar;
     onChange({
       ...formula,
       tokens: formula.tokens.map((entry, tokenIndex) =>

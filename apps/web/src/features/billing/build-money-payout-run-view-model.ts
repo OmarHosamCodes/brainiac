@@ -1,4 +1,8 @@
-import type { MoneyPayoutRunLine, MoneyPayoutRunSection, MoneyPayoutRunStatus } from "./money-payout-run";
+import type {
+  MoneyPayoutRunLine,
+  MoneyPayoutRunSection,
+  MoneyPayoutRunStatus,
+} from "./money-payout-run";
 
 export type MoneyPayoutRunLineSource = {
   id: string;
