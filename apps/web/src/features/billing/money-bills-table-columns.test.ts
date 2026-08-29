@@ -299,10 +299,7 @@ describe("moneyBillTableShowsCarry", () => {
 
   test("returns true when any group has a carry line", () => {
     expect(
-      moneyBillTableShowsCarry([
-        { lines: [{ isCarry: false }] },
-        { lines: [{ isCarry: true }] },
-      ]),
+      moneyBillTableShowsCarry([{ lines: [{ isCarry: false }] }, { lines: [{ isCarry: true }] }]),
     ).toBe(true);
   });
 });

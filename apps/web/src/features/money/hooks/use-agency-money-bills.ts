@@ -379,9 +379,7 @@ export function useAgencyMoneyBills({
   ]);
 
   const visibleDetailSelection =
-    detailSelection?.kind === "salary-pool" && !visibleSalaryPool
-      ? null
-      : detailSelection;
+    detailSelection?.kind === "salary-pool" && !visibleSalaryPool ? null : detailSelection;
 
   const detailRow = useMemo<MoneyBillPersonGroup | MoneyBillAdjustmentRow | null>(() => {
     if (!visibleDetailSelection || visibleDetailSelection.kind === "salary-pool") return null;
