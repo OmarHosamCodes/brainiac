@@ -5,7 +5,6 @@ import {
   agencyErrorPanelClass,
   agencyFocusRingClass,
   agencyInputPlaceholderClass,
-  agencyMetricClass,
   agencyPanelClass,
 } from "@/features/shared/agency-ui";
 import {
@@ -22,6 +21,7 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Skeleton } from "@/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
   DropdownMenu,
@@ -31,7 +31,6 @@ import {
 } from "@/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-import { MoneyListGhostPreview } from "./agency-money-shared-view";
 import { MoneyExpensesPanelContent } from "./agency-money-expenses-section-view";
 import { AgencyMoneyBillDetailSheet } from "./agency-money-bill-detail-sheet-view";
 import { AgencyMoneyBillsDialogs } from "./agency-money-bills-dialogs-view";
@@ -39,7 +38,7 @@ import { AgencyMoneyBillsTablesView } from "./agency-money-bills-tables-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 import {
   moneyPanelHeaderClass,
-  MoneyPanelCount,
+  MoneyPanelMetricBlock,
   MoneyPanelTitleRow,
   MoneyPeriodFxLine,
 } from "./money-panel-chrome";
@@ -73,16 +72,53 @@ function ActiveBillFilterChip({
   );
 }
 
-function BillInstrumentRowSkeleton() {
+function BillsTableSkeleton() {
   return (
-    <li className="flex items-center gap-3 border-t border-default px-3 py-3 first:border-t-0">
-      <Skeleton className="size-9 shrink-0 rounded-xl" />
-      <div className="min-w-0 flex-1 space-y-2">
-        <Skeleton className="h-4 w-40 max-w-full" />
-        <Skeleton className="h-3 w-full max-w-xs" />
+    <div className="px-4 pt-4" aria-busy="true" aria-label="Loading this period's bills">
+      <div className="overflow-x-auto rounded-dense border border-default/55 bg-default">
+        <Table className="min-w-[48rem]">
+          <TableHeader className="border-b border-default/50">
+            <TableRow>
+              {["Party", "Status", "Period", "Total", "Remaining"].map((column) => (
+                <TableHead
+                  key={column}
+                  scope="col"
+                  className={
+                    column === "Total" || column === "Remaining" ? "text-right" : undefined
+                  }
+                >
+                  {column}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 4 }, (_, index) => (
+              <TableRow key={index} className="border-b border-default last:border-b-0">
+                <TableCell>
+                  <div className="flex items-center gap-2.5">
+                    <Skeleton className="size-9 shrink-0 rounded-xl" />
+                    <Skeleton className="h-4 w-32 rounded-md" />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-24 rounded-md" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="ml-auto h-4 w-20 rounded-md" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="ml-auto h-4 w-20 rounded-md" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
-      <Skeleton className="h-10 w-[5.5rem] shrink-0 rounded-lg" />
-    </li>
+    </div>
   );
 }
 
@@ -138,10 +174,6 @@ function BillsSection({
   const isExpensesParty = bills.partyFilter === "expenses";
   const panelTitle = isExpensesParty ? "Expenses" : "Bills";
   const expensesPanel = bills.expensesPanel;
-  const expenseCountLabel =
-    expensesPanel.strip.itemCount === 1 ? "1 expense" : `${expensesPanel.strip.itemCount} expenses`;
-  const billCountLabel = `${bills.billCount} ${bills.billCount === 1 ? "bill" : "bills"}`;
-  const countLabel = isExpensesParty ? expenseCountLabel : billCountLabel;
   const hasStatusFilters = !isExpensesParty && bills.statusOptions.length > 0;
   const hasExpenseFilters = isExpensesParty && expensesPanel.status === "ready";
   const showExternalClientFilter =
@@ -175,6 +207,8 @@ function BillsSection({
   const insight = isExpensesParty
     ? expensesPanel.strip.insight
     : moneyBillComposeListInsight(bills.rows);
+  const metricLabel = isExpensesParty ? "Period spend" : "Remaining";
+  const metricValue = isExpensesParty ? expensesPanel.periodSpendLabel : bills.remainingLabel;
 
   return (
     <section
@@ -202,81 +236,7 @@ function BillsSection({
                 )}
               />
             </div>
-            {hasStatusFilters ? (
-              <>
-                <label htmlFor="money-bills-status-filter" className="sr-only">
-                  Status
-                </label>
-                <Select
-                  value={bills.statusFilter ?? "all"}
-                  onValueChange={(value) => {
-                    if (value === "all") {
-                      bills.onClearStatusFilter();
-                      return;
-                    }
-                    bills.onStatusFilterChange(value as MoneyBillsStatusFilter);
-                  }}
-                >
-                  <SelectTrigger
-                    id="money-bills-status-filter"
-                    size="sm"
-                    className="shrink-0 bg-default"
-                  >
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent align="end">
-                    <SelectItem value="all">All statuses</SelectItem>
-                    {bills.statusOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            ) : null}
-            {hasExpenseFilters ? (
-              <>
-                <label htmlFor="money-expenses-filter" className="sr-only">
-                  Expense filter
-                </label>
-                <Select
-                  value={expensesPanel.strip.filter}
-                  onValueChange={(value) =>
-                    expensesPanel.strip.onFilterChange(value as typeof expensesPanel.strip.filter)
-                  }
-                >
-                  <SelectTrigger
-                    id="money-expenses-filter"
-                    size="sm"
-                    className="shrink-0 bg-default"
-                  >
-                    <SelectValue placeholder="All expenses" />
-                  </SelectTrigger>
-                  <SelectContent align="end">
-                    {expensesPanel.strip.filterOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </>
-            ) : null}
           </div>
-          {isExpensesParty ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-10 rounded-lg px-2 text-xs text-muted sm:h-8"
-              onClick={() => expensesPanel.details.onOpenChange(true)}
-            >
-              All expenses
-            </Button>
-          ) : (
-            <MoneyPanelCount>{countLabel}</MoneyPanelCount>
-          )}
           <MoneyBillsCreateMenu
             onOpenInvoice={bills.createMenu.onOpenInvoice}
             onOpenAdjustment={bills.createMenu.onOpenAdjustment}
@@ -291,85 +251,102 @@ function BillsSection({
           onApplyCurrent={periodFx.onApplyCurrent}
         />
 
-        <div className="overflow-x-auto">
-          <Tabs
-            value={bills.partyFilter}
-            onValueChange={(value) => bills.onPartyFilterChange(value as MoneyBillsPartyFilter)}
-          >
-            <TabsList aria-label="Bill party" className="min-w-max">
-              {bills.partyOptions.map((option) => (
-                <TabsTrigger key={option.id} value={option.id} className="px-3 text-xs">
-                  {option.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {(isExpensesParty && expensesPanel.periodSpendLabel) ||
-        (!isExpensesParty && bills.remainingLabel) ||
-        insight ? (
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1">
-            {isExpensesParty && expensesPanel.periodSpendLabel ? (
-              <div className="flex min-w-0 items-baseline gap-2">
-                <span className="text-xs text-muted">Period spend</span>
-                <span
-                  className={cn(
-                    agencyMetricClass,
-                    "font-mono text-sm font-semibold tabular-nums text-highlighted",
-                  )}
-                >
-                  {expensesPanel.periodSpendLabel}
-                </span>
-              </div>
-            ) : !isExpensesParty && bills.remainingLabel ? (
-              <div className="flex min-w-0 items-baseline gap-2">
-                <span className="text-xs text-muted">Remaining</span>
-                <span
-                  className={cn(
-                    agencyMetricClass,
-                    "font-mono text-sm font-semibold tabular-nums text-highlighted",
-                  )}
-                >
-                  {bills.remainingLabel}
-                </span>
-              </div>
-            ) : null}
-            {insight ? (
-              <p className="min-w-0 text-xs text-muted text-balance sm:text-end" aria-live="polite">
-                {insight}
-              </p>
-            ) : null}
-          </div>
+        {metricValue || insight ? (
+          <MoneyPanelMetricBlock label={metricLabel} value={metricValue} hint={insight} />
         ) : null}
 
-        {showExternalClientFilter ? (
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="min-w-0 flex-1 overflow-x-auto">
+            <Tabs
+              value={bills.partyFilter}
+              onValueChange={(value) => bills.onPartyFilterChange(value as MoneyBillsPartyFilter)}
+            >
+              <TabsList aria-label="Bill party" className="min-w-max">
+                {bills.partyOptions.map((option) => (
+                  <TabsTrigger key={option.id} value={option.id} className="px-3 text-xs">
+                    {option.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+          {hasStatusFilters ? (
+            <>
+              <label htmlFor="money-bills-status-filter" className="sr-only">
+                Status
+              </label>
+              <Select
+                value={bills.statusFilter ?? "all"}
+                onValueChange={(value) => {
+                  if (value === "all") {
+                    bills.onClearStatusFilter();
+                    return;
+                  }
+                  bills.onStatusFilterChange(value as MoneyBillsStatusFilter);
+                }}
+              >
+                <SelectTrigger
+                  id="money-bills-status-filter"
+                  size="sm"
+                  className="ml-auto shrink-0 bg-default"
+                >
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="all">All statuses</SelectItem>
+                  {bills.statusOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : null}
+          {hasExpenseFilters ? (
+            <>
+              <label htmlFor="money-expenses-filter" className="sr-only">
+                Expense filter
+              </label>
+              <Select
+                value={expensesPanel.strip.filter}
+                onValueChange={(value) =>
+                  expensesPanel.strip.onFilterChange(value as typeof expensesPanel.strip.filter)
+                }
+              >
+                <SelectTrigger
+                  id="money-expenses-filter"
+                  size="sm"
+                  className="ml-auto shrink-0 bg-default"
+                >
+                  <SelectValue placeholder="All expenses" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  {expensesPanel.strip.filterOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : null}
+          {showExternalClientFilter ? (
             <ActiveBillFilterChip
               label="External"
               clearLabel="Show internal clients too"
               onClear={bills.onClearClientCategoryFilter}
             />
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
-      <div className="relative flex flex-col pb-5">
+      <div className="flex flex-col pb-5">
         {isExpensesParty ? (
           <MoneyExpensesPanelContent panel={expensesPanel} searchTerm={bills.searchTerm} />
         ) : null}
 
-        {!isExpensesParty && bills.isLoading ? (
-          <ul
-            className="mx-4 mt-4 divide-y divide-border overflow-hidden rounded-xl border border-default"
-            aria-busy="true"
-            aria-label="Loading bills"
-          >
-            {[1, 2, 3].map((item) => (
-              <BillInstrumentRowSkeleton key={item} />
-            ))}
-          </ul>
-        ) : null}
+        {!isExpensesParty && bills.isLoading ? <BillsTableSkeleton /> : null}
 
         {!isExpensesParty && bills.isError ? (
           <div className={cn(agencyErrorPanelClass, "m-4")} role="alert">
@@ -405,26 +382,20 @@ function BillsSection({
         ) : null}
 
         {showEmpty ? (
-          <>
-            <div className="px-4 pt-3">
-              <MoneyListGhostPreview />
-            </div>
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-default to-transparent" />
-            <div className="relative z-10 mx-4 mt-1 flex flex-col items-center gap-2 rounded-2xl border border-default bg-default px-5 py-8 text-center">
-              <Receipt className="size-6 text-muted" aria-hidden />
-              <p className="text-sm font-semibold text-highlighted">
-                <AgencySearchHighlight text={bills.emptyCopy.title} query={bills.searchTerm} />
-              </p>
-              <p className="max-w-sm text-xs text-muted text-balance">
-                <AgencySearchHighlight text={bills.emptyCopy.body} query={bills.searchTerm} />
-              </p>
-              {!bills.searchTerm.trim() ? (
-                <Button type="button" size="sm" className="mt-1" onClick={emptyAction.onClick}>
-                  {emptyAction.label}
-                </Button>
-              ) : null}
-            </div>
-          </>
+          <div className="mx-4 mt-4 flex flex-col items-center gap-2 rounded-2xl border border-default bg-default px-5 py-8 text-center">
+            <Receipt className="size-6 text-muted" aria-hidden />
+            <p className="text-sm font-semibold text-highlighted">
+              <AgencySearchHighlight text={bills.emptyCopy.title} query={bills.searchTerm} />
+            </p>
+            <p className="max-w-sm text-xs text-muted text-balance">
+              <AgencySearchHighlight text={bills.emptyCopy.body} query={bills.searchTerm} />
+            </p>
+            {!bills.searchTerm.trim() ? (
+              <Button type="button" size="sm" className="mt-1" onClick={emptyAction.onClick}>
+                {emptyAction.label}
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
