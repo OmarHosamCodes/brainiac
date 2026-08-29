@@ -3,6 +3,7 @@ import {
   applyDurationToDraft,
   applyEndTimeToDraft,
   applyStartTimeToDraft,
+  commitClockLabelToDraft,
   commitDurationToDraft,
   draftSpansNextDay,
   draftToIsoRange,
@@ -231,6 +232,26 @@ describe("time-entry-draft", () => {
     expect(commitDurationToDraft(draft, "abc")).toEqual({
       error: "Invalid duration.",
       revertInput: "00:03:30",
+    });
+  });
+
+  test("commitClockLabelToDraft parses Clockify labels into draft times", () => {
+    const draft: TimeEntryDraft = {
+      ...baseDraft,
+      startTime: "09:00:00",
+      endTime: "10:00:00",
+      durationInput: "01:00:00",
+    };
+    const start = commitClockLabelToDraft(draft, "start", "9:15AM");
+    expect("error" in start).toBe(false);
+    if ("error" in start) return;
+    expect(start.draft.startTime).toBe("09:15:00");
+    expect(start.draft.endTime).toBe("10:00:00");
+
+    const invalid = commitClockLabelToDraft(draft, "end", "bogus");
+    expect(invalid).toEqual({
+      error: "Invalid end time.",
+      revertLabel: "10:00AM",
     });
   });
 });

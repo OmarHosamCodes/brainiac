@@ -38,9 +38,9 @@ import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-t
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
   activeTimerStartToIso,
-  applyEndTimeToDraft,
-  applyStartTimeToDraft,
+  commitClockLabelToDraft,
   createDefaultManualTimeWindow,
+  draftSpansNextDay,
   draftToIsoRange,
   elapsedDurationToStartedAt,
   formatClockTimeLabel,
@@ -122,6 +122,9 @@ export type AgencyTimeTrackerViewModel = {
   mode: AgencyTrackerMode;
   showModeToggle: boolean;
   manualDraft: AgencyManualTimeDraft;
+  manualStartTimeInput: string;
+  manualEndTimeInput: string;
+  manualSpansNextDay: boolean;
   canAddManual: boolean;
   isManualCreatePending: boolean;
   manualError: string | null;
@@ -150,8 +153,11 @@ export type AgencyTimeTrackerViewModel = {
   onStartTimeBlur: () => void;
   onStartTimeKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onModeChange: (mode: AgencyTrackerMode) => void;
-  onManualStartTimeChange: (startTime: string) => void;
-  onManualEndTimeChange: (endTime: string) => void;
+  onManualStartTimeInputChange: (value: string) => void;
+  onManualEndTimeInputChange: (value: string) => void;
+  onManualStartTimeBlur: () => void;
+  onManualEndTimeBlur: () => void;
+  onManualTimeKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onManualDateChange: (date: string) => void;
   onStartTimer: () => void;
   onStopTimer: () => void;
@@ -200,6 +206,12 @@ export function useAgencyTimeTracker({
     const window = createDefaultManualTimeWindow();
     return { date: window.date, startTime: window.startTime, endTime: window.endTime };
   });
+  const [manualStartTimeInput, setManualStartTimeInput] = useState(() =>
+    formatClockTimeLabel(createDefaultManualTimeWindow().startTime),
+  );
+  const [manualEndTimeInput, setManualEndTimeInput] = useState(() =>
+    formatClockTimeLabel(createDefaultManualTimeWindow().endTime),
+  );
   const [descriptionFocused, setDescriptionFocused] = useState(false);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
@@ -498,6 +510,8 @@ export function useAgencyTimeTracker({
 
     const window = createDefaultManualTimeWindow();
     setManualDraft({ date: window.date, startTime: window.startTime, endTime: window.endTime });
+    setManualStartTimeInput(formatClockTimeLabel(window.startTime));
+    setManualEndTimeInput(formatClockTimeLabel(window.endTime));
     setTrackerDescription(teamId, "");
   }
 
@@ -685,48 +699,67 @@ export function useAgencyTimeTracker({
     if (nextMode === "manual") {
       const window = createDefaultManualTimeWindow();
       setManualDraft({ date: window.date, startTime: window.startTime, endTime: window.endTime });
+      setManualStartTimeInput(formatClockTimeLabel(window.startTime));
+      setManualEndTimeInput(formatClockTimeLabel(window.endTime));
     }
     setMode(nextMode);
   }
 
-  function onManualStartTimeChange(startTime: string) {
-    setManualDraft((current) => {
-      const next = applyStartTimeToDraft(
-        {
-          projectId: selectedProjectId,
-          taskId: selectedTaskId,
-          tagIds: selectedTagIds,
-          isBillable,
-          date: current.date,
-          startTime: current.startTime,
-          endTime: current.endTime,
-          durationInput: "",
-          description: timerDescription,
-        },
-        startTime,
-      );
-      return { date: next.date, startTime: next.startTime, endTime: next.endTime };
-    });
+  function applyManualClockDraft(next: TimeEntryDraft) {
+    setManualDraft({ date: next.date, startTime: next.startTime, endTime: next.endTime });
+    setManualStartTimeInput(formatClockTimeLabel(next.startTime));
+    setManualEndTimeInput(formatClockTimeLabel(next.endTime));
   }
 
-  function onManualEndTimeChange(endTime: string) {
-    setManualDraft((current) => {
-      const next = applyEndTimeToDraft(
-        {
-          projectId: selectedProjectId,
-          taskId: selectedTaskId,
-          tagIds: selectedTagIds,
-          isBillable,
-          date: current.date,
-          startTime: current.startTime,
-          endTime: current.endTime,
-          durationInput: "",
-          description: timerDescription,
-        },
-        endTime,
-      );
-      return { date: next.date, startTime: next.startTime, endTime: next.endTime };
-    });
+  function commitManualClockField(field: "start" | "end", rawInput: string) {
+    const result = commitClockLabelToDraft(manualTimeEntryDraft, field, rawInput);
+    if ("error" in result) {
+      if (field === "start") setManualStartTimeInput(result.revertLabel);
+      else setManualEndTimeInput(result.revertLabel);
+      return false;
+    }
+    applyManualClockDraft(result.draft);
+    return true;
+  }
+
+  function onManualStartTimeBlur() {
+    commitManualClockField("start", manualStartTimeInput);
+  }
+
+  function onManualEndTimeBlur() {
+    commitManualClockField("end", manualEndTimeInput);
+  }
+
+  function onManualTimeKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    const field = event.currentTarget.dataset.timeField;
+    if (field !== "start" && field !== "end") return;
+
+    const delta = clockNudgeMinutes(event);
+    if (delta !== null) {
+      event.preventDefault();
+      const currentLabel = field === "start" ? manualStartTimeInput : manualEndTimeInput;
+      const prefer =
+        field === "start"
+          ? meridiemFromDraftTime(manualDraft.startTime)
+          : meridiemFromDraftTime(manualDraft.endTime);
+      const nextLabel = nudgeClockTimeLabel(currentLabel, delta, prefer);
+      if (!nextLabel) return;
+      commitManualClockField(field, nextLabel);
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.currentTarget.blur();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setManualStartTimeInput(formatClockTimeLabel(manualDraft.startTime));
+      setManualEndTimeInput(formatClockTimeLabel(manualDraft.endTime));
+      event.currentTarget.blur();
+    }
   }
 
   function onManualDateChange(date: string) {
@@ -772,6 +805,9 @@ export function useAgencyTimeTracker({
     mode,
     showModeToggle,
     manualDraft,
+    manualStartTimeInput,
+    manualEndTimeInput,
+    manualSpansNextDay: draftSpansNextDay(manualTimeEntryDraft),
     canAddManual,
     isManualCreatePending,
     manualError,
@@ -826,8 +862,11 @@ export function useAgencyTimeTracker({
     onStartTimeBlur,
     onStartTimeKeyDown,
     onModeChange,
-    onManualStartTimeChange,
-    onManualEndTimeChange,
+    onManualStartTimeInputChange: setManualStartTimeInput,
+    onManualEndTimeInputChange: setManualEndTimeInput,
+    onManualStartTimeBlur,
+    onManualEndTimeBlur,
+    onManualTimeKeyDown,
     onManualDateChange,
     onStartTimer: () => void startTimer(),
     onStopTimer: () => void stopTimer(),

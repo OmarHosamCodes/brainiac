@@ -231,6 +231,31 @@ export function applyStartTimeToDraft(draft: TimeEntryDraft, startTime: string):
   return applyEndTimeToDraft({ ...draft, startTime }, draft.endTime);
 }
 
+export type ClockLabelCommitResult =
+  | { draft: TimeEntryDraft }
+  | { error: string; revertLabel: string };
+
+/** Parse a Clockify clock label into start or end, then apply it to the draft. */
+export function commitClockLabelToDraft(
+  draft: TimeEntryDraft,
+  field: "start" | "end",
+  rawInput: string,
+): ClockLabelCommitResult {
+  const currentTime = field === "start" ? draft.startTime : draft.endTime;
+  const parsed = parseClockTimeLabel(rawInput, {
+    preferMeridiem: meridiemFromDraftTime(currentTime),
+  });
+  if (!parsed) {
+    return {
+      error: field === "start" ? "Invalid start time." : "Invalid end time.",
+      revertLabel: formatClockTimeLabel(currentTime),
+    };
+  }
+  const next =
+    field === "start" ? applyStartTimeToDraft(draft, parsed) : applyEndTimeToDraft(draft, parsed);
+  return { draft: next };
+}
+
 export function applyDurationToDraft(draft: TimeEntryDraft, durationInput: string): TimeEntryDraft {
   const seconds = parseDurationInput(durationInput);
   const start = combineDateAndTime(draft.date, draft.startTime);
@@ -348,4 +373,20 @@ if (import.meta.main) {
   console.assert(parseClockTimeLabel("12.48") === "12:48:00");
   console.assert(parseClockTimeLabel("130", { preferMeridiem: "PM" }) === "13:30:00");
   console.assert(parseClockTimeLabel("bogus") === null);
+  const clockCommit = commitClockLabelToDraft(
+    {
+      projectId: "",
+      taskId: "",
+      tagIds: [],
+      isBillable: true,
+      date: "2026-07-06",
+      startTime: "11:00:00",
+      endTime: "12:00:00",
+      durationInput: "",
+      description: "",
+    },
+    "start",
+    "9:15AM",
+  );
+  console.assert(!("error" in clockCommit) && clockCommit.draft.startTime === "09:15:00");
 }

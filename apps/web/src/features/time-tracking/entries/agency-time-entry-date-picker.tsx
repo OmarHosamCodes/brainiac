@@ -1,7 +1,11 @@
 import { CalendarDays } from "lucide-react";
 import { useState } from "react";
 
-import { agencyTimeEntryIconButtonClass } from "@/features/shared/agency-ui";
+import {
+  agencyTimeEntryIconButtonClass,
+  agencyTimeTrackerDateTriggerClass,
+} from "@/features/shared/agency-ui";
+import { Button } from "@/ui/button";
 import { Calendar } from "@/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 
@@ -24,30 +28,35 @@ type AgencyTimeEntryDatePickerProps = {
   date: string;
   disabled?: boolean;
   onDateChange: (value: string) => void;
+  /** When set, render a labeled trigger (tracker "Today") instead of the calendar icon. */
+  label?: string;
 };
 
 export function AgencyTimeEntryDatePicker({
   date,
   disabled = false,
   onDateChange,
+  label,
 }: AgencyTimeEntryDatePickerProps) {
   const [open, setOpen] = useState(false);
   const selectedDate = parseLocalDateKey(date);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(next) => !disabled && setOpen(next)}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
-          className={agencyTimeEntryIconButtonClass}
+          variant="ghost"
+          size={label ? "lg" : "icon"}
           disabled={disabled}
-          aria-label="Entry date"
+          aria-label={label ? `Entry date, ${label}` : "Entry date"}
           aria-expanded={open}
+          className={label ? agencyTimeTrackerDateTriggerClass : agencyTimeEntryIconButtonClass}
         >
-          <CalendarDays className="size-4" aria-hidden />
-        </button>
+          {label ?? <CalendarDays className="size-4" aria-hidden />}
+        </Button>
       </PopoverTrigger>
-      <PopoverContent align="center" className="w-auto p-0">
+      <PopoverContent align="center" className="w-auto p-0" sideOffset={8}>
         <Calendar
           mode="single"
           selected={selectedDate}
