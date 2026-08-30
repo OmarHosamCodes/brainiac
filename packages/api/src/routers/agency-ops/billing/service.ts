@@ -29,6 +29,7 @@ import {
   aggregateExternalBillableIncome,
   convertWinningBillableRate,
   priceClientInvoiceProjects,
+  resolveEffectiveSourceBillableRate,
   type ClientBillableIncomeRow,
 } from "./client-billable-income";
 import { aggregateMemberPayableIncome } from "./member-payable-income";
@@ -835,6 +836,23 @@ async function loadPeriodClientBillableRows(
       agencyCurrency,
       rates,
     );
+    const sourceRate = resolveEffectiveSourceBillableRate(
+      {
+        billableRateAmount: row.taskRateAmount,
+        sourceBillableRateAmount: row.taskSourceBillableRateAmount,
+        currency: row.taskCurrency,
+      },
+      {
+        billableRateAmount: row.projectRateAmount,
+        sourceBillableRateAmount: row.projectSourceBillableRateAmount,
+        currency: row.projectCurrency,
+      },
+      {
+        billableRateAmount: row.clientRateAmount,
+        sourceBillableRateAmount: row.clientSourceBillableRateAmount,
+        currency: row.clientCurrency,
+      },
+    );
     return {
       clientId: row.clientId,
       clientName: row.clientName,
@@ -845,6 +863,8 @@ async function loadPeriodClientBillableRows(
       taskRateAmount: agencyRate,
       projectRateAmount: null,
       clientRateAmount: null,
+      sourceRateAmount: sourceRate.rateAmount,
+      sourceRateCurrency: sourceRate.currency,
     };
   });
 }
@@ -944,6 +964,8 @@ export async function listPeriodBillActivity(
     clientName: client.clientName,
     durationSeconds: client.durationSeconds,
     billableAmount: client.billableAmount,
+    sourceBillableAmount: client.sourceBillableAmount,
+    rateCurrency: client.rateCurrency,
     wasteAmount: client.wasteAmount,
   }));
 

@@ -5,6 +5,8 @@ export type PeriodBillClientActivity = {
   clientName: string;
   durationSeconds: number;
   billableAmount: number;
+  sourceBillableAmount: number;
+  rateCurrency: string;
   wasteAmount: number;
 };
 
@@ -23,6 +25,8 @@ export function aggregatePeriodClientActivity(
     clientName: string;
     durationSeconds: number;
     billableAmount?: number;
+    sourceBillableAmount?: number;
+    rateCurrency?: string;
     wasteAmount?: number;
   }>,
 ): PeriodBillClientActivity[] {
@@ -32,6 +36,7 @@ export function aggregatePeriodClientActivity(
     if (existing) {
       existing.durationSeconds += row.durationSeconds;
       existing.billableAmount += row.billableAmount ?? 0;
+      existing.sourceBillableAmount += row.sourceBillableAmount ?? 0;
       existing.wasteAmount += row.wasteAmount ?? 0;
     } else {
       byClient.set(row.clientId, {
@@ -39,6 +44,8 @@ export function aggregatePeriodClientActivity(
         clientName: row.clientName,
         durationSeconds: row.durationSeconds,
         billableAmount: row.billableAmount ?? 0,
+        sourceBillableAmount: row.sourceBillableAmount ?? 0,
+        rateCurrency: (row.rateCurrency ?? "USD").toUpperCase(),
         wasteAmount: row.wasteAmount ?? 0,
       });
     }

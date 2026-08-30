@@ -16,6 +16,8 @@ export type MoneyCarryReadySlice = MoneyCarryPeriod & {
   partyId: string;
   partyName: string;
   amount: number;
+  sourceAmount: number;
+  rateCurrency: string;
   durationSeconds: number;
   wasteAmount: number;
 };
@@ -30,6 +32,8 @@ export type MoneyCarryClientObligation =
       periodEnd: string;
       isCarry: boolean;
       amount: number;
+      sourceAmount: number;
+      rateCurrency: string;
       receivedAmount: number;
       remainingAmount: number;
       wasteAmount: number;
@@ -45,6 +49,8 @@ export type MoneyCarryClientObligation =
       periodEnd: string;
       isCarry: boolean;
       amount: number;
+      sourceAmount: number;
+      rateCurrency: string;
       receivedAmount: 0;
       remainingAmount: number;
       wasteAmount: number;
@@ -144,6 +150,8 @@ export function buildClientObligations(input: {
     periodStart: string;
     periodEnd: string;
     amount: number;
+    sourceAmount: number;
+    rateCurrency: string;
     receivedAmount: number;
     remainingAmount: number;
   }>;
@@ -153,6 +161,8 @@ export function buildClientObligations(input: {
     periodStart: string;
     periodEnd: string;
     amount: number;
+    sourceAmount: number;
+    rateCurrency: string;
     durationSeconds: number;
     wasteAmount: number;
   }>;
@@ -179,6 +189,8 @@ export function buildClientObligations(input: {
       periodEnd: invoice.periodEnd,
       isCarry: isCarry && !inCurrent,
       amount: invoice.amount,
+      sourceAmount: invoice.sourceAmount,
+      rateCurrency: invoice.rateCurrency,
       receivedAmount: invoice.receivedAmount,
       remainingAmount: invoice.remainingAmount,
       wasteAmount: 0,
@@ -205,6 +217,20 @@ export function buildClientObligations(input: {
     const readyAmount = Math.max(0, slice.amount - invoicedAmount);
     if (readyAmount <= 0) continue;
 
+    const invoicedSourceAmount = input.invoices
+      .filter(
+        (invoice) =>
+          invoice.clientId === slice.clientId &&
+          periodsOverlap(
+            invoice.periodStart,
+            invoice.periodEnd,
+            slice.periodStart,
+            slice.periodEnd,
+          ),
+      )
+      .reduce((sum, invoice) => sum + invoice.sourceAmount, 0);
+    const readySourceAmount = Math.max(0, slice.sourceAmount - invoicedSourceAmount);
+
     const isCarry = periodEndsBefore(slice.periodEnd, input.rangeStart);
     const inCurrent = periodsOverlap(
       slice.periodStart,
@@ -223,6 +249,8 @@ export function buildClientObligations(input: {
       periodEnd: slice.periodEnd,
       isCarry,
       amount: readyAmount,
+      sourceAmount: readySourceAmount,
+      rateCurrency: slice.rateCurrency,
       receivedAmount: 0,
       remainingAmount: readyAmount,
       wasteAmount: slice.wasteAmount,

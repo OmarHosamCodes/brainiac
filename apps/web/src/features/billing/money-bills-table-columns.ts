@@ -34,6 +34,32 @@ export function moneyBillTableShowsWaste(rows: ReadonlyArray<{ wasteAmount: numb
   return rows.some((row) => row.wasteAmount > 0);
 }
 
+export function moneyBillTableShowsHours(
+  groups: ReadonlyArray<{ durationSeconds: number }>,
+): boolean {
+  return groups.some((group) => group.durationSeconds > 0);
+}
+
+export function moneyBillTableShowsRateTotal(
+  party: "client" | "team",
+  groups: ReadonlyArray<{ sourceAmount: number; rateCurrency: string; currency: string }>,
+): boolean {
+  if (party !== "client") return false;
+  return groups.some(
+    (group) => group.sourceAmount > 0 || group.rateCurrency !== group.currency,
+  );
+}
+
+export function moneyBillRateTotalHeading(
+  groups: ReadonlyArray<{ rateCurrency: string }>,
+): string {
+  const currencies = [...new Set(groups.map((group) => group.rateCurrency))];
+  if (currencies.length === 1) {
+    return currencies[0] ?? "Rate total";
+  }
+  return "Rate total";
+}
+
 export function moneyBillTableShowsCarry(
   groups: ReadonlyArray<{ lines: ReadonlyArray<{ isCarry: boolean }> }>,
 ): boolean {

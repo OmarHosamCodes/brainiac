@@ -6,6 +6,7 @@ import {
   convertWinningBillableRate,
   priceClientInvoiceProjects,
   resolveEffectiveBillableRate,
+  resolveEffectiveSourceBillableRate,
 } from "./client-billable-income";
 
 describe("amountFromDurationAndRate", () => {
@@ -25,6 +26,10 @@ describe("resolveEffectiveBillableRate", () => {
 
   test("inherits client rate when task and project are null", () => {
     expect(resolveEffectiveBillableRate(null, null, 10_000)).toBe(10_000);
+  });
+
+  test("treats zero task override as inherit", () => {
+    expect(resolveEffectiveBillableRate(0, null, 10_000)).toBe(10_000);
   });
 });
 
@@ -112,6 +117,50 @@ describe("convertWinningBillableRate", () => {
   });
 });
 
+describe("resolveEffectiveSourceBillableRate", () => {
+  test("returns source rate and currency from the winning catalog level", () => {
+    expect(
+      resolveEffectiveSourceBillableRate(
+        { billableRateAmount: null },
+        { billableRateAmount: null },
+        {
+          billableRateAmount: 101_880,
+          sourceBillableRateAmount: 2_000,
+          currency: "usd",
+        },
+      ),
+    ).toEqual({ rateAmount: 2_000, currency: "USD" });
+  });
+
+  test("inherits client source when task override is zero", () => {
+    expect(
+      resolveEffectiveSourceBillableRate(
+        { billableRateAmount: 0, sourceBillableRateAmount: 0, currency: "USD" },
+        { billableRateAmount: null },
+        {
+          billableRateAmount: 101_880,
+          sourceBillableRateAmount: 2_000,
+          currency: "USD",
+        },
+      ),
+    ).toEqual({ rateAmount: 2_000, currency: "USD" });
+  });
+
+  test("falls back to billable amount when source is zero", () => {
+    expect(
+      resolveEffectiveSourceBillableRate(
+        { billableRateAmount: null },
+        { billableRateAmount: null },
+        {
+          billableRateAmount: 10_000,
+          sourceBillableRateAmount: 0,
+          currency: "EGP",
+        },
+      ),
+    ).toEqual({ rateAmount: 10_000, currency: "EGP" });
+  });
+});
+
 describe("aggregateExternalBillableIncome", () => {
   test("sums external non-waste into pool and keeps waste separate", () => {
     const result = aggregateExternalBillableIncome([
@@ -154,6 +203,7 @@ describe("aggregateExternalBillableIncome", () => {
     expect(result.clients).toHaveLength(2);
     const acme = result.clients.find((c) => c.clientId === "c1");
     expect(acme?.billableAmount).toBe(10_000);
+    expect(acme?.sourceBillableAmount).toBe(10_000);
     expect(acme?.wasteAmount).toBe(5_000);
     expect(acme?.durationSeconds).toBe(3600);
   });

@@ -19,6 +19,8 @@ describe("aggregatePeriodClientActivity", () => {
         clientName: "Acme",
         durationSeconds: 75,
         billableAmount: 0,
+        sourceBillableAmount: 0,
+        rateCurrency: "USD",
         wasteAmount: 0,
       },
       {
@@ -26,6 +28,8 @@ describe("aggregatePeriodClientActivity", () => {
         clientName: "Beta",
         durationSeconds: 100,
         billableAmount: 0,
+        sourceBillableAmount: 0,
+        rateCurrency: "USD",
         wasteAmount: 0,
       },
     ]);
@@ -59,6 +63,8 @@ describe("uninvoicedPeriodClients", () => {
         clientName: "Acme",
         durationSeconds: 100,
         billableAmount: 1,
+        sourceBillableAmount: 0,
+        rateCurrency: "USD",
         wasteAmount: 0,
       },
       {
@@ -66,6 +72,8 @@ describe("uninvoicedPeriodClients", () => {
         clientName: "Beta",
         durationSeconds: 50,
         billableAmount: 1,
+        sourceBillableAmount: 0,
+        rateCurrency: "USD",
         wasteAmount: 0,
       },
     ];

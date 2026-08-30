@@ -13,16 +13,63 @@ export function amountFromDurationAndRate(durationSeconds: number, rateAmount: n
   return Math.round((durationSeconds / 3600) * rateAmount);
 }
 
+function hasPositiveBillableRate(amount: number | null | undefined): amount is number {
+  return amount != null && amount > 0;
+}
+
+/** Task → project → client; zero amounts inherit (only null/0 are skipped). */
+export function pickWinningBillableRateLevel(
+  task: BillableRateLevel,
+  project: BillableRateLevel,
+  client: BillableRateLevel,
+): BillableRateLevel | null {
+  if (hasPositiveBillableRate(task.billableRateAmount)) return task;
+  if (hasPositiveBillableRate(project.billableRateAmount)) return project;
+  if (hasPositiveBillableRate(client.billableRateAmount)) return client;
+  return null;
+}
+
+/** Source rate when set; otherwise the stored catalog amount. Zero source inherits billable. */
+export function catalogSourceRateAmount(
+  sourceBillableRateAmount: number | null | undefined,
+  billableRateAmount: number | null | undefined,
+): number | null {
+  if (hasPositiveBillableRate(sourceBillableRateAmount)) return sourceBillableRateAmount;
+  if (hasPositiveBillableRate(billableRateAmount)) return billableRateAmount;
+  return null;
+}
+
 /** Task override when set; else project; else inherit the client catalog rate. */
 export function resolveEffectiveBillableRate(
   taskRateAmount: number | null,
   projectRateAmount: number | null,
   clientRateAmount: number | null,
 ): number | null {
-  if (taskRateAmount != null) return taskRateAmount;
-  if (projectRateAmount != null) return projectRateAmount;
-  if (clientRateAmount != null) return clientRateAmount;
+  if (hasPositiveBillableRate(taskRateAmount)) return taskRateAmount;
+  if (hasPositiveBillableRate(projectRateAmount)) return projectRateAmount;
+  if (hasPositiveBillableRate(clientRateAmount)) return clientRateAmount;
   return null;
+}
+
+/** Winning catalog rate in source currency (task → project → client). */
+export function resolveEffectiveSourceBillableRate(
+  task: BillableRateLevel,
+  project: BillableRateLevel,
+  client: BillableRateLevel,
+): { rateAmount: number | null; currency: string } {
+  const winning = pickWinningBillableRateLevel(task, project, client);
+  const fallbackCurrency = (client.currency || project.currency || "USD").toUpperCase();
+  if (!winning) {
+    return { rateAmount: null, currency: fallbackCurrency };
+  }
+  const rateAmount = catalogSourceRateAmount(
+    winning.sourceBillableRateAmount,
+    winning.billableRateAmount,
+  );
+  return {
+    rateAmount,
+    currency: (winning.currency || fallbackCurrency).toUpperCase(),
+  };
 }
 
 export type BillableRateLevel = {
@@ -43,16 +90,12 @@ export function convertWinningBillableRate(
   agencyCurrency: string,
   rates: readonly MoneyFxRateRow[],
 ): number | null {
-  const winning =
-    task.billableRateAmount != null
-      ? task
-      : project.billableRateAmount != null
-        ? project
-        : client.billableRateAmount != null
-          ? client
-          : null;
-  if (!winning || winning.billableRateAmount == null) return null;
-  if (winning.sourceBillableRateAmount != null && winning.currency) {
+  const winning = pickWinningBillableRateLevel(task, project, client);
+  if (!winning || !hasPositiveBillableRate(winning.billableRateAmount)) return null;
+  if (
+    hasPositiveBillableRate(winning.sourceBillableRateAmount) &&
+    winning.currency
+  ) {
     return resolveMoneyValue({
       sourceAmount: winning.sourceBillableRateAmount,
       sourceCurrency: winning.currency,
@@ -77,6 +120,8 @@ export type ClientBillableIncomeRow = {
   taskRateAmount?: number | null;
   projectRateAmount: number | null;
   clientRateAmount: number | null;
+  sourceRateAmount?: number | null;
+  sourceRateCurrency?: string | null;
 };
 
 export type ClientMoneyActivity = {
@@ -86,6 +131,9 @@ export type ClientMoneyActivity = {
   /** Non-waste seconds. */
   durationSeconds: number;
   billableAmount: number;
+  /** Billable total priced in the winning catalog source currency. */
+  sourceBillableAmount: number;
+  rateCurrency: string;
   wasteAmount: number;
 };
 
@@ -182,10 +230,14 @@ export function priceClientInvoiceProjects(
 export function aggregateExternalBillableIncome(
   rows: ReadonlyArray<ClientBillableIncomeRow>,
 ): ExternalBillablePool {
-  type ClientBucket = Omit<ClientMoneyActivity, "billableAmount" | "wasteAmount"> & {
+  type ClientBucket = Omit<
+    ClientMoneyActivity,
+    "billableAmount" | "sourceBillableAmount" | "wasteAmount"
+  > & {
     billableSecondsByBucket: Map<string, number>;
     wasteSecondsByBucket: Map<string, number>;
     effectiveRateByBucket: Map<string, number | null>;
+    sourceRateByBucket: Map<string, number | null>;
   };
   const byClient = new Map<string, ClientBucket>();
 
@@ -201,15 +253,23 @@ export function aggregateExternalBillableIncome(
       clientName: row.clientName,
       category: row.category,
       durationSeconds: 0,
+      rateCurrency: (row.sourceRateCurrency || "USD").toUpperCase(),
       billableSecondsByBucket: new Map<string, number>(),
       wasteSecondsByBucket: new Map<string, number>(),
       effectiveRateByBucket: new Map<string, number | null>(),
+      sourceRateByBucket: new Map<string, number | null>(),
     };
     const secondsByBucket = row.isWaste
       ? existing.wasteSecondsByBucket
       : existing.billableSecondsByBucket;
     secondsByBucket.set(bucketKey, (secondsByBucket.get(bucketKey) ?? 0) + row.durationSeconds);
     existing.effectiveRateByBucket.set(bucketKey, effectiveRate);
+    const nextSourceRate = row.sourceRateAmount;
+    if (hasPositiveBillableRate(nextSourceRate)) {
+      existing.sourceRateByBucket.set(bucketKey, nextSourceRate);
+    } else if (!existing.sourceRateByBucket.has(bucketKey)) {
+      existing.sourceRateByBucket.set(bucketKey, nextSourceRate ?? null);
+    }
 
     if (!row.isWaste) {
       existing.durationSeconds += row.durationSeconds;
@@ -223,12 +283,22 @@ export function aggregateExternalBillableIncome(
         billableSecondsByBucket,
         wasteSecondsByBucket,
         effectiveRateByBucket,
+        sourceRateByBucket,
         ...client
       }): ClientMoneyActivity => ({
         ...client,
         billableAmount: [...billableSecondsByBucket.entries()].reduce(
           (total, [bucketKey, seconds]) => {
             const rate = effectiveRateByBucket.get(bucketKey) ?? 0;
+            return total + amountFromDurationAndRate(seconds, rate);
+          },
+          0,
+        ),
+        sourceBillableAmount: [...billableSecondsByBucket.entries()].reduce(
+          (total, [bucketKey, seconds]) => {
+            const sourceRate = sourceRateByBucket.get(bucketKey);
+            const rate =
+              hasPositiveBillableRate(sourceRate) ? sourceRate : (effectiveRateByBucket.get(bucketKey) ?? 0);
             return total + amountFromDurationAndRate(seconds, rate);
           },
           0,

@@ -18,6 +18,8 @@ export type MoneyObligationClientSource = {
   periodEnd: string;
   isCarry: boolean;
   amount: number;
+  sourceAmount: number;
+  rateCurrency: string;
   receivedAmount: number;
   remainingAmount: number;
   wasteAmount: number;
@@ -63,12 +65,16 @@ export type MoneyBillObligationLine = {
   subtitle: string;
   statusLabel: string;
   totalCents: number;
+  sourceAmount: number;
+  rateCurrency: string;
   receivedAmount: number;
   remainingAmount: number;
   wasteAmount: number;
+  durationSeconds: number;
   openCents: number;
   currency: string;
   totalLabel: string;
+  sourceTotalLabel: string;
   receivedLabel: string;
   remainingLabel: string;
   wasteLabel: string;
@@ -91,12 +97,17 @@ export type MoneyBillPersonGroup = {
   userAvatar?: string | null;
   lines: MoneyBillObligationLine[];
   totalCents: number;
+  sourceAmount: number;
+  rateCurrency: string;
+  durationSeconds: number;
   receivedAmount: number;
   remainingAmount: number;
   wasteAmount: number;
   openCents: number;
   currency: string;
   totalLabel: string;
+  sourceTotalLabel: string;
+  hoursLabel: string;
   receivedLabel: string;
   remainingLabel: string;
   wasteLabel: string;
@@ -172,12 +183,16 @@ export function moneyBillLineFromClientObligation(
     subtitle: subtitleParts.join(" · "),
     statusLabel,
     totalCents,
+    sourceAmount: source.sourceAmount,
+    rateCurrency: source.rateCurrency,
     receivedAmount,
     remainingAmount,
     wasteAmount,
+    durationSeconds: source.durationSeconds,
     openCents,
     currency,
     totalLabel: formatMoneyAmount(totalCents, currency),
+    sourceTotalLabel: formatMoneyAmount(source.sourceAmount, source.rateCurrency),
     receivedLabel: formatMoneyAmount(receivedAmount, currency),
     remainingLabel: formatMoneyAmount(remainingAmount, currency),
     wasteLabel: formatMoneyAmount(wasteAmount, currency),
@@ -220,12 +235,16 @@ export function moneyBillLineFromMemberObligation(
     subtitle: subtitleParts.join(" · "),
     statusLabel,
     totalCents,
+    sourceAmount: totalCents,
+    rateCurrency: currency,
     receivedAmount,
     remainingAmount,
     wasteAmount,
+    durationSeconds: source.durationSeconds,
     openCents,
     currency,
     totalLabel: formatMoneyAmount(totalCents, currency),
+    sourceTotalLabel: formatMoneyAmount(totalCents, currency),
     receivedLabel: formatMoneyAmount(receivedAmount, currency),
     remainingLabel: formatMoneyAmount(remainingAmount, currency),
     wasteLabel: formatMoneyAmount(wasteAmount, currency),
@@ -287,7 +306,10 @@ export function buildMoneyBillPersonGroups(input: {
     for (const [clientId, lines] of byClient) {
       if (lines.length === 0) continue;
       const currency = lines[0]?.currency ?? "USD";
+      const rateCurrency = lines[0]?.rateCurrency ?? currency;
       const totalCents = lines.reduce((sum, line) => sum + line.totalCents, 0);
+      const sourceAmount = lines.reduce((sum, line) => sum + line.sourceAmount, 0);
+      const durationSeconds = lines.reduce((sum, line) => sum + line.durationSeconds, 0);
       const receivedAmount = lines.reduce((sum, line) => sum + line.receivedAmount, 0);
       const remainingAmount = lines.reduce((sum, line) => sum + line.remainingAmount, 0);
       const wasteAmount = lines.reduce((sum, line) => sum + line.wasteAmount, 0);
@@ -305,12 +327,17 @@ export function buildMoneyBillPersonGroups(input: {
         clientId,
         lines,
         totalCents,
+        sourceAmount,
+        rateCurrency,
+        durationSeconds,
         receivedAmount,
         remainingAmount,
         wasteAmount,
         openCents,
         currency,
         totalLabel: formatMoneyAmount(totalCents, currency),
+        sourceTotalLabel: formatMoneyAmount(sourceAmount, rateCurrency),
+        hoursLabel: formatDuration(durationSeconds, "units"),
         receivedLabel: formatMoneyAmount(receivedAmount, currency),
         remainingLabel: formatMoneyAmount(remainingAmount, currency),
         wasteLabel: formatMoneyAmount(wasteAmount, currency),
@@ -333,6 +360,8 @@ export function buildMoneyBillPersonGroups(input: {
       if (lines.length === 0) continue;
       const currency = lines[0]?.currency ?? "USD";
       const totalCents = lines.reduce((sum, line) => sum + line.totalCents, 0);
+      const sourceAmount = totalCents;
+      const durationSeconds = lines.reduce((sum, line) => sum + line.durationSeconds, 0);
       const receivedAmount = lines.reduce((sum, line) => sum + line.receivedAmount, 0);
       const remainingAmount = lines.reduce((sum, line) => sum + line.remainingAmount, 0);
       const wasteAmount = lines.reduce((sum, line) => sum + line.wasteAmount, 0);
@@ -347,12 +376,17 @@ export function buildMoneyBillPersonGroups(input: {
         userAvatar: lines[0]?.userAvatar ?? null,
         lines,
         totalCents,
+        sourceAmount,
+        rateCurrency: currency,
+        durationSeconds,
         receivedAmount,
         remainingAmount,
         wasteAmount,
         openCents,
         currency,
         totalLabel: formatMoneyAmount(totalCents, currency),
+        sourceTotalLabel: formatMoneyAmount(sourceAmount, currency),
+        hoursLabel: formatDuration(durationSeconds, "units"),
         receivedLabel: formatMoneyAmount(receivedAmount, currency),
         remainingLabel: formatMoneyAmount(remainingAmount, currency),
         wasteLabel: formatMoneyAmount(wasteAmount, currency),

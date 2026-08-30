@@ -848,6 +848,7 @@ export async function listPeriodMoneyObligations(
 
   const invoices = invoiceRows.map((row) => {
     const receivedAmount = row.invoice.receivedAmount ?? 0;
+    const sourceAmount = row.invoice.sourceAmount ?? row.invoice.amount;
     return {
       id: row.invoice.id,
       clientId: row.invoice.clientId,
@@ -856,6 +857,8 @@ export async function listPeriodMoneyObligations(
       periodStart: row.invoice.periodStart.toISOString(),
       periodEnd: row.invoice.periodEnd.toISOString(),
       amount: row.invoice.amount,
+      sourceAmount,
+      rateCurrency: row.invoice.currency.toUpperCase(),
       receivedAmount,
       remainingAmount: invoiceRemainingAmount(row.invoice.amount, receivedAmount),
     };
@@ -886,6 +889,8 @@ export async function listPeriodMoneyObligations(
       periodStart: rangeStartIso,
       periodEnd: rangeEndIso,
       amount: c.billableAmount,
+      sourceAmount: c.sourceBillableAmount,
+      rateCurrency: c.rateCurrency,
       durationSeconds: c.durationSeconds,
       wasteAmount: c.wasteAmount,
     })),
@@ -895,6 +900,8 @@ export async function listPeriodMoneyObligations(
       periodStart: lookbackStartIso,
       periodEnd: priorEndIso,
       amount: c.billableAmount,
+      sourceAmount: c.sourceBillableAmount,
+      rateCurrency: c.rateCurrency,
       durationSeconds: c.durationSeconds,
       wasteAmount: c.wasteAmount,
     })),

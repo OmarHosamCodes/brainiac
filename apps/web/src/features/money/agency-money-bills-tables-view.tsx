@@ -11,6 +11,7 @@ import {
   moneyBillGroupSettleLabel,
   moneyBillGroupStatusLabel,
   moneyBillGroupPeriodLabel,
+  moneyBillRateTotalHeading,
   moneyBillSalaryPoolSettleLabel,
   moneyBillStatusBadgeVariant,
   moneyBillTableShowsCarry,
@@ -76,9 +77,14 @@ function BillsTableHeader({ columns }: { columns: string[] }) {
             className={
               column === "Actions"
                 ? "text-right"
-                : ["Total", "Received", "Paid", "Waste", "Remaining", "Amount"].includes(column)
+                : ["Total", "Received", "Paid", "Waste", "Remaining", "Amount", "Rate total"].includes(
+                      column,
+                    ) ||
+                    /^[A-Z]{3}$/.test(column)
                   ? "w-32 text-right"
-                  : undefined
+                  : column === "Hours"
+                    ? "w-24 text-right"
+                    : undefined
             }
           >
             {column}
@@ -87,6 +93,10 @@ function BillsTableHeader({ columns }: { columns: string[] }) {
       </TableRow>
     </TableHeader>
   );
+}
+
+function HoursCell({ label }: { label: string }) {
+  return <TableCell className={numericCellClass}>{label}</TableCell>;
 }
 
 function MoneyCell({
@@ -220,6 +230,9 @@ function PersonBillsTable({
   const isTeam = party === "team";
   const showCarry = moneyBillTableShowsCarry(groups);
   const showWaste = moneyBillTableShowsWaste(groups);
+  const showHours = true;
+  const showRateTotal = !isTeam;
+  const rateTotalHeading = moneyBillRateTotalHeading(groups);
   const partyHeading = isTeam ? "Member" : "Party";
   const receivedHeading = isTeam ? "Paid" : "Received";
 
@@ -232,6 +245,8 @@ function PersonBillsTable({
             "Status",
             "Period",
             ...(showCarry ? ["Carry"] : []),
+            ...(showHours ? ["Hours"] : []),
+            ...(showRateTotal ? [rateTotalHeading] : []),
             "Total",
             receivedHeading,
             ...(showWaste ? ["Waste"] : []),
@@ -259,6 +274,8 @@ function PersonBillsTable({
                   <CarryCell group={group} />
                 </TableCell>
               ) : null}
+              {showHours ? <HoursCell label={group.hoursLabel} /> : null}
+              {showRateTotal ? <MoneyCell label={group.sourceTotalLabel} highlighted /> : null}
               <MoneyCell label={group.totalLabel} highlighted />
               <MoneyCell label={group.receivedLabel} />
               {showWaste ? <MoneyCell label={group.wasteLabel} /> : null}
@@ -287,6 +304,8 @@ function PersonBillsTable({
               </TableCell>
               <TableCell />
               {showCarry ? <TableCell /> : null}
+              {showHours ? <TableCell /> : null}
+              {showRateTotal ? <TableCell /> : null}
               <MoneyCell label={salaryPool.pool.totalLabel} highlighted />
               <MoneyCell label={salaryPool.pool.paidLabel} />
               {showWaste ? <TableCell /> : null}
