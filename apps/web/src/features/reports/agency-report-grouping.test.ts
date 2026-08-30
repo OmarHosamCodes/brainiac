@@ -137,12 +137,12 @@ describe("aggregateSimilarReportRows", () => {
     const peeling = rows.find((row) => row.taskTitle === "Peeling");
     expect(peeling?.durationSeconds).toBe(2_700);
     expect(peeling?.entryCount).toBe(2);
-    expect(peeling?.description).toBe("");
+    expect(peeling?.description).toBe("prep · other");
     expect(peeling?.userName).toBe("Multiple");
     expect(peeling?.entries.map((entry) => entry.id).sort()).toEqual(["e1", "e2"]);
   });
 
-  test("mergeSameTaskNames keeps shared description when all entries agree", () => {
+  test("mergeSameTaskNames joins distinct descriptions and dedupes identical ones", () => {
     const rows = aggregateSimilarReportRows(
       [
         makeEntry({
@@ -161,13 +161,20 @@ describe("aggregateSimilarReportRows", () => {
           userName: "Sam",
           durationSeconds: 900,
         }),
+        makeEntry({
+          id: "e3",
+          taskId: "task-c",
+          taskTitle: "Peeling",
+          description: "review",
+          durationSeconds: 300,
+        }),
       ],
       { mergeSameTaskNames: true },
     );
 
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.description).toBe("prep");
-    expect(rows[0]?.entryCount).toBe(2);
+    expect(rows[0]?.description).toBe("prep · review");
+    expect(rows[0]?.entryCount).toBe(3);
   });
 
   test("mergeSameTaskNames keeps description for a single entry", () => {

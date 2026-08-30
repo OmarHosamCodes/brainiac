@@ -142,16 +142,19 @@ function resolveMergedAssignee(entries: AgencyReportEntry[]): { userId: string; 
   return { userId: first.userId, userName: "Multiple" };
 }
 
-/** Shared trimmed description when all entries agree; empty when mixed. */
-export function sharedReportRowDescription(
+/** Join non-empty trimmed descriptions in entry order, unique, with a middle-dot separator. */
+export function joinedReportRowDescriptions(
   entries: readonly Pick<AgencyReportEntry, "description">[],
 ): string {
-  if (entries.length === 0) return "";
-  const first = (entries[0]!.description ?? "").trim();
-  for (let index = 1; index < entries.length; index += 1) {
-    if ((entries[index]!.description ?? "").trim() !== first) return "";
+  const parts: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    const trimmed = (entry.description ?? "").trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    parts.push(trimmed);
   }
-  return first;
+  return parts.join(" · ");
 }
 
 export function aggregateSimilarReportRows(
@@ -198,7 +201,7 @@ export function aggregateSimilarReportRows(
       const assignee = resolveMergedAssignee(aggregated.entries);
       aggregated.userId = assignee.userId;
       aggregated.userName = assignee.userName;
-      aggregated.description = sharedReportRowDescription(aggregated.entries);
+      aggregated.description = joinedReportRowDescriptions(aggregated.entries);
     }
   }
 
