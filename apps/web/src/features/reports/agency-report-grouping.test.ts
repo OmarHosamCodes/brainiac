@@ -138,8 +138,53 @@ describe("aggregateSimilarReportRows", () => {
     expect(peeling?.durationSeconds).toBe(2_700);
     expect(peeling?.entryCount).toBe(2);
     expect(peeling?.description).toBe("prep · other");
-    expect(peeling?.userName).toBe("Multiple");
+    expect(peeling?.userName).toBe("Alex · Sam");
     expect(peeling?.entries.map((entry) => entry.id).sort()).toEqual(["e1", "e2"]);
+  });
+
+  test("mergeSameTaskNames joins distinct assignees and dedupes same person", () => {
+    const rows = aggregateSimilarReportRows(
+      [
+        makeEntry({
+          id: "e1",
+          taskId: "task-a",
+          taskTitle: "Peeling",
+          description: "prep",
+          durationSeconds: 1_800,
+        }),
+        makeEntry({
+          id: "e2",
+          taskId: "task-b",
+          taskTitle: "Peeling",
+          description: "other",
+          userId: "user-2",
+          userName: "Sam",
+          durationSeconds: 900,
+        }),
+        makeEntry({
+          id: "e3",
+          taskId: "task-c",
+          taskTitle: "Peeling",
+          description: "again",
+          userId: "user-2",
+          userName: "Sam",
+          durationSeconds: 300,
+        }),
+        makeEntry({
+          id: "e4",
+          taskId: "task-d",
+          taskTitle: "Peeling",
+          description: "third",
+          userId: "user-3",
+          userName: "Jordan",
+          durationSeconds: 200,
+        }),
+      ],
+      { mergeSameTaskNames: true },
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.userName).toBe("Alex · Sam · Jordan");
   });
 
   test("mergeSameTaskNames joins distinct descriptions and dedupes identical ones", () => {

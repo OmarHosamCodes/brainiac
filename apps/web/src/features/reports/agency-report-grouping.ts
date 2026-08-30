@@ -133,13 +133,25 @@ export function reportRowAggregationKey(
   return [entry.projectId, entry.taskId ?? "", entry.userId, entry.description.trim()].join("\0");
 }
 
-function resolveMergedAssignee(entries: AgencyReportEntry[]): { userId: string; userName: string } {
+/** Join unique assignees in entry order with a middle-dot separator. */
+export function joinedReportRowAssignees(
+  entries: readonly Pick<AgencyReportEntry, "userId" | "userName">[],
+): { userId: string; userName: string } {
   const first = entries[0]!;
-  const uniqueNames = new Set(entries.map((entry) => entry.userName));
-  if (uniqueNames.size <= 1) {
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    if (seen.has(entry.userId)) continue;
+    seen.add(entry.userId);
+    names.push(entry.userName);
+  }
+  if (names.length <= 1) {
     return { userId: first.userId, userName: first.userName };
   }
-  return { userId: first.userId, userName: "Multiple" };
+  return {
+    userId: first.userId,
+    userName: names.join(" · "),
+  };
 }
 
 /** Join non-empty trimmed descriptions in entry order, unique, with a middle-dot separator. */
@@ -198,7 +210,7 @@ export function aggregateSimilarReportRows(
 
   if (mergeSameTaskNames) {
     for (const aggregated of byKey.values()) {
-      const assignee = resolveMergedAssignee(aggregated.entries);
+      const assignee = joinedReportRowAssignees(aggregated.entries);
       aggregated.userId = assignee.userId;
       aggregated.userName = assignee.userName;
       aggregated.description = joinedReportRowDescriptions(aggregated.entries);
