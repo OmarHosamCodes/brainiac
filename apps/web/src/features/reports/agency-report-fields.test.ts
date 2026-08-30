@@ -22,6 +22,8 @@ describe("agency-report-fields", () => {
     expect(serializeReportFieldsParam(["project", "task"])).toBe("project,task");
     expect(areSameReportFieldSets(["project", "task"], ["task", "project"])).toBe(true);
     expect(isReportCreatorSelectionHighlightField("project")).toBe(false);
+    expect(isReportCreatorSelectionHighlightField("from")).toBe(false);
+    expect(isReportCreatorSelectionHighlightField("to")).toBe(false);
     expect(isReportCreatorSelectionHighlightField("task")).toBe(true);
   });
 });

@@ -4,6 +4,7 @@ import {
   formatCompactDateSpan,
   formatRelativeReportTime,
   formatReportHeaderMeta,
+  formatReportPeriodDayMonth,
   getAgencyReportPeriodGroup,
   groupSavedReportsByPeriod,
   sanitizeReportFileName,
@@ -23,6 +24,11 @@ const headerLabelContext = {
 };
 
 describe("agency-report-naming", () => {
+  test("formatReportPeriodDayMonth uses day-first compact labels", () => {
+    expect(formatReportPeriodDayMonth("2026-05-26T00:00:00.000Z")).toBe("26 May");
+    expect(formatReportPeriodDayMonth("2026-06-25T23:59:59.999Z")).toBe("25 Jun");
+  });
+
   test("suggestAgencyReportName", () => {
     expect(
       suggestAgencyReportName(

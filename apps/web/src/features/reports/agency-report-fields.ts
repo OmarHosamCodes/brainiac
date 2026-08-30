@@ -1,4 +1,6 @@
 export const AGENCY_REPORT_FIELDS = [
+  "from",
+  "to",
   "project",
   "task",
   "description",
@@ -9,6 +11,8 @@ export const AGENCY_REPORT_FIELDS = [
 export type AgencyReportFieldId = (typeof AGENCY_REPORT_FIELDS)[number];
 
 export const AGENCY_REPORT_FIELD_LABELS: Record<AgencyReportFieldId, string> = {
+  from: "From",
+  to: "To",
   project: "Project",
   task: "Task",
   description: "Description",
@@ -16,14 +20,24 @@ export const AGENCY_REPORT_FIELD_LABELS: Record<AgencyReportFieldId, string> = {
   assignee: "Assignee",
 };
 
+/** Default Create Report / live Reports columns — period from/to are opt-in. */
+export const AGENCY_REPORT_DEFAULT_FIELDS = [
+  "project",
+  "task",
+  "description",
+  "duration",
+  "assignee",
+] as const satisfies readonly AgencyReportFieldId[];
+
 const fieldIdSet = new Set<string>(AGENCY_REPORT_FIELDS);
+const defaultFieldIdSet = new Set<string>(AGENCY_REPORT_DEFAULT_FIELDS);
 
 export function isAgencyReportFieldId(value: string): value is AgencyReportFieldId {
   return fieldIdSet.has(value);
 }
 
 export function allAgencyReportFieldIds(): AgencyReportFieldId[] {
-  return [...AGENCY_REPORT_FIELDS];
+  return [...AGENCY_REPORT_DEFAULT_FIELDS];
 }
 
 export function areSameReportFieldSets(
@@ -59,7 +73,15 @@ export function isReportFieldVisible(
   return fields.includes(field);
 }
 
-/** Row selection highlight applies to every column except project. */
+/** Row selection highlight applies to every column except project and period. */
 export function isReportCreatorSelectionHighlightField(field: AgencyReportFieldId): boolean {
-  return field !== "project";
+  return field !== "project" && field !== "from" && field !== "to";
+}
+
+export function isAgencyReportPeriodField(field: AgencyReportFieldId): boolean {
+  return field === "from" || field === "to";
+}
+
+export function isAgencyReportDefaultField(field: AgencyReportFieldId): boolean {
+  return defaultFieldIdSet.has(field);
 }

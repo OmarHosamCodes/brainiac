@@ -26,6 +26,7 @@ import {
   type ReportHourClient,
   type ReportHourMetrics,
 } from "@/features/reports/agency-report-hour-metrics";
+import { formatReportPeriodDayMonth } from "@/features/reports/agency-report-naming";
 import { agencyMetricClass } from "@/features/shared/agency-ui";
 import {
   groupEntriesForDisplay,
@@ -42,6 +43,8 @@ import { cn } from "@/lib/utils";
 import { Table, TableCaption, TableHead, TableHeader, TableRow } from "@/ui/table";
 
 const reportCreatorSelectedCellClass = "bg-primary/8 ring-1 ring-inset ring-primary/20";
+const reportPeriodCellClass =
+  "border-r border-default bg-success/10 px-3 py-3 text-center align-middle text-sm font-semibold text-highlighted";
 
 /** Short dim rule between task ↔ description; not a full cell-height border. */
 const reportTaskDescriptionSepClass =
@@ -61,6 +64,8 @@ type AgencyReportCreatorTableProps = {
   clients?: readonly ReportHourClient[];
   visibleFields?: AgencyReportFieldId[];
   mergeSameTaskNames?: boolean;
+  rangeFrom?: string;
+  rangeTo?: string;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onExcludeEntry: (entryId: string) => void;
   onToggleWaste: (entryIds: string[]) => void;
@@ -73,6 +78,8 @@ export function AgencyReportCreatorTable({
   clients = [],
   visibleFields = allAgencyReportFieldIds(),
   mergeSameTaskNames = DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES,
+  rangeFrom,
+  rangeTo,
   onSaveEdit,
   onExcludeEntry,
   onToggleWaste,
@@ -81,134 +88,181 @@ export function AgencyReportCreatorTable({
 }: AgencyReportCreatorTableProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const clientGroups = groupEntriesForDisplay(creator.visibleEntries, { mergeSameTaskNames });
+  const showFrom = isReportFieldVisible(visibleFields, "from") && Boolean(rangeFrom);
+  const showTo = isReportFieldVisible(visibleFields, "to") && Boolean(rangeTo);
   const showProject = isReportFieldVisible(visibleFields, "project");
   const showTask = isReportFieldVisible(visibleFields, "task");
   const showDescription = isReportFieldVisible(visibleFields, "description");
   const showDuration = isReportFieldVisible(visibleFields, "duration");
   const showAssignee = isReportFieldVisible(visibleFields, "assignee");
+  const periodFromLabel = rangeFrom ? formatReportPeriodDayMonth(rangeFrom) : "";
+  const periodToLabel = rangeTo ? formatReportPeriodDayMonth(rangeTo) : "";
 
   return (
     <div className="space-y-6">
-      {clientGroups.map((clientGroup) => (
-        <section key={clientGroup.clientId} className="space-y-2">
-          <div className="space-y-2 px-1">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="text-base font-semibold text-highlighted">{clientGroup.clientName}</h3>
-              <p className="text-xs text-muted">
-                <span className={agencyMetricClass}>
-                  {formatDuration(clientGroup.totalSeconds, "clock")}
-                </span>
-                {" total"}
-              </p>
-            </div>
-            <AgencyReportGroupHourStats
-              metrics={metricsForAggregatedRows(
-                clientGroup.projects.flatMap((project) => project.rows),
-                clients,
-              )}
-            />
-          </div>
-          <div className="overflow-x-auto rounded-dense border border-default/55 bg-default">
-            <Table className="min-w-[40rem]">
-              <TableCaption className="sr-only">
-                Time entries for {clientGroup.clientName}, grouped by project and task
-              </TableCaption>
-              <TableHeader className="border-b border-default/50">
-                <TableRow>
-                  {showProject ? (
-                    <TableHead scope="col" className="w-44">
-                      {AGENCY_REPORT_FIELD_LABELS.project}
-                    </TableHead>
-                  ) : null}
-                  {showTask ? (
-                    <TableHead scope="col" className="min-w-[14rem] w-[22%]">
-                      {AGENCY_REPORT_FIELD_LABELS.task}
-                    </TableHead>
-                  ) : null}
-                  {showDescription ? (
-                    <TableHead scope="col">{AGENCY_REPORT_FIELD_LABELS.description}</TableHead>
-                  ) : null}
-                  <TableHead scope="col" className="w-20">
-                    Waste
-                  </TableHead>
-                  {showDuration ? (
-                    <TableHead scope="col" className="w-28 text-right">
-                      {AGENCY_REPORT_FIELD_LABELS.duration}
-                    </TableHead>
-                  ) : null}
-                  {showAssignee ? (
-                    <TableHead scope="col" className="w-36">
-                      {AGENCY_REPORT_FIELD_LABELS.assignee}
-                    </TableHead>
-                  ) : null}
-                  <TableHead scope="col" className="w-10 px-2">
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <motion.tbody layout={!prefersReducedMotion}>
-                <AnimatePresence initial={false}>
-                  {clientGroup.projects.flatMap((project) => {
-                    const taskStripes = reportSimilarTaskStripeIndexes(project.rows);
-                    const projectHourMetrics = metricsForAggregatedRows(project.rows, clients);
-                    return project.rows.map((row, rowIndex) => {
-                      const activeEntryId =
-                        creator.editingEntryId &&
-                        row.entries.some((entry) => entry.id === creator.editingEntryId)
-                          ? creator.editingEntryId
-                          : creator.selectedEntryId &&
-                              row.entries.some((entry) => entry.id === creator.selectedEntryId)
-                            ? creator.selectedEntryId
-                            : null;
-                      const primaryEntryId = [...row.entries].sort(
-                        (left, right) =>
-                          new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
-                      )[0]?.id;
+      {clientGroups.map((clientGroup) => {
+        const clientRowCount = clientGroup.projects.reduce(
+          (sum, project) => sum + project.rows.length,
+          0,
+        );
 
-                      return (
-                        <ReportCreatorRow
-                          key={row.key}
-                          row={row}
-                          rowIndex={rowIndex}
-                          projectRowSpan={project.rows.length}
-                          showProject={showProject}
-                          showTask={showTask}
-                          showDescription={showDescription}
-                          showDuration={showDuration}
-                          showAssignee={showAssignee}
-                          activeEntryId={activeEntryId}
-                          primaryEntryId={primaryEntryId ?? row.entries[0]?.id ?? ""}
-                          isSelected={row.entries.some(
-                            (entry) => entry.id === creator.selectedEntryId,
-                          )}
-                          isEditing={Boolean(
-                            creator.editingEntryId &&
-                            row.entries.some((entry) => entry.id === creator.editingEntryId),
-                          )}
-                          isSaving={Boolean(activeEntryId && savingEntryId === activeEntryId)}
-                          prefersReducedMotion={prefersReducedMotion}
-                          wastePending={wastePending}
-                          similarTaskStripe={taskStripes[rowIndex] ?? 0}
-                          projectHourMetrics={projectHourMetrics}
-                          onSelectEntry={creator.selectEntry}
-                          onEdit={(entryId) => creator.startEditing(entryId)}
-                          onRemove={onExcludeEntry}
-                          onToggleWaste={onToggleWaste}
-                          onCancelEdit={creator.cancelEditing}
-                          onSaveEdit={(draft) => {
-                            if (!activeEntryId) return Promise.resolve();
-                            return onSaveEdit(activeEntryId, draft);
-                          }}
-                        />
-                      );
-                    });
-                  })}
-                </AnimatePresence>
-              </motion.tbody>
-            </Table>
-          </div>
-        </section>
-      ))}
+        return (
+          <section key={clientGroup.clientId} className="space-y-2">
+            <div className="space-y-2 px-1">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="text-base font-semibold text-highlighted">
+                  {clientGroup.clientName}
+                </h3>
+                <p className="text-xs text-muted">
+                  <span className={agencyMetricClass}>
+                    {formatDuration(clientGroup.totalSeconds, "clock")}
+                  </span>
+                  {" total"}
+                </p>
+              </div>
+              <AgencyReportGroupHourStats
+                metrics={metricsForAggregatedRows(
+                  clientGroup.projects.flatMap((project) => project.rows),
+                  clients,
+                )}
+              />
+            </div>
+            <div className="overflow-x-auto rounded-dense border border-default/55 bg-default">
+              <Table className="min-w-[40rem]">
+                <TableCaption className="sr-only">
+                  Time entries for {clientGroup.clientName}, grouped by project and task
+                </TableCaption>
+                <TableHeader className="border-b border-default/50">
+                  <TableRow>
+                    {showFrom ? (
+                      <TableHead scope="col" className="w-20 text-center">
+                        {AGENCY_REPORT_FIELD_LABELS.from}
+                      </TableHead>
+                    ) : null}
+                    {showTo ? (
+                      <TableHead scope="col" className="w-20 text-center">
+                        {AGENCY_REPORT_FIELD_LABELS.to}
+                      </TableHead>
+                    ) : null}
+                    {showProject ? (
+                      <TableHead scope="col" className="w-44">
+                        {AGENCY_REPORT_FIELD_LABELS.project}
+                      </TableHead>
+                    ) : null}
+                    {showTask ? (
+                      <TableHead scope="col" className="min-w-[14rem] w-[22%]">
+                        {AGENCY_REPORT_FIELD_LABELS.task}
+                      </TableHead>
+                    ) : null}
+                    {showDescription ? (
+                      <TableHead scope="col">{AGENCY_REPORT_FIELD_LABELS.description}</TableHead>
+                    ) : null}
+                    <TableHead scope="col" className="w-20">
+                      Waste
+                    </TableHead>
+                    {showDuration ? (
+                      <TableHead scope="col" className="w-28 text-right">
+                        {AGENCY_REPORT_FIELD_LABELS.duration}
+                      </TableHead>
+                    ) : null}
+                    {showAssignee ? (
+                      <TableHead scope="col" className="w-36">
+                        {AGENCY_REPORT_FIELD_LABELS.assignee}
+                      </TableHead>
+                    ) : null}
+                    <TableHead scope="col" className="w-10 px-2">
+                      <span className="sr-only">Actions</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <motion.tbody layout={!prefersReducedMotion}>
+                  <AnimatePresence initial={false}>
+                    {(() => {
+                      const flatRows = clientGroup.projects.flatMap((project) => {
+                        const taskStripes = reportSimilarTaskStripeIndexes(project.rows);
+                        const projectHourMetrics = metricsForAggregatedRows(project.rows, clients);
+                        return project.rows.map((row, rowIndex) => ({
+                          row,
+                          rowIndex,
+                          projectRowSpan: project.rows.length,
+                          similarTaskStripe: (taskStripes[rowIndex] ?? 0) as 0 | 1,
+                          projectHourMetrics,
+                        }));
+                      });
+
+                      return flatRows.map((item, clientRowIndex) => {
+                        const {
+                          row,
+                          rowIndex,
+                          projectRowSpan,
+                          similarTaskStripe,
+                          projectHourMetrics,
+                        } = item;
+                        const activeEntryId =
+                          creator.editingEntryId &&
+                          row.entries.some((entry) => entry.id === creator.editingEntryId)
+                            ? creator.editingEntryId
+                            : creator.selectedEntryId &&
+                                row.entries.some((entry) => entry.id === creator.selectedEntryId)
+                              ? creator.selectedEntryId
+                              : null;
+                        const primaryEntryId = [...row.entries].sort(
+                          (left, right) =>
+                            new Date(right.startedAt).getTime() -
+                            new Date(left.startedAt).getTime(),
+                        )[0]?.id;
+
+                        return (
+                          <ReportCreatorRow
+                            key={row.key}
+                            row={row}
+                            rowIndex={rowIndex}
+                            clientRowIndex={clientRowIndex}
+                            projectRowSpan={projectRowSpan}
+                            clientRowSpan={clientRowCount}
+                            showFrom={showFrom}
+                            showTo={showTo}
+                            periodFromLabel={periodFromLabel}
+                            periodToLabel={periodToLabel}
+                            showProject={showProject}
+                            showTask={showTask}
+                            showDescription={showDescription}
+                            showDuration={showDuration}
+                            showAssignee={showAssignee}
+                            activeEntryId={activeEntryId}
+                            primaryEntryId={primaryEntryId ?? row.entries[0]?.id ?? ""}
+                            isSelected={row.entries.some(
+                              (entry) => entry.id === creator.selectedEntryId,
+                            )}
+                            isEditing={Boolean(
+                              creator.editingEntryId &&
+                              row.entries.some((entry) => entry.id === creator.editingEntryId),
+                            )}
+                            isSaving={Boolean(activeEntryId && savingEntryId === activeEntryId)}
+                            prefersReducedMotion={prefersReducedMotion}
+                            wastePending={wastePending}
+                            similarTaskStripe={similarTaskStripe}
+                            projectHourMetrics={projectHourMetrics}
+                            onSelectEntry={creator.selectEntry}
+                            onEdit={(entryId) => creator.startEditing(entryId)}
+                            onRemove={onExcludeEntry}
+                            onToggleWaste={onToggleWaste}
+                            onCancelEdit={creator.cancelEditing}
+                            onSaveEdit={(draft) => {
+                              if (!activeEntryId) return Promise.resolve();
+                              return onSaveEdit(activeEntryId, draft);
+                            }}
+                          />
+                        );
+                      });
+                    })()}
+                  </AnimatePresence>
+                </motion.tbody>
+              </Table>
+            </div>
+          </section>
+        );
+      })}
 
       <p className="text-xs text-muted">
         Edit or remove from the row menu. Entries stay in Tracker.
@@ -220,7 +274,13 @@ export function AgencyReportCreatorTable({
 type ReportCreatorRowProps = {
   row: AggregatedReportRow;
   rowIndex: number;
+  clientRowIndex: number;
   projectRowSpan: number;
+  clientRowSpan: number;
+  showFrom: boolean;
+  showTo: boolean;
+  periodFromLabel: string;
+  periodToLabel: string;
   showProject: boolean;
   showTask: boolean;
   showDescription: boolean;
@@ -246,7 +306,13 @@ type ReportCreatorRowProps = {
 function ReportCreatorRow({
   row,
   rowIndex,
+  clientRowIndex,
   projectRowSpan,
+  clientRowSpan,
+  showFrom,
+  showTo,
+  periodFromLabel,
+  periodToLabel,
   showProject,
   showTask,
   showDescription,
@@ -324,6 +390,16 @@ function ReportCreatorRow({
         reportSimilarTaskStripeClass(similarTaskStripe),
       )}
     >
+      {showFrom && clientRowIndex === 0 ? (
+        <td rowSpan={clientRowSpan} className={reportPeriodCellClass}>
+          {periodFromLabel}
+        </td>
+      ) : null}
+      {showTo && clientRowIndex === 0 ? (
+        <td rowSpan={clientRowSpan} className={reportPeriodCellClass}>
+          {periodToLabel}
+        </td>
+      ) : null}
       {showProject && rowIndex === 0 ? (
         <td
           rowSpan={projectRowSpan}
@@ -372,7 +448,7 @@ function ReportCreatorRow({
             />
           ) : (
             <span
-              className="block truncate text-start text-highlighted"
+              className="block whitespace-normal break-words text-start text-highlighted"
               title={row.description || undefined}
             >
               {row.description || "—"}

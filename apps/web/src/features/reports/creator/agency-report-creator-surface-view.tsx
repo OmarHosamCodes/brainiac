@@ -133,6 +133,8 @@ export function AgencyReportCreatorSurfaceView({
             clients={vm.clients}
             visibleFields={vm.visibleFields}
             mergeSameTaskNames={vm.mergeSameTaskNames}
+            rangeFrom={vm.report.rangeFrom}
+            rangeTo={vm.report.rangeTo}
             onSaveEdit={vm.handleSaveEdit}
             onExcludeEntry={vm.handleExcludeEntry}
             onToggleWaste={(entryIds) => void vm.handleToggleWaste(entryIds)}

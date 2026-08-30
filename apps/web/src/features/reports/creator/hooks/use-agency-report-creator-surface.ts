@@ -428,6 +428,8 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
         visibleFields,
         showWaste,
         mergeSameTaskNames,
+        rangeFrom: report.rangeFrom,
+        rangeTo: report.rangeTo,
       };
       const files =
         mode === "per-client"

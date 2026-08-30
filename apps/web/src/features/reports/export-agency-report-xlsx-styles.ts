@@ -9,6 +9,7 @@ export const AGENCY_REPORT_EXPORT_PALETTE = {
   headerFill: "FF334155",
   zebra: "FFF8FAFC",
   waste: "FFFEE2E2",
+  period: "FFDCFCE7",
   grandTotal: "FFCCFBF1",
   border: "FFCBD5E1",
   projectAccent: "FF14B8A6",
@@ -29,6 +30,8 @@ export const AGENCY_REPORT_EXPORT_ROW_HEIGHTS = {
 } as const;
 
 export const AGENCY_REPORT_EXPORT_COLUMN_WIDTHS: Record<AgencyReportFieldId, number> = {
+  from: 12,
+  to: 12,
   project: 28,
   task: 28,
   description: 48,
@@ -189,23 +192,46 @@ export function applyDataRow(
   activeFields.forEach((field, index) => {
     const cell = row.getCell(index + 1);
     const isProject = field === "project";
+    const isPeriod = field === "from" || field === "to";
     cell.font = {
       name: FONT_NAME,
-      bold: isProject,
+      bold: isProject || isPeriod,
       size: isProject
         ? AGENCY_REPORT_EXPORT_FONT_SIZES.project
         : AGENCY_REPORT_EXPORT_FONT_SIZES.body,
       color: { argb: AGENCY_REPORT_EXPORT_PALETTE.ink },
     };
-    cell.fill = solidFill(fillArgb);
+    cell.fill = solidFill(isPeriod ? AGENCY_REPORT_EXPORT_PALETTE.period : fillArgb);
     cell.border = gridBorder;
     const wrap = isProject || field === "task" || field === "description";
-    cell.alignment = {
-      vertical: "middle",
-      horizontal: field === "duration" ? "right" : "left",
-      wrapText: wrap,
-    };
+    if (field === "duration") {
+      cell.alignment = { vertical: "middle", horizontal: "right", wrapText: wrap };
+    } else if (isPeriod) {
+      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: false };
+    } else {
+      cell.alignment = { vertical: "middle", horizontal: "left", wrapText: wrap };
+    }
   });
+}
+
+export function applyPeriodMergeAccent(
+  sheet: AgencyReportExportSheet,
+  startRow: number,
+  endRow: number,
+  columnIndex: number,
+) {
+  const col = columnIndex + 1;
+  sheet.mergeCells(startRow, col, endRow, col);
+  const cell = sheet.getCell(startRow, col);
+  cell.font = {
+    name: FONT_NAME,
+    bold: true,
+    size: AGENCY_REPORT_EXPORT_FONT_SIZES.body,
+    color: { argb: AGENCY_REPORT_EXPORT_PALETTE.ink },
+  };
+  cell.fill = solidFill(AGENCY_REPORT_EXPORT_PALETTE.period);
+  cell.alignment = { vertical: "middle", horizontal: "center", wrapText: false };
+  cell.border = gridBorder;
 }
 
 export function applyProjectMergeAccent(

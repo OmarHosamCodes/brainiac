@@ -180,4 +180,39 @@ describe("agency report export workbook smoke", () => {
     expect(sheet!.getCell(4, 1).value).toBeNull();
     expect(sheet!.getCell(5, 1).value).toBe("Portal");
   });
+
+  test("writes period from/to columns when selected", async () => {
+    const file = await exportAgencyReportXlsx({
+      teamId: "team-1",
+      reportName: "Tenure month",
+      entries: [
+        makeEntry({ id: "e1", projectId: "p1", projectName: "Designs" }),
+        makeEntry({
+          id: "e2",
+          projectId: "p1",
+          projectName: "Designs",
+          taskId: "task-2",
+          taskTitle: "Ship",
+          description: "other",
+        }),
+      ],
+      excludedEntryIds: new Set(),
+      entryOverrides: new Map(),
+      visibleFields: ["from", "to", "project", "task", "description", "duration"],
+      mergeSameTaskNames: true,
+      rangeFrom: "2026-05-26T00:00:00.000Z",
+      rangeTo: "2026-06-25T23:59:59.999Z",
+    });
+
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await file.blob.arrayBuffer());
+    const sheet = workbook.getWorksheet("Report");
+    expect(sheet).toBeDefined();
+
+    expect(sheet!.getCell(2, 1).value).toBe("From");
+    expect(sheet!.getCell(2, 2).value).toBe("To");
+    expect(sheet!.getCell(3, 1).value).toBe("26 May");
+    expect(sheet!.getCell(3, 2).value).toBe("25 Jun");
+  });
 });

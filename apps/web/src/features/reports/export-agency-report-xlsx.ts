@@ -7,7 +7,10 @@ import {
   isReportFieldVisible,
   type AgencyReportFieldId,
 } from "@/features/reports/agency-report-fields";
-import { sanitizeReportFileName } from "@/features/reports/agency-report-naming";
+import {
+  formatReportPeriodDayMonth,
+  sanitizeReportFileName,
+} from "@/features/reports/agency-report-naming";
 import {
   groupEntriesForDisplay,
   filterEntriesByShowWaste,
@@ -26,6 +29,7 @@ import {
   applyDataRow,
   applyGrandTotal,
   applyHeaderRow,
+  applyPeriodMergeAccent,
   applyProjectMergeAccent,
   resolveExportColumnWidths,
   type AgencyReportExportSheet,
@@ -48,11 +52,19 @@ type ExportAgencyReportXlsxInput = {
   visibleFields?: AgencyReportFieldId[];
   showWaste?: AgencyReportShowWaste;
   mergeSameTaskNames?: boolean;
+  /** Report period bounds for optional From/To columns. */
+  rangeFrom?: string;
+  rangeTo?: string;
 };
 
 type AgencyReportExportJob = {
   fileName: string;
   clientGroups: DisplayClientGroup[];
+};
+
+type ReportPeriodLabels = {
+  from: string;
+  to: string;
 };
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -64,13 +76,27 @@ function resolveActiveReportFields(
   return AGENCY_REPORT_FIELDS.filter((field) => isReportFieldVisible(normalized, field));
 }
 
+function resolvePeriodLabels(rangeFrom?: string, rangeTo?: string): ReportPeriodLabels | null {
+  if (!rangeFrom || !rangeTo) return null;
+  return {
+    from: formatReportPeriodDayMonth(rangeFrom),
+    to: formatReportPeriodDayMonth(rangeTo),
+  };
+}
+
 function reportFieldValue(
   field: AgencyReportFieldId,
   entry: AggregatedReportRow,
   projectName: string,
   entryIndex: number,
+  clientRowIndex: number,
+  period: ReportPeriodLabels | null,
 ): string {
   switch (field) {
+    case "from":
+      return clientRowIndex === 0 && period ? period.from : "";
+    case "to":
+      return clientRowIndex === 0 && period ? period.to : "";
     case "project":
       return entryIndex === 0 ? projectName : "";
     case "task":
@@ -142,6 +168,7 @@ export function planAgencyReportExportJobs(
 async function writeWorkbookBlob(
   clientGroups: DisplayClientGroup[],
   activeFields: AgencyReportFieldId[],
+  period: ReportPeriodLabels | null,
 ): Promise<Blob> {
   // ponytail: dynamic import keeps exceljs off the main bundle; upgrade path is a dedicated export chunk route
   const ExcelJS = await import("exceljs");
@@ -151,6 +178,8 @@ async function writeWorkbookBlob(
   const exportSheet = sheet as unknown as AgencyReportExportSheet;
   const columnCount = Math.max(activeFields.length, 1);
   const projectColumnIndex = activeFields.indexOf("project");
+  const fromColumnIndex = activeFields.indexOf("from");
+  const toColumnIndex = activeFields.indexOf("to");
 
   sheet.columns = resolveExportColumnWidths(activeFields);
 
@@ -172,19 +201,23 @@ async function writeWorkbookBlob(
     applyHeaderRow(headerRow, columnCount);
     rowIndex += 1;
 
+    const clientDataStartRow = rowIndex;
+    let clientRowIndex = 0;
+
     for (const [projectIndex, project] of clientGroup.projects.entries()) {
       const projectStartRow = rowIndex;
 
       for (const [entryIndex, entry] of project.rows.entries()) {
         const dataRow = exportSheet.getRow(rowIndex);
         dataRow.values = activeFields.map((field) =>
-          reportFieldValue(field, entry, project.projectName, entryIndex),
+          reportFieldValue(field, entry, project.projectName, entryIndex, clientRowIndex, period),
         );
         applyDataRow(dataRow, activeFields, {
           zebra: dataRowOrdinal % 2 === 1,
           isWaste: isReportEntryWaste(entry),
         });
         dataRowOrdinal += 1;
+        clientRowIndex += 1;
         rowIndex += 1;
       }
 
@@ -193,8 +226,20 @@ async function writeWorkbookBlob(
       }
 
       // Blank spacer between projects (not after the last in the client).
-      if (projectIndex < clientGroup.projects.length - 1) {
+      // Skip when period columns rowspan the whole client — gaps break the merge.
+      const hasPeriodColumns = fromColumnIndex >= 0 || toColumnIndex >= 0;
+      if (!hasPeriodColumns && projectIndex < clientGroup.projects.length - 1) {
         rowIndex += 1;
+      }
+    }
+
+    const clientDataEndRow = rowIndex - 1;
+    if (clientDataEndRow > clientDataStartRow) {
+      if (fromColumnIndex >= 0 && period) {
+        applyPeriodMergeAccent(exportSheet, clientDataStartRow, clientDataEndRow, fromColumnIndex);
+      }
+      if (toColumnIndex >= 0 && period) {
+        applyPeriodMergeAccent(exportSheet, clientDataStartRow, clientDataEndRow, toColumnIndex);
       }
     }
 
@@ -226,11 +271,14 @@ async function exportAgencyReportFiles(
     visibleFields,
     showWaste = DEFAULT_AGENCY_REPORT_SHOW_WASTE,
     mergeSameTaskNames = DEFAULT_AGENCY_REPORT_MERGE_SAME_TASK_NAMES,
+    rangeFrom,
+    rangeTo,
   } = input;
 
   const exportEntries = resolveExportEntries(entries, excludedEntryIds, entryOverrides, showWaste);
   const clientGroups = groupEntriesForDisplay(exportEntries, { mergeSameTaskNames });
   const activeFields = resolveActiveReportFields(visibleFields);
+  const period = resolvePeriodLabels(rangeFrom, rangeTo);
   const dateStamp = new Date().toISOString().slice(0, 10);
   const baseName = resolveAgencyReportExportBaseName(teamId, reportName);
   const jobs = planAgencyReportExportJobs(clientGroups, mode, baseName, dateStamp);
@@ -239,7 +287,7 @@ async function exportAgencyReportFiles(
   for (const job of jobs) {
     files.push({
       fileName: job.fileName,
-      blob: await writeWorkbookBlob(job.clientGroups, activeFields),
+      blob: await writeWorkbookBlob(job.clientGroups, activeFields, period),
     });
   }
   return files;

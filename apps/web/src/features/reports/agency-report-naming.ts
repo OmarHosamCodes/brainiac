@@ -56,6 +56,13 @@ function formatCompactUtcDate(date: Date): string {
   return `${month} ${date.getUTCDate()}`;
 }
 
+/** Day-first compact label for report From/To columns (e.g. "26 May"). */
+export function formatReportPeriodDayMonth(iso: string): string {
+  const date = new Date(iso);
+  const month = SHORT_MONTH_NAMES[date.getUTCMonth()] ?? "???";
+  return `${date.getUTCDate()} ${month}`;
+}
+
 export function formatCompactDateSpan(fromIso: string, toIso: string): string {
   const from = new Date(fromIso);
   const to = new Date(toIso);

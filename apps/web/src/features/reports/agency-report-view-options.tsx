@@ -4,6 +4,7 @@ import { useState } from "react";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import {
   AGENCY_REPORT_FIELD_LABELS,
+  AGENCY_REPORT_FIELDS,
   allAgencyReportFieldIds,
   areSameReportFieldSets,
   isAgencyReportFieldId,
@@ -124,7 +125,7 @@ export function AgencyReportViewOptions({
                 <span className="min-w-0 flex-1 truncate">Select all</span>
               </label>
 
-              {defaultFieldIds.map((field) => {
+              {AGENCY_REPORT_FIELDS.map((field) => {
                 const checked = fieldIds.includes(field);
                 return (
                   <label
