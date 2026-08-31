@@ -18,6 +18,7 @@ export type TimeEntryRecord = {
   clientId: string;
   clientName: string;
   tags?: Array<{ id: string; name: string }>;
+  links?: Array<{ id: string; url: string }>;
   source: "timer" | "manual";
   description: string;
   isBillable?: boolean;

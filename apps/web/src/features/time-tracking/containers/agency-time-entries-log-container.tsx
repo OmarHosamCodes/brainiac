@@ -40,6 +40,7 @@ export function AgencyTimeEntriesLogContainer({
       onDuplicate={view.onDuplicate}
       onToggleWaste={view.onToggleWaste}
       onSaveEdit={view.onSaveEdit}
+      onSaveLinks={view.onSaveLinks}
       onBulkPatch={view.onBulkPatch}
     />
   );

@@ -4,7 +4,6 @@ import {
   bestTaskIdFromRankedSuggestions,
   buildDescriptionDatalistOptions,
   draftFromDescriptionSuggestion,
-  existingTaskSuggestionFromRanked,
   normalizeSuggestionText,
   rankDescriptionDatalistOptions,
 } from "./description-suggestions";
@@ -176,68 +175,6 @@ describe("bestTaskIdFromRankedSuggestions", () => {
         },
       ]),
     ).toBe("task-9");
-  });
-});
-
-describe("existingTaskSuggestionFromRanked", () => {
-  test("returns the first ranked compound with a task different from current", () => {
-    expect(
-      existingTaskSuggestionFromRanked(
-        [
-          {
-            description: "Landing",
-            taskId: "t1",
-            taskTitle: "Landing page",
-            projectId: "p1",
-            projectName: "Alpha",
-            clientName: "Acme",
-            frequency: 2,
-            lastUsedAtMs: 1,
-          },
-        ],
-        null,
-      ),
-    ).toEqual({ taskId: "t1", taskTitle: "Landing page", projectId: "p1" });
-  });
-
-  test("returns null when the ranked task is already selected", () => {
-    expect(
-      existingTaskSuggestionFromRanked(
-        [
-          {
-            description: "Landing",
-            taskId: "t1",
-            taskTitle: "Landing page",
-            projectId: "p1",
-            projectName: "Alpha",
-            clientName: "Acme",
-            frequency: 2,
-            lastUsedAtMs: 1,
-          },
-        ],
-        "t1",
-      ),
-    ).toBeNull();
-  });
-
-  test("returns null when no ranked row has a task", () => {
-    expect(
-      existingTaskSuggestionFromRanked(
-        [
-          {
-            description: "Misc",
-            taskId: null,
-            taskTitle: null,
-            projectId: "p1",
-            projectName: "Alpha",
-            clientName: "Acme",
-            frequency: 1,
-            lastUsedAtMs: 1,
-          },
-        ],
-        null,
-      ),
-    ).toBeNull();
   });
 });
 

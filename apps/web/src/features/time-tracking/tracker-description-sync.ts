@@ -14,3 +14,16 @@ export function shouldSkipActiveTimerDescriptionSync(options: {
 
   return Boolean(options.skipDescription) || options.descriptionDirty;
 }
+
+/** Optimistic cache mirroring can make draft === cache before the server acks. */
+export function shouldPersistActiveTimerDescription(options: {
+  draftDescription: string;
+  activeTimerDescription: string;
+  descriptionDirty: boolean;
+}): boolean {
+  if (options.draftDescription !== options.activeTimerDescription) {
+    return true;
+  }
+
+  return options.descriptionDirty;
+}

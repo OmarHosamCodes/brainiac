@@ -12,6 +12,7 @@ type AgencyTimeEntryActionProps = {
     projectName: string;
     taskTitle?: string | null;
     isWaste?: boolean | null;
+    isBillable?: boolean;
   };
   canRestart?: boolean;
   deleting?: boolean;
@@ -21,6 +22,7 @@ type AgencyTimeEntryActionProps = {
   onDelete: () => void;
   onDuplicate?: () => void;
   onToggleWaste?: () => void;
+  onIsBillableChange?: (isBillable: boolean) => void;
 };
 
 export function AgencyTimeEntryPlayAction({
@@ -51,6 +53,7 @@ export function AgencyTimeEntryMoreAction({
   onDelete,
   onDuplicate,
   onToggleWaste,
+  onIsBillableChange,
 }: Pick<
   AgencyTimeEntryActionProps,
   | "entry"
@@ -60,11 +63,14 @@ export function AgencyTimeEntryMoreAction({
   | "onDelete"
   | "onDuplicate"
   | "onToggleWaste"
+  | "onIsBillableChange"
 >) {
   const entryLabel = entry.taskTitle || entry.projectName;
   const [menuOpen, setMenuOpen] = useState(false);
   const canToggleWaste = Boolean(onToggleWaste);
+  const canToggleBillable = Boolean(onIsBillableChange);
   const isWaste = entry.isWaste === true;
+  const isBillable = entry.isBillable !== false;
 
   return (
     <Popover open={menuOpen} onOpenChange={setMenuOpen}>
@@ -85,6 +91,23 @@ export function AgencyTimeEntryMoreAction({
       </PopoverTrigger>
 
       <PopoverContent align="end" className="w-44 p-1">
+        {canToggleBillable ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+            disabled={deleting || duplicating}
+            onClick={() => {
+              setMenuOpen(false);
+              onIsBillableChange?.(!isBillable);
+            }}
+          >
+            <span className={cn("size-3.5 text-center text-xs font-semibold", isBillable && "text-info")}>
+              $
+            </span>
+            {isBillable ? "Billable" : "Non-billable"}
+          </Button>
+        ) : null}
         {canToggleWaste ? (
           <Button
             variant="ghost"

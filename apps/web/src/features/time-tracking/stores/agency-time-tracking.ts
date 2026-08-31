@@ -22,7 +22,10 @@ import {
   createRetainedTrackerDraftAfterStop,
   type AgencyTrackerDraft,
 } from "@/features/time-tracking/tracker-draft";
-import { shouldSkipActiveTimerDescriptionSync } from "@/features/time-tracking/tracker-description-sync";
+import {
+  shouldPersistActiveTimerDescription,
+  shouldSkipActiveTimerDescriptionSync,
+} from "@/features/time-tracking/tracker-description-sync";
 import { createTimerMutationQueue } from "@/features/time-tracking/timer-mutation-queue";
 import { buildActiveTimerTaskUpdateInput } from "@/features/time-tracking/active-timer-task-update";
 import { releasePendingEntryIds } from "@/features/time-tracking/pending-entry-ids";
@@ -67,6 +70,7 @@ type AgencyActiveTimer = {
   projectName: string;
   description: string;
   tags: AgencyTag[];
+  links: Array<{ id: string; url: string }>;
   isBillable: boolean;
   startedAt: string;
   createdAt: string;
@@ -87,6 +91,7 @@ type AgencyTimeEntry = {
   source: "timer" | "manual";
   description: string;
   tags: AgencyTag[];
+  links: Array<{ id: string; url: string }>;
   isBillable: boolean;
   isWaste: boolean;
   startedAt: string;
@@ -213,7 +218,15 @@ type UpdateEntryPayload = {
   endAt: string;
   durationSeconds: number;
   tagIds?: string[];
+  links?: string[];
   isBillable?: boolean;
+};
+
+type UpdateEntryLinksPayload = {
+  teamId: string;
+  entryId: string;
+  links: string[];
+  previousEntry?: AgencyTimeEntry;
 };
 
 type UpdateEntriesBulkPayload = {
@@ -226,6 +239,7 @@ type UpdateEntriesBulkPayload = {
     taskId?: string | null;
     description?: string;
     tagIds?: string[];
+    links?: string[];
     isBillable?: boolean;
     isWaste?: boolean;
   };
@@ -435,7 +449,14 @@ function createAgencyTimeTrackingActions(
     }
 
     const description = draft.description;
-    if (description === activeTimer.description) {
+    const descriptionDirty = isTrackerDescriptionDirty(teamId);
+    if (
+      !shouldPersistActiveTimerDescription({
+        draftDescription: description,
+        activeTimerDescription: activeTimer.description,
+        descriptionDirty,
+      })
+    ) {
       clearTrackerDescriptionDirty(teamId);
       return;
     }
@@ -470,6 +491,46 @@ function createAgencyTimeTrackingActions(
 
     cancelActiveTimerDescriptionPersist(teamId);
     return persistActiveTimerDescription(teamId);
+  }
+
+  async function updateActiveTimerLinks(payload: { teamId: string; links: string[] }) {
+    const { teamId, links } = payload;
+    if (!teamId) return;
+
+    const activeTimer = getActiveTimerForTeam(teamId);
+    if (!activeTimer) {
+      toast.error("Unable to update links", { description: "No active timer." });
+      throw new Error("No active timer.");
+    }
+
+    const timerSnapshots = snapshotQueries(
+      [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
+    );
+
+    const optimisticTimer: AgencyActiveTimer = {
+      ...activeTimer,
+      links: links.map((url, index) => ({
+        id: `optimistic-timer-link-${index}`,
+        url,
+      })),
+      updatedAt: new Date().toISOString(),
+    };
+    patchActiveTimerCaches(optimisticTimer);
+
+    try {
+      const result = (await orpcClient.agencyOps.timer.updateLinks({
+        teamId,
+        links,
+      })) as { timer: AgencyActiveTimer };
+
+      patchActiveTimerCaches(result.timer);
+    } catch (error) {
+      restoreQuerySnapshots(timerSnapshots);
+      toast.error("Unable to update links", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+      throw error;
+    }
   }
 
   function setTrackerProjectId(teamId: string, projectId: string) {
@@ -546,7 +607,10 @@ function createAgencyTimeTrackingActions(
         }),
       )) as { timer: AgencyActiveTimer };
 
-      patchActiveTimerCaches(result.timer);
+      const patchedTimer = isTrackerDescriptionDirty(teamId)
+        ? { ...result.timer, description: draft.description }
+        : result.timer;
+      patchActiveTimerCaches(patchedTimer);
     } catch (error) {
       restoreQuerySnapshots(timerSnapshots);
 
@@ -1443,6 +1507,7 @@ function createAgencyTimeTrackingActions(
       projectName: payload.project?.name ?? "",
       description: payload.description.trim(),
       tags: [],
+      links: [],
       isBillable: payload.isBillable ?? true,
       startedAt: payload.startedAt,
       createdAt: payload.startedAt,
@@ -1475,6 +1540,7 @@ function createAgencyTimeTrackingActions(
       source: "timer",
       description: overrides.description ?? timer.description,
       tags: timer.tags,
+      links: timer.links ?? [],
       isBillable: timer.isBillable,
       isWaste: false,
       startedAt: timer.startedAt,
@@ -1515,6 +1581,7 @@ function createAgencyTimeTrackingActions(
       source: "manual",
       description,
       tags: [],
+      links: [],
       isBillable: payload.isBillable ?? true,
       isWaste: false,
       startedAt: payload.startAt,
@@ -1786,6 +1853,14 @@ function createAgencyTimeTrackingActions(
       taskTitle: payload.task?.title ?? null,
       description: payload.description.trim(),
       ...(payload.tagIds !== undefined ? { tags: previous.tags } : {}),
+      ...(payload.links !== undefined
+        ? {
+            links: payload.links.map((url, index) => ({
+              id: `optimistic-link-${index}`,
+              url,
+            })),
+          }
+        : {}),
       ...(payload.isBillable !== undefined ? { isBillable: payload.isBillable } : {}),
       startedAt: payload.startAt,
       endedAt: payload.endAt,
@@ -1932,6 +2007,7 @@ function createAgencyTimeTrackingActions(
         startAt: payload.startAt,
         endAt: payload.endAt,
         tagIds: payload.tagIds,
+        links: payload.links,
         isBillable: payload.isBillable,
       })) as AgencyTimeEntry;
 
@@ -1942,6 +2018,55 @@ function createAgencyTimeTrackingActions(
       toast.error("Unable to update entry", {
         description: getErrorMessage(error, "Please try again."),
       });
+    } finally {
+      set((s) => ({
+        ...s,
+        updatingEntryIds: releasePendingEntryIds(s.updatingEntryIds, [payload.entryId]),
+      }));
+    }
+  }
+
+  async function updateEntryLinks(payload: UpdateEntryLinksPayload) {
+    const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
+    const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
+    const previousEntry = payload.previousEntry ?? findTimeEntry(payload.teamId, payload.entryId);
+
+    if (!previousEntry) {
+      toast.error("Unable to update links", { description: "Entry not found." });
+      throw new Error("Entry not found.");
+    }
+
+    const optimisticEntry: AgencyTimeEntry = {
+      ...previousEntry,
+      links: payload.links.map((url, index) => ({
+        id: `optimistic-link-${index}`,
+        url,
+      })),
+      updatedAt: new Date().toISOString(),
+    };
+
+    set((s) => ({
+      ...s,
+      updatingEntryIds: [...new Set([...s.updatingEntryIds, payload.entryId])],
+    }));
+
+    try {
+      patchUpdatedEntry(payload.teamId, previousEntry, optimisticEntry);
+
+      const updated = (await orpcClient.agencyOps.timeEntries.updateMine({
+        teamId: payload.teamId,
+        entryId: payload.entryId,
+        links: payload.links,
+      })) as AgencyTimeEntry;
+
+      patchUpdatedEntry(payload.teamId, optimisticEntry, updated);
+    } catch (error) {
+      restoreQuerySnapshots(logSnapshots);
+      optimistic().restoreTimeEntries(payload.teamId, entryOverlaySnapshot);
+      toast.error("Unable to update links", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+      throw error;
     } finally {
       set((s) => ({
         ...s,
@@ -1981,6 +2106,14 @@ function createAgencyTimeTrackingActions(
       ...(payload.patch.taskId ? { taskId: payload.patch.taskId } : {}),
       ...(payload.patch.description !== undefined
         ? { description: payload.patch.description.trim() }
+        : {}),
+      ...(payload.patch.links !== undefined
+        ? {
+            links: payload.patch.links.map((url, index) => ({
+              id: `optimistic-link-${index}`,
+              url,
+            })),
+          }
         : {}),
       ...(payload.patch.isBillable !== undefined ? { isBillable: payload.patch.isBillable } : {}),
       ...(payload.patch.isWaste !== undefined ? { isWaste: payload.patch.isWaste } : {}),
@@ -2049,6 +2182,7 @@ function createAgencyTimeTrackingActions(
     syncDraftFromActiveTimer,
     reconcileActiveTimerFromLive,
     flushActiveTimerDescription,
+    updateActiveTimerLinks,
     registerActiveTimerQuery,
     unregisterActiveTimerQuery,
     registerLogQuery,
@@ -2061,6 +2195,7 @@ function createAgencyTimeTrackingActions(
     duplicateEntry,
     createManualEntry,
     updateEntry,
+    updateEntryLinks,
     updateEntriesBulk,
     requestOpenTaskChooser,
   };

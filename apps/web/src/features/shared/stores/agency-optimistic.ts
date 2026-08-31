@@ -54,6 +54,7 @@ export type AgencyOptimisticTimeEntry = {
   source: "timer" | "manual";
   description: string;
   tags: AgencyOptimisticTag[];
+  links: Array<{ id: string; url: string }>;
   isBillable: boolean;
   isWaste: boolean;
   startedAt: string;
@@ -73,6 +74,7 @@ export type AgencyOptimisticActiveTimer = {
   projectName: string;
   description: string;
   tags: AgencyOptimisticTag[];
+  links: Array<{ id: string; url: string }>;
   isBillable: boolean;
   startedAt: string;
   createdAt: string;

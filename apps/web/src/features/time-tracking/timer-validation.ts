@@ -192,7 +192,7 @@ export function getAgencyTimerStopButtonPresentation(input: {
   hasActiveTimer: boolean;
 }): { label: string; disabled: boolean } {
   if (input.isPending) {
-    return { label: "…", disabled: true };
+    return { label: "Stop", disabled: true };
   }
   return { label: "Stop", disabled: !input.hasActiveTimer };
 }

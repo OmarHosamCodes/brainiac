@@ -31,6 +31,7 @@ describe("viewer timer live reconciliation", () => {
           updatedAt: timestamp,
         },
       ],
+      links: [],
       startedAt: timestamp,
       createdAt: timestamp,
       updatedAt: timestamp,

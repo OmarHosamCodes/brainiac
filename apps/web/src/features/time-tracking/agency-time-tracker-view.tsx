@@ -1,6 +1,7 @@
 import { CalendarClock, MoreVertical, Timer, Trash2 } from "lucide-react";
 
 import { AgencyDescriptionDatalistField } from "@/features/time-tracking/agency-description-datalist-field";
+import { AgencyTimeEntryLinkHoverTrigger } from "@/features/time-tracking/agency-time-entry-link-hover-trigger";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { AgencyTimeEntryDatePicker } from "@/features/time-tracking/entries/agency-time-entry-date-picker";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
@@ -8,6 +9,7 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Separator } from "@/ui/separator";
+import { AgencyTimeTrackerLoadingView } from "@/features/time-tracking/agency-time-tracker-loading-view";
 import type { AgencyTimeTrackerViewModel } from "@/features/time-tracking/hooks/use-agency-time-tracker";
 import {
   agencyTimeTrackerCardClass,
@@ -49,13 +51,13 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
   );
   const idleManual = !view.activeTimer && view.mode === "manual";
   const controlsDisabled =
-    !view.teamId ||
-    view.isTimerMutationPending ||
-    view.isManualCreatePending ||
-    view.projectsLoading ||
-    view.tasksLoading;
+    !view.teamId || view.isTimerMutationPending || view.isManualCreatePending;
 
-  const showStatusRow = Boolean(view.stopButtonHint) || view.isTimerMutationPending;
+  const showStatusRow = Boolean(view.stopButtonHint);
+
+  if (view.isTrackerLoading) {
+    return <AgencyTimeTrackerLoadingView />;
+  }
 
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
@@ -64,30 +66,20 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
         data-agency-time-tracker
         data-timer-state={view.activeTimer ? "running" : idleManual ? "manual" : "idle"}
       >
-        <div className="min-w-0 flex-1 pr-2">
-          <AgencyDescriptionDatalistField
-            value={view.timerDescription}
-            options={view.descriptionDatalistOptions}
-            affinityProjectId={view.selectedProjectId || undefined}
-            onValueChange={view.onDescriptionChange}
-            onSelectOption={view.onDescriptionSuggestionSelect}
-            onFocus={view.onDescriptionFocus}
-            onBlur={view.onDescriptionBlur}
-            onKeyDown={view.onDescriptionKeyDown}
-            disabled={view.isTimerMutationPending || view.isManualCreatePending || !view.teamId}
-          />
-          {view.existingTaskSuggestion ? (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="mt-1 h-auto px-0 text-xs text-muted-foreground"
+        <div className="flex min-w-0 flex-1 items-center gap-1 pr-2">
+          <div className="min-w-0 flex-1">
+            <AgencyDescriptionDatalistField
+              value={view.timerDescription}
+              options={view.descriptionDatalistOptions}
+              affinityProjectId={view.selectedProjectId || undefined}
+              onValueChange={view.onDescriptionChange}
+              onSelectOption={view.onDescriptionSuggestionSelect}
+              onFocus={view.onDescriptionFocus}
+              onBlur={view.onDescriptionBlur}
+              onKeyDown={view.onDescriptionKeyDown}
               disabled={view.isTimerMutationPending || view.isManualCreatePending || !view.teamId}
-              onClick={view.onApplyExistingTaskSuggestion}
-            >
-              Use existing task {view.existingTaskSuggestion.taskTitle}
-            </Button>
-          ) : null}
+            />
+          </div>
         </div>
 
         <div className={agencyTimeTrackerRailClass}>
@@ -115,7 +107,6 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                   : undefined
               }
               className={taskChooserTriggerClass}
-              loading={view.projectsLoading || view.tasksLoading}
               disabled={controlsDisabled}
               open={view.taskChooserOpen}
               contentAlign="end"
@@ -126,20 +117,16 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           <TrackerRailDivider />
 
           <div className={agencyTimeTrackerRailCellClass}>
-            <Button
-              type="button"
-              variant="ghost"
-              className={cn(
-                agencyTimeTrackerIconActionClass,
-                view.isBillable ? "text-info hover:text-info" : undefined,
-              )}
-              aria-pressed={view.isBillable}
-              aria-label={view.isBillable ? "Billable" : "Non-billable"}
-              disabled={controlsDisabled}
-              onClick={() => view.onIsBillableChange(!view.isBillable)}
-            >
-              $
-            </Button>
+            <AgencyTimeEntryLinkHoverTrigger
+              links={view.activeTimer ? view.timerLinks : []}
+              disabled={
+                !view.activeTimer || view.isTimerMutationPending || !view.teamId
+              }
+              saving={view.isTimerMutationPending}
+              hoverRevealClassName="opacity-100"
+              buttonClassName={agencyTimeTrackerIconActionClass}
+              onSave={view.onSaveLinks}
+            />
           </div>
 
           <TrackerRailDivider />
@@ -322,9 +309,10 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 size="lg"
                 className={agencyTimeTrackerPrimaryActionClass}
                 disabled={!view.canAddManual}
+                aria-busy={view.isManualCreatePending || undefined}
                 onClick={view.onAddManual}
               >
-                {view.isManualCreatePending ? "…" : "Add"}
+                Add
               </Button>
             ) : (
               <Button
@@ -334,7 +322,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 aria-busy={view.isTimerMutationPending || undefined}
                 onClick={view.onStartTimer}
               >
-                {view.isTimerMutationPending ? "…" : "Start"}
+                Start
               </Button>
             )}
           </div>
@@ -356,58 +344,64 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             </>
           ) : null}
 
-          {view.activeTimer ? (
-            <>
-              <TrackerRailDivider />
-              <div className={cn(agencyTimeTrackerRailCellClass, "pr-0")}>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className={agencyTimeTrackerIconActionClass}
-                      aria-label="Timer options"
-                      disabled={view.isTimerMutationPending}
-                    >
-                      <MoreVertical className="size-5" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-40 p-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start text-error"
-                      disabled={view.isTimerMutationPending}
-                      onClick={view.onDiscardTimer}
-                    >
-                      <Trash2 />
-                      Discard timer
-                    </Button>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </>
-          ) : null}
+          <TrackerRailDivider />
+          <div className={cn(agencyTimeTrackerRailCellClass, "pr-0")}>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={agencyTimeTrackerIconActionClass}
+                  aria-label="Timer options"
+                  disabled={controlsDisabled}
+                >
+                  <MoreVertical className="size-5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-44 p-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  disabled={controlsDisabled}
+                  onClick={() => view.onIsBillableChange(!view.isBillable)}
+                >
+                  <span
+                    className={cn(
+                      "size-3.5 text-center text-xs font-semibold",
+                      view.isBillable && "text-info",
+                    )}
+                  >
+                    $
+                  </span>
+                  {view.isBillable ? "Billable" : "Non-billable"}
+                </Button>
+                {view.activeTimer ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-error"
+                    disabled={view.isTimerMutationPending}
+                    onClick={view.onDiscardTimer}
+                  >
+                    <Trash2 />
+                    Discard timer
+                  </Button>
+                ) : null}
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
 
       {showStatusRow ? (
-        <div className="flex min-w-0 items-center justify-between gap-3 px-1">
-          {view.stopButtonHint ? (
-            <p
-              id="agency-timer-stop-blocker"
-              className="min-w-0 flex-1 text-xs text-warning"
-              role="alert"
-            >
-              {view.stopButtonHint}
-            </p>
-          ) : (
-            <span className="min-w-0 flex-1" />
-          )}
-          {view.isTimerMutationPending ? (
-            <span className="shrink-0 text-xs text-muted" aria-live="polite">
-              Saving…
-            </span>
-          ) : null}
+        <div className="px-1">
+          <p
+            id="agency-timer-stop-blocker"
+            className="min-w-0 text-xs text-warning"
+            role="alert"
+          >
+            {view.stopButtonHint}
+          </p>
         </div>
       ) : null}
     </div>

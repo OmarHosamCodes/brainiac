@@ -13,7 +13,6 @@ import {
   bestTaskIdFromRankedSuggestions,
   buildDescriptionDatalistOptions,
   draftFromDescriptionSuggestion,
-  existingTaskSuggestionFromRanked,
   rankDescriptionDatalistOptions,
   type DescriptionDatalistOption,
 } from "@/features/time-tracking/description-suggestions";
@@ -100,6 +99,7 @@ export type AgencyTimeTrackerViewModel = {
   tasks: AgencyProjectTask[];
   projectsLoading: boolean;
   tasksLoading: boolean;
+  isTrackerLoading: boolean;
   activeTimer: NonNullable<
     NonNullable<ReturnType<typeof useAgencyActiveTimerQuery>["data"]>["timer"]
   > | null;
@@ -130,14 +130,14 @@ export type AgencyTimeTrackerViewModel = {
   manualError: string | null;
   descriptionDatalistOptions: DescriptionDatalistOption[];
   suggestionBestTaskId: string | null;
-  existingTaskSuggestion: { taskId: string; taskTitle: string; projectId: string } | null;
   trackerStatusLine: string;
   onDescriptionChange: (value: string) => void;
   onDescriptionSuggestionSelect: (option: DescriptionDatalistOption) => void;
-  onApplyExistingTaskSuggestion: () => void;
   onDescriptionFocus: () => void;
   onDescriptionBlur: () => void;
   onDescriptionKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
+  timerLinks: Array<{ id: string; url: string }>;
+  onSaveLinks: (links: string[]) => Promise<void>;
   onProjectChange: (projectId: string) => void;
   onTaskChange: (taskId: string, projectId?: string) => void;
   onTagIdsChange: (tagIds: string[]) => void;
@@ -184,6 +184,7 @@ export function useAgencyTimeTracker({
   const flushActiveTimerDescription = useAgencyTimeTrackingStore(
     (s) => s.flushActiveTimerDescription,
   );
+  const updateActiveTimerLinks = useAgencyTimeTrackingStore((s) => s.updateActiveTimerLinks);
   const startTimerAction = useAgencyTimeTrackingStore((s) => s.startTimer);
   const stopTimerAction = useAgencyTimeTrackingStore((s) => s.stopTimer);
   const updateActiveTimerStartAction = useAgencyTimeTrackingStore((s) => s.updateActiveTimerStart);
@@ -466,11 +467,6 @@ export function useAgencyTimeTracker({
     [rankedDescriptionOptions],
   );
 
-  const existingTaskSuggestion = useMemo(
-    () => existingTaskSuggestionFromRanked(rankedDescriptionOptions, selectedTaskId || null),
-    [rankedDescriptionOptions, selectedTaskId],
-  );
-
   async function startTimer() {
     if (!teamId || !canStartTimer || activeTimer) return;
 
@@ -525,13 +521,6 @@ export function useAgencyTimeTracker({
     // Project before task: setTrackerProjectId clears taskId when project changes.
     setTrackerProjectId(teamId, draft.projectId);
     setTrackerTaskId(teamId, draft.taskId);
-  }
-
-  function handleApplyExistingTaskSuggestion() {
-    if (!existingTaskSuggestion) return;
-    // Project before task: setTrackerProjectId clears taskId when project changes.
-    setTrackerProjectId(teamId, existingTaskSuggestion.projectId);
-    setTrackerTaskId(teamId, existingTaskSuggestion.taskId);
   }
 
   function handleDescriptionKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -785,6 +774,7 @@ export function useAgencyTimeTracker({
     tasks,
     projectsLoading: projectsQuery.isPending,
     tasksLoading: tasksQuery.isPending,
+    isTrackerLoading: projectsQuery.isPending || (tasksQuery.isPending && tasks.length === 0),
     activeTimer,
     elapsedLabel,
     canStartTimer,
@@ -813,14 +803,17 @@ export function useAgencyTimeTracker({
     manualError,
     descriptionDatalistOptions,
     suggestionBestTaskId,
-    existingTaskSuggestion,
     trackerStatusLine,
+    timerLinks: activeTimer?.links ?? [],
     onDescriptionChange: handleDescriptionChange,
     onDescriptionSuggestionSelect: handleDescriptionSuggestionSelect,
-    onApplyExistingTaskSuggestion: handleApplyExistingTaskSuggestion,
     onDescriptionFocus: () => setDescriptionFocused(true),
     onDescriptionBlur: handleDescriptionBlur,
     onDescriptionKeyDown: handleDescriptionKeyDown,
+    onSaveLinks: async (links) => {
+      if (!teamId || !activeTimer) return;
+      await updateActiveTimerLinks({ teamId, links });
+    },
     onProjectChange: (projectId) => {
       setTrackerProjectId(teamId, projectId);
       if (!projectId) {

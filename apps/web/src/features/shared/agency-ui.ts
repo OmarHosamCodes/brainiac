@@ -285,6 +285,10 @@ export const agencyTimeTrackerCardClass = cn(
   "flex min-h-[52px] min-w-0 flex-row items-center overflow-visible px-3 sm:px-4",
 );
 
+/** Whole-tracker loading shimmer — one surface, no partial text placeholders. */
+export const agencyTimeTrackerShimmerClass =
+  "pointer-events-none absolute inset-0 rounded-[inherit] bg-muted/50 shimmer motion-reduce:animate-none";
+
 export const agencyTimeTrackerDescriptionZoneClass =
   "group/desc relative flex min-h-0 min-w-0 flex-1 items-center overflow-visible";
 
@@ -421,7 +425,7 @@ export const agencyTimeDayHeaderClass = cn(
 export const agencyTimeWeekHeaderClass = "sr-only";
 
 export const agencyTimeEntryRowClass = cn(
-  "flex min-h-[52px] items-stretch border-b border-border/30 bg-clip-padding font-sans transition-colors hover:bg-elevated/50 motion-reduce:transition-none",
+  "group/row flex min-h-[52px] items-stretch border-b border-border/30 bg-clip-padding font-sans transition-colors hover:bg-elevated/50 motion-reduce:transition-none",
 );
 
 /** Nested child row inside an expanded multi-entry group. */

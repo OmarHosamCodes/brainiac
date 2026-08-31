@@ -32,6 +32,7 @@ type AgencyTimeEntryRowContainerProps = {
   onDuplicate: (entryId: string) => void;
   onToggleWaste: (entryId: string | readonly string[]) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onSaveLinks: (entryId: string, links: string[]) => Promise<void>;
   onBulkPatch: (
     entryIds: string[],
     patch: {

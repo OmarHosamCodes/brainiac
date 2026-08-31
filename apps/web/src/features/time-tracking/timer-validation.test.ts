@@ -163,6 +163,15 @@ describe("getAgencyTimerStopButtonPresentation", () => {
       }),
     ).toEqual({ label: "Stop", disabled: false });
   });
+
+  it("keeps Stop label while pending", () => {
+    expect(
+      getAgencyTimerStopButtonPresentation({
+        isPending: true,
+        hasActiveTimer: true,
+      }),
+    ).toEqual({ label: "Stop", disabled: true });
+  });
 });
 
 describe("resolveAgencyTimerTaskRef", () => {

@@ -7,6 +7,7 @@ import {
   AgencyTimeEntryPlayAction,
 } from "@/features/time-tracking/entries/agency-time-entry-actions";
 import { AgencyTimeEntryDatePicker } from "@/features/time-tracking/entries/agency-time-entry-date-picker";
+import { AgencyTimeEntryLinkHoverTrigger } from "@/features/time-tracking/agency-time-entry-link-hover-trigger";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -27,7 +28,6 @@ import {
   agencyTimeEntryRowClass,
   agencyTimeEntryRowEditingClass,
   agencyTimeEntryClockTimeInputClass,
-  agencyTimeTrackerIconActionClass,
   agencyWorkCountBadgeClass,
   agencyWorkMetricClass,
   agencyWorkTimeRangeClass,
@@ -103,6 +103,8 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onInlineKeyDown,
     onEditingDescriptionChange,
     onTimeEditorOpenChange,
+    links,
+    onSaveLinks,
   } = view;
 
   const taskChooserTriggerClass = cn(
@@ -205,20 +207,13 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
 
       <div className={agencyTimeEntryRailClass}>
         <div className={agencyTimeEntryRailBillableClass}>
-          <button
-            type="button"
-            className={cn(
-              agencyTimeTrackerIconActionClass,
-              "inline-flex size-8 items-center justify-center",
-              editDraft.isBillable ? "text-info" : "text-muted",
-            )}
-            aria-pressed={editDraft.isBillable}
-            aria-label={editDraft.isBillable ? "Billable" : "Non-billable"}
+          <AgencyTimeEntryLinkHoverTrigger
+            links={links}
             disabled={editSaving || rowUpdating}
-            onClick={() => onIsBillableChange(!editDraft.isBillable)}
-          >
-            $
-          </button>
+            saving={rowUpdating}
+            hoverRevealClassName="opacity-100"
+            onSave={onSaveLinks}
+          />
         </div>
 
         <div className={agencyTimeEntryRailTimeClass}>
@@ -360,6 +355,23 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 >
                   Show {group.entries.length} entries
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  disabled={editSaving || rowUpdating}
+                  onClick={() => onIsBillableChange(!editDraft.isBillable)}
+                >
+                  <span
+                    className={cn(
+                      "size-3.5 text-center text-xs font-semibold",
+                      editDraft.isBillable && "text-info",
+                    )}
+                  >
+                    $
+                  </span>
+                  {editDraft.isBillable ? "Billable" : "Non-billable"}
+                </Button>
                 {canToggleWaste ? (
                   <Button
                     variant="ghost"
@@ -397,6 +409,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 projectName: group.projectName,
                 taskTitle: group.taskTitle,
                 isWaste: canDismissWaste,
+                isBillable: editDraft.isBillable,
               }}
               deleting={rowDeleting || rowUpdating || editSaving}
               duplicating={rowDuplicating}
@@ -404,6 +417,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               onDelete={() => onDeleteGroup()}
               onDuplicate={!isMulti ? onDuplicate : undefined}
               onToggleWaste={canToggleWaste ? onToggleWaste : undefined}
+              onIsBillableChange={onIsBillableChange}
             />
           )}
         </div>

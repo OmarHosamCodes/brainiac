@@ -120,6 +120,7 @@ type UseAgencyTimeEntryRowOptions = {
   onDuplicate: (entryId: string) => void;
   onToggleWaste: (entryId: string | readonly string[]) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onSaveLinks: (entryId: string, links: string[]) => Promise<void>;
   onBulkPatch: (
     entryIds: string[],
     patch: {
@@ -201,6 +202,8 @@ export type AgencyTimeEntryRowViewModel = {
   onInlineKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onEditingDescriptionChange: (editing: boolean) => void;
   onTimeEditorOpenChange: (open: boolean) => void;
+  links: Array<{ id: string; url: string }>;
+  onSaveLinks: (links: string[]) => Promise<void>;
 };
 
 export function useAgencyTimeEntryRow({
@@ -223,6 +226,7 @@ export function useAgencyTimeEntryRow({
   onDuplicate,
   onToggleWaste,
   onSaveEdit,
+  onSaveLinks,
   onBulkPatch,
 }: UseAgencyTimeEntryRowOptions): AgencyTimeEntryRowViewModel {
   const { isDark } = useTheme();
@@ -675,5 +679,9 @@ export function useAgencyTimeEntryRow({
     onInlineKeyDown,
     onEditingDescriptionChange: setEditingDescription,
     onTimeEditorOpenChange: setTimeEditorOpen,
+    links: primaryEntry.links ?? [],
+    onSaveLinks: async (links) => {
+      await onSaveLinks(primaryEntry.id, links);
+    },
   };
 }

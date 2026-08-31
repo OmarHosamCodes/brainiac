@@ -75,6 +75,7 @@ export type AgencyTimeEntriesLogViewModel = {
   onDuplicate: (entryId: string) => void;
   onToggleWaste: (entryId: string | readonly string[]) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onSaveLinks: (entryId: string, links: string[]) => Promise<void>;
   onBulkPatch: (
     entryIds: string[],
     patch: {
@@ -308,6 +309,17 @@ export function useAgencyTimeEntriesLog({
     });
   }
 
+  async function saveLinks(entryId: string, links: string[]) {
+    const entry = entries.find((item) => item.id === entryId);
+    if (!teamId || !entry) return;
+    await agencyTimeTrackingStore.updateEntryLinks({
+      teamId,
+      entryId: entry.id,
+      links,
+      previousEntry: entry,
+    });
+  }
+
   async function duplicateEntry(entryId: string) {
     const entry = entries.find((item) => item.id === entryId);
     if (!teamId || !entry) return;
@@ -492,6 +504,7 @@ export function useAgencyTimeEntriesLog({
     onDuplicate: (entryId) => void duplicateEntry(entryId),
     onToggleWaste: (entryId) => void toggleEntryWaste(entryId),
     onSaveEdit: saveEdit,
+    onSaveLinks: saveLinks,
     onBulkPatch: saveBulkPatch,
     selectedEntryIds,
     bulkEditDayKey,

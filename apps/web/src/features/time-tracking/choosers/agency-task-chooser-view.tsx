@@ -112,7 +112,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
 
   function renderTriggerLabel() {
     if (loading) {
-      return <span className="min-w-0 truncate text-muted-foreground">Loading…</span>;
+      return <Skeleton className="h-4 w-28 max-w-full rounded-md" aria-hidden />;
     }
     if (triggerFormat === "task-client") {
       if (triggerProject && triggerTaskTitle) {
