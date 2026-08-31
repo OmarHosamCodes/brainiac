@@ -3,6 +3,7 @@ import { db } from "@orch/db";
 import {
   agencyOpsActiveTimer,
   agencyOpsActiveTimerTag,
+  agencyOpsActiveTimerLink,
   agencyOpsProjectTask,
   agencyOpsProject,
   agencyOpsProjectJourneyStep,
@@ -11,6 +12,7 @@ import {
   agencyOpsClient,
   agencyOpsTimeEntry,
   agencyOpsTimeEntryTag,
+  agencyOpsTimeEntryLink,
   agencyOpsTag,
   workspaceTeamMember,
 } from "@orch/db/schema";
@@ -24,6 +26,7 @@ import { parseIsoDateTime } from "../shared/date-helpers";
 import { type ReportEntityFilterInput, applyReportEntityFilters } from "../shared/report-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import { groupTimeEntryTagRows } from "./group-time-entry-tag-rows";
+import { normalizeTimeEntryLinkUrls } from "./normalize-time-entry-links";
 import { loadTeamWorkSchedule } from "../resourcing/load-team-work-schedule";
 import {
   addDaysToDateKey,
@@ -46,6 +49,11 @@ type AgencyTagRecord = {
   updatedAt: string;
 };
 
+type AgencyTimeEntryLinkRecord = {
+  id: string;
+  url: string;
+};
+
 type AgencyTimeEntryRecord = {
   id: string;
   teamId: string;
@@ -63,6 +71,7 @@ type AgencyTimeEntryRecord = {
   isBillable: boolean;
   isWaste: boolean;
   tags: AgencyTagRecord[];
+  links: AgencyTimeEntryLinkRecord[];
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -94,6 +103,7 @@ function mapAgencyTimeEntryRow(
     updatedAt: Date;
   },
   tags: AgencyTagRecord[],
+  links: AgencyTimeEntryLinkRecord[],
 ): AgencyTimeEntryRecord {
   return {
     id: row.id,
@@ -112,6 +122,7 @@ function mapAgencyTimeEntryRow(
     isBillable: row.isBillable,
     isWaste: row.isWaste,
     tags,
+    links,
     startedAt: row.startedAt.toISOString(),
     endedAt: row.endedAt.toISOString(),
     durationSeconds: row.durationSeconds,
@@ -131,6 +142,7 @@ type AgencyActiveTimerRecord = {
   description: string;
   isBillable: boolean;
   tags: AgencyTagRecord[];
+  links: AgencyTimeEntryLinkRecord[];
   startedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -210,6 +222,101 @@ async function listTagsForActiveTimer(activeTimerId: string) {
   return rows.map(mapAgencyTagRow);
 }
 
+async function listLinksByTimeEntryIds(timeEntryIds: string[]) {
+  if (timeEntryIds.length === 0) {
+    return new Map<string, AgencyTimeEntryLinkRecord[]>();
+  }
+
+  const rows = await db
+    .select({
+      timeEntryId: agencyOpsTimeEntryLink.timeEntryId,
+      id: agencyOpsTimeEntryLink.id,
+      url: agencyOpsTimeEntryLink.url,
+      sortOrder: agencyOpsTimeEntryLink.sortOrder,
+    })
+    .from(agencyOpsTimeEntryLink)
+    .where(inArray(agencyOpsTimeEntryLink.timeEntryId, timeEntryIds))
+    .orderBy(asc(agencyOpsTimeEntryLink.sortOrder), asc(agencyOpsTimeEntryLink.createdAt));
+
+  return groupTimeEntryTagRows(
+    rows.map(({ timeEntryId, id, url }) => ({
+      timeEntryId,
+      tag: { id, url } satisfies AgencyTimeEntryLinkRecord,
+    })),
+  );
+}
+
+async function listLinksForTimeEntry(timeEntryId: string) {
+  const grouped = await listLinksByTimeEntryIds([timeEntryId]);
+  return grouped.get(timeEntryId) ?? [];
+}
+
+async function listLinksForActiveTimer(activeTimerId: string) {
+  const rows = await db
+    .select({
+      id: agencyOpsActiveTimerLink.id,
+      url: agencyOpsActiveTimerLink.url,
+    })
+    .from(agencyOpsActiveTimerLink)
+    .where(eq(agencyOpsActiveTimerLink.activeTimerId, activeTimerId))
+    .orderBy(asc(agencyOpsActiveTimerLink.sortOrder), asc(agencyOpsActiveTimerLink.createdAt));
+
+  return rows.map(({ id, url }) => ({ id, url }) satisfies AgencyTimeEntryLinkRecord);
+}
+
+async function insertTimeEntryLinks(
+  // ponytail: drizzle tx typing is verbose; upgrade with ExtractTablesWithRelations if needed
+  tx: { insert: typeof db.insert },
+  timeEntryId: string,
+  urls: string[],
+) {
+  if (urls.length === 0) return;
+  await tx.insert(agencyOpsTimeEntryLink).values(
+    urls.map((url, sortOrder) => ({
+      id: createWorkspaceId("agency-time-link"),
+      timeEntryId,
+      url,
+      sortOrder,
+    })),
+  );
+}
+
+async function replaceTimeEntryLinks(
+  tx: { insert: typeof db.insert; delete: typeof db.delete },
+  timeEntryId: string,
+  urls: string[],
+) {
+  await tx.delete(agencyOpsTimeEntryLink).where(eq(agencyOpsTimeEntryLink.timeEntryId, timeEntryId));
+  await insertTimeEntryLinks(tx, timeEntryId, urls);
+}
+
+async function insertActiveTimerLinks(
+  tx: { insert: typeof db.insert },
+  activeTimerId: string,
+  urls: string[],
+) {
+  if (urls.length === 0) return;
+  await tx.insert(agencyOpsActiveTimerLink).values(
+    urls.map((url, sortOrder) => ({
+      id: createWorkspaceId("agency-timer-link"),
+      activeTimerId,
+      url,
+      sortOrder,
+    })),
+  );
+}
+
+async function replaceActiveTimerLinks(
+  tx: { insert: typeof db.insert; delete: typeof db.delete },
+  activeTimerId: string,
+  urls: string[],
+) {
+  await tx
+    .delete(agencyOpsActiveTimerLink)
+    .where(eq(agencyOpsActiveTimerLink.activeTimerId, activeTimerId));
+  await insertActiveTimerLinks(tx, activeTimerId, urls);
+}
+
 async function validateAgencyTagIds(teamId: string, tagIds: string[] | undefined) {
   if (tagIds === undefined) return [];
 
@@ -256,6 +363,7 @@ async function getActiveTimerByUser(userId: string) {
   }
 
   const tags = await listTagsForActiveTimer(timer.id);
+  const links = await listLinksForActiveTimer(timer.id);
 
   return {
     id: timer.id,
@@ -268,6 +376,7 @@ async function getActiveTimerByUser(userId: string) {
     description: timer.description,
     isBillable: timer.isBillable,
     tags,
+    links,
     startedAt: timer.startedAt.toISOString(),
     createdAt: timer.createdAt.toISOString(),
     updatedAt: timer.updatedAt.toISOString(),
@@ -371,11 +480,13 @@ export async function startAgencyTimer(
     taskId?: string;
     description?: string;
     tagIds?: string[];
+    links?: string[];
     isBillable?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   const tagIds = await validateAgencyTagIds(input.teamId, input.tagIds);
+  const links = normalizeTimeEntryLinkUrls(input.links);
 
   let projectId: string | null = input.projectId ?? null;
   if (input.taskId) {
@@ -441,6 +552,19 @@ export async function startAgencyTimer(
               previousTagIds.map(({ tagId }) => ({ timeEntryId: rolledOverEntryId!, tagId })),
             );
         }
+
+        const previousLinks = await tx
+          .select({ url: agencyOpsActiveTimerLink.url, sortOrder: agencyOpsActiveTimerLink.sortOrder })
+          .from(agencyOpsActiveTimerLink)
+          .where(eq(agencyOpsActiveTimerLink.activeTimerId, existing.id))
+          .orderBy(asc(agencyOpsActiveTimerLink.sortOrder));
+        if (previousLinks.length > 0) {
+          await insertTimeEntryLinks(
+            tx,
+            rolledOverEntryId!,
+            previousLinks.map((row) => row.url),
+          );
+        }
       }
       // Unbound previous timer can't become an entry (entries require a project).
 
@@ -467,6 +591,9 @@ export async function startAgencyTimer(
       await tx
         .insert(agencyOpsActiveTimerTag)
         .values(tagIds.map((tagId) => ({ activeTimerId: createdTimer.id, tagId })));
+    }
+    if (createdTimer && links.length > 0) {
+      await insertActiveTimerLinks(tx, createdTimer.id, links);
     }
 
     if (input.taskId) {
@@ -568,8 +695,16 @@ async function fetchAgencyTimeEntryRecords(entryIds: string[]) {
     .where(inArray(agencyOpsTimeEntry.id, entryIds));
 
   const tagsByEntryId = await listTagsByTimeEntryIds(rows.map((row) => row.id));
+  const linksByEntryId = await listLinksByTimeEntryIds(rows.map((row) => row.id));
   const recordsById = new Map(
-    rows.map((row) => [row.id, mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? [])]),
+    rows.map((row) => [
+      row.id,
+      mapAgencyTimeEntryRow(
+        row,
+        tagsByEntryId.get(row.id) ?? [],
+        linksByEntryId.get(row.id) ?? [],
+      ),
+    ]),
   );
   const records: AgencyTimeEntryRecord[] = [];
   for (const entryId of entryIds) {
@@ -591,6 +726,7 @@ export async function stopAgencyTimer(
     taskId?: string;
     description?: string;
     tagIds?: string[];
+    links?: string[];
     isBillable?: boolean;
     discard?: boolean;
   },
@@ -625,6 +761,8 @@ export async function stopAgencyTimer(
   }
 
   const tagIds = await validateAgencyTagIds(active.teamId, input.tagIds);
+  const links =
+    input.links === undefined ? undefined : normalizeTimeEntryLinkUrls(input.links);
 
   let taskId = active.taskId ?? null;
   let entryProjectId = active.projectId;
@@ -715,6 +853,23 @@ export async function stopAgencyTimer(
         .values(tagsToInsert.map(({ tagId }) => ({ timeEntryId: created.id, tagId })));
     }
 
+    if (created) {
+      const linksToInsert =
+        links === undefined
+          ? (
+              await tx
+                .select({
+                  url: agencyOpsActiveTimerLink.url,
+                  sortOrder: agencyOpsActiveTimerLink.sortOrder,
+                })
+                .from(agencyOpsActiveTimerLink)
+                .where(eq(agencyOpsActiveTimerLink.activeTimerId, active.id))
+                .orderBy(asc(agencyOpsActiveTimerLink.sortOrder))
+            ).map((row) => row.url)
+          : links;
+      await insertTimeEntryLinks(tx, created.id, linksToInsert);
+    }
+
     await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
 
     if (taskId) {
@@ -786,6 +941,53 @@ export async function updateAgencyActiveTimerDescription(
     .update(agencyOpsActiveTimer)
     .set({ description: input.description.trim(), updatedAt: now })
     .where(eq(agencyOpsActiveTimer.id, active.id));
+
+  const timer = await getActiveTimerByUser(actorUserId);
+
+  if (!timer) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
+
+  return { timer };
+}
+
+export async function updateAgencyActiveTimerLinks(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    links: string[];
+  },
+) {
+  const [active] = await db
+    .select({ id: agencyOpsActiveTimer.id, teamId: agencyOpsActiveTimer.teamId })
+    .from(agencyOpsActiveTimer)
+    .where(eq(agencyOpsActiveTimer.userId, actorUserId))
+    .limit(1);
+
+  if (!active) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await requireTeamMembership(actorUserId, active.teamId, "viewer");
+
+  if (active.teamId !== input.teamId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Active timer belongs to a different team.",
+    });
+  }
+
+  const links = normalizeTimeEntryLinkUrls(input.links);
+  const now = new Date();
+
+  await db.transaction(async (tx) => {
+    await replaceActiveTimerLinks(tx, active.id, links);
+    await tx
+      .update(agencyOpsActiveTimer)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsActiveTimer.id, active.id));
+  });
 
   const timer = await getActiveTimerByUser(actorUserId);
 
@@ -973,7 +1175,10 @@ export async function listMyAgencyTimeEntries(
     .offset(offset);
 
   const tagsByEntryId = await listTagsByTimeEntryIds(rows.map((row) => row.id));
-  const items = rows.map((row) => mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? []));
+  const linksByEntryId = await listLinksByTimeEntryIds(rows.map((row) => row.id));
+  const items = rows.map((row) =>
+    mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? [], linksByEntryId.get(row.id) ?? []),
+  );
 
   // Count total for pagination
   const [countRow] = await db
@@ -1141,7 +1346,10 @@ export async function listMyAgencyTimeEntriesInRange(
     .limit(500);
 
   const tagsByEntryId = await listTagsByTimeEntryIds(rows.map((row) => row.id));
-  const items = rows.map((row) => mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? []));
+  const linksByEntryId = await listLinksByTimeEntryIds(rows.map((row) => row.id));
+  const items = rows.map((row) =>
+    mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? [], linksByEntryId.get(row.id) ?? []),
+  );
 
   return { items };
 }
@@ -1156,11 +1364,13 @@ export async function createManualAgencyTimeEntry(
     endAt: string;
     description?: string;
     tagIds?: string[];
+    links?: string[];
     isBillable?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   const tagIds = await validateAgencyTagIds(input.teamId, input.tagIds);
+  const links = normalizeTimeEntryLinkUrls(input.links);
 
   let projectId = input.projectId;
   if (input.taskId) {
@@ -1206,6 +1416,9 @@ export async function createManualAgencyTimeEntry(
         .insert(agencyOpsTimeEntryTag)
         .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
     }
+    if (entry && links.length > 0) {
+      await insertTimeEntryLinks(tx, entry.id, links);
+    }
     return [entry];
   });
 
@@ -1248,7 +1461,11 @@ export async function createManualAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id));
+  return mapAgencyTimeEntryRow(
+    row,
+    await listTagsForTimeEntry(row.id),
+    await listLinksForTimeEntry(row.id),
+  );
 }
 
 export async function updateMyAgencyTimeEntry(
@@ -1262,12 +1479,15 @@ export async function updateMyAgencyTimeEntry(
     endAt?: string;
     description?: string;
     tagIds?: string[];
+    links?: string[];
     isBillable?: boolean;
     isWaste?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   const tagIds = await validateAgencyTagIds(input.teamId, input.tagIds);
+  const links =
+    input.links === undefined ? undefined : normalizeTimeEntryLinkUrls(input.links);
 
   const [current] = await db
     .select({
@@ -1349,6 +1569,9 @@ export async function updateMyAgencyTimeEntry(
           .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
       }
     }
+    if (entry && links !== undefined) {
+      await replaceTimeEntryLinks(tx, entry.id, links);
+    }
     return [entry];
   });
 
@@ -1391,7 +1614,11 @@ export async function updateMyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id));
+  return mapAgencyTimeEntryRow(
+    row,
+    await listTagsForTimeEntry(row.id),
+    await listLinksForTimeEntry(row.id),
+  );
 }
 
 export async function updateMyAgencyTimeEntriesBulk(
@@ -1404,6 +1631,7 @@ export async function updateMyAgencyTimeEntriesBulk(
       taskId?: string | null;
       description?: string;
       tagIds?: string[];
+      links?: string[];
       isBillable?: boolean;
       isWaste?: boolean;
     };
@@ -1417,6 +1645,10 @@ export async function updateMyAgencyTimeEntriesBulk(
   }
 
   const tagIds = await validateAgencyTagIds(input.teamId, input.patch.tagIds);
+  const links =
+    input.patch.links === undefined
+      ? undefined
+      : normalizeTimeEntryLinkUrls(input.patch.links);
 
   if (input.patch.projectId) {
     await getProjectByIdForTeam(input.teamId, input.patch.projectId);
@@ -1480,6 +1712,9 @@ export async function updateMyAgencyTimeEntriesBulk(
             .insert(agencyOpsTimeEntryTag)
             .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
         }
+      }
+      if (links !== undefined) {
+        await replaceTimeEntryLinks(tx, entry.id, links);
       }
     }
   });
@@ -1709,7 +1944,10 @@ export async function listAllAgencyTimeEntries(
     .offset(offset);
 
   const tagsByEntryId = await listTagsByTimeEntryIds(rows.map((row) => row.id));
-  const items = rows.map((row) => mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? []));
+  const linksByEntryId = await listLinksByTimeEntryIds(rows.map((row) => row.id));
+  const items = rows.map((row) =>
+    mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? [], linksByEntryId.get(row.id) ?? []),
+  );
 
   const [countRow] = await db
     .select({ count: sql<number>`count(*)` })
@@ -1739,12 +1977,15 @@ export async function updateAnyAgencyTimeEntry(
     projectId?: string;
     taskId?: string | null;
     tagIds?: string[];
+    links?: string[];
     isBillable?: boolean;
     isWaste?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
   const tagIds = await validateAgencyTagIds(input.teamId, input.tagIds);
+  const links =
+    input.links === undefined ? undefined : normalizeTimeEntryLinkUrls(input.links);
 
   const [current] = await db
     .select({
@@ -1824,6 +2065,9 @@ export async function updateAnyAgencyTimeEntry(
           .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
       }
     }
+    if (entry && links !== undefined) {
+      await replaceTimeEntryLinks(tx, entry.id, links);
+    }
     return [entry];
   });
 
@@ -1866,7 +2110,11 @@ export async function updateAnyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id));
+  return mapAgencyTimeEntryRow(
+    row,
+    await listTagsForTimeEntry(row.id),
+    await listLinksForTimeEntry(row.id),
+  );
 }
 
 export async function deleteAnyAgencyTimeEntry(
@@ -1948,6 +2196,13 @@ export async function duplicateAnyAgencyTimeEntry(
     .where(eq(agencyOpsTimeEntryTag.timeEntryId, source.id));
   const tagIds = tagRows.map((row) => row.tagId);
 
+  const linkRows = await db
+    .select({ url: agencyOpsTimeEntryLink.url, sortOrder: agencyOpsTimeEntryLink.sortOrder })
+    .from(agencyOpsTimeEntryLink)
+    .where(eq(agencyOpsTimeEntryLink.timeEntryId, source.id))
+    .orderBy(asc(agencyOpsTimeEntryLink.sortOrder));
+  const linkUrls = linkRows.map((row) => row.url);
+
   const now = new Date();
   const [created] = await db.transaction(async (tx) => {
     const [entry] = await tx
@@ -1975,6 +2230,9 @@ export async function duplicateAnyAgencyTimeEntry(
       await tx
         .insert(agencyOpsTimeEntryTag)
         .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
+    }
+    if (entry && linkUrls.length > 0) {
+      await insertTimeEntryLinks(tx, entry.id, linkUrls);
     }
 
     return [entry];

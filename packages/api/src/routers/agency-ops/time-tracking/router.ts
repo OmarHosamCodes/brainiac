@@ -14,6 +14,7 @@ import {
   stopAgencyTimer,
   updateAgencyActiveTimerStart,
   updateAgencyActiveTimerDescription,
+  updateAgencyActiveTimerLinks,
   updateAgencyActiveTimerTask,
   listMyAgencyTimeEntries,
   createManualAgencyTimeEntry,
@@ -23,6 +24,7 @@ import {
   getAgencyTimeSummary,
 } from "./service";
 
+const agencyTimeEntryLinksInputSchema = z.array(z.string().max(2_048)).max(10);
 const agencyWeekSummarySchema = z.object({
   weekStartKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startDate: z.string().datetime(),
@@ -71,6 +73,7 @@ export const timeTrackingRouter = {
           taskId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
           tagIds: z.array(z.string().min(1)).optional(),
+          links: agencyTimeEntryLinksInputSchema.optional(),
           isBillable: z.boolean().optional(),
         }),
       )
@@ -90,6 +93,7 @@ export const timeTrackingRouter = {
           taskId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
           tagIds: z.array(z.string().min(1)).optional(),
+          links: agencyTimeEntryLinksInputSchema.optional(),
           isBillable: z.boolean().optional(),
           discard: z.boolean().optional(),
         }),
@@ -129,6 +133,17 @@ export const timeTrackingRouter = {
         return z
           .object({ timer: agencyActiveTimerSchema })
           .parse(await updateAgencyActiveTimerDescription(context.session.user.id, input));
+      }),
+    updateLinks: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          links: agencyTimeEntryLinksInputSchema,
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ timer: agencyActiveTimerSchema })
+          .parse(await updateAgencyActiveTimerLinks(context.session.user.id, input));
       }),
     updateTask: protectedProProcedure
       .input(
@@ -175,6 +190,7 @@ export const timeTrackingRouter = {
           endAt: z.string().datetime(),
           description: z.string().max(2_000).optional(),
           tagIds: z.array(z.string().min(1)).optional(),
+          links: agencyTimeEntryLinksInputSchema.optional(),
           isBillable: z.boolean().optional(),
         }),
       )
@@ -194,6 +210,7 @@ export const timeTrackingRouter = {
           endAt: z.string().datetime().optional(),
           description: z.string().max(2_000).optional(),
           tagIds: z.array(z.string().min(1)).optional(),
+          links: agencyTimeEntryLinksInputSchema.optional(),
           isBillable: z.boolean().optional(),
           isWaste: z.boolean().optional(),
         }),
@@ -213,6 +230,7 @@ export const timeTrackingRouter = {
             taskId: z.string().min(1).nullable().optional(),
             description: z.string().max(2_000).optional(),
             tagIds: z.array(z.string().min(1)).optional(),
+            links: agencyTimeEntryLinksInputSchema.optional(),
             isBillable: z.boolean().optional(),
             isWaste: z.boolean().optional(),
           }),

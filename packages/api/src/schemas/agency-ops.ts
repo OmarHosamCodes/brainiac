@@ -205,6 +205,12 @@ export const agencyTimeEntrySchema = z.object({
   clientId: z.string().min(1),
   clientName: z.string().min(1),
   tags: z.array(agencyTagSchema),
+  links: z.array(
+    z.object({
+      id: z.string().min(1),
+      url: z.string().url(),
+    }),
+  ),
   source: agencyTimeEntrySourceSchema,
   description: z.string(),
   isBillable: z.boolean(),
@@ -225,6 +231,12 @@ export const agencyActiveTimerSchema = z.object({
   taskTitle: z.string().nullable(),
   projectName: z.string().min(1),
   tags: z.array(agencyTagSchema),
+  links: z.array(
+    z.object({
+      id: z.string().min(1),
+      url: z.string().url(),
+    }),
+  ),
   description: z.string(),
   isBillable: z.boolean(),
   startedAt: z.string().datetime(),

@@ -29,6 +29,7 @@ describe("agency timer live events", () => {
             updatedAt: timestamp,
           },
         ],
+        links: [{ id: "link-1", url: "https://example.com/pr/1" }],
         startedAt: timestamp,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -39,6 +40,7 @@ describe("agency timer live events", () => {
       timer: {
         isBillable: false,
         tags: [{ id: "tag-1", name: "Realtime" }],
+        links: [{ id: "link-1", url: "https://example.com/pr/1" }],
       },
     });
   });

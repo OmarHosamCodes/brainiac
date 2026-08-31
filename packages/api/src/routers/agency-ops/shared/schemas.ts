@@ -103,6 +103,11 @@ export const agencyProjectJourneySchema = z.object({
   totalSteps: z.number().int().nonnegative(),
 });
 
+export const agencyTimeEntryLinkSchema = z.object({
+  id: z.string().min(1),
+  url: z.string().url(),
+});
+
 export const agencyTimeEntrySchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
@@ -116,6 +121,7 @@ export const agencyTimeEntrySchema = z.object({
   clientId: z.string().min(1),
   clientName: z.string().min(1),
   tags: z.array(agencyTagSchema),
+  links: z.array(agencyTimeEntryLinkSchema),
   source: agencyTimeEntrySourceSchema,
   description: z.string(),
   isBillable: z.boolean(),
@@ -137,6 +143,7 @@ export const agencyActiveTimerSchema = z.object({
   taskTitle: z.string().nullable(),
   projectName: z.string(),
   tags: z.array(agencyTagSchema),
+  links: z.array(agencyTimeEntryLinkSchema),
   description: z.string(),
   isBillable: z.boolean(),
   startedAt: z.string().datetime(),

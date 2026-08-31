@@ -28,6 +28,12 @@ const agencyActiveTimerLiveSchema = z.object({
       updatedAt: z.string().datetime(),
     }),
   ),
+  links: z.array(
+    z.object({
+      id: z.string().min(1),
+      url: z.string().url(),
+    }),
+  ),
   startedAt: z.string().datetime(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -308,6 +314,10 @@ export async function publishAgencyTimerUpdated(
       name: string;
       createdAt: string;
       updatedAt: string;
+    }>;
+    links: Array<{
+      id: string;
+      url: string;
     }>;
     startedAt: string;
     createdAt: string;

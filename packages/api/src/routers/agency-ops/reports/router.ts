@@ -88,6 +88,7 @@ export const reportsRouter = {
           projectId: z.string().min(1).optional(),
           taskId: z.string().min(1).nullable().optional(),
           tagIds: z.array(z.string().min(1)).optional(),
+          links: z.array(z.string().max(2_048)).max(10).optional(),
           isBillable: z.boolean().optional(),
           isWaste: z.boolean().optional(),
         }),
