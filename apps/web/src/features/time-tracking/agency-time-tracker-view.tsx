@@ -1,5 +1,6 @@
 import { CalendarClock, MoreVertical, Timer, Trash2 } from "lucide-react";
 
+import { AgencyBillableToggleMenuItem } from "@/features/time-tracking/entries/agency-billable-toggle-menu-item";
 import { AgencyDescriptionDatalistField } from "@/features/time-tracking/agency-description-datalist-field";
 import { AgencyTimeEntryLinkHoverTrigger } from "@/features/time-tracking/agency-time-entry-link-hover-trigger";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
@@ -358,23 +359,11 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-44 p-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
+                <AgencyBillableToggleMenuItem
+                  isBillable={view.isBillable}
                   disabled={controlsDisabled}
-                  onClick={() => view.onIsBillableChange(!view.isBillable)}
-                >
-                  <span
-                    className={cn(
-                      "size-3.5 text-center text-xs font-semibold",
-                      view.isBillable && "text-info",
-                    )}
-                  >
-                    $
-                  </span>
-                  {view.isBillable ? "Billable" : "Non-billable"}
-                </Button>
+                  onToggle={() => view.onIsBillableChange(!view.isBillable)}
+                />
                 {view.activeTimer ? (
                   <Button
                     variant="ghost"

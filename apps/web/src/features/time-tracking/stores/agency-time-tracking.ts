@@ -222,13 +222,6 @@ type UpdateEntryPayload = {
   isBillable?: boolean;
 };
 
-type UpdateEntryLinksPayload = {
-  teamId: string;
-  entryId: string;
-  links: string[];
-  previousEntry?: AgencyTimeEntry;
-};
-
 type UpdateEntriesBulkPayload = {
   teamId: string;
   entryIds: string[];
@@ -260,6 +253,42 @@ type CreateManualEntryPayload = {
   tagIds?: string[];
   isBillable?: boolean;
 };
+
+function buildUpdateEntryPayloadFromEntry(
+  entry: AgencyTimeEntry,
+  teamId: string,
+  patch: Pick<UpdateEntryPayload, "links"> = {},
+): UpdateEntryPayload {
+  return {
+    teamId,
+    entryId: entry.id,
+    previousEntry: entry,
+    projectId: entry.projectId,
+    taskId: entry.taskId,
+    task: entry.taskId ? { id: entry.taskId, title: entry.taskTitle ?? "" } : null,
+    project: {
+      id: entry.projectId,
+      name: entry.projectName,
+      clientId: entry.clientId,
+      clientName: entry.clientName,
+    },
+    description: entry.description,
+    startAt: entry.startedAt,
+    endAt: entry.endedAt,
+    durationSeconds: entry.durationSeconds,
+    tagIds: entry.tags.map((tag) => tag.id),
+    isBillable: entry.isBillable,
+    ...patch,
+  };
+}
+
+export function buildAgencyTimeEntryLinksUpdatePayload(
+  entry: AgencyTimeEntry,
+  teamId: string,
+  links: string[],
+): UpdateEntryPayload {
+  return buildUpdateEntryPayloadFromEntry(entry, teamId, { links });
+}
 
 const OPTIMISTIC_CLIENT_ID = "optimistic-client";
 const OPTIMISTIC_CLIENT_NAME = "Unknown client";
@@ -493,7 +522,7 @@ function createAgencyTimeTrackingActions(
     return persistActiveTimerDescription(teamId);
   }
 
-  async function updateActiveTimerLinks(payload: { teamId: string; links: string[] }) {
+  async function runUpdateActiveTimerLinks(payload: { teamId: string; links: string[] }) {
     const { teamId, links } = payload;
     if (!teamId) return;
 
@@ -531,6 +560,10 @@ function createAgencyTimeTrackingActions(
       });
       throw error;
     }
+  }
+
+  function updateActiveTimerLinks(payload: { teamId: string; links: string[] }) {
+    return enqueueTimerMutation(() => runUpdateActiveTimerLinks(payload));
   }
 
   function setTrackerProjectId(teamId: string, projectId: string) {
@@ -2026,55 +2059,6 @@ function createAgencyTimeTrackingActions(
     }
   }
 
-  async function updateEntryLinks(payload: UpdateEntryLinksPayload) {
-    const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
-    const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
-    const previousEntry = payload.previousEntry ?? findTimeEntry(payload.teamId, payload.entryId);
-
-    if (!previousEntry) {
-      toast.error("Unable to update links", { description: "Entry not found." });
-      throw new Error("Entry not found.");
-    }
-
-    const optimisticEntry: AgencyTimeEntry = {
-      ...previousEntry,
-      links: payload.links.map((url, index) => ({
-        id: `optimistic-link-${index}`,
-        url,
-      })),
-      updatedAt: new Date().toISOString(),
-    };
-
-    set((s) => ({
-      ...s,
-      updatingEntryIds: [...new Set([...s.updatingEntryIds, payload.entryId])],
-    }));
-
-    try {
-      patchUpdatedEntry(payload.teamId, previousEntry, optimisticEntry);
-
-      const updated = (await orpcClient.agencyOps.timeEntries.updateMine({
-        teamId: payload.teamId,
-        entryId: payload.entryId,
-        links: payload.links,
-      })) as AgencyTimeEntry;
-
-      patchUpdatedEntry(payload.teamId, optimisticEntry, updated);
-    } catch (error) {
-      restoreQuerySnapshots(logSnapshots);
-      optimistic().restoreTimeEntries(payload.teamId, entryOverlaySnapshot);
-      toast.error("Unable to update links", {
-        description: getErrorMessage(error, "Please try again."),
-      });
-      throw error;
-    } finally {
-      set((s) => ({
-        ...s,
-        updatingEntryIds: releasePendingEntryIds(s.updatingEntryIds, [payload.entryId]),
-      }));
-    }
-  }
-
   async function updateEntriesBulk(payload: UpdateEntriesBulkPayload) {
     const entryIds = [...new Set(payload.entryIds)];
     if (entryIds.length === 0) return;
@@ -2195,7 +2179,6 @@ function createAgencyTimeTrackingActions(
     duplicateEntry,
     createManualEntry,
     updateEntry,
-    updateEntryLinks,
     updateEntriesBulk,
     requestOpenTaskChooser,
   };

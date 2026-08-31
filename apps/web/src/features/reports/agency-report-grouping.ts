@@ -1,5 +1,9 @@
 import type { AgencyTimeEntry } from "@orch/api/schemas/agency-ops";
 import { isWasteLabel } from "@orch/api/routers/agency-ops/shared/waste-helpers";
+import {
+  joinedTimeEntryLinkUrls,
+  mergeTimeEntryLinkRecords,
+} from "@/features/shared/agency-time-entry-links";
 
 import { type AgencyReportShowWaste } from "@/features/reports/agency-report-show-waste";
 
@@ -174,17 +178,7 @@ export function joinedReportRowDescriptions(
 export function joinedReportRowLinks(
   entries: readonly Pick<AgencyReportEntry, "links">[],
 ): string {
-  const parts: string[] = [];
-  const seen = new Set<string>();
-  for (const entry of entries) {
-    for (const link of entry.links ?? []) {
-      const url = (link.url ?? "").trim();
-      if (!url || seen.has(url)) continue;
-      seen.add(url);
-      parts.push(url);
-    }
-  }
-  return parts.join(" · ");
+  return joinedTimeEntryLinkUrls(entries);
 }
 
 export function aggregateSimilarReportRows(
@@ -235,15 +229,7 @@ export function aggregateSimilarReportRows(
       aggregated.description = joinedReportRowDescriptions(aggregated.entries);
     }
     if (aggregated.entries.length > 1) {
-      const seen = new Set<string>();
-      aggregated.links = [];
-      for (const entry of aggregated.entries) {
-        for (const link of entry.links ?? []) {
-          if (seen.has(link.url)) continue;
-          seen.add(link.url);
-          aggregated.links.push(link);
-        }
-      }
+      aggregated.links = mergeTimeEntryLinkRecords(aggregated.entries);
     }
   }
 

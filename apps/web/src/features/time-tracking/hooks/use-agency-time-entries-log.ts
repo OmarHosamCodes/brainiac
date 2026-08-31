@@ -26,6 +26,7 @@ import {
 } from "@/features/time-tracking/agency-time-entry";
 import { resolveWasteTogglePatch } from "@/features/time-tracking/agency-entry-group-waste";
 import {
+  buildAgencyTimeEntryLinksUpdatePayload,
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
 } from "@/features/time-tracking/stores/agency-time-tracking";
@@ -312,12 +313,9 @@ export function useAgencyTimeEntriesLog({
   async function saveLinks(entryId: string, links: string[]) {
     const entry = entries.find((item) => item.id === entryId);
     if (!teamId || !entry) return;
-    await agencyTimeTrackingStore.updateEntryLinks({
-      teamId,
-      entryId: entry.id,
-      links,
-      previousEntry: entry,
-    });
+    await useAgencyTimeTrackingStore
+      .getState()
+      .updateEntry(buildAgencyTimeEntryLinksUpdatePayload(entry, teamId, links));
   }
 
   async function duplicateEntry(entryId: string) {

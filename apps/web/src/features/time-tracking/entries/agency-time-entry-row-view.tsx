@@ -6,6 +6,7 @@ import {
   AgencyTimeEntryMoreAction,
   AgencyTimeEntryPlayAction,
 } from "@/features/time-tracking/entries/agency-time-entry-actions";
+import { AgencyBillableToggleMenuItem } from "@/features/time-tracking/entries/agency-billable-toggle-menu-item";
 import { AgencyTimeEntryDatePicker } from "@/features/time-tracking/entries/agency-time-entry-date-picker";
 import { AgencyTimeEntryLinkHoverTrigger } from "@/features/time-tracking/agency-time-entry-link-hover-trigger";
 import { Button } from "@/ui/button";
@@ -355,23 +356,11 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 >
                   Show {group.entries.length} entries
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
+                <AgencyBillableToggleMenuItem
+                  isBillable={editDraft.isBillable}
                   disabled={editSaving || rowUpdating}
-                  onClick={() => onIsBillableChange(!editDraft.isBillable)}
-                >
-                  <span
-                    className={cn(
-                      "size-3.5 text-center text-xs font-semibold",
-                      editDraft.isBillable && "text-info",
-                    )}
-                  >
-                    $
-                  </span>
-                  {editDraft.isBillable ? "Billable" : "Non-billable"}
-                </Button>
+                  onToggle={() => onIsBillableChange(!editDraft.isBillable)}
+                />
                 {canToggleWaste ? (
                   <Button
                     variant="ghost"

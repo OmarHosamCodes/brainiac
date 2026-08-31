@@ -1,9 +1,9 @@
 import {
-  collectTimeEntryLinkRecords,
   formatTimeEntryLinkLabel,
+  mergeTimeEntryLinkRecords,
   joinedTimeEntryLinkUrls,
   type TimeEntryLinkRecord,
-} from "@/features/time-tracking/time-entry-links";
+} from "@/features/shared/agency-time-entry-links";
 import { AgencyTimeEntryLinkHoverTrigger } from "@/features/time-tracking/agency-time-entry-link-hover-trigger";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
@@ -14,16 +14,18 @@ const reportCellHitClass =
 type AgencyReportLinkCellProps = {
   links: readonly TimeEntryLinkRecord[];
   disabled?: boolean;
+  readOnly?: boolean;
   onSave: (urls: string[]) => void | Promise<void>;
 };
 
 export function AgencyReportLinkCell({
   links,
   disabled = false,
+  readOnly = false,
   onSave,
 }: AgencyReportLinkCellProps) {
   const joined = joinedTimeEntryLinkUrls([{ links }]);
-  const unique = collectTimeEntryLinkRecords([{ links }]);
+  const unique = mergeTimeEntryLinkRecords([{ links }]);
 
   return (
     <div className={cn(reportCellHitClass, "group/row")}>
@@ -50,12 +52,14 @@ export function AgencyReportLinkCell({
           <span className="text-muted">—</span>
         )}
       </div>
-      <AgencyTimeEntryLinkHoverTrigger
-        links={unique}
-        disabled={disabled}
-        hoverRevealClassName="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
-        onSave={onSave}
-      />
+      {!readOnly ? (
+        <AgencyTimeEntryLinkHoverTrigger
+          links={unique}
+          disabled={disabled}
+          hoverRevealClassName="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
+          onSave={onSave}
+        />
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Copy, Loader2, MoreVertical, Play, Trash2, TrashIcon } from "lucide-react";
 import { useState } from "react";
 
+import { AgencyBillableToggleMenuItem } from "@/features/time-tracking/entries/agency-billable-toggle-menu-item";
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { agencyTimeEntryIconButtonClass } from "@/features/shared/agency-ui";
@@ -92,21 +93,14 @@ export function AgencyTimeEntryMoreAction({
 
       <PopoverContent align="end" className="w-44 p-1">
         {canToggleBillable ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
+          <AgencyBillableToggleMenuItem
+            isBillable={isBillable}
             disabled={deleting || duplicating}
-            onClick={() => {
+            onToggle={() => {
               setMenuOpen(false);
               onIsBillableChange?.(!isBillable);
             }}
-          >
-            <span className={cn("size-3.5 text-center text-xs font-semibold", isBillable && "text-info")}>
-              $
-            </span>
-            {isBillable ? "Billable" : "Non-billable"}
-          </Button>
+          />
         ) : null}
         {canToggleWaste ? (
           <Button

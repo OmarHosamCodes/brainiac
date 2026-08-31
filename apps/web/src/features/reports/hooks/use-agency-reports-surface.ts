@@ -158,9 +158,8 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
 
   const linksChangeMutation = useMutation({
     mutationFn: async ({ row, links }: { row: AggregatedReportRow; links: string[] }) => {
-      // ponytail: primary-entry links only on grouped rows; upgrade to per-entry edit via details dialog
       const primary = row.entries[0];
-      if (!primary) return;
+      if (!primary || row.entryCount > 1) return;
       await orpcClient.agencyOps.reports.updateEntry({
         teamId,
         entryId: primary.id,
@@ -202,7 +201,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
 
   const handleLinksChange = useCallback(
     async (row: AggregatedReportRow, links: string[]) => {
-      if (!teamId) return;
+      if (!teamId || row.entryCount > 1) return;
       setUpdatingRowKeys((current) => new Set(current).add(row.key));
       try {
         await linksChangeMutation.mutateAsync({ row, links });

@@ -2,7 +2,7 @@ import { Link2 } from "lucide-react";
 import { useState } from "react";
 
 import { AgencyTimeEntryLinksDialog } from "@/features/time-tracking/agency-time-entry-links-dialog";
-import type { TimeEntryLinkRecord } from "@/features/time-tracking/time-entry-links";
+import type { TimeEntryLinkRecord } from "@/features/shared/agency-time-entry-links";
 import {
   agencyFocusRingClass,
   agencyTimeEntryIconButtonClass,

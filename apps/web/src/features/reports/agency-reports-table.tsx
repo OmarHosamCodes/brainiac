@@ -272,6 +272,7 @@ export function AgencyReportsTable({
                               <AgencyReportLinkCell
                                 links={row.links}
                                 disabled={updatingRowKeys?.has(row.key)}
+                                readOnly={row.entryCount > 1}
                                 onSave={(links) => onLinksChange(row, links)}
                               />
                             ) : (

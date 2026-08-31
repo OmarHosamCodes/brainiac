@@ -5,7 +5,7 @@ import {
   MAX_TIME_ENTRY_LINKS,
   normalizeTimeEntryLinkUrls,
   type TimeEntryLinkRecord,
-} from "@/features/time-tracking/time-entry-links";
+} from "@/features/shared/agency-time-entry-links";
 import { Button } from "@/ui/button";
 import {
   Dialog,
