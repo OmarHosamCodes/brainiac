@@ -15,6 +15,7 @@ import {
   groupEntriesForDisplay,
   filterEntriesByShowWaste,
   isReportEntryWaste,
+  joinedReportRowLinks,
   type AgencyReportEntry,
   type AggregatedReportRow,
   type DisplayClientGroup,
@@ -103,6 +104,8 @@ function reportFieldValue(
       return entry.taskTitle || "—";
     case "description":
       return entry.description || "—";
+    case "link":
+      return joinedReportRowLinks(entry.entries) || "—";
     case "duration":
       return formatDuration(entry.durationSeconds, "clock");
     case "assignee":

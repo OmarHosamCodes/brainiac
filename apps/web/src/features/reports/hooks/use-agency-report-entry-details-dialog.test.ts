@@ -25,6 +25,7 @@ function makeEntry(
     taskTitle: "Peeling",
     taskIsWaste: null,
     tags: [],
+    links: [],
     source: "manual",
     description: "new peeling",
     isBillable: true,

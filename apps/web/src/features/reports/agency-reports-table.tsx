@@ -1,6 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 
 import { AgencyReportDescriptionCell } from "@/features/reports/cells/agency-report-description-cell";
+import { AgencyReportLinkCell } from "@/features/reports/cells/agency-report-link-cell";
 import { AgencyReportDurationCell } from "@/features/reports/cells/agency-report-duration-cell";
 import { AgencyReportRowActions } from "@/features/reports/agency-report-row-actions";
 import { AgencyReportTaskCell } from "@/features/reports/cells/agency-report-task-cell";
@@ -67,6 +68,7 @@ type AgencyReportsTableProps = {
   wastePendingRowKeys?: ReadonlySet<string>;
   onTaskChange?: (row: AggregatedReportRow, taskId: string) => void;
   onDescriptionChange?: (row: AggregatedReportRow, description: string) => void;
+  onLinksChange?: (row: AggregatedReportRow, links: string[]) => void;
   onEditDetails?: (row: AggregatedReportRow) => void;
   onDeleteRow?: (row: AggregatedReportRow) => void;
   onToggleWaste?: (row: AggregatedReportRow) => void;
@@ -89,6 +91,7 @@ export function AgencyReportsTable({
   wastePendingRowKeys,
   onTaskChange,
   onDescriptionChange,
+  onLinksChange,
   onEditDetails,
   onDeleteRow,
   onToggleWaste,
@@ -108,6 +111,7 @@ export function AgencyReportsTable({
   const showProject = isReportFieldVisible(visibleFields, "project");
   const showTask = isReportFieldVisible(visibleFields, "task");
   const showDescription = isReportFieldVisible(visibleFields, "description");
+  const showLink = isReportFieldVisible(visibleFields, "link");
   const showDuration = isReportFieldVisible(visibleFields, "duration");
   const showAssignee = isReportFieldVisible(visibleFields, "assignee");
   const showActions = Boolean(onEditDetails || onDeleteRow || onToggleWaste || onAskOrchWaste);
@@ -154,6 +158,11 @@ export function AgencyReportsTable({
                   {showDescription ? (
                     <TableHead scope="col">{AGENCY_REPORT_FIELD_LABELS.description}</TableHead>
                   ) : null}
+                  {showLink ? (
+                    <TableHead scope="col" className="min-w-[10rem]">
+                      {AGENCY_REPORT_FIELD_LABELS.link}
+                    </TableHead>
+                  ) : null}
                   <TableHead scope="col" className="w-20">
                     Waste
                   </TableHead>
@@ -183,7 +192,7 @@ export function AgencyReportsTable({
                       <TableRow
                         key={row.key}
                         className={cn(
-                          "border-b border-default last:border-b-0",
+                          "group/row border-b border-default last:border-b-0",
                           reportSimilarTaskStripeClass(taskStripes[rowIndex] ?? 0),
                         )}
                       >
@@ -253,6 +262,26 @@ export function AgencyReportsTable({
                                 title={row.description || undefined}
                               >
                                 {row.description || "—"}
+                              </span>
+                            )}
+                          </TableCell>
+                        ) : null}
+                        {showLink ? (
+                          <TableCell className="min-w-0 max-w-xs text-sm text-highlighted">
+                            {onLinksChange ? (
+                              <AgencyReportLinkCell
+                                links={row.links}
+                                disabled={updatingRowKeys?.has(row.key)}
+                                onSave={(links) => onLinksChange(row, links)}
+                              />
+                            ) : (
+                              <span
+                                className="block truncate text-start"
+                                title={
+                                  row.links.map((link) => link.url).join(" · ") || undefined
+                                }
+                              >
+                                {row.links.map((link) => link.url).join(" · ") || "—"}
                               </span>
                             )}
                           </TableCell>

@@ -24,6 +24,7 @@ function makeEntry(
     taskTitle: null,
     taskIsWaste: null,
     tags: [],
+    links: [],
     source: "manual",
     description: "Design review",
     isBillable: true,
@@ -447,5 +448,38 @@ describe("applyReportEntriesWaste", () => {
     expect(next.find((entry) => entry.id === "keep")?.isWaste).toBe(false);
     expect(next.find((entry) => entry.id === "flip")?.isWaste).toBe(true);
     expect(entries.find((entry) => entry.id === "flip")?.isWaste).toBe(false);
+  });
+});
+
+describe("joinedReportRowLinks / merge links", () => {
+  test("joins unique links with middle-dot when mergeSameTaskNames", () => {
+    const rows = aggregateSimilarReportRows(
+      [
+        makeEntry({
+          id: "e1",
+          taskId: "t1",
+          taskTitle: "Peeling",
+          links: [{ id: "l1", url: "https://a.example" }],
+        }),
+        makeEntry({
+          id: "e2",
+          taskId: "t2",
+          taskTitle: "Peeling",
+          userId: "user-2",
+          userName: "Sam",
+          links: [
+            { id: "l2", url: "https://b.example" },
+            { id: "l3", url: "https://a.example" },
+          ],
+        }),
+      ],
+      { mergeSameTaskNames: true },
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.links.map((link) => link.url)).toEqual([
+      "https://a.example",
+      "https://b.example",
+    ]);
   });
 });

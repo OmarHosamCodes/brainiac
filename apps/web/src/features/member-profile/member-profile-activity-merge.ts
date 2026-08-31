@@ -105,6 +105,7 @@ export function activityToReportEntry(
     clientId: item.clientId,
     clientName: item.clientName,
     tags: [],
+    links: [],
     source: item.source,
     description: item.description ?? "",
     isBillable: item.isBillable,

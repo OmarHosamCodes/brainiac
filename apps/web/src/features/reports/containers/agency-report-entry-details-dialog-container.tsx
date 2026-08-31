@@ -40,6 +40,7 @@ export function AgencyReportEntryDetailsDialogContainer(
       onDuplicate={viewModel.onDuplicate}
       onToggleWaste={viewModel.onToggleWaste}
       onSaveEdit={viewModel.onSaveEdit}
+      onSaveLinks={viewModel.onSaveLinks}
       onBulkPatch={viewModel.onBulkPatch}
     />
   );

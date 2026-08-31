@@ -23,6 +23,7 @@ function makeEntry(id: string): AgencyReportEntry {
     taskTitle: "Task",
     taskIsWaste: null,
     tags: [],
+    links: [],
     source: "manual",
     description: "Work",
     isBillable: true,

@@ -156,6 +156,28 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     },
   });
 
+  const linksChangeMutation = useMutation({
+    mutationFn: async ({ row, links }: { row: AggregatedReportRow; links: string[] }) => {
+      // ponytail: primary-entry links only on grouped rows; upgrade to per-entry edit via details dialog
+      const primary = row.entries[0];
+      if (!primary) return;
+      await orpcClient.agencyOps.reports.updateEntry({
+        teamId,
+        entryId: primary.id,
+        links,
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
+    },
+    onError: (error) => {
+      toast.error("Couldn't update links", {
+        description: getErrorMessage(error, "Try again."),
+      });
+      throw error;
+    },
+  });
+
   const handleDescriptionChange = useCallback(
     async (row: AggregatedReportRow, description: string) => {
       if (!teamId || row.description.trim() === description) return;
@@ -176,6 +198,24 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
       }
     },
     [descriptionChangeMutation, flashSavedRow, teamId],
+  );
+
+  const handleLinksChange = useCallback(
+    async (row: AggregatedReportRow, links: string[]) => {
+      if (!teamId) return;
+      setUpdatingRowKeys((current) => new Set(current).add(row.key));
+      try {
+        await linksChangeMutation.mutateAsync({ row, links });
+        flashSavedRow(row.key);
+      } finally {
+        setUpdatingRowKeys((current) => {
+          const next = new Set(current);
+          next.delete(row.key);
+          return next;
+        });
+      }
+    },
+    [flashSavedRow, linksChangeMutation, teamId],
   );
 
   const handleTaskChange = useCallback(
@@ -343,6 +383,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
     detailsLabel: detailsRowLabel,
     onTaskChange: handleTaskChange,
     onDescriptionChange: handleDescriptionChange,
+    onLinksChange: handleLinksChange,
     onEditDetails: handleEditDetails,
     onDetailsOpenChange: handleDetailsOpenChange,
     onDeleteRow: handleDeleteRow,

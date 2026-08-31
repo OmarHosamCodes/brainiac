@@ -44,6 +44,7 @@ function makeEntry(
     taskTitle: "Design",
     taskIsWaste: null,
     tags: [],
+    links: [],
     source: "manual",
     description: "Design review",
     isBillable: true,

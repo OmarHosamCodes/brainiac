@@ -33,6 +33,7 @@ export type AggregatedReportRow = {
   taskTitle: string | null;
   taskIsWaste: boolean | null;
   description: string;
+  links: Array<{ id: string; url: string }>;
   userId: string;
   userName: string;
   durationSeconds: number;
@@ -169,6 +170,23 @@ export function joinedReportRowDescriptions(
   return parts.join(" · ");
 }
 
+/** Join unique link URLs in entry order with a middle-dot separator. */
+export function joinedReportRowLinks(
+  entries: readonly Pick<AgencyReportEntry, "links">[],
+): string {
+  const parts: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    for (const link of entry.links ?? []) {
+      const url = (link.url ?? "").trim();
+      if (!url || seen.has(url)) continue;
+      seen.add(url);
+      parts.push(url);
+    }
+  }
+  return parts.join(" · ");
+}
+
 export function aggregateSimilarReportRows(
   rows: AgencyReportEntry[],
   options: ReportRowAggregationOptions = {},
@@ -190,6 +208,7 @@ export function aggregateSimilarReportRows(
           : entry.taskTitle,
         taskIsWaste: entry.taskIsWaste,
         description: entry.description,
+        links: [...(entry.links ?? [])],
         userId: entry.userId,
         userName: entry.userName,
         durationSeconds: 0,
@@ -208,12 +227,23 @@ export function aggregateSimilarReportRows(
     }
   }
 
-  if (mergeSameTaskNames) {
-    for (const aggregated of byKey.values()) {
+  for (const aggregated of byKey.values()) {
+    if (mergeSameTaskNames) {
       const assignee = joinedReportRowAssignees(aggregated.entries);
       aggregated.userId = assignee.userId;
       aggregated.userName = assignee.userName;
       aggregated.description = joinedReportRowDescriptions(aggregated.entries);
+    }
+    if (aggregated.entries.length > 1) {
+      const seen = new Set<string>();
+      aggregated.links = [];
+      for (const entry of aggregated.entries) {
+        for (const link of entry.links ?? []) {
+          if (seen.has(link.url)) continue;
+          seen.add(link.url);
+          aggregated.links.push(link);
+        }
+      }
     }
   }
 

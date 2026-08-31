@@ -93,6 +93,7 @@ export function AgencyReportCreatorTable({
   const showProject = isReportFieldVisible(visibleFields, "project");
   const showTask = isReportFieldVisible(visibleFields, "task");
   const showDescription = isReportFieldVisible(visibleFields, "description");
+  const showLink = isReportFieldVisible(visibleFields, "link");
   const showDuration = isReportFieldVisible(visibleFields, "duration");
   const showAssignee = isReportFieldVisible(visibleFields, "assignee");
   const periodFromLabel = rangeFrom ? formatReportPeriodDayMonth(rangeFrom) : "";
@@ -156,6 +157,11 @@ export function AgencyReportCreatorTable({
                     ) : null}
                     {showDescription ? (
                       <TableHead scope="col">{AGENCY_REPORT_FIELD_LABELS.description}</TableHead>
+                    ) : null}
+                    {showLink ? (
+                      <TableHead scope="col" className="min-w-[10rem]">
+                        {AGENCY_REPORT_FIELD_LABELS.link}
+                      </TableHead>
                     ) : null}
                     <TableHead scope="col" className="w-20">
                       Waste
@@ -227,6 +233,7 @@ export function AgencyReportCreatorTable({
                             showProject={showProject}
                             showTask={showTask}
                             showDescription={showDescription}
+                            showLink={showLink}
                             showDuration={showDuration}
                             showAssignee={showAssignee}
                             activeEntryId={activeEntryId}
@@ -284,6 +291,7 @@ type ReportCreatorRowProps = {
   showProject: boolean;
   showTask: boolean;
   showDescription: boolean;
+  showLink: boolean;
   showDuration: boolean;
   showAssignee: boolean;
   activeEntryId: string | null;
@@ -316,6 +324,7 @@ function ReportCreatorRow({
   showProject,
   showTask,
   showDescription,
+  showLink,
   showDuration,
   showAssignee,
   activeEntryId,
@@ -454,6 +463,21 @@ function ReportCreatorRow({
               {row.description || "—"}
             </span>
           )}
+        </td>
+      ) : null}
+      {showLink ? (
+        <td
+          className={cn(
+            "min-w-0 max-w-xs px-4 py-3 text-start text-sm text-highlighted",
+            reportCreatorCellSelectionClass(isSelected, "link"),
+          )}
+        >
+          <span
+            className="block truncate text-start"
+            title={row.links.map((link) => link.url).join(" · ") || undefined}
+          >
+            {row.links.map((link) => link.url).join(" · ") || "—"}
+          </span>
         </td>
       ) : null}
       <td className="px-4 py-3">

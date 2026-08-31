@@ -18,6 +18,7 @@ export type ReportEntryPatch = {
   projectId?: string;
   taskId?: string | null;
   tagIds?: string[];
+  links?: string[];
   isBillable?: boolean;
   isWaste?: boolean;
 };

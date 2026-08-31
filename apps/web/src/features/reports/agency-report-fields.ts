@@ -4,6 +4,7 @@ export const AGENCY_REPORT_FIELDS = [
   "project",
   "task",
   "description",
+  "link",
   "duration",
   "assignee",
 ] as const;
@@ -16,6 +17,7 @@ export const AGENCY_REPORT_FIELD_LABELS: Record<AgencyReportFieldId, string> = {
   project: "Project",
   task: "Task",
   description: "Description",
+  link: "Link",
   duration: "Duration",
   assignee: "Assignee",
 };
@@ -25,6 +27,7 @@ export const AGENCY_REPORT_DEFAULT_FIELDS = [
   "project",
   "task",
   "description",
+  "link",
   "duration",
   "assignee",
 ] as const satisfies readonly AgencyReportFieldId[];

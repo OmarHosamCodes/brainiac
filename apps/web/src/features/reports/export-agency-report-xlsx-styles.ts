@@ -35,6 +35,7 @@ export const AGENCY_REPORT_EXPORT_COLUMN_WIDTHS: Record<AgencyReportFieldId, num
   project: 28,
   task: 28,
   description: 48,
+  link: 40,
   duration: 14,
   assignee: 20,
 };

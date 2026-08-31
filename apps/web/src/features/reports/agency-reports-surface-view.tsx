@@ -80,6 +80,7 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
         deletingEntryIds={vm.deletingEntryIds}
         onTaskChange={vm.onTaskChange}
         onDescriptionChange={vm.onDescriptionChange}
+        onLinksChange={vm.onLinksChange}
         onEditDetails={vm.onEditDetails}
         onDeleteRow={vm.onDeleteRow}
         onToggleWaste={vm.onToggleWaste}

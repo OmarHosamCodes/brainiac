@@ -95,6 +95,7 @@ export type AgencyReportEntryDetailsDialogViewModel = {
   onDuplicate: (entryId: string) => void;
   onToggleWaste: (entryId: string | readonly string[]) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onSaveLinks: (entryId: string, links: string[]) => Promise<void>;
   onBulkPatch: (
     entryIds: string[],
     patch: {
@@ -288,6 +289,20 @@ export function useAgencyReportEntryDetailsDialog({
       toast.error("Unable to update entry", {
         description: getErrorMessage(error, "Please try again."),
       });
+    }
+  }
+
+  async function saveLinks(entryId: string, links: string[]) {
+    if (!teamId) return;
+    try {
+      await trackPendingIds(setUpdatingEntryIds, [entryId], async () => {
+        await updateReportEntry(queryClient, teamId, entryId, { links });
+      });
+    } catch (error) {
+      toast.error("Unable to update links", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+      throw error;
     }
   }
 
@@ -495,6 +510,7 @@ export function useAgencyReportEntryDetailsDialog({
     onDuplicate: (entryId) => void duplicateEntry(entryId),
     onToggleWaste: (entryId) => void toggleEntryWaste(entryId),
     onSaveEdit: saveEdit,
+    onSaveLinks: saveLinks,
     onBulkPatch: saveBulkPatch,
     onBulkDraftChange: (patch) => setBulkDraft((current) => ({ ...current, ...patch })),
     onToggleEntrySelected: toggleEntrySelected,
