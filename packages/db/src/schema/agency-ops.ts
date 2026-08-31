@@ -467,6 +467,23 @@ export const agencyOpsTimeEntryTag = pgTable(
   ],
 );
 
+export const agencyOpsTimeEntryLink = pgTable(
+  "agency_ops_time_entry_link",
+  {
+    id: text("id").primaryKey(),
+    timeEntryId: text("time_entry_id")
+      .notNull()
+      .references(() => agencyOpsTimeEntry.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("agency_ops_time_entry_link_entry_idx").on(table.timeEntryId),
+    index("agency_ops_time_entry_link_entry_sort_idx").on(table.timeEntryId, table.sortOrder),
+  ],
+);
+
 export const agencyOpsActiveTimer = pgTable(
   "agency_ops_active_timer",
   {
@@ -511,6 +528,26 @@ export const agencyOpsActiveTimerTag = pgTable(
     primaryKey({ columns: [table.activeTimerId, table.tagId] }),
     index("agency_ops_active_timer_tag_timer_idx").on(table.activeTimerId),
     index("agency_ops_active_timer_tag_tag_idx").on(table.tagId),
+  ],
+);
+
+export const agencyOpsActiveTimerLink = pgTable(
+  "agency_ops_active_timer_link",
+  {
+    id: text("id").primaryKey(),
+    activeTimerId: text("active_timer_id")
+      .notNull()
+      .references(() => agencyOpsActiveTimer.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("agency_ops_active_timer_link_timer_idx").on(table.activeTimerId),
+    index("agency_ops_active_timer_link_timer_sort_idx").on(
+      table.activeTimerId,
+      table.sortOrder,
+    ),
   ],
 );
 
