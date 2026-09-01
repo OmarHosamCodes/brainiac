@@ -175,14 +175,6 @@ export function AgencyMoneyBillsDialogs({ bills }: BillsDialogsProps) {
                   {preview.selectedTotalLabel}
                 </span>
               </div>
-              {preview.pendingAdjustmentCents !== 0 ? (
-                <div className="mt-1 flex justify-between gap-2">
-                  <span className="text-muted">Pending adjustments</span>
-                  <span className="font-mono tabular-nums text-highlighted">
-                    {preview.pendingAdjustmentLabel}
-                  </span>
-                </div>
-              ) : null}
               <div className="mt-2 flex justify-between gap-2 border-t border-default pt-2 font-medium">
                 <span className="text-highlighted">Due</span>
                 <span className="font-mono tabular-nums text-highlighted">{preview.dueLabel}</span>
@@ -236,6 +228,29 @@ export function AgencyMoneyBillsDialogs({ bills }: BillsDialogsProps) {
                   Ready lines export the original-period document first, then{" "}
                   {adjust.partyType === "client" ? "record the collection" : "record the payment"}.
                   Refund is available only after the document exists.
+                </div>
+              ) : null}
+
+              {adjust.obligationOptions.length > 1 ? (
+                <div className={agencyFormFieldClass}>
+                  <Label htmlFor="money-adjust-obligation" className={agencyFormLabelClass}>
+                    Bill line
+                  </Label>
+                  <Select value={adjust.obligationId} onValueChange={adjust.onObligationIdChange}>
+                    <SelectTrigger
+                      id="money-adjust-obligation"
+                      className="h-9 w-full rounded-xl border-default bg-default"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {adjust.obligationOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               ) : null}
 

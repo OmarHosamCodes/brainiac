@@ -18,11 +18,11 @@ describe("money-bill-obligation-rows", () => {
           periodStart: "2026-04-01T00:00:00.000Z",
           periodEnd: "2026-04-30T23:59:59.999Z",
           isCarry: false,
-          amount: 12_000,
-          sourceAmount: 12_000,
+          amount: 11_500,
+          sourceAmount: 11_500,
           rateCurrency: "USD",
           receivedAmount: 0,
-          remainingAmount: 12_000,
+          remainingAmount: 11_500,
           wasteAmount: 0,
           durationSeconds: 40 * 3600,
           number: null,
@@ -57,6 +57,8 @@ describe("money-bill-obligation-rows", () => {
           note: "Goodwill",
           periodStart: null,
           periodEnd: null,
+          obligationId: null,
+          appliedInvoiceId: null,
         },
       ],
       statusFilter: null,
@@ -71,8 +73,113 @@ describe("money-bill-obligation-rows", () => {
     if (group?.kind !== "person-group") return;
     expect(group.lines).toHaveLength(2);
     expect(group.lines[1]?.isCarry).toBe(true);
-    expect(group.openCents).toBe(30_500);
+    expect(group.openCents).toBe(30_000);
+    expect(group.totalCents).toBe(51_500);
     expect(group.pendingAdjustmentCents).toBe(-500);
+    expect(group.pendingAdjustments).toHaveLength(1);
+    expect(group.pendingAdjustments[0]?.kindLabel).toBe("Discount");
+  });
+
+  test("does not re-apply ready surcharge already baked into obligation totals", () => {
+    const periodStart = "2026-04-01T00:00:00.000Z";
+    const periodEnd = "2026-04-30T23:59:59.999Z";
+    const readyId = `ready:client:c1:${periodStart}:${periodEnd}`;
+    const rows = buildMoneyBillPersonGroups({
+      clients: [
+        {
+          kind: "ready",
+          id: readyId,
+          clientId: "c1",
+          clientName: "Northwind",
+          periodStart,
+          periodEnd,
+          isCarry: false,
+          amount: 12_000,
+          sourceAmount: 12_000,
+          rateCurrency: "USD",
+          receivedAmount: 0,
+          remainingAmount: 12_000,
+          wasteAmount: 0,
+          durationSeconds: 3600,
+          number: null,
+        },
+      ],
+      members: [],
+      adjustments: [],
+      pendingAdjustments: [
+        {
+          id: "adj-surcharge",
+          partyType: "client",
+          partyId: "c1",
+          kind: "surcharge",
+          amount: 2_000,
+          note: "",
+          periodStart,
+          periodEnd,
+          obligationId: readyId,
+          appliedInvoiceId: null,
+        },
+      ],
+      statusFilter: null,
+      includeClients: true,
+      includeMembers: false,
+      includeAdjustments: false,
+    });
+    const group = rows[0];
+    if (group?.kind !== "person-group") return;
+    expect(group.lines[0]?.totalCents).toBe(12_000);
+    expect(group.totalCents).toBe(12_000);
+    expect(group.openCents).toBe(12_000);
+    expect(group.pendingAdjustmentCents).toBe(2_000);
+  });
+
+  test("ignores invoice-applied adjustments in the pending net", () => {
+    const rows = buildMoneyBillPersonGroups({
+      clients: [
+        {
+          kind: "ready",
+          id: "ready:client:c1:april",
+          clientId: "c1",
+          clientName: "Northwind",
+          periodStart: "2026-04-01T00:00:00.000Z",
+          periodEnd: "2026-04-30T23:59:59.999Z",
+          isCarry: false,
+          amount: 12_000,
+          sourceAmount: 12_000,
+          rateCurrency: "USD",
+          receivedAmount: 0,
+          remainingAmount: 12_000,
+          wasteAmount: 0,
+          durationSeconds: 0,
+          number: null,
+        },
+      ],
+      members: [],
+      adjustments: [],
+      pendingAdjustments: [
+        {
+          id: "adj-applied",
+          partyType: "client",
+          partyId: "c1",
+          kind: "surcharge",
+          amount: 2_000,
+          note: "",
+          periodStart: "2026-04-01T00:00:00.000Z",
+          periodEnd: "2026-04-30T23:59:59.999Z",
+          obligationId: "inv-1",
+          appliedInvoiceId: "inv-1",
+        },
+      ],
+      statusFilter: null,
+      includeClients: true,
+      includeMembers: false,
+      includeAdjustments: false,
+    });
+    const group = rows[0];
+    if (group?.kind !== "person-group") return;
+    expect(group.pendingAdjustmentCents).toBe(0);
+    expect(group.pendingAdjustments).toHaveLength(1);
+    expect(group.pendingAdjustments[0]?.applied).toBe(true);
   });
 
   test("groups compose rows into Clients / Team sections", () => {

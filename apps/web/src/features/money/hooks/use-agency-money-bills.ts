@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@/lib/navigation";
-import { toast } from "sonner";
 
 import {
   moneyBillsActiveFilterSummary,
@@ -21,7 +20,6 @@ import {
   filterComposeRowsByClientCategory,
   groupMoneyBillComposeDisplayRows,
   type MoneyBillComposeDisplayRow,
-  type MoneyBillObligationLine,
   type MoneyBillPersonGroup,
   type MoneyPendingAdjustmentSource,
 } from "@/features/billing/money-bill-obligation-rows";
@@ -32,14 +30,11 @@ import {
   moneyBillRowFromAdjustmentLine,
   MONEY_ADJUSTMENT_SECTION_OPTIONS,
   moneyBillsAdjustmentCreateValid,
-  moneyBillsCanRefundObligation,
   moneyBillsCreateFormValid,
-  moneyBillsDefaultAdjustTab,
   moneyBillsPartyShowsAdjustments,
   moneyBillsPartyShowsClients,
   moneyBillsPartyShowsExpenses,
   moneyBillsPartyShowsMembers,
-  moneyBillsPickAdjustLine,
   moneyBillsPaymentCanSubmit,
   parseMoneyBillPaymentAmount,
   type MoneyBillAdjustmentRow,
@@ -54,8 +49,10 @@ import {
 } from "@/features/shared/stores/agency-ops";
 import { toDateInputValue } from "@/features/shared/use-agency-time-range-filters";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { orpc, orpcClient } from "@/lib/orpc";
+import { orpc } from "@/lib/orpc";
 
+import { useAgencyMoneyBillAdjust } from "./use-agency-money-bill-adjust";
+import { useAgencyMoneyBillPreview } from "./use-agency-money-bill-preview";
 import { useMoneyDetailSheetSide } from "./use-money-detail-sheet-side";
 
 const BILL_CREATE_FORM_ID = "agency-money-bill-create";
@@ -71,40 +68,11 @@ type MoneyPaymentTarget = {
   currency: string;
 };
 
-type MoneyPreviewParty = {
-  partyType: "client" | "member";
-  partyId: string;
-  title: string;
-  currency: string;
-  pendingAdjustmentCents: number;
-  lines: MoneyBillObligationLine[];
-};
-
-type MoneyAdjustTarget = {
-  partyType: "client" | "member";
-  partyId: string;
-  partyTitle: string;
-  line: MoneyBillObligationLine;
-};
-
-type MoneySettleAction = "pay" | "partial" | "refund";
-type MoneyExportMode = "combine" | "split";
-type MoneyPendingAdjustKind = "discount" | "surcharge" | "debt";
-type MoneyAdjustTab = MoneySettleAction | "adjustments";
-
 export type BillsDetailSelection =
   | { kind: "group"; id: string }
   | { kind: "adjustment"; id: string }
   | { kind: "salary-pool" }
   | null;
-
-function partyTypeFromGroup(group: MoneyBillPersonGroup): "client" | "member" {
-  return group.party === "client" ? "client" : "member";
-}
-
-function partyIdFromGroup(group: MoneyBillPersonGroup): string | null {
-  return group.clientId ?? group.userId ?? null;
-}
 
 type UseAgencyMoneyBillsArgs = {
   teamId: string;
@@ -179,17 +147,6 @@ export function useAgencyMoneyBills({
   const [pendingActionInvoiceId, setPendingActionInvoiceId] = useState<string | null>(null);
   const [markPaidTargetId, setMarkPaidTargetId] = useState<string | null>(null);
   const [dismissTargetId, setDismissTargetId] = useState<string | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewParty, setPreviewParty] = useState<MoneyPreviewParty | null>(null);
-  const [selectedObligationIds, setSelectedObligationIds] = useState<string[]>([]);
-  const [exportMode, setExportMode] = useState<MoneyExportMode>("combine");
-  const [adjustOpen, setAdjustOpen] = useState(false);
-  const [adjustTarget, setAdjustTarget] = useState<MoneyAdjustTarget | null>(null);
-  const [adjustTab, setAdjustTab] = useState<MoneyAdjustTab>("pay");
-  const [adjustAmount, setAdjustAmount] = useState("");
-  const [adjustKind, setAdjustKind] = useState<MoneyPendingAdjustKind>("discount");
-  const [adjustNote, setAdjustNote] = useState("");
-  const [adjustSubmitted, setAdjustSubmitted] = useState(false);
   const [composeActionPending, setComposeActionPending] = useState(false);
   const [detailSelection, setDetailSelection] = useState<BillsDetailSelection>(null);
 
@@ -339,6 +296,8 @@ export function useAgencyMoneyBills({
       note: item.note,
       periodStart: item.periodStart,
       periodEnd: item.periodEnd,
+      obligationId: item.obligationId,
+      appliedInvoiceId: item.appliedInvoiceId,
     }));
     const adjustmentLines = (payoutsQuery.data?.items ?? [])
       .filter(
@@ -439,6 +398,22 @@ export function useAgencyMoneyBills({
       }),
     ]);
   }
+
+  const billAdjust = useAgencyMoneyBillAdjust({
+    teamId,
+    isInvoiceMutationPending,
+    composeActionPending,
+    setComposeActionPending,
+    setPendingActionInvoiceId,
+    invalidateMoneyComposeQueries,
+  });
+  const billPreview = useAgencyMoneyBillPreview({
+    teamId,
+    periodLabel,
+    composeActionPending,
+    setComposeActionPending,
+    invalidateMoneyComposeQueries,
+  });
 
   const resolvePaymentTarget = useMemo(
     () =>
@@ -615,239 +590,6 @@ export function useAgencyMoneyBills({
 
   function onOpenMember(userId: string) {
     navigate(moneyBillMemberHref(userId));
-  }
-
-  function onOpenPreview(group: MoneyBillPersonGroup) {
-    const partyId = partyIdFromGroup(group);
-    if (!partyId) return;
-    setPreviewParty({
-      partyType: partyTypeFromGroup(group),
-      partyId,
-      title: group.title,
-      currency: group.currency,
-      pendingAdjustmentCents: group.pendingAdjustmentCents,
-      lines: group.lines,
-    });
-    setSelectedObligationIds(group.lines.map((line) => line.id));
-    setExportMode("combine");
-    setPreviewOpen(true);
-  }
-
-  function onOpenPreviewLine(group: MoneyBillPersonGroup, line: MoneyBillObligationLine) {
-    const partyId = partyIdFromGroup(group);
-    if (!partyId) return;
-    setPreviewParty({
-      partyType: partyTypeFromGroup(group),
-      partyId,
-      title: group.title,
-      currency: group.currency,
-      pendingAdjustmentCents: group.pendingAdjustmentCents,
-      lines: group.lines,
-    });
-    setSelectedObligationIds([line.id]);
-    setExportMode("combine");
-    setPreviewOpen(true);
-  }
-
-  function onClosePreview() {
-    setPreviewOpen(false);
-    setPreviewParty(null);
-    setSelectedObligationIds([]);
-  }
-
-  function onPreviewOpenChange(open: boolean) {
-    if (!open) onClosePreview();
-    else setPreviewOpen(true);
-  }
-
-  function onToggleObligationSelect(obligationId: string) {
-    setSelectedObligationIds((current) =>
-      current.includes(obligationId)
-        ? current.filter((id) => id !== obligationId)
-        : [...current, obligationId],
-    );
-  }
-
-  function onSelectAllObligations() {
-    if (!previewParty) return;
-    const allIds = previewParty.lines.map((line) => line.id);
-    setSelectedObligationIds((current) => (current.length === allIds.length ? [] : allIds));
-  }
-
-  async function onExportDocuments() {
-    if (!previewParty || selectedObligationIds.length === 0) return;
-    const selectedLines = previewParty.lines.filter((line) =>
-      selectedObligationIds.includes(line.id),
-    );
-    if (selectedLines.length === 0) return;
-    setComposeActionPending(true);
-    try {
-      await orpcClient.agencyOps.money.exportDocuments({
-        teamId,
-        partyType: previewParty.partyType,
-        partyId: previewParty.partyId,
-        mode: exportMode,
-        selections: selectedLines.map((line) => ({
-          obligationId: line.id,
-          periodStart: line.periodStart,
-          periodEnd: line.periodEnd,
-          kind: line.obligationKind,
-          amount: line.openCents,
-        })),
-      });
-      await invalidateMoneyComposeQueries();
-      toast.success(exportMode === "combine" ? "Document exported" : "Documents exported");
-      onClosePreview();
-    } catch (error) {
-      toast.error("Couldn't export documents", {
-        description: getErrorMessage(error, "Try again."),
-      });
-    } finally {
-      setComposeActionPending(false);
-    }
-  }
-
-  function onOpenAdjustLine(group: MoneyBillPersonGroup, line: MoneyBillObligationLine) {
-    const partyId = partyIdFromGroup(group);
-    if (!partyId) return;
-    setAdjustTarget({
-      partyType: partyTypeFromGroup(group),
-      partyId,
-      partyTitle: group.title,
-      line,
-    });
-    setAdjustTab(moneyBillsDefaultAdjustTab(line));
-    setAdjustAmount((line.openCents / 100).toFixed(2));
-    setAdjustKind("discount");
-    setAdjustNote("");
-    setAdjustSubmitted(false);
-    setAdjustOpen(true);
-  }
-
-  function onOpenAdjust(group: MoneyBillPersonGroup) {
-    const line = moneyBillsPickAdjustLine(group.lines);
-    if (!line) return;
-    onOpenAdjustLine(group, line);
-  }
-
-  function onAdjustOpenChange(open: boolean) {
-    setAdjustOpen(open);
-    if (!open) {
-      setAdjustTarget(null);
-      setAdjustTab("pay");
-      setAdjustAmount("");
-      setAdjustKind("discount");
-      setAdjustNote("");
-      setAdjustSubmitted(false);
-    }
-  }
-
-  async function onSettle(input: { action: MoneySettleAction; amount: number }) {
-    if (!adjustTarget) return;
-    const { line, partyType, partyId } = adjustTarget;
-    setComposeActionPending(true);
-    setPendingActionInvoiceId(line.id);
-    try {
-      await orpcClient.agencyOps.money.settle({
-        teamId,
-        partyType,
-        obligationId: line.id,
-        action: input.action,
-        amount: input.amount,
-        periodStart: line.periodStart,
-        periodEnd: line.periodEnd,
-        clientId: partyType === "client" ? partyId : undefined,
-        userId: partyType === "member" ? partyId : undefined,
-      });
-      await invalidateMoneyComposeQueries();
-      const isClient = partyType === "client";
-      const label =
-        input.action === "pay"
-          ? isClient
-            ? "Collection recorded"
-            : "Payment recorded"
-          : input.action === "partial"
-            ? isClient
-              ? "Partial collection recorded"
-              : "Partial payment recorded"
-            : isClient
-              ? "Collection reversed"
-              : "Refund recorded";
-      toast.success(label);
-      onAdjustOpenChange(false);
-    } catch (error) {
-      toast.error("Couldn't settle obligation", {
-        description: getErrorMessage(error, "Try again."),
-      });
-    } finally {
-      setComposeActionPending(false);
-      setPendingActionInvoiceId(null);
-    }
-  }
-
-  async function onUpsertPendingAdjustment(input: {
-    kind: MoneyPendingAdjustKind;
-    amount: number;
-    note: string;
-  }) {
-    if (!adjustTarget) return;
-    setComposeActionPending(true);
-    try {
-      await orpcClient.agencyOps.pendingAdjustments.upsert({
-        teamId,
-        partyType: adjustTarget.partyType,
-        partyId: adjustTarget.partyId,
-        kind: input.kind,
-        amount: input.amount,
-        note: input.note || undefined,
-        periodStart,
-        periodEnd,
-      });
-      await invalidateMoneyComposeQueries();
-      toast.success("Adjustment saved");
-      onAdjustOpenChange(false);
-    } catch (error) {
-      toast.error("Couldn't save adjustment", {
-        description: getErrorMessage(error, "Try again."),
-      });
-    } finally {
-      setComposeActionPending(false);
-    }
-  }
-
-  async function onAdjustSubmit() {
-    if (!adjustTarget) return;
-    setAdjustSubmitted(true);
-    switch (adjustTab) {
-      case "pay": {
-        await onSettle({ action: "pay", amount: adjustTarget.line.openCents });
-        return;
-      }
-      case "partial": {
-        const amount = parseMoneyBillPaymentAmount(adjustAmount, adjustTarget.line.openCents);
-        if (amount === null) return;
-        await onSettle({ action: "partial", amount });
-        return;
-      }
-      case "refund": {
-        await onSettle({ action: "refund", amount: 0 });
-        return;
-      }
-      case "adjustments": {
-        const amount = parseMoneyExpenseAmount(adjustAmount);
-        if (amount === null) return;
-        await onUpsertPendingAdjustment({
-          kind: adjustKind,
-          amount,
-          note: adjustNote,
-        });
-        return;
-      }
-      default: {
-        const _exhaustive: never = adjustTab;
-        void _exhaustive;
-      }
-    }
   }
 
   async function onCreatePayoutForMember(userId: string) {
@@ -1030,49 +772,6 @@ export function useAgencyMoneyBills({
     void runDismissAdjustment(rowId);
   }
 
-  const selectedPreviewLines = useMemo(() => {
-    if (!previewParty) return [];
-    return previewParty.lines.filter((line) => selectedObligationIds.includes(line.id));
-  }, [previewParty, selectedObligationIds]);
-
-  const previewSelectedCents = useMemo(
-    () => selectedPreviewLines.reduce((sum, line) => sum + line.openCents, 0),
-    [selectedPreviewLines],
-  );
-
-  const previewDueCents = previewParty
-    ? previewSelectedCents + previewParty.pendingAdjustmentCents
-    : 0;
-
-  const adjustCanSubmit = (() => {
-    if (!adjustTarget || composeActionPending || isInvoiceMutationPending) return false;
-    switch (adjustTab) {
-      case "pay":
-        return adjustTarget.line.openCents > 0;
-      case "partial":
-        return moneyBillsPaymentCanSubmit(adjustAmount, adjustTarget.line.openCents);
-      case "refund":
-        return moneyBillsCanRefundObligation(
-          adjustTarget.line.obligationKind,
-          adjustTarget.line.receivedAmount,
-        );
-      case "adjustments":
-        return parseMoneyExpenseAmount(adjustAmount) !== null;
-      default: {
-        const _exhaustive: never = adjustTab;
-        return _exhaustive;
-      }
-    }
-  })();
-  const adjustAmountError =
-    adjustSubmitted && adjustTarget && (adjustTab === "partial" || adjustTab === "adjustments")
-      ? adjustTab === "partial"
-        ? moneyBillsPaymentCanSubmit(adjustAmount, adjustTarget.line.openCents)
-          ? null
-          : `Enter an amount greater than zero and no more than ${adjustTarget.line.openLabel}.`
-        : moneyExpenseAmountError(adjustAmount)
-      : null;
-
   async function onSalaryPoolPay() {
     const pool = salaryPoolQuery.data?.pool;
     if (!pool) return;
@@ -1209,10 +908,13 @@ export function useAgencyMoneyBills({
     },
     onOpenClient,
     onOpenMember,
-    onOpenPreview,
-    onOpenPreviewLine,
-    onOpenAdjust,
-    onOpenAdjustLine,
+    onOpenPreview: billPreview.onOpenPreview,
+    onOpenPreviewLine: billPreview.onOpenPreviewLine,
+    onOpenAdjust: billAdjust.onOpenAdjust,
+    onOpenAdjustLine: billAdjust.onOpenAdjustLine,
+    onAddAdjustment: billAdjust.onAddAdjustment,
+    onEditPendingAdjustment: billAdjust.onEditPendingAdjustment,
+    onDeletePendingAdjustment: billAdjust.onDeletePendingAdjustment,
     onCreateInvoiceForClient,
     onCreatePayoutForMember,
     onSend: onSendBill,
@@ -1243,73 +945,8 @@ export function useAgencyMoneyBills({
       },
     },
     salaryPool: salaryPoolViewModel,
-    preview: {
-      open: previewOpen,
-      onOpenChange: onPreviewOpenChange,
-      title: previewParty?.partyType === "member" ? "Payslip preview" : "Invoice preview",
-      partyTitle: previewParty?.title ?? "",
-      periodLabel,
-      currency: previewParty?.currency ?? "USD",
-      lines: (previewParty?.lines ?? []).map((line) => ({
-        id: line.id,
-        label: line.subtitle,
-        subtitle: line.subtitle,
-        statusLabel: line.statusLabel,
-        isCarry: line.isCarry,
-        amountLabel: line.openLabel,
-        checked: selectedObligationIds.includes(line.id),
-      })),
-      selectedCount: selectedObligationIds.length,
-      allSelected:
-        Boolean(previewParty) &&
-        previewParty!.lines.length > 0 &&
-        selectedObligationIds.length === previewParty!.lines.length,
-      onToggleObligationSelect,
-      onSelectAllObligations,
-      exportMode,
-      onExportModeChange: setExportMode,
-      selectedTotalLabel: formatMoneyAmount(previewSelectedCents, previewParty?.currency ?? "USD"),
-      pendingAdjustmentCents: previewParty?.pendingAdjustmentCents ?? 0,
-      pendingAdjustmentLabel: formatMoneyAmount(
-        previewParty?.pendingAdjustmentCents ?? 0,
-        previewParty?.currency ?? "USD",
-      ),
-      dueLabel: formatMoneyAmount(previewDueCents, previewParty?.currency ?? "USD"),
-      canExport: selectedObligationIds.length > 0 && !composeActionPending,
-      onExport: () => void onExportDocuments(),
-      onClose: onClosePreview,
-    },
-    adjust: {
-      open: adjustOpen,
-      onOpenChange: onAdjustOpenChange,
-      partyType: adjustTarget?.partyType ?? "client",
-      partyTitle: adjustTarget?.partyTitle ?? "",
-      lineSubtitle: adjustTarget?.line.subtitle ?? "",
-      statusLabel: adjustTarget?.line.statusLabel ?? "",
-      isReady: adjustTarget?.line.obligationKind === "ready",
-      canRefund: adjustTarget
-        ? moneyBillsCanRefundObligation(
-            adjustTarget.line.obligationKind,
-            adjustTarget.line.receivedAmount,
-          )
-        : false,
-      remainingLabel: adjustTarget?.line.openLabel ?? "",
-      currency: adjustTarget?.line.currency ?? "USD",
-      tab: adjustTab,
-      onTabChange: setAdjustTab,
-      amount: adjustAmount,
-      onAmountChange: setAdjustAmount,
-      kind: adjustKind,
-      onKindChange: setAdjustKind,
-      note: adjustNote,
-      onNoteChange: setAdjustNote,
-      amountError: adjustAmountError,
-      canSubmit: adjustCanSubmit,
-      isPending: composeActionPending || isInvoiceMutationPending,
-      onSubmit: () => void onAdjustSubmit(),
-      onSettle,
-      onUpsertPendingAdjustment,
-    },
+    preview: billPreview.preview,
+    adjust: billAdjust.adjust,
     create: {
       open: billCreateOpen,
       onOpenChange: onBillCreateOpenChange,

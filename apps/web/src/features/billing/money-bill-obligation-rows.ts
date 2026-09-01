@@ -1,5 +1,9 @@
 /** Display rows for compose-on-demand: person groups with separate obligation lines. */
 
+import {
+  pendingAdjustmentKindLabel,
+  signedClientAdjustmentAmount,
+} from "@orch/api/routers/agency-ops/billing/money-bill-carry";
 import { formatDuration } from "@/lib/utils/format-duration";
 
 import type { MoneyBillsStatusFilter } from "./money-bills-filters";
@@ -54,6 +58,8 @@ export type MoneyPendingAdjustmentSource = {
   note: string;
   periodStart: string | null;
   periodEnd: string | null;
+  obligationId: string | null;
+  appliedInvoiceId: string | null;
 };
 
 export type MoneyBillObligationLine = {
@@ -87,6 +93,18 @@ export type MoneyBillObligationLine = {
   userAvatar?: string | null;
 };
 
+export type MoneyBillPendingAdjustmentItem = {
+  id: string;
+  kind: "discount" | "surcharge" | "debt";
+  amount: number;
+  signedAmount: number;
+  note: string;
+  obligationId: string | null;
+  applied: boolean;
+  kindLabel: string;
+  amountLabel: string;
+};
+
 export type MoneyBillPersonGroup = {
   kind: "person-group";
   id: string;
@@ -113,9 +131,18 @@ export type MoneyBillPersonGroup = {
   wasteLabel: string;
   openLabel: string;
   pendingAdjustmentCents: number;
+  pendingAdjustments: MoneyBillPendingAdjustmentItem[];
 };
 
 export type MoneyBillComposeDisplayRow = MoneyBillPersonGroup | MoneyBillAdjustmentRow;
+
+export function moneyBillGroupPartyType(group: MoneyBillPersonGroup): "client" | "member" {
+  return group.party === "client" ? "client" : "member";
+}
+
+export function moneyBillGroupPartyId(group: MoneyBillPersonGroup): string | null {
+  return group.clientId ?? group.userId ?? null;
+}
 
 function obligationStatusLabel(line: {
   obligationKind: "ready" | "invoice" | "payout";
@@ -265,21 +292,34 @@ function sumPendingForParty(
   let delta = 0;
   for (const item of pending) {
     if (item.partyType !== partyType || item.partyId !== partyId) continue;
-    switch (item.kind) {
-      case "discount":
-        delta -= item.amount;
-        break;
-      case "surcharge":
-      case "debt":
-        delta += item.amount;
-        break;
-      default: {
-        const _exhaustive: never = item.kind;
-        void _exhaustive;
-      }
-    }
+    if (item.appliedInvoiceId) continue;
+    delta += signedClientAdjustmentAmount(item.kind, item.amount);
   }
   return delta;
+}
+
+function pendingItemsForParty(
+  pending: MoneyPendingAdjustmentSource[],
+  partyType: "client" | "member",
+  partyId: string,
+  currency: string,
+): MoneyBillPendingAdjustmentItem[] {
+  return pending
+    .filter((item) => item.partyType === partyType && item.partyId === partyId)
+    .map((item) => {
+      const signedAmount = signedClientAdjustmentAmount(item.kind, item.amount);
+      return {
+        id: item.id,
+        kind: item.kind,
+        amount: item.amount,
+        signedAmount,
+        note: item.note,
+        obligationId: item.obligationId,
+        applied: Boolean(item.appliedInvoiceId),
+        kindLabel: pendingAdjustmentKindLabel(item.kind),
+        amountLabel: formatMoneyAmount(signedAmount, currency),
+      };
+    });
 }
 
 export function buildMoneyBillPersonGroups(input: {
@@ -319,6 +359,12 @@ export function buildMoneyBillPersonGroups(input: {
         "client",
         clientId,
       );
+      const pendingAdjustments = pendingItemsForParty(
+        input.pendingAdjustments,
+        "client",
+        clientId,
+        currency,
+      );
       rows.push({
         kind: "person-group",
         id: `person-group:client:${clientId}`,
@@ -343,6 +389,7 @@ export function buildMoneyBillPersonGroups(input: {
         wasteLabel: formatMoneyAmount(wasteAmount, currency),
         openLabel: formatMoneyAmount(openCents, currency),
         pendingAdjustmentCents,
+        pendingAdjustments,
       });
     }
   }
@@ -367,6 +414,12 @@ export function buildMoneyBillPersonGroups(input: {
       const wasteAmount = lines.reduce((sum, line) => sum + line.wasteAmount, 0);
       const openCents = lines.reduce((sum, line) => sum + line.openCents, 0);
       const pendingAdjustmentCents = sumPendingForParty(input.pendingAdjustments, "member", userId);
+      const pendingAdjustments = pendingItemsForParty(
+        input.pendingAdjustments,
+        "member",
+        userId,
+        currency,
+      );
       rows.push({
         kind: "person-group",
         id: `person-group:member:${userId}`,
@@ -392,6 +445,7 @@ export function buildMoneyBillPersonGroups(input: {
         wasteLabel: formatMoneyAmount(wasteAmount, currency),
         openLabel: formatMoneyAmount(openCents, currency),
         pendingAdjustmentCents,
+        pendingAdjustments,
       });
     }
   }

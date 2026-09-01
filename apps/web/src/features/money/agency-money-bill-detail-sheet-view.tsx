@@ -1,5 +1,8 @@
+import { MoreHorizontal } from "lucide-react";
+
 import {
   type MoneyBillObligationLine,
+  type MoneyBillPendingAdjustmentItem,
   type MoneyBillPersonGroup,
 } from "@/features/billing/money-bill-obligation-rows";
 import {
@@ -18,6 +21,12 @@ import {
 } from "@/features/billing/money-bills-table-columns";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import {
@@ -112,8 +121,19 @@ function LedgerAmount({
   );
 }
 
-function ObligationLine({ line }: { line: MoneyBillObligationLine }) {
+function ObligationLine({
+  line,
+  group,
+  bills,
+  disabled,
+}: {
+  line: MoneyBillObligationLine;
+  group: MoneyBillPersonGroup;
+  bills: BillsViewModel;
+  disabled: boolean;
+}) {
   const subtitle = line.isCarry ? line.subtitle.replace(/^Prior period · /, "") : line.subtitle;
+  const canSend = line.obligationKind === "invoice" && line.statusLabel === "Outstanding";
   return (
     <li className="flex flex-col gap-3 border-b border-default px-6 py-4 last:border-b-0">
       <div className="flex items-start justify-between gap-3">
@@ -123,7 +143,41 @@ function ObligationLine({ line }: { line: MoneyBillObligationLine }) {
             <span className="text-sm font-medium text-highlighted">{subtitle}</span>
           </div>
         </div>
-        <StatusBadge label={line.statusLabel} />
+        <div className="flex items-center gap-1">
+          <StatusBadge label={line.statusLabel} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                disabled={disabled}
+                aria-label={`Actions for ${subtitle}`}
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onSelect={() => bills.onOpenPreviewLine(group, line)}>
+                Preview
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => bills.onOpenAdjustLine(group, line)}>
+                {group.party === "client" ? "Collect" : "Pay"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => bills.onOpenAdjustLine(group, line, { tab: "adjustments" })}
+              >
+                Adjust
+              </DropdownMenuItem>
+              {canSend ? (
+                <DropdownMenuItem onSelect={() => bills.onSend(line.id)}>
+                  Send invoice
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
       <dl className="grid grid-cols-3 gap-3">
         <LedgerAmount label="Total" value={line.totalLabel} />
@@ -138,6 +192,93 @@ function ObligationLine({ line }: { line: MoneyBillObligationLine }) {
         />
       </dl>
     </li>
+  );
+}
+
+function AdjustmentsPanel({
+  group,
+  bills,
+  disabled,
+}: {
+  group: MoneyBillPersonGroup;
+  bills: BillsViewModel;
+  disabled: boolean;
+}) {
+  const items = group.pendingAdjustments;
+  const baseCents = group.totalCents - group.pendingAdjustmentCents;
+  return (
+    <div className="border-t border-default px-6 py-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-xs font-medium text-highlighted">Adjustments</h3>
+        {group.party === "client" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={disabled || group.lines.length === 0}
+            onClick={() => bills.onAddAdjustment(group)}
+          >
+            Add
+          </Button>
+        ) : null}
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted">No period adjustments on this bill.</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {items.map((item: MoneyBillPendingAdjustmentItem) => (
+            <li key={item.id} className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-sm text-highlighted">{item.kindLabel}</span>
+                  {item.applied ? <Badge variant="outline">On invoice</Badge> : null}
+                </div>
+                {item.note ? <p className="text-xs text-muted">{item.note}</p> : null}
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-mono text-sm tabular-nums text-highlighted">
+                  {item.amountLabel}
+                </span>
+                {group.party === "client" ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8"
+                        disabled={disabled}
+                        aria-label={`Actions for ${item.kindLabel}`}
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onSelect={() => bills.onEditPendingAdjustment(group, item)}>
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => bills.onDeletePendingAdjustment(item.id)}>
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {group.pendingAdjustmentCents !== 0 ? (
+        <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-default pt-3">
+          <LedgerAmount label="Base" value={formatMoneyAmount(baseCents, group.currency)} />
+          <LedgerAmount
+            label="Adjustments"
+            value={formatMoneyAmount(group.pendingAdjustmentCents, group.currency)}
+          />
+          <LedgerAmount label="Total" value={group.totalLabel} />
+        </dl>
+      ) : null}
+    </div>
   );
 }
 
@@ -174,17 +315,16 @@ function GroupDetail({ group, bills }: { group: MoneyBillPersonGroup; bills: Bil
       <div className="min-h-0 flex-1 overflow-y-auto">
         <ul aria-label={`${group.title} bill lines`}>
           {lines.map((line) => (
-            <ObligationLine key={line.id} line={line} />
+            <ObligationLine
+              key={line.id}
+              line={line}
+              group={group}
+              bills={bills}
+              disabled={disabled}
+            />
           ))}
         </ul>
-        {group.pendingAdjustmentCents !== 0 ? (
-          <div className="flex items-center justify-between gap-3 border-t border-default px-6 py-4">
-            <span className="text-xs text-muted">Pending adjustments</span>
-            <span className="font-mono text-sm font-medium tabular-nums text-highlighted">
-              {formatMoneyAmount(group.pendingAdjustmentCents, group.currency)}
-            </span>
-          </div>
-        ) : null}
+        <AdjustmentsPanel group={group} bills={bills} disabled={disabled} />
       </div>
       <SheetFooter className="border-t border-default bg-popover">
         <Button
@@ -198,6 +338,16 @@ function GroupDetail({ group, bills }: { group: MoneyBillPersonGroup; bills: Bil
         <Button type="button" disabled={disabled} onClick={() => bills.onOpenAdjust(group)}>
           {disabled ? "Saving…" : adjustLabel}
         </Button>
+        {group.party === "client" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={disabled || group.lines.length === 0}
+            onClick={() => bills.onAddAdjustment(group)}
+          >
+            Add adjustment
+          </Button>
+        ) : null}
       </SheetFooter>
     </>
   );
