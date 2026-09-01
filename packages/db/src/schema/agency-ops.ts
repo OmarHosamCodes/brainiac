@@ -747,6 +747,15 @@ export const agencyOpsMoneyPendingAdjustment = pgTable(
     /** Optional obligation period this adjustment scopes to. */
     periodStart: timestamp("period_start"),
     periodEnd: timestamp("period_end"),
+    /** Invoice id or synthetic ready id (`ready:client:…`). */
+    obligationId: text("obligation_id"),
+    /** Set when this adjustment is baked into an invoice. */
+    appliedInvoiceId: text("applied_invoice_id").references(() => agencyOpsInvoice.id, {
+      onDelete: "set null",
+    }),
+    invoiceLineItemId: text("invoice_line_item_id").references(() => agencyOpsInvoiceLineItem.id, {
+      onDelete: "set null",
+    }),
     kind: text("kind").$type<AgencyOpsMoneyPendingAdjustmentKind>().notNull(),
     /** Agency-currency amount (integer minor units). */
     amount: integer("amount").notNull(),
