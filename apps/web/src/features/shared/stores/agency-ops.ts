@@ -342,7 +342,8 @@ type CreatePayoutLinePayload = {
     | "paid_vacation"
     | "debt_discount"
     | "charity"
-    | "pbc";
+    | "pbc"
+    | "extra";
   label: string;
   amount: number;
   payeeUserId?: string | null;
