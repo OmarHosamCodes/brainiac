@@ -821,7 +821,8 @@ export type AgencyOpsPayoutSectionKey =
   | "paid_vacation"
   | "debt_discount"
   | "charity"
-  | "pbc";
+  | "pbc"
+  | "extra";
 export type AgencyOpsPayoutLineStatus = "draft" | "partial" | "paid";
 
 export const agencyOpsPayoutRun = pgTable(
