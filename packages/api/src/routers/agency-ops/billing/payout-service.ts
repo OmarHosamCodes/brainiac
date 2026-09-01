@@ -978,6 +978,7 @@ export async function getPayoutSectionTotals(
     debt_discount: 0,
     charity: 0,
     pbc: 0,
+    extra: 0,
   } satisfies Record<AgencyOpsPayoutSectionKey, number>;
 
   for (const row of rows) {

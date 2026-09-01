@@ -21,6 +21,8 @@ export type PeriodScoreboardInput = {
   charityAmount: number;
   pbcAmount: number;
   teamLossAmount: number;
+  /** Manual Extra adjustment lines — added to Total income, never to cost. */
+  extraIncomeAmount?: number;
   currency: string;
 };
 
@@ -71,7 +73,9 @@ export function buildPeriodScoreboard(input: PeriodScoreboardInput): PeriodScore
     0,
     Math.max(0, input.billablePoolAmount) + (input.clientPeriodAdjustmentsNet ?? 0),
   );
-  const totalIncomeAmount = Math.max(adjustedPool, receivedAmount + remainingAmount);
+  const extraIncomeAmount = Math.max(0, input.extraIncomeAmount ?? 0);
+  const totalIncomeAmount =
+    Math.max(adjustedPool, receivedAmount + remainingAmount) + extraIncomeAmount;
   const costAmount = profitabilityCostAmount({
     salariesDueAmount: input.salariesDueAmount,
     expensesAmount: input.expensesAmount,

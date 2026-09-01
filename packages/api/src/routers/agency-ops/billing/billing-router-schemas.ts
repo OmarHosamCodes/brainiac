@@ -13,6 +13,7 @@ export const payoutSectionKeySchema = z.enum([
   "debt_discount",
   "charity",
   "pbc",
+  "extra",
 ]);
 export const payoutBillsPartySchema = z.enum(["team", "adjustments", "all"]);
 export const expenseKindSchema = z.enum(["one_time", "subscription"]);

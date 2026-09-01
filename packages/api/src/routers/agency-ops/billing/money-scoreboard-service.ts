@@ -72,6 +72,7 @@ export async function getPeriodScoreboard(
     charityAmount: sectionTotals.charity,
     pbcAmount: sectionTotals.pbc,
     teamLossAmount: sectionTotals.team_loss,
+    extraIncomeAmount: sectionTotals.extra,
     currency,
   };
 

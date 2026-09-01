@@ -11,12 +11,14 @@ export const PAYOUT_SECTION_META: Record<
   debt_discount: { title: "Debt / Discount", sortOrder: 4, billsParty: "adjustments" },
   charity: { title: "Charity", sortOrder: 5, billsParty: "adjustments" },
   pbc: { title: "PBC", sortOrder: 6, billsParty: "adjustments" },
+  extra: { title: "Extra", sortOrder: 7, billsParty: "adjustments" },
 };
 
 export const ADJUSTMENT_SECTION_KEYS: AgencyOpsPayoutSectionKey[] = [
   "debt_discount",
   "charity",
   "pbc",
+  "extra",
 ];
 
 export const TEAM_SECTION_KEYS: AgencyOpsPayoutSectionKey[] = [
@@ -30,9 +32,9 @@ export function isPayoutSectionKey(value: string): value is AgencyOpsPayoutSecti
   return value in PAYOUT_SECTION_META;
 }
 
-/** Formula sync writes these; salaries and debt/discount stay manual. */
+/** Formula sync writes these; salaries, debt/discount, and extra stay manual. */
 export function isFormulaSyncedPayoutSection(key: AgencyOpsPayoutSectionKey): boolean {
-  return key !== "salaries" && key !== "debt_discount";
+  return key !== "salaries" && key !== "debt_discount" && key !== "extra";
 }
 
 export function isAdjustmentSectionKey(

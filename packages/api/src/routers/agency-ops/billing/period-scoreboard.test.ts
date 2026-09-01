@@ -114,4 +114,26 @@ describe("buildPeriodScoreboard", () => {
     expect(withSurcharge.totalIncomeAmount).toBe(110_000);
     expect(withSurcharge.roi).toBeGreaterThan(without.roi);
   });
+
+  test("extra income raises total and roi without raising cost", () => {
+    const without = buildPeriodScoreboard({
+      ...base,
+      billablePoolAmount: 100_000,
+      receivedAmount: 0,
+      invoicedRemainingAmount: 0,
+    });
+    const withExtra = buildPeriodScoreboard({
+      ...base,
+      billablePoolAmount: 100_000,
+      extraIncomeAmount: 8_000,
+      receivedAmount: 0,
+      invoicedRemainingAmount: 0,
+    });
+    expect(withExtra.totalIncomeAmount).toBe(108_000);
+    expect(withExtra.teamProfitAmount).toBe(without.teamProfitAmount + 8_000);
+    expect(withExtra.roi).toBeGreaterThan(without.roi);
+    expect(withExtra.debtDiscountAmount).toBe(without.debtDiscountAmount);
+    expect(withExtra.charityAmount).toBe(without.charityAmount);
+    expect(withExtra.pbcAmount).toBe(without.pbcAmount);
+  });
 });
