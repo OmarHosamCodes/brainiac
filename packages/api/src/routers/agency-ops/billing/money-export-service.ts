@@ -21,14 +21,14 @@ import { getAgencyCurrency } from "./money-fx-service";
 import {
   buildClientObligations,
   buildMemberObligations,
-  applyPendingAdjustmentAmount,
+  filterAdjustmentsForPeriod,
   type MoneyCarryClientObligation,
   type MoneyCarryMemberObligation,
 } from "./money-bill-carry";
 import { invoiceRemainingAmount, invoiceStatusAfterUncollect } from "./invoice-bill-status";
 import {
-  clearPendingAdjustmentsForParty,
   listPendingAdjustments,
+  markClientReadyAdjustmentsApplied,
   type MoneyPendingAdjustmentRecord,
 } from "./money-pending-adjustment-service";
 import { payoutRemainingAmount } from "./payout-bill-status";
@@ -378,6 +378,20 @@ export async function settleMoneyObligation(
           });
           invoiceId = exported.id;
           remainingAmount = exported.remainingAmount;
+          if (input.action === "pay") {
+            await markClientReadyAdjustmentsApplied(actorUserId, {
+              teamId: input.teamId,
+              partyId: clientId,
+              invoiceId,
+              exported: [
+                {
+                  obligationId: input.obligationId,
+                  periodStart: input.periodStart,
+                  periodEnd: input.periodEnd,
+                },
+              ],
+            });
+          }
         } else {
           const [inv] = await db
             .select({
@@ -504,7 +518,6 @@ async function createCombinedClientInvoice(
     teamId: string;
     clientId: string;
     selections: ExportSelection[];
-    adjustments: MoneyPendingAdjustmentRecord[];
   },
 ): Promise<string> {
   const periodStart = input.selections.reduce(
@@ -545,41 +558,6 @@ async function createCombinedClientInvoice(
       durationSeconds: 0,
       rateAmount: 0,
       amount: sel.amount,
-      fromTimeEntries: false,
-      createdAt: now,
-    });
-  }
-
-  for (const adj of input.adjustments) {
-    let amount = 0;
-    let description = adj.note || adj.kind;
-    switch (adj.kind) {
-      case "discount":
-        amount = -adj.amount;
-        description = adj.note || "Discount";
-        break;
-      case "surcharge":
-        amount = adj.amount;
-        description = adj.note || "Surcharge";
-        break;
-      case "debt":
-        amount = adj.amount;
-        description = adj.note || "Debt";
-        break;
-      default: {
-        const _exhaustive: never = adj.kind;
-        return _exhaustive;
-      }
-    }
-    total += amount;
-    lineItems.push({
-      id: createWorkspaceId("agency-li"),
-      invoiceId,
-      description,
-      projectId: null,
-      durationSeconds: 0,
-      rateAmount: 0,
-      amount,
       fromTimeEntries: false,
       createdAt: now,
     });
@@ -634,12 +612,6 @@ export async function exportMoneyDocuments(
     throw new ORPCError("BAD_REQUEST", { message: "Select at least one obligation to export." });
   }
 
-  const { items: adjustments } = await listPendingAdjustments(actorUserId, {
-    teamId: input.teamId,
-    partyType: input.partyType,
-    partyId: input.partyId,
-  });
-
   const documents: Array<{ id: string; kind: "invoice" | "payout" }> = [];
   const readySelections = input.selections.filter((s) => s.kind === "ready");
   const existingSelections = input.selections.filter((s) => s.kind !== "ready");
@@ -667,42 +639,47 @@ export async function exportMoneyDocuments(
         teamId: input.teamId,
         clientId: input.partyId,
         selections: readySelections,
-        adjustments,
       });
       documents.push({ id, kind: "invoice" });
+      await markClientReadyAdjustmentsApplied(actorUserId, {
+        teamId: input.teamId,
+        partyId: input.partyId,
+        invoiceId: id,
+        exported: readySelections.map((sel) => ({
+          obligationId: sel.obligationId,
+          periodStart: sel.periodStart,
+          periodEnd: sel.periodEnd,
+        })),
+      });
     } else {
       const groups =
         input.mode === "combine"
           ? [readySelections]
           : groupSelectionsForExport(readySelections, "split");
 
-      let adjustmentsApplied = false;
       for (const group of groups) {
         if (group.length === 0) continue;
         const first = group[0]!;
-        // For split, one ready per period group; amount is sum of group.
         const amount = group.reduce((sum, s) => sum + s.amount, 0);
-        const adjusted =
-          !adjustmentsApplied && input.mode === "split"
-            ? applyPendingAdjustmentAmount(amount, adjustments)
-            : input.mode === "combine"
-              ? applyPendingAdjustmentAmount(amount, adjustments)
-              : amount;
-        adjustmentsApplied = true;
-
         const exported = await softExportClientReady(actorUserId, {
           teamId: input.teamId,
           clientId: input.partyId,
           periodStart: first.periodStart,
           periodEnd: first.periodEnd,
-          amount: adjusted,
+          amount,
           markSent: false,
-          lineDescription:
-            adjustments.length > 0 && adjusted !== amount
-              ? "Ready balance (with adjustments)"
-              : undefined,
         });
         documents.push({ id: exported.id, kind: "invoice" });
+        await markClientReadyAdjustmentsApplied(actorUserId, {
+          teamId: input.teamId,
+          partyId: input.partyId,
+          invoiceId: exported.id,
+          exported: group.map((sel) => ({
+            obligationId: sel.obligationId,
+            periodStart: sel.periodStart,
+            periodEnd: sel.periodEnd,
+          })),
+        });
       }
     }
   } else {
@@ -723,12 +700,6 @@ export async function exportMoneyDocuments(
           ? group.reduce((max, s) => (s.periodEnd > max ? s.periodEnd : max), first.periodEnd)
           : first.periodEnd;
 
-      // Adjustments applied on client path; member v1 soft-exports activity for the period window.
-      void applyPendingAdjustmentAmount(
-        group.reduce((sum, s) => sum + s.amount, 0),
-        adjustments,
-      );
-
       const exported = await softExportMemberReady(actorUserId, {
         teamId: input.teamId,
         userId: input.partyId,
@@ -738,12 +709,6 @@ export async function exportMoneyDocuments(
       documents.push({ id: exported.id, kind: "payout" });
     }
   }
-
-  await clearPendingAdjustmentsForParty(actorUserId, {
-    teamId: input.teamId,
-    partyType: input.partyType,
-    partyId: input.partyId,
-  });
 
   return { documents };
 }
@@ -930,17 +895,41 @@ export async function listPeriodMoneyObligations(
     })),
   ];
 
+  const periodPending = filterAdjustmentsForPeriod(pending.items, lookbackStartIso, rangeEndIso);
+
   let clients = buildClientObligations({
     rangeStart: rangeStartIso,
     rangeEnd: rangeEndIso,
     invoices,
     readySlices: readySlicesClients,
+    adjustments: periodPending
+      .filter((item) => item.partyType === "client")
+      .map((item) => ({
+        partyId: item.partyId,
+        obligationId: item.obligationId,
+        appliedInvoiceId: item.appliedInvoiceId,
+        periodStart: item.periodStart,
+        periodEnd: item.periodEnd,
+        kind: item.kind,
+        amount: item.amount,
+      })),
   });
   let members = buildMemberObligations({
     rangeStart: rangeStartIso,
     rangeEnd: rangeEndIso,
     payouts,
     readySlices: readySlicesMembers,
+    adjustments: periodPending
+      .filter((item) => item.partyType === "member")
+      .map((item) => ({
+        partyId: item.partyId,
+        obligationId: item.obligationId,
+        appliedInvoiceId: item.appliedInvoiceId,
+        periodStart: item.periodStart,
+        periodEnd: item.periodEnd,
+        kind: item.kind,
+        amount: item.amount,
+      })),
   });
 
   const searchTerm = input.search?.trim().toLowerCase();
@@ -952,6 +941,6 @@ export async function listPeriodMoneyObligations(
   return {
     clients,
     members,
-    pendingAdjustments: pending.items,
+    pendingAdjustments: periodPending,
   };
 }

@@ -139,6 +139,168 @@ export function selectUncoveredReadySlices<T extends MoneyCarryReadySlice>(
   );
 }
 
+export type MoneyPendingAdjustmentKind = "discount" | "surcharge" | "debt";
+
+export type MoneyAdjustmentMatch = {
+  partyId: string;
+  obligationId: string | null;
+  appliedInvoiceId: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  kind: MoneyPendingAdjustmentKind;
+  amount: number;
+};
+
+export function clientReadyObligationId(
+  clientId: string,
+  periodStart: string,
+  periodEnd: string,
+): string {
+  return `ready:client:${clientId}:${periodStart}:${periodEnd}`;
+}
+
+export function memberReadyObligationId(
+  userId: string,
+  periodStart: string,
+  periodEnd: string,
+): string {
+  return `ready:member:${userId}:${periodStart}:${periodEnd}`;
+}
+
+export function isReadyObligationId(obligationId: string): boolean {
+  return obligationId.startsWith("ready:");
+}
+
+export function isInvoiceObligationId(obligationId: string): boolean {
+  return !isReadyObligationId(obligationId);
+}
+
+export function pendingAdjustmentKindLabel(kind: MoneyPendingAdjustmentKind): string {
+  switch (kind) {
+    case "discount":
+      return "Discount";
+    case "surcharge":
+      return "Surcharge";
+    case "debt":
+      return "Debt";
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+export function signedClientAdjustmentAmount(
+  kind: MoneyPendingAdjustmentKind,
+  amount: number,
+): number {
+  switch (kind) {
+    case "discount":
+      return -amount;
+    case "surcharge":
+    case "debt":
+      return amount;
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+export function netClientAdjustmentAmount(
+  adjustments: ReadonlyArray<{ kind: MoneyPendingAdjustmentKind; amount: number }>,
+): number {
+  return adjustments.reduce(
+    (total, adj) => total + signedClientAdjustmentAmount(adj.kind, adj.amount),
+    0,
+  );
+}
+
+/** Apply pending Adjust deltas: discount reduces, surcharge/debt increase. */
+export function applyPendingAdjustmentAmount(
+  baseAmount: number,
+  adjustments: ReadonlyArray<{ kind: MoneyPendingAdjustmentKind; amount: number }>,
+): number {
+  return Math.max(0, baseAmount + netClientAdjustmentAmount(adjustments));
+}
+
+export function adjustmentPeriodOverlaps(
+  adj: { periodStart: string | null; periodEnd: string | null },
+  rangeStart: string,
+  rangeEnd: string,
+): boolean {
+  if (!adj.periodStart || !adj.periodEnd) return true;
+  return periodsOverlap(adj.periodStart, adj.periodEnd, rangeStart, rangeEnd);
+}
+
+export function filterAdjustmentsForPeriod<
+  T extends { periodStart: string | null; periodEnd: string | null },
+>(adjustments: readonly T[], rangeStart: string, rangeEnd: string): T[] {
+  return adjustments.filter((adj) => adjustmentPeriodOverlaps(adj, rangeStart, rangeEnd));
+}
+
+export function isUnappliedReadyAdjustment(adj: {
+  appliedInvoiceId: string | null;
+  obligationId: string | null;
+}): boolean {
+  if (adj.appliedInvoiceId) return false;
+  if (adj.obligationId && !isReadyObligationId(adj.obligationId)) return false;
+  return true;
+}
+
+export function adjustmentsForReadyObligation(
+  slice: { partyId: string; obligationId: string; periodStart: string; periodEnd: string },
+  adjustments: readonly MoneyAdjustmentMatch[],
+): MoneyAdjustmentMatch[] {
+  return adjustments.filter((adj) => {
+    if (adj.partyId !== slice.partyId) return false;
+    if (!isUnappliedReadyAdjustment(adj)) return false;
+    if (adj.obligationId && adj.obligationId !== slice.obligationId) return false;
+    return adjustmentPeriodOverlaps(adj, slice.periodStart, slice.periodEnd);
+  });
+}
+
+/**
+ * Income/ROI bump that is not already sitting in invoice remaining.
+ * Invoice-targeted rows (even after apply) raise the pool when tracked work still
+ * dominates invoiced totals. Ready rows only count until export bakes them into
+ * an invoice; exported ready rows are skipped so max(pool, invoiced) does not
+ * double-count them.
+ */
+export function scoreboardClientAdjustmentNet(
+  adjustments: ReadonlyArray<{
+    kind: MoneyPendingAdjustmentKind;
+    amount: number;
+    obligationId: string | null;
+    appliedInvoiceId: string | null;
+  }>,
+): number {
+  return netClientAdjustmentAmount(
+    adjustments.filter((adj) => {
+      if (adj.obligationId && isInvoiceObligationId(adj.obligationId)) return true;
+      return isUnappliedReadyAdjustment(adj);
+    }),
+  );
+}
+
+export function readyAdjustmentMatchesExport(
+  adj: {
+    obligationId: string | null;
+    appliedInvoiceId: string | null;
+    periodStart: string | null;
+    periodEnd: string | null;
+  },
+  exported: ReadonlyArray<{ obligationId: string; periodStart: string; periodEnd: string }>,
+): boolean {
+  if (adj.appliedInvoiceId) return false;
+  if (adj.obligationId) {
+    return exported.some((item) => item.obligationId === adj.obligationId);
+  }
+  return exported.some((item) =>
+    adjustmentPeriodOverlaps(adj, item.periodStart, item.periodEnd),
+  );
+}
+
 export function buildClientObligations(input: {
   rangeStart: string;
   rangeEnd: string;
@@ -166,6 +328,7 @@ export function buildClientObligations(input: {
     durationSeconds: number;
     wasteAmount: number;
   }>;
+  adjustments?: readonly MoneyAdjustmentMatch[];
 }): MoneyCarryClientObligation[] {
   const out: MoneyCarryClientObligation[] = [];
 
@@ -199,37 +362,40 @@ export function buildClientObligations(input: {
     });
   }
 
-  // Ready = residual activity after overlapping invoice amounts for that slice.
+  // Ready = residual activity after overlapping invoice amounts for that slice,
+  // then unapplied ready adjustments (invoice-targeted rows already live on invoices).
+  const adjustments = input.adjustments ?? [];
   for (const slice of input.readySlices) {
-    if (slice.amount <= 0) continue;
-    const invoicedAmount = input.invoices
-      .filter(
-        (invoice) =>
-          invoice.clientId === slice.clientId &&
-          periodsOverlap(
-            invoice.periodStart,
-            invoice.periodEnd,
-            slice.periodStart,
-            slice.periodEnd,
-          ),
-      )
-      .reduce((sum, invoice) => sum + invoice.amount, 0);
-    const readyAmount = Math.max(0, slice.amount - invoicedAmount);
+    const overlappingInvoices = input.invoices.filter(
+      (invoice) =>
+        invoice.clientId === slice.clientId &&
+        periodsOverlap(invoice.periodStart, invoice.periodEnd, slice.periodStart, slice.periodEnd),
+    );
+    const invoicedAmount = overlappingInvoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+    const residual = Math.max(0, slice.amount - invoicedAmount);
+    const obligationId = clientReadyObligationId(
+      slice.clientId,
+      slice.periodStart,
+      slice.periodEnd,
+    );
+    const matching = adjustmentsForReadyObligation(
+      {
+        partyId: slice.clientId,
+        obligationId,
+        periodStart: slice.periodStart,
+        periodEnd: slice.periodEnd,
+      },
+      adjustments,
+    );
+    const readyAmount = applyPendingAdjustmentAmount(residual, matching);
     if (readyAmount <= 0) continue;
 
-    const invoicedSourceAmount = input.invoices
-      .filter(
-        (invoice) =>
-          invoice.clientId === slice.clientId &&
-          periodsOverlap(
-            invoice.periodStart,
-            invoice.periodEnd,
-            slice.periodStart,
-            slice.periodEnd,
-          ),
-      )
-      .reduce((sum, invoice) => sum + invoice.sourceAmount, 0);
-    const readySourceAmount = Math.max(0, slice.sourceAmount - invoicedSourceAmount);
+    const invoicedSourceAmount = overlappingInvoices.reduce(
+      (sum, invoice) => sum + invoice.sourceAmount,
+      0,
+    );
+    const residualSource = Math.max(0, slice.sourceAmount - invoicedSourceAmount);
+    const readySourceAmount = applyPendingAdjustmentAmount(residualSource, matching);
 
     const isCarry = periodEndsBefore(slice.periodEnd, input.rangeStart);
     const inCurrent = periodsOverlap(
@@ -242,7 +408,7 @@ export function buildClientObligations(input: {
 
     out.push({
       kind: "ready",
-      id: `ready:client:${slice.clientId}:${slice.periodStart}:${slice.periodEnd}`,
+      id: obligationId,
       clientId: slice.clientId,
       clientName: slice.clientName,
       periodStart: slice.periodStart,
@@ -291,6 +457,7 @@ export function buildMemberObligations(input: {
     durationSeconds: number;
     wasteAmount: number;
   }>;
+  adjustments?: readonly MoneyAdjustmentMatch[];
 }): MoneyCarryMemberObligation[] {
   const out: MoneyCarryMemberObligation[] = [];
 
@@ -322,8 +489,8 @@ export function buildMemberObligations(input: {
     });
   }
 
+  const memberAdjustments = input.adjustments ?? [];
   for (const slice of input.readySlices) {
-    if (slice.amount <= 0) continue;
     const paidOutAmount = input.payouts
       .filter(
         (payout) =>
@@ -331,7 +498,22 @@ export function buildMemberObligations(input: {
           periodsOverlap(payout.periodStart, payout.periodEnd, slice.periodStart, slice.periodEnd),
       )
       .reduce((sum, payout) => sum + payout.amount, 0);
-    const readyAmount = Math.max(0, slice.amount - paidOutAmount);
+    const residual = Math.max(0, slice.amount - paidOutAmount);
+    const obligationId = memberReadyObligationId(
+      slice.userId,
+      slice.periodStart,
+      slice.periodEnd,
+    );
+    const matching = adjustmentsForReadyObligation(
+      {
+        partyId: slice.userId,
+        obligationId,
+        periodStart: slice.periodStart,
+        periodEnd: slice.periodEnd,
+      },
+      memberAdjustments,
+    );
+    const readyAmount = applyPendingAdjustmentAmount(residual, matching);
     if (readyAmount <= 0) continue;
 
     const isCarry = periodEndsBefore(slice.periodEnd, input.rangeStart);
@@ -345,7 +527,7 @@ export function buildMemberObligations(input: {
 
     out.push({
       kind: "ready",
-      id: `ready:member:${slice.userId}:${slice.periodStart}:${slice.periodEnd}`,
+      id: obligationId,
       userId: slice.userId,
       userName: slice.userName,
       userAvatar: slice.userAvatar,
@@ -382,30 +564,4 @@ export function groupObligationsForExport(
     byPeriod.set(key, list);
   }
   return [...byPeriod.values()];
-}
-
-export type MoneyPendingAdjustmentKind = "discount" | "surcharge" | "debt";
-
-/** Apply pending Adjust deltas: discount reduces, surcharge/debt increase. */
-export function applyPendingAdjustmentAmount(
-  baseAmount: number,
-  adjustments: ReadonlyArray<{ kind: MoneyPendingAdjustmentKind; amount: number }>,
-): number {
-  let total = baseAmount;
-  for (const adj of adjustments) {
-    switch (adj.kind) {
-      case "discount":
-        total -= adj.amount;
-        break;
-      case "surcharge":
-      case "debt":
-        total += adj.amount;
-        break;
-      default: {
-        const _exhaustive: never = adj.kind;
-        return _exhaustive;
-      }
-    }
-  }
-  return Math.max(0, total);
 }

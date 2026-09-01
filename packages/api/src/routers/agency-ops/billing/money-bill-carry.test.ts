@@ -3,9 +3,15 @@ import { describe, expect, test } from "bun:test";
 import {
   buildClientObligations,
   buildMemberObligations,
+  filterAdjustmentsForPeriod,
   groupObligationsForExport,
+  isInvoiceObligationId,
+  netClientAdjustmentAmount,
+  readyAdjustmentMatchesExport,
+  scoreboardClientAdjustmentNet,
   selectOpenPriorDocs,
   selectUncoveredReadySlices,
+  signedClientAdjustmentAmount,
 } from "./money-bill-carry";
 
 describe("money-bill-carry", () => {
@@ -13,6 +19,20 @@ describe("money-bill-carry", () => {
   const aprilEnd = "2026-04-30T23:59:59.999Z";
   const marchStart = "2026-03-01T00:00:00.000Z";
   const marchEnd = "2026-03-31T23:59:59.999Z";
+
+  test("signed and net client adjustments", () => {
+    expect(signedClientAdjustmentAmount("discount", 500)).toBe(-500);
+    expect(signedClientAdjustmentAmount("surcharge", 200)).toBe(200);
+    expect(signedClientAdjustmentAmount("debt", 100)).toBe(100);
+    expect(
+      netClientAdjustmentAmount([
+        { kind: "discount", amount: 500 },
+        { kind: "surcharge", amount: 200 },
+      ]),
+    ).toBe(-300);
+    expect(isInvoiceObligationId("inv-1")).toBe(true);
+    expect(isInvoiceObligationId("ready:client:c1:a:b")).toBe(false);
+  });
 
   test("selectOpenPriorDocs keeps remaining prior invoices only", () => {
     const open = selectOpenPriorDocs(
@@ -190,5 +210,168 @@ describe("money-bill-carry", () => {
     ];
     expect(groupObligationsForExport(items, "combine")).toHaveLength(1);
     expect(groupObligationsForExport(items, "split")).toHaveLength(2);
+  });
+
+  test("ready surcharge is included in residual after invoice subtraction", () => {
+    const rows = buildClientObligations({
+      rangeStart: aprilStart,
+      rangeEnd: aprilEnd,
+      invoices: [],
+      readySlices: [
+        {
+          clientId: "c1",
+          clientName: "Northwind",
+          periodStart: aprilStart,
+          periodEnd: aprilEnd,
+          amount: 10_000,
+          sourceAmount: 10_000,
+          rateCurrency: "USD",
+          durationSeconds: 3600,
+          wasteAmount: 0,
+        },
+      ],
+      adjustments: [
+        {
+          partyId: "c1",
+          obligationId: `ready:client:c1:${aprilStart}:${aprilEnd}`,
+          appliedInvoiceId: null,
+          periodStart: aprilStart,
+          periodEnd: aprilEnd,
+          kind: "surcharge",
+          amount: 2_000,
+        },
+      ],
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.amount).toBe(12_000);
+    expect(rows[0]?.remainingAmount).toBe(12_000);
+  });
+
+  test("invoice-targeted adjustment does not also inflate ready residual", () => {
+    const rows = buildClientObligations({
+      rangeStart: aprilStart,
+      rangeEnd: aprilEnd,
+      invoices: [
+        {
+          id: "inv-1",
+          clientId: "c1",
+          clientName: "Northwind",
+          number: "INV-1",
+          periodStart: aprilStart,
+          periodEnd: aprilEnd,
+          amount: 12_000,
+          sourceAmount: 12_000,
+          rateCurrency: "USD",
+          receivedAmount: 0,
+          remainingAmount: 12_000,
+        },
+      ],
+      readySlices: [
+        {
+          clientId: "c1",
+          clientName: "Northwind",
+          periodStart: aprilStart,
+          periodEnd: aprilEnd,
+          amount: 10_000,
+          sourceAmount: 10_000,
+          rateCurrency: "USD",
+          durationSeconds: 0,
+          wasteAmount: 0,
+        },
+      ],
+      adjustments: [
+        {
+          partyId: "c1",
+          obligationId: "inv-1",
+          appliedInvoiceId: "inv-1",
+          periodStart: aprilStart,
+          periodEnd: aprilEnd,
+          kind: "surcharge",
+          amount: 2_000,
+        },
+      ],
+    });
+    expect(rows.map((r) => `${r.kind}:${r.amount}`)).toEqual(["invoice:12000"]);
+  });
+
+  test("filterAdjustmentsForPeriod keeps overlapping and legacy rows", () => {
+    const kept = filterAdjustmentsForPeriod(
+      [
+        { periodStart: aprilStart, periodEnd: aprilEnd },
+        { periodStart: marchStart, periodEnd: marchEnd },
+        { periodStart: null, periodEnd: null },
+      ],
+      aprilStart,
+      aprilEnd,
+    );
+    expect(kept).toHaveLength(2);
+  });
+
+  test("scoreboard net includes invoice apply and unapplied ready, skips exported ready", () => {
+    expect(
+      scoreboardClientAdjustmentNet([
+        {
+          kind: "surcharge",
+          amount: 2_000,
+          obligationId: "inv-1",
+          appliedInvoiceId: "inv-1",
+        },
+        {
+          kind: "surcharge",
+          amount: 1_000,
+          obligationId: "ready:client:c1:a:b",
+          appliedInvoiceId: null,
+        },
+        {
+          kind: "surcharge",
+          amount: 500,
+          obligationId: "ready:client:c1:a:b",
+          appliedInvoiceId: "inv-exported",
+        },
+      ]),
+    ).toBe(3_000);
+  });
+
+  test("readyAdjustmentMatchesExport is scoped to exported obligation ids", () => {
+    const exported = [
+      {
+        obligationId: "ready:client:c1:april",
+        periodStart: aprilStart,
+        periodEnd: aprilEnd,
+      },
+    ];
+    expect(
+      readyAdjustmentMatchesExport(
+        {
+          obligationId: "ready:client:c1:april",
+          appliedInvoiceId: null,
+          periodStart: aprilStart,
+          periodEnd: aprilEnd,
+        },
+        exported,
+      ),
+    ).toBe(true);
+    expect(
+      readyAdjustmentMatchesExport(
+        {
+          obligationId: "ready:client:c1:march",
+          appliedInvoiceId: null,
+          periodStart: marchStart,
+          periodEnd: marchEnd,
+        },
+        exported,
+      ),
+    ).toBe(false);
+    expect(
+      readyAdjustmentMatchesExport(
+        {
+          obligationId: null,
+          appliedInvoiceId: null,
+          periodStart: aprilStart,
+          periodEnd: aprilEnd,
+        },
+        exported,
+      ),
+    ).toBe(true);
   });
 });

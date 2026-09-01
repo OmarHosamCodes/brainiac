@@ -6,6 +6,7 @@ import { syncFormulaPayoutLines } from "./money-formula-payout-sync";
 import { getMoneySettings } from "./money-settings-service";
 import { getInvoiceSummary, sumPeriodExternalBillablePool } from "./service";
 import { sumExpensesInPeriod } from "./expense-service";
+import { sumExternalClientPeriodAdjustments } from "./money-pending-adjustment-service";
 import { getPayoutSectionTotals, getPayoutSummary } from "./payout-service";
 import { buildPeriodScoreboard } from "./period-scoreboard";
 
@@ -32,15 +33,23 @@ export async function getPeriodScoreboard(
     });
   }
 
-  const [invoiceSummary, payoutSummary, expenseTotals, sectionTotals, settings, billablePool] =
-    await Promise.all([
-      getInvoiceSummary(actorUserId, input),
-      getPayoutSummary(actorUserId, input),
-      sumExpensesInPeriod(actorUserId, input),
-      getPayoutSectionTotals(actorUserId, input),
-      getMoneySettings(actorUserId, { teamId: input.teamId }),
-      sumPeriodExternalBillablePool(actorUserId, input),
-    ]);
+  const [
+    invoiceSummary,
+    payoutSummary,
+    expenseTotals,
+    sectionTotals,
+    settings,
+    billablePool,
+    clientPeriodAdjustmentsNet,
+  ] = await Promise.all([
+    getInvoiceSummary(actorUserId, input),
+    getPayoutSummary(actorUserId, input),
+    sumExpensesInPeriod(actorUserId, input),
+    getPayoutSectionTotals(actorUserId, input),
+    getMoneySettings(actorUserId, { teamId: input.teamId }),
+    sumPeriodExternalBillablePool(actorUserId, input),
+    sumExternalClientPeriodAdjustments(actorUserId, input),
+  ]);
 
   const currency =
     settings.currency ||
@@ -52,6 +61,7 @@ export async function getPeriodScoreboard(
 
   const scoreboardInput = {
     billablePoolAmount: billablePool.billablePoolAmount,
+    clientPeriodAdjustmentsNet,
     receivedAmount: invoiceSummary.receivedAmount,
     invoicedRemainingAmount: invoiceSummary.remainingAmount,
     salariesDueAmount: payoutSummary.salariesDueAmount || sectionTotals.salaries,

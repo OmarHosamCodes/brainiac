@@ -1,16 +1,27 @@
 import { db } from "@orch/db";
 import {
+  agencyOpsClient,
   agencyOpsMoneyPendingAdjustment,
   type AgencyOpsMoneyPendingAdjustmentKind,
   type AgencyOpsMoneyPendingPartyType,
 } from "@orch/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { ORPCError } from "@orpc/server";
 import { createWorkspaceId } from "@orch/workspace";
 
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { requireTeamMembership } from "../shared/membership";
+import {
+  applyInvoiceClientAdjustment,
+  isInvoiceObligationId,
+  reverseInvoiceClientAdjustment,
+} from "./client-bill-adjustment";
 import { loadMoneyResolveContext } from "./money-fx-service";
+import {
+  filterAdjustmentsForPeriod,
+  readyAdjustmentMatchesExport,
+  scoreboardClientAdjustmentNet,
+} from "./money-bill-carry";
 
 export type MoneyPendingAdjustmentRecord = {
   id: string;
@@ -19,6 +30,9 @@ export type MoneyPendingAdjustmentRecord = {
   partyId: string;
   periodStart: string | null;
   periodEnd: string | null;
+  obligationId: string | null;
+  appliedInvoiceId: string | null;
+  invoiceLineItemId: string | null;
   kind: AgencyOpsMoneyPendingAdjustmentKind;
   amount: number;
   note: string;
@@ -37,6 +51,9 @@ function mapPendingAdjustmentRow(
     partyId: row.partyId,
     periodStart: row.periodStart?.toISOString() ?? null,
     periodEnd: row.periodEnd?.toISOString() ?? null,
+    obligationId: row.obligationId ?? null,
+    appliedInvoiceId: row.appliedInvoiceId ?? null,
+    invoiceLineItemId: row.invoiceLineItemId ?? null,
     kind: row.kind,
     amount: row.amount,
     note: row.note ?? "",
@@ -85,6 +102,7 @@ export async function upsertPendingAdjustment(
     note?: string;
     periodStart?: string;
     periodEnd?: string;
+    obligationId?: string;
   },
 ): Promise<MoneyPendingAdjustmentRecord> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -93,6 +111,19 @@ export async function upsertPendingAdjustment(
     throw new ORPCError("BAD_REQUEST", {
       message: "Amount must be a positive integer (minor units).",
     });
+  }
+
+  if (input.partyType === "client") {
+    if (!input.obligationId) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "obligationId is required for client adjustments.",
+      });
+    }
+    if (!input.periodStart || !input.periodEnd) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "periodStart and periodEnd are required for client adjustments.",
+      });
+    }
   }
 
   const periodStart = input.periodStart ? parseIsoDateTime(input.periodStart, "periodStart") : null;
@@ -107,8 +138,127 @@ export async function upsertPendingAdjustment(
   const money = moneyCtx.resolve(input.amount, moneyCtx.agencyCurrency);
   await moneyCtx.lock();
 
-  if (input.id) {
-    const [existing] = await db
+  const obligationId = input.obligationId ?? null;
+  const applyToInvoice =
+    input.partyType === "client" && obligationId != null && isInvoiceObligationId(obligationId);
+
+  return db.transaction(async (tx) => {
+    let existing: typeof agencyOpsMoneyPendingAdjustment.$inferSelect | undefined;
+    if (input.id) {
+      const [row] = await tx
+        .select()
+        .from(agencyOpsMoneyPendingAdjustment)
+        .where(
+          and(
+            eq(agencyOpsMoneyPendingAdjustment.id, input.id),
+            eq(agencyOpsMoneyPendingAdjustment.teamId, input.teamId),
+          ),
+        )
+        .limit(1);
+      if (!row) {
+        throw new ORPCError("NOT_FOUND", { message: "Pending adjustment was not found." });
+      }
+      existing = row;
+    }
+
+    const applyToSameInvoice =
+      applyToInvoice &&
+      obligationId != null &&
+      existing?.appliedInvoiceId === obligationId &&
+      existing.invoiceLineItemId != null;
+
+    if (existing?.appliedInvoiceId && existing.invoiceLineItemId && !applyToSameInvoice) {
+      await reverseInvoiceClientAdjustment(tx, {
+        teamId: input.teamId,
+        clientId: existing.partyId,
+        invoiceId: existing.appliedInvoiceId,
+        invoiceLineItemId: existing.invoiceLineItemId,
+        kind: existing.kind,
+        amount: existing.amount,
+      });
+    }
+
+    let appliedInvoiceId: string | null = null;
+    let invoiceLineItemId: string | null = null;
+    if (applyToInvoice && obligationId) {
+      const applied = await applyInvoiceClientAdjustment(tx, {
+        teamId: input.teamId,
+        clientId: input.partyId,
+        invoiceId: obligationId,
+        kind: input.kind,
+        amount: money.amount,
+        note,
+        existingLineItemId: applyToSameInvoice ? existing?.invoiceLineItemId : null,
+      });
+      appliedInvoiceId = applied.appliedInvoiceId;
+      invoiceLineItemId = applied.invoiceLineItemId;
+    }
+
+    if (existing) {
+      const [updated] = await tx
+        .update(agencyOpsMoneyPendingAdjustment)
+        .set({
+          partyType: input.partyType,
+          partyId: input.partyId,
+          kind: input.kind,
+          amount: money.amount,
+          currency: money.sourceCurrency,
+          sourceAmount: money.sourceAmount,
+          fxRate: money.fxRate,
+          fxAsOf: new Date(money.fxAsOf),
+          note,
+          periodStart,
+          periodEnd,
+          obligationId,
+          appliedInvoiceId,
+          invoiceLineItemId,
+          updatedAt: now,
+        })
+        .where(eq(agencyOpsMoneyPendingAdjustment.id, existing.id))
+        .returning();
+
+      if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
+      return mapPendingAdjustmentRow(updated);
+    }
+
+    const [inserted] = await tx
+      .insert(agencyOpsMoneyPendingAdjustment)
+      .values({
+        id: createWorkspaceId("agency-money-adj"),
+        teamId: input.teamId,
+        partyType: input.partyType,
+        partyId: input.partyId,
+        kind: input.kind,
+        amount: money.amount,
+        currency: money.sourceCurrency,
+        sourceAmount: money.sourceAmount,
+        fxRate: money.fxRate,
+        fxAsOf: new Date(money.fxAsOf),
+        note,
+        periodStart,
+        periodEnd,
+        obligationId,
+        appliedInvoiceId,
+        invoiceLineItemId,
+        createdByUserId: actorUserId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    if (!inserted) throw new ORPCError("INTERNAL_SERVER_ERROR");
+    return mapPendingAdjustmentRow(inserted);
+  });
+}
+
+export async function deletePendingAdjustment(
+  actorUserId: string,
+  input: { teamId: string; id: string },
+): Promise<{ id: string }> {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
       .select()
       .from(agencyOpsMoneyPendingAdjustment)
       .where(
@@ -123,95 +273,124 @@ export async function upsertPendingAdjustment(
       throw new ORPCError("NOT_FOUND", { message: "Pending adjustment was not found." });
     }
 
-    const [updated] = await db
-      .update(agencyOpsMoneyPendingAdjustment)
-      .set({
-        partyType: input.partyType,
-        partyId: input.partyId,
-        kind: input.kind,
-        amount: money.amount,
-        currency: money.sourceCurrency,
-        sourceAmount: money.sourceAmount,
-        fxRate: money.fxRate,
-        fxAsOf: new Date(money.fxAsOf),
-        note,
-        periodStart,
-        periodEnd,
-        updatedAt: now,
-      })
-      .where(eq(agencyOpsMoneyPendingAdjustment.id, input.id))
-      .returning();
+    if (existing.appliedInvoiceId && existing.invoiceLineItemId) {
+      await reverseInvoiceClientAdjustment(tx, {
+        teamId: input.teamId,
+        clientId: existing.partyId,
+        invoiceId: existing.appliedInvoiceId,
+        invoiceLineItemId: existing.invoiceLineItemId,
+        kind: existing.kind,
+        amount: existing.amount,
+      });
+    }
 
-    if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
-    return mapPendingAdjustmentRow(updated);
-  }
+    const [deleted] = await tx
+      .delete(agencyOpsMoneyPendingAdjustment)
+      .where(eq(agencyOpsMoneyPendingAdjustment.id, existing.id))
+      .returning({ id: agencyOpsMoneyPendingAdjustment.id });
 
-  const [inserted] = await db
-    .insert(agencyOpsMoneyPendingAdjustment)
-    .values({
-      id: createWorkspaceId("agency-money-adj"),
-      teamId: input.teamId,
-      partyType: input.partyType,
-      partyId: input.partyId,
-      kind: input.kind,
-      amount: money.amount,
-      currency: money.sourceCurrency,
-      sourceAmount: money.sourceAmount,
-      fxRate: money.fxRate,
-      fxAsOf: new Date(money.fxAsOf),
-      note,
-      periodStart,
-      periodEnd,
-      createdByUserId: actorUserId,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
+    if (!deleted) {
+      throw new ORPCError("NOT_FOUND", { message: "Pending adjustment was not found." });
+    }
 
-  if (!inserted) throw new ORPCError("INTERNAL_SERVER_ERROR");
-  return mapPendingAdjustmentRow(inserted);
+    return { id: deleted.id };
+  });
 }
 
-export async function deletePendingAdjustment(
-  actorUserId: string,
-  input: { teamId: string; id: string },
-): Promise<{ id: string }> {
-  await requireTeamMembership(actorUserId, input.teamId, "owner");
-
-  const [deleted] = await db
-    .delete(agencyOpsMoneyPendingAdjustment)
-    .where(
-      and(
-        eq(agencyOpsMoneyPendingAdjustment.id, input.id),
-        eq(agencyOpsMoneyPendingAdjustment.teamId, input.teamId),
-      ),
-    )
-    .returning({ id: agencyOpsMoneyPendingAdjustment.id });
-
-  if (!deleted) {
-    throw new ORPCError("NOT_FOUND", { message: "Pending adjustment was not found." });
-  }
-
-  return { id: deleted.id };
-}
-
-export async function clearPendingAdjustmentsForParty(
+export async function markClientReadyAdjustmentsApplied(
   actorUserId: string,
   input: {
     teamId: string;
-    partyType: AgencyOpsMoneyPendingPartyType;
     partyId: string;
+    invoiceId: string;
+    exported: ReadonlyArray<{ obligationId: string; periodStart: string; periodEnd: string }>;
   },
 ): Promise<void> {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
+  if (input.exported.length === 0) return;
 
-  await db
-    .delete(agencyOpsMoneyPendingAdjustment)
+  const rows = await db
+    .select({
+      id: agencyOpsMoneyPendingAdjustment.id,
+      obligationId: agencyOpsMoneyPendingAdjustment.obligationId,
+      appliedInvoiceId: agencyOpsMoneyPendingAdjustment.appliedInvoiceId,
+      periodStart: agencyOpsMoneyPendingAdjustment.periodStart,
+      periodEnd: agencyOpsMoneyPendingAdjustment.periodEnd,
+    })
+    .from(agencyOpsMoneyPendingAdjustment)
     .where(
       and(
         eq(agencyOpsMoneyPendingAdjustment.teamId, input.teamId),
-        eq(agencyOpsMoneyPendingAdjustment.partyType, input.partyType),
+        eq(agencyOpsMoneyPendingAdjustment.partyType, "client"),
         eq(agencyOpsMoneyPendingAdjustment.partyId, input.partyId),
       ),
     );
+
+  const ids = rows
+    .filter((row) =>
+      readyAdjustmentMatchesExport(
+        {
+          obligationId: row.obligationId,
+          appliedInvoiceId: row.appliedInvoiceId,
+          periodStart: row.periodStart?.toISOString() ?? null,
+          periodEnd: row.periodEnd?.toISOString() ?? null,
+        },
+        input.exported,
+      ),
+    )
+    .map((row) => row.id);
+
+  if (ids.length === 0) return;
+
+  await db
+    .update(agencyOpsMoneyPendingAdjustment)
+    .set({
+      appliedInvoiceId: input.invoiceId,
+      updatedAt: new Date(),
+    })
+    .where(inArray(agencyOpsMoneyPendingAdjustment.id, ids));
+}
+
+/** Net signed adjustment total for external clients in the viewing period (Ready + invoice). */
+export async function sumExternalClientPeriodAdjustments(
+  actorUserId: string,
+  input: { teamId: string; periodStart: string; periodEnd: string },
+): Promise<number> {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  const periodStart = parseIsoDateTime(input.periodStart, "periodStart");
+  const periodEnd = parseIsoDateTime(input.periodEnd, "periodEnd");
+
+  const rows = await db
+    .select({
+      kind: agencyOpsMoneyPendingAdjustment.kind,
+      amount: agencyOpsMoneyPendingAdjustment.amount,
+      obligationId: agencyOpsMoneyPendingAdjustment.obligationId,
+      appliedInvoiceId: agencyOpsMoneyPendingAdjustment.appliedInvoiceId,
+      periodStart: agencyOpsMoneyPendingAdjustment.periodStart,
+      periodEnd: agencyOpsMoneyPendingAdjustment.periodEnd,
+    })
+    .from(agencyOpsMoneyPendingAdjustment)
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsMoneyPendingAdjustment.partyId))
+    .where(
+      and(
+        eq(agencyOpsMoneyPendingAdjustment.teamId, input.teamId),
+        eq(agencyOpsMoneyPendingAdjustment.partyType, "client"),
+        eq(agencyOpsClient.category, "external"),
+      ),
+    );
+
+  const inPeriod = filterAdjustmentsForPeriod(
+    rows.map((row) => ({
+      kind: row.kind,
+      amount: row.amount,
+      obligationId: row.obligationId,
+      appliedInvoiceId: row.appliedInvoiceId,
+      periodStart: row.periodStart?.toISOString() ?? null,
+      periodEnd: row.periodEnd?.toISOString() ?? null,
+    })),
+    periodStart.toISOString(),
+    periodEnd.toISOString(),
+  );
+
+  return scoreboardClientAdjustmentNet(inPeriod);
 }

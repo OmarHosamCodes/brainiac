@@ -3,6 +3,13 @@
 export type PeriodScoreboardInput = {
   /** External non-waste tracked value (billable rates). */
   billablePoolAmount: number;
+  /**
+   * Period-scoped external client bill adjustments (discount negative, surcharge/debt positive).
+   * Ready unapplied + invoice-targeted rows. Exported ready rows are omitted — they already
+   * sit in invoiced remaining. Used as a pool bump so max(pool, invoiced) still moves when
+   * tracked work dominates invoiced totals.
+   */
+  clientPeriodAdjustmentsNet?: number;
   receivedAmount: number;
   /** Invoiced unpaid — not total − received. */
   invoicedRemainingAmount: number;
@@ -60,10 +67,11 @@ export type PeriodScoreboard = {
 export function buildPeriodScoreboard(input: PeriodScoreboardInput): PeriodScoreboard {
   const receivedAmount = input.receivedAmount;
   const remainingAmount = Math.max(0, input.invoicedRemainingAmount);
-  const totalIncomeAmount = Math.max(
-    Math.max(0, input.billablePoolAmount),
-    receivedAmount + remainingAmount,
+  const adjustedPool = Math.max(
+    0,
+    Math.max(0, input.billablePoolAmount) + (input.clientPeriodAdjustmentsNet ?? 0),
   );
+  const totalIncomeAmount = Math.max(adjustedPool, receivedAmount + remainingAmount);
   const costAmount = profitabilityCostAmount({
     salariesDueAmount: input.salariesDueAmount,
     expensesAmount: input.expensesAmount,
