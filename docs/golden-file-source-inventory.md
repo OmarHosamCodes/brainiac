@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-08-31 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-09-01 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,9 +19,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 939 |
+| golden-feature | 944 |
 | server-operation | 16 |
-| shared-infrastructure | 468 |
+| shared-infrastructure | 469 |
 | static-presentation | 22 |
 
 ## Counts by domain
@@ -33,12 +33,12 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 14 |
-| billing | 140 |
+| billing | 145 |
 | ci | 2 |
 | clients | 13 |
 | configuration | 3 |
 | dashboard | 8 |
-| database-platform | 43 |
+| database-platform | 44 |
 | deployment | 6 |
 | environment | 5 |
 | integrations | 2 |
@@ -424,6 +424,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/money/containers/agency-money-surface-container.tsx` | billing | container | golden-feature | billing-domain | Feature-owned billing artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/money/hooks/money-expense-rows.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/money/hooks/money-expense-rows.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/money/hooks/use-agency-money-bill-adjust.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/money/hooks/use-agency-money-bill-preview.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/money/hooks/use-agency-money-bills.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/money/hooks/use-agency-money-expenses-panel.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/money/hooks/use-agency-money-scoreboard.ts` | billing | feature-hook | golden-feature | billing-domain | Feature-owned billing artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
@@ -1175,9 +1177,11 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/lib/redis.ts` | api-platform | domain-service | shared-infrastructure | api-platform | Cross-cutting api-platform domain-service support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/lib/team-membership.ts` | team | domain-logic | golden-feature | team-domain | Feature-owned team artifact in the canonical domain-logic layer. | content: database access, exported declarations; structure: source role and exported behavior |
 | `packages/api/src/procedures.ts` | api-platform | domain-service | shared-infrastructure | api-platform | Cross-cutting api-platform domain-service support rather than a feature-owned business workflow. | content: oRPC procedures or clients, exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/agency-ops/billing/billing-router-schemas.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/agency-ops/billing/client-bill-adjustment.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/api/src/routers/agency-ops/billing/client-bill-adjustment.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/client-billable-income.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/client-billable-income.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
-| `packages/api/src/routers/agency-ops/billing/debug-period-obligations.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/expense-helpers.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/expense-helpers.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/expense-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
@@ -1226,6 +1230,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agency-ops/billing/payout-section-keys.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/payout-section-keys.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
 | `packages/api/src/routers/agency-ops/billing/payout-service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
+| `packages/api/src/routers/agency-ops/billing/pending-adjustments-router.ts` | billing | api-router | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-router layer. | content: Zod contracts, oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
 | `packages/api/src/routers/agency-ops/billing/period-bill-activity.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/billing/period-bill-activity.ts` | billing | domain-logic | golden-feature | billing-domain | Feature-owned billing artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/billing/period-scoreboard.test.ts` | billing | test | golden-feature | billing-domain | Feature-owned billing artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
@@ -1447,6 +1452,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/db/src/migrations/0062_agency_payout_line_source_formula.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0063_agency_period_fx.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0064_agency_time_entry_links.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
+| `packages/db/src/migrations/0065_agency_money_pending_adjustment_target.sql` | database-platform | persistence-migration | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-migration support rather than a feature-owned business workflow. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/meta/0000_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0001_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0002_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
