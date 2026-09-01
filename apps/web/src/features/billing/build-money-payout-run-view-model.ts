@@ -26,6 +26,7 @@ const PAYOUT_RUN_SECTIONS: Array<{ key: string; title: string; sortOrder: number
   { key: "debt_discount", title: "Debt / Discount", sortOrder: 4 },
   { key: "charity", title: "Charity", sortOrder: 5 },
   { key: "pbc", title: "PBC", sortOrder: 6 },
+  { key: "extra", title: "Extra", sortOrder: 7 },
 ];
 
 export function buildMoneyPayoutRunSections(

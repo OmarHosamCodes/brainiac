@@ -31,6 +31,7 @@ import {
   MONEY_ADJUSTMENT_SECTION_OPTIONS,
   moneyBillsAdjustmentCreateValid,
   moneyBillsCreateFormValid,
+  moneyBillsIsAdjustmentSection,
   moneyBillsPartyShowsAdjustments,
   moneyBillsPartyShowsClients,
   moneyBillsPartyShowsExpenses,
@@ -300,12 +301,7 @@ export function useAgencyMoneyBills({
       appliedInvoiceId: item.appliedInvoiceId,
     }));
     const adjustmentLines = (payoutsQuery.data?.items ?? [])
-      .filter(
-        (payout) =>
-          payout.sectionKey === "debt_discount" ||
-          payout.sectionKey === "charity" ||
-          payout.sectionKey === "pbc",
-      )
+      .filter((payout) => moneyBillsIsAdjustmentSection(payout.sectionKey))
       .map((payout) => moneyBillRowFromAdjustmentLine(payout));
     const rows = buildMoneyBillPersonGroups({
       clients: showsClientBills ? clients : [],
@@ -420,12 +416,9 @@ export function useAgencyMoneyBills({
       (rowId: string): MoneyPaymentTarget | null => {
         const payoutLine = (payoutsQuery.data?.items ?? []).find((line) => line.id === rowId);
         if (payoutLine) {
-          const kind =
-            payoutLine.sectionKey === "debt_discount" ||
-            payoutLine.sectionKey === "charity" ||
-            payoutLine.sectionKey === "pbc"
-              ? "adjustment"
-              : "payout";
+          const kind = moneyBillsIsAdjustmentSection(payoutLine.sectionKey)
+            ? "adjustment"
+            : "payout";
           return {
             kind,
             id: payoutLine.id,

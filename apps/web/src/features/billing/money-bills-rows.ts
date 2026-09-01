@@ -56,7 +56,8 @@ export type MoneyBillPayoutSectionKey =
   | "paid_vacation"
   | "debt_discount"
   | "charity"
-  | "pbc";
+  | "pbc"
+  | "extra";
 
 export type MoneyBillTeamPayoutSource = {
   id: string;
@@ -198,6 +199,7 @@ const ADJUSTMENT_SECTION_KEYS = new Set<MoneyBillPayoutSectionKey>([
   "debt_discount",
   "charity",
   "pbc",
+  "extra",
 ]);
 
 export function moneyBillsPartyShowsAdjustments(party: MoneyBillsPartyFilter): boolean {
@@ -728,14 +730,21 @@ export function filterMoneyBillRowsByClientCategory(
 }
 
 export const MONEY_ADJUSTMENT_SECTION_OPTIONS: ReadonlyArray<{
-  id: Extract<MoneyBillPayoutSectionKey, "debt_discount" | "charity" | "pbc"> | "salary_pool";
+  id:
+    | Extract<MoneyBillPayoutSectionKey, "debt_discount" | "charity" | "pbc" | "extra">
+    | "salary_pool";
   label: string;
 }> = [
   { id: "salary_pool", label: "Team salaries total" },
+  { id: "extra", label: "Extra" },
   { id: "debt_discount", label: "Debt / Discount" },
   { id: "charity", label: "Charity" },
   { id: "pbc", label: "PBC" },
 ];
+
+export function moneyBillsIsAdjustmentSection(key: string): boolean {
+  return ADJUSTMENT_SECTION_KEYS.has(key as MoneyBillPayoutSectionKey);
+}
 
 export function moneyBillsAdjustmentCreateValid(
   sectionKey: string,

@@ -15,6 +15,7 @@ import {
   moneyBillsCanRefundObligation,
   moneyBillsCreateFormValid,
   moneyBillsDefaultAdjustTab,
+  moneyBillsIsAdjustmentSection,
   moneyBillsPartyShowsClients,
   moneyBillsPartyShowsMembers,
   moneyBillsPaymentCanSubmit,
@@ -416,6 +417,12 @@ describe("transactional amount rules", () => {
     expect(moneyBillsAdjustmentCreateValid("charity", "Donation", "12.50")).toBe(true);
     expect(moneyBillsAdjustmentCreateValid("charity", "Donation", "1.234")).toBe(false);
     expect(moneyBillsAdjustmentCreateValid("charity", "Donation", "1e2")).toBe(false);
+    expect(moneyBillsAdjustmentCreateValid("extra", "Bonus income", "10")).toBe(true);
+  });
+
+  test("treats Extra as an adjustment section, not a team cost", () => {
+    expect(moneyBillsIsAdjustmentSection("extra")).toBe(true);
+    expect(moneyBillsIsAdjustmentSection("salaries")).toBe(false);
   });
 
   test("preserves non-zero minor units without forcing trailing zeroes", () => {

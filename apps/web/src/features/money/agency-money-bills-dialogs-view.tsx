@@ -525,7 +525,9 @@ export function AgencyMoneyBillsDialogs({ bills }: BillsDialogsProps) {
             <DialogDescription>
               {adjustmentCreate.isSalaryPool
                 ? "Set the manual Team salaries total for this period."
-                : "Create a Debt / Discount, Charity, or formula-driven PBC line for this period."}
+                : adjustmentCreate.sectionKey === "extra"
+                  ? "Add extra period income. It raises Total income and ROI for this period."
+                  : "Create a Debt / Discount, Extra, Charity, or formula-driven PBC line for this period."}
             </DialogDescription>
           </DialogHeader>
           <form
