@@ -26,6 +26,7 @@ import {
   shouldPersistActiveTimerDescription,
   shouldSkipActiveTimerDescriptionSync,
 } from "@/features/time-tracking/tracker-description-sync";
+import { isQueryCancelRejection, settledQueryCancel } from "@/features/time-tracking/query-cancel";
 import { createTimerMutationQueue } from "@/features/time-tracking/timer-mutation-queue";
 import { buildActiveTimerTaskUpdateInput } from "@/features/time-tracking/active-timer-task-update";
 import { releasePendingEntryIds } from "@/features/time-tracking/pending-entry-ids";
@@ -1116,7 +1117,7 @@ function createAgencyTimeTrackingActions(
           // #region agent log
           startPhase = "task-cache-patch";
           // #endregion
-          await cancelAgencyProjectTaskListQueries(payload.teamId);
+          await settledQueryCancel(() => cancelAgencyProjectTaskListQueries(payload.teamId));
           const inProgressTask = {
             ...cachedTask,
             status: "in_progress" as const,
@@ -1199,6 +1200,9 @@ function createAgencyTimeTrackingActions(
 
       toast.success("Timer started", { description: payload.successDescription });
     } catch (error) {
+      if (isQueryCancelRejection(error)) {
+        return;
+      }
       // #region agent log
       const err = error as { message?: string; stack?: string; name?: string };
       fetch("http://127.0.0.1:7426/ingest/ccff2d3d-07dc-43a2-9258-da9208dfd805", {
@@ -1361,6 +1365,9 @@ function createAgencyTimeTrackingActions(
 
       toast.success(payload.discard ? "Timer discarded" : "Timer stopped");
     } catch (error) {
+      if (isQueryCancelRejection(error)) {
+        return;
+      }
       restoreQuerySnapshots(timerSnapshots);
       restoreQuerySnapshots(logSnapshots);
       restoreTimerOverlaySnapshots(timerOverlaySnapshots);
@@ -1651,7 +1658,9 @@ function createAgencyTimeTrackingActions(
 
   async function cancelQueries(queries: Iterable<{ queryKey: QueryKey }>) {
     await Promise.all(
-      [...queries].map((query) => getQueryClient().cancelQueries({ queryKey: query.queryKey })),
+      [...queries].map((query) =>
+        settledQueryCancel(() => getQueryClient().cancelQueries({ queryKey: query.queryKey })),
+      ),
     );
   }
 
