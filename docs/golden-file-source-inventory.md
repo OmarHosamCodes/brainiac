@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-09-01 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-09-05 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 944 |
+| golden-feature | 945 |
 | server-operation | 16 |
 | shared-infrastructure | 469 |
 | static-presentation | 22 |
@@ -33,7 +33,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 14 |
-| billing | 145 |
+| billing | 146 |
 | ci | 2 |
 | clients | 13 |
 | configuration | 3 |
@@ -414,6 +414,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/money/agency-money-bills-section-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-bills-tables-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-expense-detail-sheet-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/money/agency-money-expense-dialogs-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-expenses-section-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-settings-dialog-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/money/agency-money-shared-view.tsx` | billing | presentational-view | golden-feature | billing-domain | Feature-owned billing artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |

@@ -35,6 +35,7 @@ import { MoneyExpensesPanelContent } from "./agency-money-expenses-section-view"
 import { AgencyMoneyBillDetailSheet } from "./agency-money-bill-detail-sheet-view";
 import { AgencyMoneyBillsDialogs } from "./agency-money-bills-dialogs-view";
 import { AgencyMoneyBillsTablesView } from "./agency-money-bills-tables-view";
+import { AgencyMoneyExpenseDialogs } from "./agency-money-expense-dialogs-view";
 import { type AgencyMoneySurfaceViewModel } from "./hooks/use-agency-money-surface";
 import {
   moneyPanelHeaderClass,
@@ -417,6 +418,7 @@ function BillsSection({
 
       <AgencyMoneyBillDetailSheet bills={bills} />
       <AgencyMoneyBillsDialogs bills={bills} />
+      <AgencyMoneyExpenseDialogs panel={expensesPanel} />
     </section>
   );
 }
