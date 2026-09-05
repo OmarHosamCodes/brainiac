@@ -11,7 +11,6 @@ import {
   moneyBillGroupSettleLabel,
   moneyBillGroupStatusLabel,
   moneyBillGroupPeriodLabel,
-  moneyBillRateTotalHeading,
   moneyBillSalaryPoolSettleLabel,
   moneyBillStatusBadgeVariant,
   moneyBillTableShowsCarry,
@@ -77,10 +76,7 @@ function BillsTableHeader({ columns }: { columns: string[] }) {
             className={
               column === "Actions"
                 ? "text-right"
-                : ["Total", "Received", "Paid", "Waste", "Remaining", "Amount", "Rate total"].includes(
-                      column,
-                    ) ||
-                    /^[A-Z]{3}$/.test(column)
+                : ["Total", "Received", "Paid", "Waste", "Remaining", "Amount"].includes(column)
                   ? "w-32 text-right"
                   : column === "Hours"
                     ? "w-24 text-right"
@@ -231,8 +227,6 @@ function PersonBillsTable({
   const showCarry = moneyBillTableShowsCarry(groups);
   const showWaste = moneyBillTableShowsWaste(groups);
   const showHours = true;
-  const showRateTotal = !isTeam;
-  const rateTotalHeading = moneyBillRateTotalHeading(groups);
   const partyHeading = isTeam ? "Member" : "Party";
   const receivedHeading = isTeam ? "Paid" : "Received";
 
@@ -246,7 +240,6 @@ function PersonBillsTable({
             "Period",
             ...(showCarry ? ["Carry"] : []),
             ...(showHours ? ["Hours"] : []),
-            ...(showRateTotal ? [rateTotalHeading] : []),
             "Total",
             receivedHeading,
             ...(showWaste ? ["Waste"] : []),
@@ -275,7 +268,6 @@ function PersonBillsTable({
                 </TableCell>
               ) : null}
               {showHours ? <HoursCell label={group.hoursLabel} /> : null}
-              {showRateTotal ? <MoneyCell label={group.sourceTotalLabel} highlighted /> : null}
               <MoneyCell label={group.totalLabel} highlighted />
               <MoneyCell label={group.receivedLabel} />
               {showWaste ? <MoneyCell label={group.wasteLabel} /> : null}
@@ -305,7 +297,6 @@ function PersonBillsTable({
               <TableCell />
               {showCarry ? <TableCell /> : null}
               {showHours ? <TableCell /> : null}
-              {showRateTotal ? <TableCell /> : null}
               <MoneyCell label={salaryPool.pool.totalLabel} highlighted />
               <MoneyCell label={salaryPool.pool.paidLabel} />
               {showWaste ? <TableCell /> : null}

@@ -302,7 +302,17 @@ export function useAgencyMoneyBills({
     }));
     const adjustmentLines = (payoutsQuery.data?.items ?? [])
       .filter((payout) => moneyBillsIsAdjustmentSection(payout.sectionKey))
-      .map((payout) => moneyBillRowFromAdjustmentLine(payout));
+      .map((payout) => {
+        const row = moneyBillRowFromAdjustmentLine(payout);
+        if (row.currency === currency) return row;
+        return {
+          ...row,
+          currency,
+          amountLabel: formatMoneyAmount(row.amount, currency),
+          paidLabel: formatMoneyAmount(row.paidAmount, currency),
+          remainingLabel: formatMoneyAmount(row.remainingAmount, currency),
+        };
+      });
     const rows = buildMoneyBillPersonGroups({
       clients: showsClientBills ? clients : [],
       members: showsMemberBills ? members : [],
@@ -414,6 +424,7 @@ export function useAgencyMoneyBills({
   const resolvePaymentTarget = useMemo(
     () =>
       (rowId: string): MoneyPaymentTarget | null => {
+        const currency = scoreboardCurrency;
         const payoutLine = (payoutsQuery.data?.items ?? []).find((line) => line.id === rowId);
         if (payoutLine) {
           const kind = moneyBillsIsAdjustmentSection(payoutLine.sectionKey)
@@ -428,8 +439,8 @@ export function useAgencyMoneyBills({
                 : payoutLine.userName,
             referenceLabel: kind === "adjustment" ? payoutLine.sectionTitle : payoutLine.label,
             remainingAmount: payoutLine.remainingAmount,
-            remainingLabel: formatMoneyAmount(payoutLine.remainingAmount, payoutLine.currency),
-            currency: payoutLine.currency,
+            remainingLabel: formatMoneyAmount(payoutLine.remainingAmount, currency),
+            currency,
           };
         }
 
@@ -441,14 +452,14 @@ export function useAgencyMoneyBills({
             partyName: invoice.clientName,
             referenceLabel: invoice.number,
             remainingAmount: invoice.remainingAmount,
-            remainingLabel: formatMoneyAmount(invoice.remainingAmount, invoice.currency),
-            currency: invoice.currency,
+            remainingLabel: formatMoneyAmount(invoice.remainingAmount, currency),
+            currency,
           };
         }
 
         return null;
       },
-    [invoicesQuery.data?.items, payoutsQuery.data?.items],
+    [invoicesQuery.data?.items, payoutsQuery.data?.items, scoreboardCurrency],
   );
 
   const paymentRow = useMemo(
@@ -980,7 +991,7 @@ export function useAgencyMoneyBills({
       partyName: paymentRow?.partyName ?? "",
       referenceLabel: paymentRow?.referenceLabel ?? "",
       remainingLabel: paymentRow?.remainingLabel ?? "",
-      currency: paymentRow?.currency ?? "USD",
+      currency: paymentRow?.currency ?? scoreboardCurrency,
       amount: paymentAmount,
       onAmountChange: setPaymentAmount,
       validationMessage: paymentValidationMessage,
