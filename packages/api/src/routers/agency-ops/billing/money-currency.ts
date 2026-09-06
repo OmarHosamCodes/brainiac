@@ -85,6 +85,8 @@ export function resolveMoneyValue(input: {
   rates: readonly MoneyFxRateRow[];
   /** ISO timestamp; defaults to now. */
   asOf?: string;
+  /** Positive decimal; used instead of team FX when source !== agency. */
+  fxRateOverride?: string;
 }): ResolvedMoneyValue {
   if (!Number.isInteger(input.sourceAmount)) {
     throw new MoneyCurrencyError("sourceAmount must be an integer minor amount");
@@ -104,7 +106,8 @@ export function resolveMoneyValue(input: {
     };
   }
 
-  const fxRate = lookupFxMultiplier(input.rates, sourceCurrency, agencyCurrency);
+  const override = input.fxRateOverride?.trim();
+  const fxRate = override || lookupFxMultiplier(input.rates, sourceCurrency, agencyCurrency);
   if (fxRate == null) {
     throw new MoneyCurrencyError(`Add an FX rate for ${sourceCurrency}→${agencyCurrency}`);
   }

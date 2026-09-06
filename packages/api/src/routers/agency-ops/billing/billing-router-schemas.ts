@@ -20,6 +20,14 @@ export const expenseKindSchema = z.enum(["one_time", "subscription"]);
 export const expenseAmountModeSchema = z.enum(["fixed", "variable"]);
 export const expensePeriodSchema = z.enum(["weekly", "monthly", "quarterly", "yearly"]);
 export const expenseStatusSchema = z.enum(["due", "partial", "paid"]);
+export const positiveFxRateSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine((value) => {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0;
+  }, "Rate must be a positive number.");
 export const moneySettleActionSchema = z.enum(["pay", "partial", "refund"]);
 export const moneyExportModeSchema = z.enum(["combine", "split"]);
 export const moneyObligationKindSchema = z.enum(["ready", "invoice", "payout"]);
@@ -157,6 +165,7 @@ export const expenseRecordSchema = z.object({
   remainingAmount: z.number().int().nonnegative(),
   currency: z.string().min(1),
   sourceAmount: z.number().int().nonnegative().nullable(),
+  fxRate: positiveFxRateSchema,
   status: expenseStatusSchema,
   startsAt: z.string().datetime().nullable(),
   nextDueAt: z.string().datetime().nullable(),

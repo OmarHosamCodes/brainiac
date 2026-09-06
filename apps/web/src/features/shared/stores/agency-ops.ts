@@ -313,6 +313,7 @@ type CreateExpensePayload = {
   amount: number;
   amountMode?: "fixed" | "variable";
   currency?: string;
+  fxRate?: string;
   startsAt?: string | null;
   occurredAt?: string | null;
 };
@@ -326,6 +327,7 @@ type UpdateExpensePayload = {
   amount?: number;
   amountMode?: "fixed" | "variable";
   currency?: string;
+  fxRate?: string;
   period?: "weekly" | "monthly" | "quarterly" | "yearly" | null;
   startsAt?: string | null;
   occurredAt?: string | null;
@@ -2148,6 +2150,7 @@ function createAgencyOpsActions(
         amount: payload.amount,
         amountMode: payload.amountMode,
         currency: payload.currency,
+        fxRate: payload.fxRate,
         startsAt: payload.startsAt,
         occurredAt: payload.occurredAt,
       });

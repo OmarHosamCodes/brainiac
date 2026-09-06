@@ -5,6 +5,7 @@ import {
   type MoneyExpenseKind,
   type MoneyExpensePeriod,
 } from "@/features/billing/money-expense-form";
+import { MoneyFxOverrideField } from "@/features/billing/money-fx-override-field-view";
 import { MemberProfileDatePicker } from "@/features/shared/date/member-profile-date-picker";
 import {
   agencyFormFieldClass,
@@ -349,6 +350,7 @@ export function AgencyMoneyExpenseDialogs({ panel }: AgencyMoneyExpenseDialogsPr
                     {create.errors.amount}
                   </p>
                 ) : null}
+                {create.fxOverride ? <MoneyFxOverrideField {...create.fxOverride} /> : null}
               </div>
 
               <div className={agencyFormFieldClass}>

@@ -255,7 +255,11 @@ export async function getAgencyCurrency(
 
 export type MoneyResolveContext = {
   agencyCurrency: string;
-  resolve: (sourceAmount: number, sourceCurrency?: string) => ResolvedMoneyValue;
+  resolve: (
+    sourceAmount: number,
+    sourceCurrency?: string,
+    fxRateOverride?: string,
+  ) => ResolvedMoneyValue;
   lock: () => Promise<void>;
 };
 
@@ -272,13 +276,14 @@ export async function loadMoneyResolveContext(
   const rates = await listTeamFxRateRows(input.teamId);
   return {
     agencyCurrency,
-    resolve(sourceAmount: number, sourceCurrency?: string) {
+    resolve(sourceAmount: number, sourceCurrency?: string, fxRateOverride?: string) {
       try {
         return resolveMoneyValue({
           sourceAmount,
           sourceCurrency: sourceCurrency || agencyCurrency,
           agencyCurrency,
           rates,
+          fxRateOverride,
         });
       } catch (error) {
         if (error instanceof MoneyCurrencyError) {

@@ -12,6 +12,10 @@ import {
   moneyExpensePeriodLabel,
   moneyExpenseStatusLabel,
   moneyExpenseSubscriptionMeta,
+  parseExpenseFxRate,
+  expenseFxRateError,
+  expenseFxRateForSave,
+  expenseFxOverridePrefill,
   parseMoneyExpenseAmount,
   parseMoneyExpensePaymentAmount,
 } from "./money-expense-form";
@@ -48,6 +52,126 @@ describe("moneyExpenseCanSubmit", () => {
   test("fixed subscription still needs amount", () => {
     expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly", "", "fixed")).toBe(false);
     expect(moneyExpenseCanSubmit("Notion", "subscription", "monthly", "20", "fixed")).toBe(true);
+  });
+});
+
+describe("parseExpenseFxRate", () => {
+  test("null draft means team rate", () => {
+    expect(parseExpenseFxRate(null)).toBeNull();
+    expect(parseExpenseFxRate("")).toBeNull();
+    expect(parseExpenseFxRate("  ")).toBeNull();
+  });
+
+  test("accepts a positive decimal", () => {
+    expect(parseExpenseFxRate("48")).toBe("48");
+    expect(parseExpenseFxRate(" 50.94 ")).toBe("50.94");
+  });
+
+  test("rejects zero and garbage", () => {
+    expect(parseExpenseFxRate("0")).toBeNull();
+    expect(parseExpenseFxRate("-1")).toBeNull();
+    expect(parseExpenseFxRate("abc")).toBeNull();
+  });
+});
+
+describe("expenseFxRateError", () => {
+  test("silent when not opted in", () => {
+    expect(expenseFxRateError(null)).toBeNull();
+  });
+
+  test("empty or invalid opted-in draft is an error", () => {
+    expect(expenseFxRateError("")).toBe("Rate must be greater than zero.");
+    expect(expenseFxRateError("0")).toBe("Rate must be greater than zero.");
+    expect(expenseFxRateError("48")).toBeNull();
+  });
+});
+
+describe("expenseFxRateForSave", () => {
+  test("omits when source matches agency", () => {
+    expect(
+      expenseFxRateForSave({
+        sourceCurrency: "EGP",
+        agencyCurrency: "EGP",
+        teamRate: null,
+        draft: "48",
+      }),
+    ).toBeUndefined();
+  });
+
+  test("omits when draft is null or equals team rate", () => {
+    expect(
+      expenseFxRateForSave({
+        sourceCurrency: "USD",
+        agencyCurrency: "EGP",
+        teamRate: "50.94",
+        draft: null,
+      }),
+    ).toBeUndefined();
+    expect(
+      expenseFxRateForSave({
+        sourceCurrency: "USD",
+        agencyCurrency: "EGP",
+        teamRate: "50.94",
+        draft: "50.940",
+      }),
+    ).toBeUndefined();
+  });
+
+  test("sends a rate that differs from team", () => {
+    expect(
+      expenseFxRateForSave({
+        sourceCurrency: "USD",
+        agencyCurrency: "EGP",
+        teamRate: "50.94",
+        draft: "48",
+      }),
+    ).toBe("48");
+  });
+
+  test("sends a rate when there is no team pair", () => {
+    expect(
+      expenseFxRateForSave({
+        sourceCurrency: "USD",
+        agencyCurrency: "EGP",
+        teamRate: null,
+        draft: "48",
+      }),
+    ).toBe("48");
+  });
+});
+
+describe("expenseFxOverridePrefill", () => {
+  test("stays closed when stored rate matches team", () => {
+    expect(
+      expenseFxOverridePrefill({
+        sourceCurrency: "USD",
+        agencyCurrency: "EGP",
+        storedRate: "50.94",
+        teamRate: "50.94",
+      }),
+    ).toBeNull();
+  });
+
+  test("opens with the stored snapshot when it differs from team", () => {
+    expect(
+      expenseFxOverridePrefill({
+        sourceCurrency: "USD",
+        agencyCurrency: "EGP",
+        storedRate: "48",
+        teamRate: "50.94",
+      }),
+    ).toBe("48");
+  });
+
+  test("stays closed for agency-currency rows", () => {
+    expect(
+      expenseFxOverridePrefill({
+        sourceCurrency: "EGP",
+        agencyCurrency: "EGP",
+        storedRate: "1",
+        teamRate: null,
+      }),
+    ).toBeNull();
   });
 });
 

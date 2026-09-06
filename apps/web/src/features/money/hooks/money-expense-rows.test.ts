@@ -19,6 +19,7 @@ const usdReceipt: MoneyExpenseRecord = {
   remainingAmount: 254_700,
   currency: "USD",
   sourceAmount: 5_000,
+  fxRate: "50.94",
   status: "due",
   startsAt: null,
   nextDueAt: null,

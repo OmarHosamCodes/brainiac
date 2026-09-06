@@ -46,4 +46,16 @@ describe("previewConvertedRate", () => {
   test("returns null when the FX pair is missing", () => {
     expect(previewConvertedRate(2_000, "USD", "EGP", [])).toBeNull();
   });
+
+  test("uses an override rate when provided", () => {
+    expect(
+      previewConvertedRate(
+        2_000,
+        "USD",
+        "EGP",
+        [{ fromCurrency: "USD", toCurrency: "EGP", rate: "50.94" }],
+        "48",
+      ),
+    ).toBe(96_000);
+  });
 });

@@ -68,6 +68,7 @@ export function previewConvertedRate(
   sourceCurrency: string,
   agencyCurrency: string,
   rates: readonly { fromCurrency: string; toCurrency: string; rate: string }[],
+  fxRateOverride?: string,
 ): number | null {
   try {
     return resolveMoneyValue({
@@ -75,6 +76,7 @@ export function previewConvertedRate(
       sourceCurrency,
       agencyCurrency,
       rates,
+      fxRateOverride,
     }).amount;
   } catch {
     return null;

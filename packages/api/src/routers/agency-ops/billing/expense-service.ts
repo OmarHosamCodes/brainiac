@@ -40,6 +40,7 @@ export type AgencyExpenseRecord = {
   remainingAmount: number;
   currency: string;
   sourceAmount: number | null;
+  fxRate: string;
   status: AgencyOpsExpenseStatus;
   startsAt: string | null;
   nextDueAt: string | null;
@@ -63,6 +64,7 @@ function mapExpenseRow(row: typeof agencyOpsExpense.$inferSelect): AgencyExpense
     remainingAmount: expenseRemainingAmount(row.amount, paidAmount),
     currency: row.currency,
     sourceAmount: row.sourceAmount ?? null,
+    fxRate: row.fxRate,
     status: row.status,
     startsAt: row.startsAt?.toISOString() ?? null,
     nextDueAt: row.nextDueAt?.toISOString() ?? null,
@@ -192,6 +194,7 @@ export async function createExpense(
     amount: number;
     amountMode?: AgencyOpsExpenseAmountMode;
     currency?: string;
+    fxRate?: string;
     startsAt?: string | null;
     nextDueAt?: string | null;
     occurredAt?: string | null;
@@ -252,6 +255,7 @@ export async function createExpense(
   const money = moneyCtx.resolve(
     resolvedAmount,
     (input.currency ?? moneyCtx.agencyCurrency).toUpperCase(),
+    input.fxRate,
   );
   await moneyCtx.lock();
 
@@ -296,6 +300,7 @@ export async function updateExpense(
     amount?: number;
     amountMode?: AgencyOpsExpenseAmountMode;
     currency?: string;
+    fxRate?: string;
     period?: AgencyOpsExpensePeriod | null;
     startsAt?: string | null;
     nextDueAt?: string | null;
@@ -374,21 +379,21 @@ export async function updateExpense(
   ).toUpperCase();
   const rawSourceAmount = input.amount ?? existing.sourceAmount ?? existing.amount;
   const moneyCtx = await loadMoneyResolveContext(actorUserId, { teamId: input.teamId });
-  const money =
-    input.amount !== undefined || input.currency !== undefined || input.amountMode !== undefined
-      ? moneyCtx.resolve(rawSourceAmount, sourceCurrency)
-      : {
-          amount: existing.amount,
-          sourceAmount: existing.sourceAmount ?? existing.amount,
-          sourceCurrency: existing.currency,
-          fxRate: existing.fxRate,
-          fxAsOf: existing.fxAsOf?.toISOString() ?? new Date().toISOString(),
-        };
-  if (
+  const shouldResolveMoney =
     input.amount !== undefined ||
     input.currency !== undefined ||
-    input.amountMode !== undefined
-  ) {
+    input.amountMode !== undefined ||
+    input.fxRate !== undefined;
+  const money = shouldResolveMoney
+    ? moneyCtx.resolve(rawSourceAmount, sourceCurrency, input.fxRate)
+    : {
+        amount: existing.amount,
+        sourceAmount: existing.sourceAmount ?? existing.amount,
+        sourceCurrency: existing.currency,
+        fxRate: existing.fxRate,
+        fxAsOf: existing.fxAsOf?.toISOString() ?? new Date().toISOString(),
+      };
+  if (shouldResolveMoney) {
     await moneyCtx.lock();
   }
 

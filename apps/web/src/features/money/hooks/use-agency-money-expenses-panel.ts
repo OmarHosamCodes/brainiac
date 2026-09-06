@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { lookupFxMultiplier } from "@orch/api/routers/agency-ops/billing/money-currency";
 
 import {
   formatMoneyExpenseAmount,
@@ -11,6 +12,10 @@ import {
   moneyExpensePaymentCanSubmit,
   parseMoneyExpenseAmount,
   parseMoneyExpensePaymentAmount,
+  expenseFxOverridePrefill,
+  expenseFxRateError,
+  expenseFxRateForSave,
+  parseExpenseFxRate,
   MONEY_EXPENSE_AMOUNT_MODE_OPTIONS,
   MONEY_EXPENSE_KIND_OPTIONS,
   MONEY_EXPENSE_PERIOD_OPTIONS,
@@ -92,6 +97,7 @@ export function useAgencyMoneyExpensesPanel({
   const [expenseOccurredAt, setExpenseOccurredAt] = useState("");
   const [expenseOccurredTime, setExpenseOccurredTime] = useState("");
   const [expenseCurrency, setExpenseCurrency] = useState<string | null>(null);
+  const [fxRateDraft, setFxRateDraft] = useState<string | null>(null);
   const [expenseCreateSubmitted, setExpenseCreateSubmitted] = useState(false);
   const [expensePaymentId, setExpensePaymentId] = useState<string | null>(null);
   const [expensePaymentAmount, setExpensePaymentAmount] = useState("");
@@ -137,6 +143,10 @@ export function useAgencyMoneyExpensesPanel({
   const agencyCurrency = fxRatesQuery.data?.agencyCurrency ?? "USD";
   const currencyDraft = expenseCurrency ?? agencyCurrency;
   const parsedExpenseAmount = parseMoneyExpenseAmount(expenseAmount);
+  const teamFxRate =
+    currencyDraft === agencyCurrency
+      ? null
+      : lookupFxMultiplier(fxRatesQuery.data?.items ?? [], currencyDraft, agencyCurrency);
   const amountPreview =
     parsedExpenseAmount != null && currencyDraft !== agencyCurrency
       ? previewConvertedRate(
@@ -144,6 +154,7 @@ export function useAgencyMoneyExpensesPanel({
           currencyDraft,
           agencyCurrency,
           fxRatesQuery.data?.items ?? [],
+          parseExpenseFxRate(fxRateDraft) ?? undefined,
         )
       : null;
   const amountPreviewLabel =
@@ -262,13 +273,14 @@ export function useAgencyMoneyExpensesPanel({
     updateMoneySearch({ expense: next === "all" ? null : next }, false);
   }
 
-  const canSubmitExpense = moneyExpenseCanSubmit(
-    expenseName,
-    expenseKind,
-    expensePeriod,
-    expenseAmount,
-    expenseAmountMode,
-  );
+  const canSubmitExpense =
+    moneyExpenseCanSubmit(
+      expenseName,
+      expenseKind,
+      expensePeriod,
+      expenseAmount,
+      expenseAmountMode,
+    ) && expenseFxRateError(fxRateDraft) === null;
   const expenseNeedsAmount =
     expenseKind !== "subscription" ||
     expenseAmountMode === "fixed" ||
@@ -281,6 +293,7 @@ export function useAgencyMoneyExpensesPanel({
         : null,
     amount:
       expenseCreateSubmitted && expenseNeedsAmount ? moneyExpenseAmountError(expenseAmount) : null,
+    fxRate: expenseCreateSubmitted ? expenseFxRateError(fxRateDraft) : null,
   };
 
   const expensePaymentRow = useMemo(() => {
@@ -308,12 +321,18 @@ export function useAgencyMoneyExpensesPanel({
     setExpenseOccurredAt("");
     setExpenseOccurredTime("");
     setExpenseCurrency(null);
+    setFxRateDraft(null);
     setExpenseCreateSubmitted(false);
   }
 
   function onExpenseCreateOpenChange(open: boolean) {
     setExpenseCreateOpen(open);
     if (!open) resetExpenseCreateForm();
+  }
+
+  function onExpenseCurrencyChange(next: string) {
+    setExpenseCurrency(next);
+    setFxRateDraft(null);
   }
 
   function onExpenseKindChange(next: MoneyExpenseKind) {
@@ -362,6 +381,18 @@ export function useAgencyMoneyExpensesPanel({
       moneyExpenseDraftAmount(record.amount, record.sourceAmount, record.amountMode ?? "fixed"),
     );
     setExpenseCurrency(record.currency);
+    setFxRateDraft(
+      expenseFxOverridePrefill({
+        sourceCurrency: record.currency,
+        agencyCurrency,
+        storedRate: record.fxRate,
+        teamRate: lookupFxMultiplier(
+          fxRatesQuery.data?.items ?? [],
+          record.currency,
+          agencyCurrency,
+        ),
+      }),
+    );
     setExpenseNote(record.note);
     setExpenseStartsAt(record.startsAt ? toDateInputValue(new Date(record.startsAt)) : "");
     const occurred = moneyExpenseOccurredAtInputs(record.occurredAt);
@@ -373,17 +404,7 @@ export function useAgencyMoneyExpensesPanel({
   async function onExpenseCreateSubmit(event: { preventDefault: () => void }) {
     event.preventDefault();
     setExpenseCreateSubmitted(true);
-    if (
-      !moneyExpenseCanSubmit(
-        expenseName,
-        expenseKind,
-        expensePeriod,
-        expenseAmount,
-        expenseAmountMode,
-      )
-    ) {
-      return;
-    }
+    if (!canSubmitExpense) return;
     const parsedAmount = parseMoneyExpenseAmount(expenseAmount);
     const amount =
       parsedAmount ??
@@ -393,6 +414,12 @@ export function useAgencyMoneyExpensesPanel({
     if (amount === null) {
       return;
     }
+    const fxRate = expenseFxRateForSave({
+      sourceCurrency: currencyDraft,
+      agencyCurrency,
+      teamRate: teamFxRate,
+      draft: fxRateDraft,
+    });
     const startsAt =
       expenseKind === "subscription" && expenseStartsAt
         ? dateInputToIso(expenseStartsAt)
@@ -414,6 +441,7 @@ export function useAgencyMoneyExpensesPanel({
           amount,
           amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
           currency: currencyDraft,
+          fxRate,
           startsAt: expenseKind === "subscription" ? (startsAt ?? null) : null,
           occurredAt: expenseKind === "one_time" ? occurredAt : null,
         },
@@ -432,6 +460,7 @@ export function useAgencyMoneyExpensesPanel({
         amount,
         amountMode: expenseKind === "subscription" ? expenseAmountMode : "fixed",
         currency: currencyDraft,
+        fxRate,
         startsAt,
         occurredAt: occurredAt ?? undefined,
       },
@@ -521,8 +550,19 @@ export function useAgencyMoneyExpensesPanel({
       onAmountChange: setExpenseAmount,
       currency: currencyDraft,
       currencyOptions: AGENCY_CURRENCY_OPTIONS,
-      onCurrencyChange: setExpenseCurrency,
+      onCurrencyChange: onExpenseCurrencyChange,
       amountPreview: amountPreviewLabel,
+      fxOverride:
+        currencyDraft === agencyCurrency
+          ? null
+          : {
+              sourceCurrency: currencyDraft,
+              agencyCurrency,
+              teamRate: teamFxRate,
+              value: fxRateDraft,
+              onChange: setFxRateDraft,
+              error: expenseCreateErrors.fxRate,
+            },
       note: expenseNote,
       onNoteChange: setExpenseNote,
       errors: expenseCreateErrors,

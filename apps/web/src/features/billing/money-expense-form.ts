@@ -20,6 +20,7 @@ export type MoneyExpenseRecord = {
   remainingAmount: number;
   currency: string;
   sourceAmount?: number | null;
+  fxRate: string;
   status: MoneyExpenseStatus;
   startsAt: string | null;
   nextDueAt: string | null;
@@ -90,6 +91,53 @@ export function moneyExpenseCanSubmit(
     return parseMoneyExpenseAmount(amount) !== null;
   }
   return parseMoneyExpenseAmount(amount) !== null;
+}
+
+export function parseExpenseFxRate(draft: string | null): string | null {
+  if (draft == null) return null;
+  const trimmed = draft.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return trimmed;
+}
+
+function fxRatesEqual(a: string, b: string): boolean {
+  const left = Number(a);
+  const right = Number(b);
+  if (Number.isFinite(left) && Number.isFinite(right)) return left === right;
+  return a === b;
+}
+
+export function expenseFxRateError(draft: string | null): string | null {
+  if (draft == null) return null;
+  return parseExpenseFxRate(draft) === null ? "Rate must be greater than zero." : null;
+}
+
+export function expenseFxRateForSave(input: {
+  sourceCurrency: string;
+  agencyCurrency: string;
+  teamRate: string | null;
+  draft: string | null;
+}): string | undefined {
+  if (input.sourceCurrency.toUpperCase() === input.agencyCurrency.toUpperCase()) return undefined;
+  const parsed = parseExpenseFxRate(input.draft);
+  if (parsed == null) return undefined;
+  if (input.teamRate != null && fxRatesEqual(parsed, input.teamRate)) return undefined;
+  return parsed;
+}
+
+export function expenseFxOverridePrefill(input: {
+  sourceCurrency: string;
+  agencyCurrency: string;
+  storedRate: string;
+  teamRate: string | null;
+}): string | null {
+  if (input.sourceCurrency.toUpperCase() === input.agencyCurrency.toUpperCase()) return null;
+  const stored = parseExpenseFxRate(input.storedRate);
+  if (stored == null) return null;
+  if (input.teamRate != null && fxRatesEqual(stored, input.teamRate)) return null;
+  return stored;
 }
 
 export function moneyExpenseAmountLabel(input: {

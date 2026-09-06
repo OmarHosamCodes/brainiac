@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { positiveFxRateSchema } from "./billing-router-schemas";
 import {
   amountToMajor,
   lookupFxMultiplier,
@@ -96,5 +97,68 @@ describe("money-currency", () => {
         rates: [],
       }),
     ).toThrow(/integer/);
+  });
+
+  test("fxRateOverride replaces team FX", () => {
+    const resolved = resolveMoneyValue({
+      sourceAmount: 100,
+      sourceCurrency: "USD",
+      agencyCurrency: "EGP",
+      rates: [{ fromCurrency: "USD", toCurrency: "EGP", rate: "50.2" }],
+      fxRateOverride: "48",
+      asOf: "2026-08-06T00:00:00.000Z",
+    });
+    expect(resolved.amount).toBe(4800);
+    expect(resolved.fxRate).toBe("48");
+  });
+
+  test("fxRateOverride works without a team pair", () => {
+    const resolved = resolveMoneyValue({
+      sourceAmount: 200,
+      sourceCurrency: "USD",
+      agencyCurrency: "EGP",
+      rates: [],
+      fxRateOverride: "51.5",
+      asOf: "2026-08-06T00:00:00.000Z",
+    });
+    expect(resolved.amount).toBe(10300);
+    expect(resolved.fxRate).toBe("51.5");
+  });
+
+  test("invalid fxRateOverride throws", () => {
+    expect(() =>
+      resolveMoneyValue({
+        sourceAmount: 100,
+        sourceCurrency: "USD",
+        agencyCurrency: "EGP",
+        rates: [{ fromCurrency: "USD", toCurrency: "EGP", rate: "50" }],
+        fxRateOverride: "0",
+      }),
+    ).toThrow(MoneyCurrencyError);
+  });
+
+  test("same currency ignores fxRateOverride", () => {
+    const resolved = resolveMoneyValue({
+      sourceAmount: 10_000,
+      sourceCurrency: "EGP",
+      agencyCurrency: "EGP",
+      rates: [],
+      fxRateOverride: "99",
+      asOf: "2026-08-06T00:00:00.000Z",
+    });
+    expect(resolved.amount).toBe(10_000);
+    expect(resolved.fxRate).toBe("1");
+  });
+});
+
+describe("positiveFxRateSchema", () => {
+  test("accepts a positive decimal", () => {
+    expect(positiveFxRateSchema.parse(" 48.5 ")).toBe("48.5");
+  });
+
+  test("rejects zero, blank, and garbage", () => {
+    expect(positiveFxRateSchema.safeParse("0").success).toBe(false);
+    expect(positiveFxRateSchema.safeParse("").success).toBe(false);
+    expect(positiveFxRateSchema.safeParse("abc").success).toBe(false);
   });
 });
