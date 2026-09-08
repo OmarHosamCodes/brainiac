@@ -86,7 +86,9 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 bindQueryClient(new QueryClient());
 
 const {
+  agencyLiveHoldKey,
   getAgencyLiveConnectionState,
+  getAgencyLiveViewerIdentityForTest,
   resetAgencyLiveConnectionsForTest,
   setAgencyLiveHandlerLoadGateForTest,
   setAgencyLiveViewerUserId,
@@ -348,5 +350,54 @@ describe("subscribeAgencyLive", () => {
     const serialized = JSON.stringify(invalidateCalls);
     expect(serialized).toContain("getActive");
     expect(serialized).toContain("notifications");
+  });
+
+  test("account switch does not tear down the team socket solely due to viewerUserId change", async () => {
+    const teamId = "account-switch-team";
+
+    const unsubscribe = subscribeAgencyLive(teamId, () => {}, { viewerUserId: "user-a" });
+    await waitUntilLive(teamId);
+    expect(createdWebSockets).toHaveLength(1);
+    expect(subscribeCallCount).toBe(1);
+    expect(closeCalls).toHaveLength(0);
+    expect(agencyLiveHoldKey(teamId, "user-a")).toBe(agencyLiveHoldKey(teamId, "user-b"));
+    expect(agencyLiveHoldKey(teamId, "user-a")).not.toBe(agencyLiveHoldKey(teamId, null));
+    expect(agencyLiveHoldKey(teamId, null)).toBeNull();
+    expect(agencyLiveHoldKey("", "user-a")).toBeNull();
+
+    setAgencyLiveViewerUserId("user-b");
+    await flushLiveWork();
+
+    expect(closeCalls).toHaveLength(0);
+    expect(createdWebSockets).toHaveLength(1);
+    expect(subscribeCallCount).toBe(1);
+    expect(getAgencyLiveConnectionState(teamId)).toBe("live");
+    expect(getAgencyLiveViewerIdentityForTest(teamId)).toMatchObject({
+      viewerUserId: "user-b",
+    });
+
+    unsubscribe();
+  });
+
+  test("in-place identity change does not briefly null then set", async () => {
+    const teamId = "identity-publish-team";
+    const unsubscribe = subscribeAgencyLive(teamId, () => {}, { viewerUserId: "user-a" });
+    await waitUntilLive(teamId);
+
+    const before = getAgencyLiveViewerIdentityForTest(teamId);
+    expect(before?.viewerUserId).toBe("user-a");
+
+    setAgencyLiveViewerUserId("user-b");
+
+    const after = getAgencyLiveViewerIdentityForTest(teamId);
+    expect(after?.viewerUserId).toBe("user-b");
+    expect(after?.identityGeneration).toBe((before?.identityGeneration ?? 0) + 1);
+    expect(closeCalls).toHaveLength(0);
+    expect(createdWebSockets).toHaveLength(1);
+
+    setAgencyLiveViewerUserId(null);
+    expect(getAgencyLiveViewerIdentityForTest(teamId)?.viewerUserId).toBeNull();
+
+    unsubscribe();
   });
 });

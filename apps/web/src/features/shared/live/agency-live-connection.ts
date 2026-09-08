@@ -196,6 +196,26 @@ export function setAgencyLiveViewerUserId(viewerUserId: string | null) {
   }
 }
 
+/** One hold key per team while signed in; viewer id is not part of the key. */
+export function agencyLiveHoldKey(teamId: string, viewerUserId: string | null): string | null {
+  if (!teamId || !viewerUserId) {
+    return null;
+  }
+  return teamId;
+}
+
+/** ponytail: test-only identity snapshot */
+export function getAgencyLiveViewerIdentityForTest(teamId: string) {
+  const connection = teamConnections.get(teamId);
+  if (!connection) {
+    return null;
+  }
+  return {
+    viewerUserId: connection.viewerUserId,
+    identityGeneration: connection.identityGeneration,
+  };
+}
+
 let handlerLoadGate: () => Promise<void> = async () => {};
 
 /** ponytail: test-only gate so identity can change during in-flight fan-out */

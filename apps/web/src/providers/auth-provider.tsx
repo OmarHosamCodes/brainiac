@@ -25,12 +25,18 @@ export function AuthProvider({
     }
   }, [resolved.user, session.isPending]);
 
+  // Publish the next id directly. Null only when the session is gone or this
+  // provider unmounts — cleanup-null on every identity change would bump
+  // generation twice and drop events until reconcile.
   useEffect(() => {
     setAgencyLiveViewerUserId(resolved.user?.id ?? null);
+  }, [resolved.user?.id]);
+
+  useEffect(() => {
     return () => {
       setAgencyLiveViewerUserId(null);
     };
-  }, [resolved.user?.id]);
+  }, []);
 
   return <AuthSessionContext.Provider value={resolved}>{children}</AuthSessionContext.Provider>;
 }
