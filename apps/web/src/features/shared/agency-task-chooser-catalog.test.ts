@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, mock, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 
 mock.module("@/lib/env", () => ({
@@ -9,22 +9,32 @@ mock.module("@/lib/env", () => ({
 
 const listCalls: Array<{ page: number; search?: string; teamId: string }> = [];
 
-mock.module("@/lib/orpc", () => ({
-  orpc: {
-    agencyOps: {
-      projectTasks: {
-        list: {
-          queryOptions: ({
-            input,
-          }: {
-            input: { teamId: string; pageSize?: number; search?: string };
-          }) => ({
-            queryKey: [["agencyOps", "projectTasks", "list"], { input, type: "query" }],
-          }),
-        },
+function orpcQueryKey(path: string[], input: unknown) {
+  return [path, { input, type: "query" }] as const;
+}
+
+function createOrpcRouter(path: string[] = []): object {
+  return new Proxy(
+    {},
+    {
+      get(_target, key: string | symbol) {
+        if (typeof key !== "string" || key === "then") return undefined;
+        if (key === "queryKey") {
+          return ({ input }: { input: unknown }) => orpcQueryKey(path, input);
+        }
+        if (key === "queryOptions") {
+          return ({ input }: { input: unknown }) => ({
+            queryKey: orpcQueryKey(path, input),
+          });
+        }
+        return createOrpcRouter([...path, key]);
       },
     },
-  },
+  );
+}
+
+mock.module("@/lib/orpc", () => ({
+  orpc: createOrpcRouter(),
   orpcClient: {
     agencyOps: {
       projectTasks: {
@@ -45,6 +55,10 @@ mock.module("@/lib/orpc", () => ({
     },
   },
 }));
+
+afterAll(() => {
+  mock.restore();
+});
 
 const {
   AGENCY_TASK_CHOOSER_CATALOG_STALE_TIME_MS,

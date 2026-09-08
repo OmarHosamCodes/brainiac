@@ -1,7 +1,9 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
 
 import { bindQueryClient } from "@/lib/query-client";
+
+mock.restore();
 
 const createdWebSockets: MockWebSocket[] = [];
 const closeCalls: MockWebSocket[] = [];
@@ -185,6 +187,11 @@ afterEach(() => {
   sessionRequestCount = 0;
   handlerLoadGate = Promise.resolve();
   setAgencyLiveHandlerLoadGateForTest(() => handlerLoadGate);
+});
+
+afterAll(() => {
+  globalThis.fetch = originalFetch;
+  mock.restore();
 });
 
 describe("subscribeAgencyLive", () => {

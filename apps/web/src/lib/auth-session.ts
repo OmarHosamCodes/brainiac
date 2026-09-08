@@ -25,15 +25,13 @@ export function resolveAuthSession(
     return { user: clientUser, isPending: false };
   }
 
-  if (client.isPending) {
-    return { user: initialUser ?? null, isPending: !initialUser };
+  const signedOut = client.data === null || (client.data !== undefined && !client.data.user);
+  if (signedOut) {
+    return { user: null, isPending: client.isPending && !initialUser };
   }
 
-  const signedOut =
-    client.error == null &&
-    (client.data === null || (client.data !== undefined && !client.data.user));
-  if (signedOut) {
-    return { user: null, isPending: false };
+  if (client.isPending) {
+    return { user: initialUser ?? null, isPending: !initialUser };
   }
 
   return { user: initialUser ?? null, isPending: false };

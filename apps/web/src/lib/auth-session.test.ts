@@ -33,7 +33,7 @@ describe("resolveAuthSession", () => {
     });
   });
 
-  test("transient client failure keeps the loader user instead of signing out", () => {
+  test("transient client failure keeps the loader user only while data is unsettled", () => {
     expect(
       resolveAuthSession(
         { data: undefined, isPending: false, error: new Error("timeout") },
@@ -43,10 +43,20 @@ describe("resolveAuthSession", () => {
       user: loaderUser,
       isPending: false,
     });
+  });
+
+  test("authoritative signed-out wins even when getSession also returns an error", () => {
+    const timeout = new Error("timeout");
     expect(
-      resolveAuthSession({ data: null, isPending: false, error: new Error("timeout") }, loaderUser),
+      resolveAuthSession({ data: null, isPending: false, error: timeout }, loaderUser),
     ).toEqual({
-      user: loaderUser,
+      user: null,
+      isPending: false,
+    });
+    expect(
+      resolveAuthSession({ data: { user: null }, isPending: false, error: timeout }, loaderUser),
+    ).toEqual({
+      user: null,
       isPending: false,
     });
   });

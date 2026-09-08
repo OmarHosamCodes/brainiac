@@ -1,9 +1,11 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
 import type { AgencyLiveEvent } from "@orch/api/routers/agency-ops/live/live";
 import type { NotificationRecord } from "@orch/api/schemas/notifications";
 import { QueryClient } from "@tanstack/react-query";
 
 let sessionRequestCount = 0;
+
+mock.restore();
 
 mock.module("@/lib/env", () => ({
   getServerUrl: () => "http://localhost:7000",
@@ -232,6 +234,11 @@ describe("viewer timer live reconciliation", () => {
       useAgencyTimeTrackingStore.getState().trackerDraftsByTeam[teamId]?.syncedTimerId,
     ).toBeNull();
   });
+});
+
+afterAll(() => {
+  globalThis.fetch = originalFetch;
+  mock.restore();
 });
 
 describe("live handler viewer identity", () => {
