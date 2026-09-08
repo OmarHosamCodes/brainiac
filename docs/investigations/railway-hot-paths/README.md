@@ -14,10 +14,11 @@ This folder is evidence only. Product fixes land in later tasks on `fix/railway-
 
 ## Documents
 
-| File | Section | Status |
-| --- | --- | --- |
-| [baseline.md](./baseline.md) | Before-change capture (this task) | Captured 2026-09-08 |
-| [treatment.md](./treatment.md) | After a separately authorized deploy | Empty until rollout |
+| File                             | Section                                  | Status                          |
+| -------------------------------- | ---------------------------------------- | ------------------------------- |
+| [baseline.md](./baseline.md)     | Before-change capture (this task)        | Captured 2026-09-08             |
+| [task-6-sql.md](./task-6-sql.md) | Task 6 caller inventory and SQL decision | COUNT kept; id tie-breaker only |
+| [treatment.md](./treatment.md)   | After a separately authorized deploy     | Empty until rollout             |
 
 ## What later tasks should change vs leave
 

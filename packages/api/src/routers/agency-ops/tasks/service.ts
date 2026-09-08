@@ -413,7 +413,9 @@ export async function listAgencyProjectTasks(
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
     .where(whereClause)
-    .orderBy(desc(agencyOpsProjectTask.createdAt))
+    // Unique id after createdAt keeps offset pages deterministic. Concurrent
+    // inserts still shift offsets; list refreshes stay authoritative.
+    .orderBy(desc(agencyOpsProjectTask.createdAt), desc(agencyOpsProjectTask.id))
     .limit(pageSize)
     .offset(offset);
 
