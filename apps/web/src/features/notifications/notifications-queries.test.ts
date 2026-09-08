@@ -290,6 +290,26 @@ describe("notification mutation rollback", () => {
     observer.reset();
   });
 
+  test("failed mutation does not seed unread count when the snapshot had none", async () => {
+    const queryClient = createClient();
+    queryClient.setQueryData(listKey(), {
+      items: [notification("unread")],
+      nextCursor: null,
+    });
+
+    const observer = new MutationObserver(
+      queryClient,
+      notificationMarkAllReadMutationOptions(queryClient, teamId, async () => {
+        throw new Error("write failed");
+      }),
+    );
+
+    await observer.mutate().catch(() => {});
+
+    expect(queryClient.getQueryData(unreadKey())).toBeUndefined();
+    observer.reset();
+  });
+
   test("app-update still wins the rail card after a failed dismissal rollback", async () => {
     const queryClient = createClient();
     const featured = notification("needs-action");

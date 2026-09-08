@@ -78,7 +78,7 @@ type NotificationListCache = {
 
 type NotificationCountCache = {
   count: number;
-  actionCount?: number;
+  actionCount: number;
 };
 
 type NotificationQuerySnapshot = {
@@ -144,6 +144,11 @@ function restoreNotificationQueries(
   snapshot: NotificationQuerySnapshot,
 ) {
   queryClient.setQueryData(notificationListQueryKey(teamId), snapshot.list);
+  if (snapshot.count === undefined) {
+    // setQueryData(undefined) no-ops and would leave an optimistic { count: 0 }.
+    queryClient.removeQueries({ queryKey: notificationUnreadCountQueryKey(teamId) });
+    return;
+  }
   queryClient.setQueryData(notificationUnreadCountQueryKey(teamId), snapshot.count);
 }
 
