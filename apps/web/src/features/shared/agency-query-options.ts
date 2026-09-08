@@ -2,6 +2,7 @@
  * Agency queries use tiered polling — data is kept fresh via refetch intervals,
  * optimistic mutation patches, and focus/reconnect refetch.
  */
+import type { AgencyLiveConnectionState } from "@/features/shared/agency-live-rpc";
 import { isAgencyLiveConnected } from "@/features/shared/live/agency-live-connected";
 import { getQueryClient } from "@/lib/query-client";
 
@@ -23,6 +24,7 @@ export type AgencySyncMeta = {
   agencyLiveGatedTeamId?: string;
   agencySyncTier?: AgencySyncTier;
   agencyNoPoll?: boolean;
+  agencyConnectedReconcile?: boolean;
 };
 
 export type AgencySyncOptions = {
@@ -30,18 +32,37 @@ export type AgencySyncOptions = {
   teamId?: string;
   /** Initial fetch only — no refetchInterval even when live is disconnected. */
   noPoll?: boolean;
+  /** When live, keep a 30s reconcile instead of stopping. Opt-in for notifications. */
+  connectedReconcile?: boolean;
+  /** Reactive snapshot from a mounted observer; preferred over query.setOptions. */
+  liveState?: AgencyLiveConnectionState;
 };
+
+function isLiveForPolling(
+  gatedTeamId: string | undefined,
+  liveState: AgencyLiveConnectionState | undefined,
+) {
+  if (!gatedTeamId) {
+    return false;
+  }
+  if (liveState !== undefined) {
+    return liveState === "live";
+  }
+  return isAgencyLiveConnected(gatedTeamId);
+}
 
 function resolveRefetchInterval(
   tier: AgencySyncTier,
   gatedTeamId: string | undefined,
   noPoll: boolean,
+  connectedReconcile: boolean,
+  liveState: AgencyLiveConnectionState | undefined,
 ) {
   if (noPoll) {
     return false as const;
   }
-  if (gatedTeamId) {
-    return isAgencyLiveConnected(gatedTeamId) ? false : AGENCY_POLL[tier];
+  if (isLiveForPolling(gatedTeamId, liveState)) {
+    return connectedReconcile ? AGENCY_POLL.cold : (false as const);
   }
   return AGENCY_POLL[tier];
 }
@@ -51,14 +72,26 @@ export function withAgencySyncQueryOptions<T extends Record<string, unknown>>(
   tier: AgencySyncTier = "warm",
   syncOptions?: AgencySyncOptions,
 ) {
-  const { liveGated = false, teamId, noPoll = false } = syncOptions ?? {};
+  const {
+    liveGated = false,
+    teamId,
+    noPoll = false,
+    connectedReconcile = false,
+    liveState,
+  } = syncOptions ?? {};
   const gatedTeamId = liveGated && teamId ? teamId : undefined;
   const existingMeta = (options as { meta?: Record<string, unknown> }).meta;
 
   return {
     ...options,
     staleTime: AGENCY_STALE_TIME[tier],
-    refetchInterval: resolveRefetchInterval(tier, gatedTeamId, noPoll),
+    refetchInterval: resolveRefetchInterval(
+      tier,
+      gatedTeamId,
+      noPoll,
+      connectedReconcile,
+      liveState,
+    ),
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
@@ -66,6 +99,7 @@ export function withAgencySyncQueryOptions<T extends Record<string, unknown>>(
       ...existingMeta,
       ...(gatedTeamId ? { agencyLiveGatedTeamId: gatedTeamId, agencySyncTier: tier } : {}),
       ...(noPoll ? { agencyNoPoll: true } : {}),
+      ...(connectedReconcile ? { agencyConnectedReconcile: true } : {}),
     },
   };
 }
@@ -97,7 +131,11 @@ export function refreshAgencyLiveGatedPolling(teamId: string) {
       continue;
     }
     const tier = meta.agencySyncTier ?? "warm";
-    const nextInterval = connected ? false : AGENCY_POLL[tier];
+    const nextInterval = connected
+      ? meta.agencyConnectedReconcile
+        ? AGENCY_POLL.cold
+        : false
+      : AGENCY_POLL[tier];
     query.setOptions({
       ...query.options,
       refetchInterval: nextInterval,

@@ -267,7 +267,10 @@ describe("live handler viewer identity", () => {
 
     expect(sessionRequestCount).toBe(0);
     expect(useAgencyOptimisticStore.getState().activeTimers[teamId]?.description).toBe("burst-49");
-    expect(queryClient.getQueryData(unreadKey(teamId))).toEqual({ count: 50, actionCount: 50 });
+    expect(queryClient.getQueryData(unreadKey(teamId))).toEqual({
+      count: NOTIFICATION_LIST_LIMIT,
+      actionCount: NOTIFICATION_LIST_LIMIT,
+    });
   });
 
   test("does not apply another user's timer to the viewer store", async () => {

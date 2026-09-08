@@ -90,9 +90,11 @@ const {
   getAgencyLiveConnectionState,
   getAgencyLiveViewerIdentityForTest,
   resetAgencyLiveConnectionsForTest,
+  setAgencyLiveConnectionStateForTest,
   setAgencyLiveHandlerLoadGateForTest,
   setAgencyLiveViewerUserId,
   subscribeAgencyLive,
+  subscribeAgencyLiveConnectionStateForTest,
 } = await import("./agency-live-connection");
 const { orpc } = await import("@/lib/orpc");
 const { NOTIFICATION_LIST_LIMIT } =
@@ -232,6 +234,12 @@ describe("subscribeAgencyLive", () => {
       count: 0,
       actionCount: 0,
     });
+    queryClient.setQueryData(
+      orpc.notifications.list.queryKey({
+        input: { teamId, limit: NOTIFICATION_LIST_LIMIT },
+      }),
+      { items: [], nextCursor: null },
+    );
 
     const events: unknown[] = [];
     for (let i = 0; i < 50; i++) {
@@ -255,8 +263,8 @@ describe("subscribeAgencyLive", () => {
     expect(
       queryClient.getQueryData(orpc.notifications.unreadCount.queryKey({ input: { teamId } })),
     ).toEqual({
-      count: 50,
-      actionCount: 50,
+      count: NOTIFICATION_LIST_LIMIT,
+      actionCount: NOTIFICATION_LIST_LIMIT,
     });
 
     unsubscribe();
@@ -399,5 +407,60 @@ describe("subscribeAgencyLive", () => {
     expect(getAgencyLiveViewerIdentityForTest(teamId)?.viewerUserId).toBeNull();
 
     unsubscribe();
+  });
+
+  test("reconnect performs one coalesced notification recovery and does not double-fetch with startup reconcile", async () => {
+    const teamId = "reconnect-coalesce-team";
+    const queryClient = new QueryClient();
+    bindQueryClient(queryClient);
+    const invalidateCalls: unknown[] = [];
+    const originalInvalidate = queryClient.invalidateQueries.bind(queryClient);
+    queryClient.invalidateQueries = ((
+      ...args: Parameters<typeof queryClient.invalidateQueries>
+    ) => {
+      invalidateCalls.push(args[0]);
+      return originalInvalidate(...args);
+    }) as typeof queryClient.invalidateQueries;
+
+    const unsubscribe = subscribeAgencyLive(teamId, () => {}, { viewerUserId: "user-1" });
+    await waitUntilLive(teamId);
+    await flushLiveWork();
+
+    const afterStartup = invalidateCalls.length;
+    expect(afterStartup).toBeGreaterThan(0);
+    expect(JSON.stringify(invalidateCalls)).toContain("notifications");
+
+    invalidateCalls.length = 0;
+    setAgencyLiveConnectionStateForTest(teamId, "reconnecting");
+    setAgencyLiveConnectionStateForTest(teamId, "live");
+    await flushLiveWork();
+
+    const serialized = JSON.stringify(invalidateCalls);
+    expect(serialized).toContain("notifications");
+    expect(serialized).toContain("unreadCount");
+    const notificationInvalidations = invalidateCalls.filter((call) =>
+      JSON.stringify(call).includes("notifications"),
+    );
+    expect(notificationInvalidations).toHaveLength(2);
+
+    unsubscribe();
+  });
+
+  test("teardown notifies mounted state listeners so Canvas consumers resume fallback", async () => {
+    const teamId = "teardown-listener-team";
+    const seen: string[] = [];
+    const unsubscribeLive = subscribeAgencyLive(teamId, () => {}, { viewerUserId: "user-1" });
+    await waitUntilLive(teamId);
+
+    const unsubscribeState = subscribeAgencyLiveConnectionStateForTest(teamId, () => {
+      seen.push(getAgencyLiveConnectionState(teamId));
+    });
+
+    unsubscribeLive();
+    await flushLiveWork();
+
+    expect(seen.some((state) => state !== "live")).toBe(true);
+    expect(getAgencyLiveConnectionState(teamId)).not.toBe("live");
+    unsubscribeState();
   });
 });

@@ -102,6 +102,9 @@ function updateConnectionState(teamId: string, state: AgencyLiveConnectionState)
   if (!connection || connection.state === state) {
     return;
   }
+  if (connection.state === "live" && state !== "live") {
+    connection.reconciledKey = null;
+  }
   connection.state = state;
   setAgencyTeamLiveConnected(teamId, state === "live");
   refreshAgencyLiveGatedPolling(teamId);
@@ -202,6 +205,22 @@ export function agencyLiveHoldKey(teamId: string, viewerUserId: string | null): 
     return null;
   }
   return teamId;
+}
+
+/** ponytail: test-only live-state transition */
+export function setAgencyLiveConnectionStateForTest(
+  teamId: string,
+  state: AgencyLiveConnectionState,
+) {
+  updateConnectionState(teamId, state);
+}
+
+/** ponytail: test-only state subscription for mounted Canvas consumers */
+export function subscribeAgencyLiveConnectionStateForTest(
+  teamId: string,
+  onStoreChange: () => void,
+) {
+  return subscribeToConnectionState(teamId, onStoreChange);
 }
 
 /** ponytail: test-only identity snapshot */
@@ -391,7 +410,7 @@ function teardownTeamConnection(teamId: string) {
   connection.abortController?.abort();
   closeConnectionWebSocket(connection, "subscription disposed");
   connection.subscriptionGeneration += 1;
-  setAgencyTeamLiveConnected(teamId, false);
+  updateConnectionState(teamId, "connecting");
   teamConnections.delete(teamId);
 }
 
