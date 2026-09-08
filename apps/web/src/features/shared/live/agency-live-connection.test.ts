@@ -463,4 +463,34 @@ describe("subscribeAgencyLive", () => {
     expect(getAgencyLiveConnectionState(teamId)).not.toBe("live");
     unsubscribeState();
   });
+
+  test("same Canvas state subscription goes live again after Agency remount without resubscribe", async () => {
+    const teamId = "canvas-observer-reuse-team";
+    const seen: string[] = [];
+    const unsubscribeLive = subscribeAgencyLive(teamId, () => {}, { viewerUserId: "user-1" });
+    await waitUntilLive(teamId);
+
+    const unsubscribeState = subscribeAgencyLiveConnectionStateForTest(teamId, () => {
+      seen.push(getAgencyLiveConnectionState(teamId));
+    });
+
+    unsubscribeLive();
+    await flushLiveWork();
+
+    expect(getAgencyLiveConnectionState(teamId)).not.toBe("live");
+    const afterTeardown = seen.length;
+    expect(afterTeardown).toBeGreaterThan(0);
+
+    const unsubscribeLiveAgain = subscribeAgencyLive(teamId, () => {}, {
+      viewerUserId: "user-1",
+    });
+    await waitUntilLive(teamId);
+    await flushLiveWork();
+
+    expect(seen.slice(afterTeardown)).toContain("live");
+    expect(getAgencyLiveConnectionState(teamId)).toBe("live");
+
+    unsubscribeLiveAgain();
+    unsubscribeState();
+  });
 });

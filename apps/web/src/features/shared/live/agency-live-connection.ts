@@ -411,7 +411,7 @@ function teardownTeamConnection(teamId: string) {
   closeConnectionWebSocket(connection, "subscription disposed");
   connection.subscriptionGeneration += 1;
   updateConnectionState(teamId, "connecting");
-  teamConnections.delete(teamId);
+  maybeRemoveIdleConnection(teamId);
 }
 
 function maybeRemoveIdleConnection(teamId: string) {
@@ -488,6 +488,7 @@ export function useAgencyLiveConnectionState(teamId: string): AgencyLiveConnecti
 export function teardownAllAgencyLiveConnections() {
   for (const teamId of [...teamConnections.keys()]) {
     teardownTeamConnection(teamId);
+    teamConnections.delete(teamId);
   }
   resetAgencyLiveConnectedForTest();
 }
