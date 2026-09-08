@@ -4,6 +4,7 @@ import { describe, expect, mock, test } from "bun:test";
 mock.module("@/lib/env", () => ({
   getServerUrl: () => "http://localhost:7000",
   getRpcBaseUrl: () => "http://localhost:7000",
+  getAuthBaseUrl: () => "http://localhost:7000",
 }));
 
 const { bindQueryClient } = await import("@/lib/query-client");
@@ -107,6 +108,26 @@ describe("patchInsertedProjectTaskInCache", () => {
     expect(data?.pages).toBeDefined();
     expect(data?.pages[0]?.items.map((item) => item.id)).toEqual(["new-task", "existing"]);
     expect(Object.hasOwn(data ?? {}, "items")).toBe(false);
+  });
+
+  test("does not duplicate a task that already exists on a later infinite page", () => {
+    const client = setupClient();
+    client.setQueryData(chooserCatalogQueryKey, {
+      pages: [
+        { items: [makeTask("a")], page: 1, pageSize: 1, total: 2 },
+        { items: [makeTask("b")], page: 2, pageSize: 1, total: 2 },
+      ],
+      pageParams: [1, 2],
+    });
+
+    patchInsertedProjectTaskInCache(teamId, makeTask("b", { title: "Task b updated" }));
+
+    const data = client.getQueryData<{
+      pages: Array<{ items: Array<{ id: string; title: string }> }>;
+    }>(chooserCatalogQueryKey);
+    const ids = data?.pages.flatMap((page) => page.items.map((item) => item.id));
+    expect(ids).toEqual(["a", "b"]);
+    expect(data?.pages[1]?.items[0]?.title).toBe("Task b updated");
   });
 
   test("heals list-shaped data corruptly stored under a chooser infinite key", () => {
