@@ -1,6 +1,5 @@
 import type { AgencyLiveEvent } from "@orch/api/routers/agency-ops/live/live";
 
-import { authClient } from "@/lib/auth-client";
 import { applyNotificationCreatedToCache } from "@/features/notifications/notifications-queries";
 import { getQueryClient } from "@/lib/query-client";
 import {
@@ -12,6 +11,11 @@ import {
 import { useAgencyTaskMessagesStore } from "@/features/task-management/stores/agency-task-messages";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
 
+export type AgencyLiveHandlerContext = {
+  viewerUserId: string | null;
+  isCurrent: () => boolean;
+};
+
 export function applyViewerTimerUpdated(
   event: Extract<AgencyLiveEvent, { type: "timer.updated" }>,
 ) {
@@ -20,19 +24,25 @@ export function applyViewerTimerUpdated(
     .reconcileActiveTimerFromLive(event.teamId, event.timer, event.updatedAt);
 }
 
-async function getViewerUserId(): Promise<string | null> {
-  const session = await authClient.getSession();
-  return session.data?.user?.id ?? null;
-}
+function handleTimerUpdated(
+  event: Extract<AgencyLiveEvent, { type: "timer.updated" }>,
+  context: AgencyLiveHandlerContext,
+) {
+  if (!context.isCurrent() || !context.viewerUserId) {
+    return;
+  }
 
-async function handleTimerUpdated(event: Extract<AgencyLiveEvent, { type: "timer.updated" }>) {
-  const viewerUserId = await getViewerUserId();
-
-  if (viewerUserId && event.userId === viewerUserId) {
+  if (event.userId === context.viewerUserId) {
+    if (!context.isCurrent()) {
+      return;
+    }
     applyViewerTimerUpdated(event);
     return;
   }
 
+  if (!context.isCurrent()) {
+    return;
+  }
   patchActiveMembersFromLiveTimer(event.teamId, event.timer, event.userId);
 }
 
@@ -51,15 +61,20 @@ function handleTaskUpdated(event: Extract<AgencyLiveEvent, { type: "task.updated
 
 function handleNotificationCreated(
   event: Extract<AgencyLiveEvent, { type: "notification.created" }>,
+  context: AgencyLiveHandlerContext,
 ) {
-  void getViewerUserId().then((viewerUserId) => {
-    if (!viewerUserId || event.notification.recipientUserId !== viewerUserId) return;
+  if (!context.isCurrent() || !context.viewerUserId) {
+    return;
+  }
+  if (event.notification.recipientUserId !== context.viewerUserId) {
+    return;
+  }
+  if (!context.isCurrent()) {
+    return;
+  }
 
-    const queryClient = getQueryClient();
-    const teamId = event.teamId;
-
-    applyNotificationCreatedToCache(queryClient, teamId, event.notification);
-  });
+  const queryClient = getQueryClient();
+  applyNotificationCreatedToCache(queryClient, event.teamId, event.notification);
 }
 
 function handleTaskMessageCreated(
@@ -68,10 +83,21 @@ function handleTaskMessageCreated(
   useAgencyTaskMessagesStore.getState().applyLiveMessage(event.message);
 }
 
-export function handleAgencyLiveEvent(_teamId: string, event: AgencyLiveEvent) {
+export function handleAgencyLiveEvent(
+  teamId: string,
+  event: AgencyLiveEvent,
+  context: AgencyLiveHandlerContext,
+) {
+  if (!context.isCurrent()) {
+    return;
+  }
+  if (event.teamId !== teamId) {
+    return;
+  }
+
   switch (event.type) {
     case "timer.updated":
-      void handleTimerUpdated(event);
+      handleTimerUpdated(event, context);
       break;
     case "task.updated":
       handleTaskUpdated(event);
@@ -80,7 +106,7 @@ export function handleAgencyLiveEvent(_teamId: string, event: AgencyLiveEvent) {
       void handleJourneyStepUpdated(event);
       break;
     case "notification.created":
-      handleNotificationCreated(event);
+      handleNotificationCreated(event, context);
       break;
     case "taskMessage.created":
       handleTaskMessageCreated(event);

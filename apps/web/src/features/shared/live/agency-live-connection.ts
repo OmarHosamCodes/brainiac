@@ -5,7 +5,10 @@ import {
   resetAgencyLiveConnectedForTest,
   setAgencyTeamLiveConnected,
 } from "@/features/shared/live/agency-live-connected";
+import { NOTIFICATION_LIST_LIMIT } from "@/features/notifications/notification-list-limit";
 import { getServerUrl } from "@/lib/env";
+import { orpc } from "@/lib/orpc";
+import { getQueryClient } from "@/lib/query-client";
 import { refreshAgencyLiveGatedPolling } from "@/features/shared/agency-query-options";
 import {
   closeAgencyLiveWebSocket,
@@ -29,6 +32,16 @@ function loadAgencyLiveHandlers() {
 
 export type AgencyLiveListener = (event: AgencyLiveEvent) => void;
 
+export type SubscribeAgencyLiveOptions = {
+  viewerUserId?: string | null;
+};
+
+type LiveIdentitySnapshot = {
+  subscriptionGeneration: number;
+  identityGeneration: number;
+  viewerUserId: string | null;
+};
+
 type TeamLiveConnection = {
   websocket: WebSocket | null;
   refCount: number;
@@ -39,6 +52,9 @@ type TeamLiveConnection = {
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   abortController: AbortController | null;
   subscriptionGeneration: number;
+  viewerUserId: string | null;
+  identityGeneration: number;
+  reconciledKey: string | null;
 };
 
 const teamConnections = new Map<string, TeamLiveConnection>();
@@ -66,6 +82,9 @@ function createEmptyConnection(): TeamLiveConnection {
     reconnectTimer: null,
     abortController: null,
     subscriptionGeneration: 0,
+    viewerUserId: null,
+    identityGeneration: 0,
+    reconciledKey: null,
   };
 }
 
@@ -86,6 +105,9 @@ function updateConnectionState(teamId: string, state: AgencyLiveConnectionState)
   connection.state = state;
   setAgencyTeamLiveConnected(teamId, state === "live");
   refreshAgencyLiveGatedPolling(teamId);
+  if (state === "live") {
+    maybeReconcileAuthenticatedLive(teamId);
+  }
   for (const listener of connection.stateListeners) {
     listener();
   }
@@ -106,14 +128,107 @@ function closeConnectionWebSocket(connection: TeamLiveConnection, reason = "subs
   connection.websocket = null;
 }
 
+function snapshotLiveIdentity(connection: TeamLiveConnection): LiveIdentitySnapshot {
+  return {
+    subscriptionGeneration: connection.subscriptionGeneration,
+    identityGeneration: connection.identityGeneration,
+    viewerUserId: connection.viewerUserId,
+  };
+}
+
+function isLiveIdentityCurrent(teamId: string, snapshot: LiveIdentitySnapshot): boolean {
+  const connection = teamConnections.get(teamId);
+  return Boolean(
+    connection &&
+    connection.subscriptionGeneration === snapshot.subscriptionGeneration &&
+    connection.identityGeneration === snapshot.identityGeneration &&
+    connection.viewerUserId === snapshot.viewerUserId,
+  );
+}
+
+function setConnectionViewer(connection: TeamLiveConnection, viewerUserId: string | null) {
+  if (connection.viewerUserId === viewerUserId) {
+    return;
+  }
+  connection.viewerUserId = viewerUserId;
+  connection.identityGeneration += 1;
+}
+
+function reconcileAuthenticatedAgencyLive(teamId: string) {
+  const queryClient = getQueryClient();
+  void queryClient.invalidateQueries({
+    queryKey: orpc.agencyOps.timer.getActive.queryKey({ input: { teamId } }),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: orpc.agencyOps.timer.listActiveMembers.queryKey({ input: { teamId } }),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: orpc.notifications.list.queryKey({
+      input: { teamId, limit: NOTIFICATION_LIST_LIMIT },
+    }),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: orpc.notifications.unreadCount.queryKey({ input: { teamId } }),
+  });
+}
+
+function maybeReconcileAuthenticatedLive(teamId: string) {
+  const connection = teamConnections.get(teamId);
+  if (!connection || connection.state !== "live" || !connection.viewerUserId) {
+    return;
+  }
+  const key = `${connection.subscriptionGeneration}:${connection.identityGeneration}`;
+  if (connection.reconciledKey === key) {
+    return;
+  }
+  connection.reconciledKey = key;
+  reconcileAuthenticatedAgencyLive(teamId);
+}
+
+export function setAgencyLiveViewerUserId(viewerUserId: string | null) {
+  for (const teamId of [...teamConnections.keys()]) {
+    const connection = teamConnections.get(teamId);
+    if (!connection) {
+      continue;
+    }
+    setConnectionViewer(connection, viewerUserId);
+    maybeReconcileAuthenticatedLive(teamId);
+  }
+}
+
+let handlerLoadGate: () => Promise<void> = async () => {};
+
+/** ponytail: test-only gate so identity can change during in-flight fan-out */
+export function setAgencyLiveHandlerLoadGateForTest(gate: () => Promise<void>) {
+  handlerLoadGate = gate;
+}
+
 async function fanOutEvent(teamId: string, event: AgencyLiveEvent) {
   const connection = teamConnections.get(teamId);
   if (!connection) {
     return;
   }
+  const snapshot = snapshotLiveIdentity(connection);
+  await handlerLoadGate();
+  if (!isLiveIdentityCurrent(teamId, snapshot)) {
+    return;
+  }
   const { handleAgencyLiveEvent } = await loadAgencyLiveHandlers();
-  handleAgencyLiveEvent(teamId, event);
-  for (const listener of connection.listeners) {
+  if (!isLiveIdentityCurrent(teamId, snapshot)) {
+    return;
+  }
+  handleAgencyLiveEvent(teamId, event, {
+    viewerUserId: snapshot.viewerUserId,
+    isCurrent: () => isLiveIdentityCurrent(teamId, snapshot),
+  });
+  if (!isLiveIdentityCurrent(teamId, snapshot)) {
+    return;
+  }
+  const current = teamConnections.get(teamId);
+  if (!current) {
+    return;
+  }
+  for (const listener of current.listeners) {
     listener(event);
   }
 }
@@ -267,7 +382,11 @@ function maybeRemoveIdleConnection(teamId: string) {
   }
 }
 
-export function subscribeAgencyLive(teamId: string, listener: AgencyLiveListener): () => void {
+export function subscribeAgencyLive(
+  teamId: string,
+  listener: AgencyLiveListener,
+  options?: SubscribeAgencyLiveOptions,
+): () => void {
   if (!teamId) {
     return () => {};
   }
@@ -276,6 +395,9 @@ export function subscribeAgencyLive(teamId: string, listener: AgencyLiveListener
   const wasInactive = connection.refCount === 0;
   connection.refCount += 1;
   connection.listeners.add(listener);
+  if (options && "viewerUserId" in options) {
+    setConnectionViewer(connection, options.viewerUserId ?? null);
+  }
 
   if (wasInactive) {
     ensureConnectionStarted(teamId);
@@ -334,6 +456,7 @@ export function teardownAllAgencyLiveConnections() {
 /** ponytail: test-only reset; not for production */
 export function resetAgencyLiveConnectionsForTest() {
   teardownAllAgencyLiveConnections();
+  handlerLoadGate = async () => {};
 }
 
 // ponytail: Vite HMR reloads this module without unmounting React; close sockets so server
