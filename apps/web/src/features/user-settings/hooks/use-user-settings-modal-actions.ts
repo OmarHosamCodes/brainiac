@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useNavigate } from "@/lib/navigation";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ import {
 } from "@/features/notifications/notifications-queries";
 import { notificationPreferenceLabel } from "@/features/notifications/notification-presentation";
 import { useTeamStore } from "@/features/team/team-store";
+import { resetAuthenticatedClientState } from "@/lib/authenticated-client-reset";
 import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
 import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
@@ -31,6 +33,7 @@ export type UserSettingsModalInput = {
 export function useUserSettingsModalActions(input: UserSettingsModalInput) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const session = authClient.useSession();
   const { tier, isPro, checkout, openPortal } = useBilling();
   const { isDark, toggle: toggleTheme } = useTheme();
@@ -133,7 +136,7 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
       await authClient.signOut({
         fetchOptions: {
           onSuccess: () => {
-            queryClient.clear();
+            resetAuthenticatedClientState({ queryClient, router });
             toast.success("Signed out successfully");
             input.onOpenChange(false);
             navigate("/", { replace: true });

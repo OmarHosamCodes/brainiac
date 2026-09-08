@@ -1,102 +1,93 @@
-# Task 4 report: Bills chrome restack
+# Task 4 report — Bound authenticated loader work safely
 
-**Branch:** `feat/bills-tables`
-**Commit:** `e7817511` (`feat: restack bills chrome with tabs and status select`)
+## What I implemented
 
-## Summary
+Authenticated shell boot now treats session, chrome, and cache as independent lifecycles:
 
-- Replaced party filter pills with controlled shadcn Tabs for All, Clients, Team, Adjustments, and Expenses, with horizontal overflow on narrow screens.
-- Replaced bill status pills with an accessible shadcn Select beside search. Selecting a status now sets it; All statuses clears it.
-- Compacted Remaining / Period spend and insight into one quiet summary row while preserving the insight live region.
-- Preserved search, count / All expenses, Add menu, FX line, the scoped External chip, and the existing expense Due / Paid / All pills.
-- Left bill tables, bill detail sheet internals, and the expense strip body unchanged.
+- `resolveAuthSession` uses the loader user only while the client session is pending or in transient failure. An authoritative signed-out client result (`data: null` or `{ user: null }`, no error) no longer keeps the previous loader user.
+- Sign-out and account replacement clear the query cache, reset `selectedTeamId`, clear cached `/_authenticated` router matches, and `invalidate()` so Back/rapid sign-in cannot restore the previous user's shell. Live sockets are not torn down for identity changes (Task 2 in-place viewer updates remain).
+- Boot chrome fetches unread, list, and timer independently. Failed RPCs stay `null` and are not seeded as zero/empty/null authority. Seeding skips a query whose `dataUpdatedAt` is newer than boot start.
+- First-team is only the initial fallback. Client navigation passes the selected team into `fetchBootShellChrome`.
+- Boot session remains request-scoped (`createServerFn` + request cookie). No global session/chrome cache. Better Auth `refetchOnWindowFocus` is unchanged.
 
-## Verification
+**Route `staleTime` was not added.** A router-core test proved child navigation re-runs the settled parent (`cause: "stay"`), and the same re-runs still happen with `staleTime: 30_000` / `preloadStaleTime: 30_000`. Those stay reloads are not stale-age driven, so route freshness would not bound parent boot fanout. Global `defaultPreload: "intent"` is unchanged.
 
-- `bunx oxfmt --write` on both touched files: pass
-- `bunx oxlint` on both touched files: pass
-- `bun test apps/web/src/features/billing/money-bills-filters.test.ts`: 20 pass, 0 fail
-- `bun run check-types`: pass
-- Browser: verified named party tabs, labeled status combobox, Expenses hiding status, All expenses remaining available, and expense strip pills remaining intact.
-- `bun run check:conventions`: blocked by 8 pre-existing violations in task-management, workspace-agent, and workspace-knowledge files; no violation references either touched file.
+## What I tested and test results
 
-## Concerns
+From `apps/web`:
 
-No Task 4 blocker. The unrelated `.superpowers/sdd/progress.md` and `docs/superpowers/plans/2026-08-29-bills-tables.md` worktree changes were not committed.
+```bash
+bun test src/lib/auth-session.test.ts \
+  src/lib/boot-chrome.test.ts \
+  src/lib/authenticated-client-reset.test.ts \
+  src/lib/authenticated-boot.test.ts \
+  src/lib/authenticated-parent-freshness.test.ts
+```
 
----
+**GREEN:** 28 pass, 0 fail.
 
-# Task 4 report — DraftRestore chip in the composer
+Task 2–3 regressions also passed (68 tests across 9 files).
 
-**Branch:** `omarhosamcodes/cloud-agent-1786657271032-f0r08`  
-**Commit:** `a5711e7d` — `feat: restore unsent Orch drafts from the server`  
-**Plan:** `docs/superpowers/plans/2026-08-14-orch-composer-reliability.md`
+`bunx oxlint` and `bunx oxfmt --check` clean on touched files. Did not run root `bun run check`.
 
-## Summary
+## TDD Evidence
 
-Implemented server-backed composer draft restore UX for Orch:
+### RED
 
-- **`composer-draft-display.ts`** — pure helpers `shouldOfferComposerDraftRestore` and `formatComposerDraftSavedAt`
-- **`use-workspace-agent-data.ts`** — `draft.get` query plus `draft.upsert` / `draft.discard` mutations
-- **`use-workspace-agent.ts`** — debounced upsert (500ms), discard after successful `"send"`, restore/discard handlers, `serverDraftOffer` computed in hook
-- **`workspace-agent-thread-composer-view.tsx`** — `DraftRestore` chip above `MessageQueue` (props-only)
-- **`workspace-agent-view.tsx`** — passes new composer props from view model
+```bash
+cd apps/web && bun test src/lib/auth-session.test.ts src/lib/boot-chrome.test.ts \
+  src/lib/authenticated-client-reset.test.ts src/lib/authenticated-boot.test.ts \
+  src/lib/authenticated-parent-freshness.test.ts
+```
 
-## TDD
+Representative failures (before production changes):
 
-1. Added failing `composer-draft-display.test.ts` (module not found)
-2. Implemented `composer-draft-display.ts`
-3. Wired hook + view
-4. Tests pass
+```
+resolveAuthSession > authoritative signed-out client result does not keep the loader user
+  Expected: user null
+  Received: loader user / snapshot object treated as user
 
-## Behavior
+loadBootShellChrome > keeps successful chrome RPCs when a sibling fetch fails
+  notifications became empty chrome instead of null sibling
 
-| Scenario                          | Behavior                                            |
-| --------------------------------- | --------------------------------------------------- |
-| Live draft non-empty              | Debounced upsert to server (500ms); no restore chip |
-| Live draft empty, server has text | `DraftRestore` chip shown                           |
-| User clicks Restore               | `setDraft(serverDraft.text)`; chip hides            |
-| User clicks Discard on chip       | `draft.discard` + invalidate query                  |
-| Successful send (`"send"`)        | `draft.discard` + invalidate query                  |
-| Queue while streaming (`"queue"`) | No discard; server draft can remain                 |
-| Send fails                        | Draft restored locally; no discard                  |
-| Empty live draft debounce         | **No** discard — preserves restore offer            |
+seedBootChromeQueries > failed chrome RPCs do not seed authoritative zeros
+  (stub seeded nothing; later implementation must not write { count: 0 })
+
+resetAuthenticatedClientState > clears user-scoped query and team state
+  Expected undefined query data, Received previous shell
+
+authenticated parent loader freshness > with 30s staleTime, child navigation does not re-run
+  Expected: 1 parent load
+  Received: 3 (cause stay) — even with staleTime: 30_000
+```
+
+### GREEN
+
+After implementation, the 28 tests above pass. The parent-freshness suite was rewritten to lock the measured router-core behavior: stay child-nav re-runs the parent, and `staleTime: 30_000` does not stop that.
 
 ## Files changed
 
-| File                                       | Change                                |
-| ------------------------------------------ | ------------------------------------- |
-| `composer-draft-display.ts`                | **Created**                           |
-| `composer-draft-display.test.ts`           | **Created**                           |
-| `hooks/use-workspace-agent-data.ts`        | Draft query + mutations               |
-| `hooks/use-workspace-agent.ts`             | Autosave, restore offer, send discard |
-| `workspace-agent-thread-composer-view.tsx` | `DraftRestore` UI                     |
-| `workspace-agent-view.tsx`                 | Prop wiring                           |
+- `apps/web/src/lib/auth-session.ts` + test
+- `apps/web/src/lib/boot-chrome.ts` + test (team fallback, independent RPCs, conditional seed)
+- `apps/web/src/lib/boot-prefetch.ts` (optional preferred `teamId`, request-scoped cookie client)
+- `apps/web/src/lib/authenticated-boot.ts` + test (session redirect, deep-link search, request-scoped double load)
+- `apps/web/src/lib/authenticated-client-reset.ts` + test
+- `apps/web/src/lib/authenticated-parent-freshness.test.ts` (staleTime decision evidence)
+- `apps/web/src/routes/_authenticated.tsx`
+- `apps/web/src/providers/auth-provider.tsx`
+- `apps/web/src/features/user-settings/hooks/use-user-settings-modal-actions.ts`
 
-## Tests run
+Not changed: Railway memory, Better Auth focus refetch, chooser catalog, COUNT, Task 2 live identity / Task 3 notification polling.
 
-```bash
-bun test apps/web/src/features/workspace-agent/composer-draft-display.test.ts
-# 2 pass, 0 fail
+## staleTime decision
 
-bun run check-types   # pass
-bun run check         # pass
-bun run check:conventions  # pass
-```
+**Not added** on `/_authenticated`.
 
-## Golden layer compliance
-
-- Composer view remains props-only (no oRPC/query/store imports)
-- Draft logic lives in hook + data hook
-- `DraftRestore` component unchanged (no restyle)
-
-## Out of scope (per brief)
-
-- Task 5 (`@` / `/` triggers)
-- API/DB changes
-- Attachment restore UI
-- `chat-panel-view.tsx` mount
+Evidence: installed `@tanstack/router-core` 1.171.20 reloads a successful parent on child navigation with `cause: "stay"` (1 → 3 loads across preload + `/canvas` + `/agency`). Repeating the same matrix with `staleTime: 30_000` and `preloadStaleTime: 30_000` still produced 3 parent loads. Intent preload itself did not add a parent load. Because route `staleTime` does not prevent these stay reloads, it is not a necessary or sufficient bound; savings stay with the lifecycle safeguards (no zero seeds, selected-team chrome, signed-out/account reset).
 
 ## Concerns
 
-None blocking. Manual browser verification of end-to-end draft save/restore was not performed in this run (no authenticated dev session in agent environment); logic follows Task 3 API contracts and brief exactly.
+- Parent boot can still re-run on in-shell child navigation. Stopping that would need a non-spec `shouldReload` change, not `staleTime`.
+- Selected team is preserved on client navigation only; zustand is not persisted, so a hard refresh still falls back to the first team (pre-existing).
+- Explicit sign-out resets from both the settings hook and AuthProvider; the helper is idempotent.
+- `apps/web` `tsc -b` still reports a pre-existing Task 3 error in `notifications-queries.ts`; no new errors in Task 4 files.
