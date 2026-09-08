@@ -13,7 +13,7 @@ export type BootActiveTimer = Awaited<
 >;
 
 export type BootShellChrome = {
-  teams: BootTeams;
+  teams: BootTeams | null;
   teamId: string;
   unread: BootUnreadCount | null;
   notifications: BootNotificationList | null;
@@ -32,7 +32,7 @@ export type BootChromeClient = {
 };
 
 const emptyChrome = (): BootShellChrome => ({
-  teams: { items: [] },
+  teams: null,
   teamId: "",
   unread: null,
   notifications: null,
@@ -100,7 +100,9 @@ export function seedBootChromeQueries(
   chrome: BootShellChrome,
   bootStartedAt: number,
 ): void {
-  seedIfNotNewer(queryClient, teamListQueryKey(), chrome.teams, bootStartedAt);
+  if (chrome.teams != null) {
+    seedIfNotNewer(queryClient, teamListQueryKey(), chrome.teams, bootStartedAt);
+  }
   if (!chrome.teamId) {
     return;
   }

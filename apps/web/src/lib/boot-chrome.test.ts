@@ -117,20 +117,19 @@ describe("loadBootShellChrome", () => {
     expect(chrome.timer).toEqual(timer);
   });
 
-  test("does not invent zero chrome after a failed team list", async () => {
+  test("failed team list is null, not a successful empty list", async () => {
     const client = fakeChromeClient({
       teams: async () => {
         throw new Error("teams failed");
       },
     });
 
-    await expect(loadBootShellChrome(client)).resolves.toEqual({
-      teams: { items: [] },
-      teamId: "",
-      unread: null,
-      notifications: null,
-      timer: null,
-    });
+    const chrome = await loadBootShellChrome(client);
+    expect(chrome.teams).toBeNull();
+    expect(chrome.teamId).toBe("");
+    expect(chrome.unread).toBeNull();
+    expect(chrome.notifications).toBeNull();
+    expect(chrome.timer).toBeNull();
   });
 
   test("no-team accounts skip notification and timer fetches", async () => {
@@ -145,7 +144,7 @@ describe("loadBootShellChrome", () => {
 
     const chrome = await loadBootShellChrome(client);
     expect(chrome.teamId).toBe("");
-    expect(chrome.teams.items).toEqual([]);
+    expect(chrome.teams).toEqual({ items: [] });
     expect(chromeCalls).toBe(0);
   });
 });
@@ -188,6 +187,25 @@ describe("seedBootChromeQueries", () => {
     expect(queryClient.getQueryData(unreadKey("team-a"))).toBeUndefined();
     expect(queryClient.getQueryData(listKey("team-a"))).toBeUndefined();
     expect(queryClient.getQueryData(timerKey("team-a"))).toBeUndefined();
+  });
+
+  test("failed team list does not seed or wipe an existing team list", () => {
+    const queryClient = createClient();
+    queryClient.setQueryData(teamListQueryKey(), teams);
+
+    seedBootChromeQueries(
+      queryClient,
+      {
+        teams: null,
+        teamId: "",
+        unread: null,
+        notifications: null,
+        timer: null,
+      },
+      Date.now(),
+    );
+
+    expect(queryClient.getQueryData(teamListQueryKey())).toEqual(teams);
   });
 
   test("does not overwrite query data updated after boot began", () => {

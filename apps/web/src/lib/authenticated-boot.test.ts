@@ -89,6 +89,27 @@ describe("loadAuthenticatedShell", () => {
     expect(queryClient.getQueryData(teamListQueryKey())).toEqual(teams);
   });
 
+  test("failed team list does not seed an empty list over a good cache", async () => {
+    const queryClient = createClient();
+    queryClient.setQueryData(teamListQueryKey(), teams);
+
+    const result = await loadAuthenticatedShell({
+      queryClient,
+      location: { pathname: "/agency", searchStr: "" },
+      fetchSession: async () => session,
+      fetchChrome: async () => ({
+        teams: null,
+        teamId: "",
+        unread: null,
+        notifications: null,
+        timer: null,
+      }),
+    });
+
+    expect(result.teamCount).toBe(0);
+    expect(queryClient.getQueryData(teamListQueryKey())).toEqual(teams);
+  });
+
   test("hard refresh remains request-scoped: each load fetches session and chrome again", async () => {
     const fetchSession = mock(async () => session);
     const fetchChrome = mock(async () => chromeFor("team-a"));

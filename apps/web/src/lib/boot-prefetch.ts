@@ -33,7 +33,7 @@ function createServerOrpcClient(cookie: string): AppRouterClient {
 }
 
 const emptyChrome = (): BootShellChrome => ({
-  teams: { items: [] },
+  teams: null,
   teamId: "",
   unread: null,
   notifications: null,

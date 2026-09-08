@@ -26,5 +26,5 @@ export async function loadAuthenticatedShell(input: {
   }
 
   seedBootChromeQueries(input.queryClient, chrome, bootStartedAt);
-  return { session, teamCount: chrome.teams.items.length };
+  return { session, teamCount: chrome.teams?.items.length ?? 0 };
 }

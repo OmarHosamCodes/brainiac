@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { QueryClient } from "@tanstack/react-query";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
 
 mock.module("@/lib/env", () => ({
   getServerUrl: () => "http://localhost:7000",
@@ -58,4 +64,108 @@ describe("resetAuthenticatedClientState", () => {
     expect(router.invalidate).toHaveBeenCalledTimes(1);
     expect(router.clearCache).toHaveBeenCalledTimes(1);
   });
+
+  test("Back after reset cannot restore the previous authenticated match or query shell", async () => {
+    let sessionUser = "prev";
+    const queryClient = createClient();
+    queryClient.setQueryData(["shell"], { user: "prev" });
+    useTeamStore.getState().setSelectedTeamId("team-previous");
+
+    const shellLoader = () => ({ session: { user: { id: sessionUser } } });
+    const rootRoute = createRootRoute();
+    const publicRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/",
+    });
+    const authenticatedRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      id: "_authenticated",
+      loader: shellLoader,
+    });
+    const agencyRoute = createRoute({
+      getParentRoute: () => authenticatedRoute,
+      path: "/agency",
+      loader: shellLoader,
+    });
+    const canvasRoute = createRoute({
+      getParentRoute: () => authenticatedRoute,
+      path: "/canvas",
+      loader: shellLoader,
+    });
+
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([
+        publicRoute,
+        authenticatedRoute.addChildren([agencyRoute, canvasRoute]),
+      ]),
+      history: createMemoryHistory({ initialEntries: ["/agency"] }),
+      defaultPreload: "intent",
+    });
+
+    await router.load();
+    await flushRouter();
+    await router.navigate({ to: "/canvas" });
+    await flushRouter();
+    await router.preloadRoute({ to: "/agency" });
+    await flushRouter();
+
+    expect(authenticatedUserIds(router)).toContain("prev");
+    expect(cachedAuthenticatedUserIds(router)).toContain("prev");
+    expect(queryClient.getQueryData(["shell"])).toEqual({ user: "prev" });
+
+    sessionUser = "next";
+    resetAuthenticatedClientState({ queryClient, router });
+
+    expect(queryClient.getQueryData(["shell"])).toBeUndefined();
+    expect(useTeamStore.getState().selectedTeamId).toBe("");
+    expect(cachedAuthenticatedUserIds(router)).not.toContain("prev");
+
+    await router.navigate({ to: "/" });
+    await flushRouter();
+    router.history.back();
+    await router.load();
+    await flushRouter();
+    router.history.back();
+    await router.load();
+    await flushRouter();
+
+    expect(authenticatedUserIds(router)).not.toContain("prev");
+    expect(cachedAuthenticatedUserIds(router)).not.toContain("prev");
+    expect(queryClient.getQueryData(["shell"])).toBeUndefined();
+  });
 });
+
+async function flushRouter() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+type MatchLike = {
+  routeId: string;
+  loaderData?: { session?: { user?: { id?: string } } };
+};
+
+function isAuthenticatedRouteId(routeId: string) {
+  return routeId === "/_authenticated" || routeId.startsWith("/_authenticated");
+}
+
+function userIdFromMatch(match: MatchLike) {
+  return match.loaderData?.session?.user?.id;
+}
+
+function cachedAuthenticatedUserIds(router: object) {
+  const cache = (router as { _cache?: Map<string, MatchLike> })._cache;
+  if (!cache) return [];
+  return [...cache.values()]
+    .filter((match) => isAuthenticatedRouteId(match.routeId))
+    .map(userIdFromMatch)
+    .filter((id): id is string => Boolean(id));
+}
+
+function authenticatedUserIds(router: { state: { matches: MatchLike[] } }) {
+  const fromState = router.state.matches
+    .filter((match) => isAuthenticatedRouteId(match.routeId))
+    .map(userIdFromMatch)
+    .filter((id): id is string => Boolean(id));
+  return [...fromState, ...cachedAuthenticatedUserIds(router)];
+}

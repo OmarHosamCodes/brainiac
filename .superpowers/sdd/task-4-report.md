@@ -91,3 +91,74 @@ Evidence: installed `@tanstack/router-core` 1.171.20 reloads a successful parent
 - Selected team is preserved on client navigation only; zustand is not persisted, so a hard refresh still falls back to the first team (pre-existing).
 - Explicit sign-out resets from both the settings hook and AuthProvider; the helper is idempotent.
 - `apps/web` `tsc -b` still reports a pre-existing Task 3 error in `notifications-queries.ts`; no new errors in Task 4 files.
+
+## Review fixes (Important)
+
+1. Failed `team.list` is now `teams: null`, distinct from a successful `{ items: [] }`. Seeding skips a null team list so a transient failure cannot wipe a good cache. `teamCount` is `chrome.teams?.items.length ?? 0`.
+2. Real-router test: sibling preload puts the previous `/_authenticated/agency` match in router `_cache`; after `resetAuthenticatedClientState`, that cached user id is gone, query shell is gone, and Back does not restore `prev`.
+
+Did not add `staleTime`, `shouldReload`, or disable `refetchOnWindowFocus`. Did not amend `7e7c799b`.
+
+### Covering tests (re-run)
+
+```bash
+cd apps/web && bun test src/lib/auth-session.test.ts \
+  src/lib/boot-chrome.test.ts \
+  src/lib/authenticated-client-reset.test.ts \
+  src/lib/authenticated-boot.test.ts \
+  src/lib/authenticated-parent-freshness.test.ts
+```
+
+```
+bun test v1.4.0 (34cbb9a40)
+
+src/lib/auth-session.test.ts:
+(pass) resolveAuthSession > loader user bridges while the client session is still pending
+(pass) resolveAuthSession > authoritative signed-out client result does not keep the loader user
+(pass) resolveAuthSession > transient client failure keeps the loader user instead of signing out
+(pass) resolveAuthSession > unsettled client data without an error keeps the loader user
+(pass) resolveAuthSession > client user wins once present
+(pass) resolveAuthSession > pending only when neither source has a user
+
+src/lib/boot-chrome.test.ts:
+(pass) resolveBootTeamId > first team is only an initial fallback
+(pass) resolveBootTeamId > preserves the selected team when it is still in the list
+(pass) resolveBootTeamId > falls back to the first team when the selected team is gone
+(pass) resolveBootTeamId > no-team accounts resolve to an empty team id
+(pass) loadBootShellChrome > loads chrome for the selected team, not always the first team
+(pass) loadBootShellChrome > keeps successful chrome RPCs when a sibling fetch fails
+(pass) loadBootShellChrome > failed team list is null, not a successful empty list
+(pass) loadBootShellChrome > no-team accounts skip notification and timer fetches
+(pass) seedBootChromeQueries > seeds only successful chrome results
+(pass) seedBootChromeQueries > failed chrome RPCs do not seed authoritative zeros
+(pass) seedBootChromeQueries > failed team list does not seed or wipe an existing team list
+(pass) seedBootChromeQueries > does not overwrite query data updated after boot began
+(pass) seedBootChromeQueries > does not seed another team's chrome when no team is selected yet
+
+src/lib/authenticated-client-reset.test.ts:
+(pass) shouldResetAuthenticatedClientState > does not reset during pending hydration or the first settled user
+(pass) shouldResetAuthenticatedClientState > resets on sign-out and account replacement
+(pass) shouldResetAuthenticatedClientState > does not reset while a transient pending state still has the current user
+(pass) resetAuthenticatedClientState > clears user-scoped query and team state without tearing down live sockets
+(pass) resetAuthenticatedClientState > Back after reset cannot restore the previous authenticated match or query shell
+
+src/lib/authenticated-boot.test.ts:
+(pass) loadAuthenticatedShell > expired or revoked sessions redirect to login with the deep-link path
+(pass) loadAuthenticatedShell > direct canvas load without search uses the canvas fallback redirect
+(pass) loadAuthenticatedShell > successful boot seeds chrome for the preferred team
+(pass) loadAuthenticatedShell > failed team list does not seed an empty list over a good cache
+(pass) loadAuthenticatedShell > hard refresh remains request-scoped: each load fetches session and chrome again
+
+src/lib/authenticated-parent-freshness.test.ts:
+(pass) authenticated parent loader freshness > child navigation re-runs a settled parent even without missing preload freshness
+(pass) authenticated parent loader freshness > route staleTime 30s does not stop stay child-navigation parent reloads
+
+ 31 pass
+ 0 fail
+ 82 expect() calls
+Ran 31 tests across 5 files. [290.00ms]
+```
+
+No dedicated `session-boot` test file; session coverage remains `auth-session.test.ts` + `authenticated-boot.test.ts`.
+
+`bunx oxlint` and `bunx oxfmt --check` clean on touched files.
