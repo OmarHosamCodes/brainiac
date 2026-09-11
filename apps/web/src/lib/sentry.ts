@@ -1,4 +1,7 @@
 import * as Sentry from "@sentry/react";
+import type { AnyRouter } from "@tanstack/react-router";
+
+import { parameterizeTransactionName } from "@/lib/sentry-transaction-name";
 
 declare const __APP_BUILD_ID__: string;
 declare const __SENTRY_DSN__: string;
@@ -17,7 +20,15 @@ const sentryDsn = resolveSentryDsn();
 
 export const isSentryEnabled = Boolean(sentryDsn) && import.meta.env.PROD;
 
-if (typeof window !== "undefined" && sentryDsn) {
+let browserSentryInitialized = false;
+
+export function initBrowserSentry(router: AnyRouter): void {
+  if (browserSentryInitialized || typeof window === "undefined" || !sentryDsn) {
+    return;
+  }
+
+  browserSentryInitialized = true;
+
   Sentry.init({
     dsn: sentryDsn,
     enabled: import.meta.env.PROD,
@@ -25,8 +36,15 @@ if (typeof window !== "undefined" && sentryDsn) {
     release: resolveSentryRelease(),
     sendDefaultPii: false,
     ignoreErrors: ["TimeoutError", /signal timed out/i, /Failed to fetch/i],
-    integrations: [Sentry.browserTracingIntegration()],
-    tracesSampleRate: import.meta.env.PROD ? 0.1 : 1.0,
+    integrations: [
+      Sentry.tanstackRouterBrowserTracingIntegration(router, {
+        beforeStartSpan: (context) => ({
+          ...context,
+          name: parameterizeTransactionName(context.name ?? ""),
+        }),
+      }),
+    ],
+    tracesSampleRate: 1.0,
     tracePropagationTargets: [
       "localhost",
       /^https:\/\/orch\.school-of-marketing\.com/,

@@ -1,6 +1,12 @@
 # Sentry Observability Setup
 
-Orch sends frontend and backend errors into one Sentry project. Tracing is enabled; session replay and Sentry logs are intentionally off for the initial rollout.
+Orch sends frontend and backend errors **and real-user performance traces** into one Sentry project. Session replay and Sentry logs stay off.
+
+Tracing covers every production session (`tracesSampleRate: 1.0`):
+
+- **Browser:** TanStack Router pageload/navigation spans (parameterized route names), Core Web Vitals (LCP, INP, CLS, FCP, TTFB), long tasks, and `fetch` waterfalls to `/rpc`.
+- **API:** Hono request spans renamed to `POST /rpc/<procedure>` (for example `POST /rpc/agencyOps.timer.getActive`) so Insights can rank slow procedures. `GET /` health checks are not sampled.
+- **Users:** authenticated sessions attach `user.id` only (no email). Distributed traces use `sentry-trace` and `baggage` (allowed on API CORS).
 
 ## Create the Sentry project
 
@@ -28,9 +34,18 @@ Set these on the Railway service that builds and runs Orch:
 
 Leave DSN values empty in `.env` files. The SDKs stay disabled without a DSN, and production builds skip source map upload without auth credentials.
 
+## Reading performance data
+
+After production traffic lands:
+
+1. Open **Insights → Web Vitals** and sort by LCP / INP / CLS at p75. Transaction names should be route patterns (`/agency/members/:userId`, `/canvas`), not raw IDs.
+2. Open **Insights → Traces** (or Performance) and filter `transaction:POST /rpc/*`. Sort by p95 duration to find the slow procedure.
+3. Open a slow trace to see the browser navigation plus the linked Hono/oRPC span in one waterfall.
+
 ## Verification checklist
 
 1. Deploy with DSN + auth token configured.
 2. Trigger one synthetic browser exception and one synthetic server exception.
 3. Confirm both appear in the same Sentry project with the Railway release and readable frames.
-4. Remove any temporary trigger routes/buttons after verification.
+4. Load an authenticated Agency page, then confirm a named route transaction and a `POST /rpc/...` span in Traces.
+5. Remove any temporary trigger routes/buttons after verification.

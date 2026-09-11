@@ -98,7 +98,8 @@ function createApp() {
         environment: env.SENTRY_ENVIRONMENT ?? env.NODE_ENV,
         release: resolveSentryRelease(),
         sendDefaultPii: false,
-        tracesSampleRate: env.NODE_ENV === "production" ? 0.1 : 1.0,
+        tracesSampleRate: 1.0,
+        ignoreTransactions: [/^GET \/$/],
       }),
     );
   }
@@ -119,7 +120,7 @@ function createApp() {
     cors({
       origin: corsOrigins,
       allowMethods: ["GET", "POST", "OPTIONS"],
-      allowHeaders: ["Content-Type", "Authorization"],
+      allowHeaders: ["Content-Type", "Authorization", "sentry-trace", "baggage"],
       credentials: true,
     }),
   );

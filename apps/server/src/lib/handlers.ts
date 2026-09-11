@@ -5,6 +5,8 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 
+import { nameActiveRpcSpan } from "./rpc-span";
+
 const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [
     new OpenAPIReferencePlugin({
@@ -23,6 +25,7 @@ export async function handleAppRouterRequest(request: Request, context: Context)
     });
 
     if (rpcResult.matched) {
+      nameActiveRpcSpan(request);
       return rpcResult.response;
     }
 

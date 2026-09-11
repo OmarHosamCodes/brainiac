@@ -8,6 +8,7 @@ import {
 } from "@/lib/authenticated-client-reset";
 import { authClient, markAuthSessionReady } from "@/lib/auth-client";
 import { AuthSessionContext, resolveAuthSession } from "@/lib/auth-session";
+import { isSentryEnabled, Sentry } from "@/lib/sentry";
 import type { BootSession } from "@/lib/session-boot";
 
 export function AuthProvider({
@@ -55,6 +56,19 @@ export function AuthProvider({
       setAgencyLiveViewerUserId(null);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isSentryEnabled) {
+      return;
+    }
+    if (resolved.user) {
+      Sentry.setUser({ id: resolved.user.id });
+      return;
+    }
+    if (!session.isPending) {
+      Sentry.setUser(null);
+    }
+  }, [resolved.user, session.isPending]);
 
   return <AuthSessionContext.Provider value={resolved}>{children}</AuthSessionContext.Provider>;
 }

@@ -2,6 +2,7 @@ import { createRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 
 import { createAppQueryClient } from "@/lib/create-query-client";
+import { initBrowserSentry } from "@/lib/sentry";
 import { routeTree } from "@/routeTree.gen";
 
 export function getRouter() {
@@ -20,6 +21,8 @@ export function getRouter() {
     router,
     queryClient,
   });
+
+  initBrowserSentry(router);
 
   return router;
 }

@@ -21,7 +21,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | --- | ---: |
 | golden-feature | 949 |
 | server-operation | 16 |
-| shared-infrastructure | 478 |
+| shared-infrastructure | 482 |
 | static-presentation | 22 |
 
 ## Counts by domain
@@ -50,11 +50,11 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | reports | 66 |
 | repository | 13 |
 | resourcing | 44 |
-| server-platform | 23 |
+| server-platform | 25 |
 | task-management | 101 |
 | team | 19 |
 | time-tracking | 120 |
-| web-platform | 257 |
+| web-platform | 259 |
 | workspace | 138 |
 
 ## Artifacts
@@ -78,6 +78,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/server/src/lib/handlers.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/knowledge-sources.ts` | workspace | domain-service | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical domain-service layer. | content: database access, exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/notification-digest.ts` | notifications | domain-service | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical domain-service layer. | content: database access, exported declarations; structure: source role and exported behavior |
+| `apps/server/src/lib/rpc-span.test.ts` | server-platform | test | shared-infrastructure | server-platform | Cross-cutting server-platform test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
+| `apps/server/src/lib/rpc-span.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/seed-agency-scale.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/seed-agency-types.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/startup.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
@@ -1031,6 +1033,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/lib/safe-redirect-path.test.ts` | web-platform | test | shared-infrastructure | web-platform | Cross-cutting web-platform test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/lib/safe-redirect-path.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/lib/schemas/index.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/lib/sentry-transaction-name.test.ts` | web-platform | test | shared-infrastructure | web-platform | Cross-cutting web-platform test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/lib/sentry-transaction-name.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/lib/sentry.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations, environment contract; structure: source role and exported behavior |
 | `apps/web/src/lib/session-boot.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: server runtime wiring, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/lib/ssr-api-origin.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations, environment contract; structure: source role and exported behavior |
